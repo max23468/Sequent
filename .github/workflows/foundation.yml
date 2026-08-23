@@ -1,0 +1,44 @@
+name: Foundation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  foundation:
+    name: Foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verifica fondazione pubblica
+        run: |
+          test -f AGENTS.md
+          test -f README.md
+          test -f SECURITY.md
+          test -f CHANGELOG.md
+          test -f docs/MASTER_PLAN.md
+          test -f docs/runbooks/github.md
+          test -f package-lock.json
+          test -f .oxfmtrc.json
+          test ! -e LICENSE
+          git diff-tree --check HEAD
+      - name: Verifica titolo Conventional Commits
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          printf '%s\n' "$PR_TITLE" | grep -Eq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9._/-]+\))?!?: .+'
