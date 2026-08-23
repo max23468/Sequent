@@ -2,11 +2,13 @@
 
 ## Target canonico
 
-- host: `fatture-hub-vm`, VPS OCI Milano;
-- accesso amministrativo: SSH come `ubuntu` tramite `fatture.opik.net`;
+- identità reale dell'host e target amministrativo: configurazione privata fuori da Git;
+- accesso amministrativo: alias SSH configurato localmente, senza utente o endpoint nel repository pubblico;
 - architettura: ARM64;
 - checkout: `/opt/sequent/repo/`;
 - nessun hostname o servizio Sequent attivo durante M0.
+
+Il preflight legge per default `/opt/sequent/private/preflight.env`, posseduto dall'utente amministrativo e con modalità `0600`. Il file definisce `SEQUENT_EXPECTED_HOST` e `SEQUENT_SHARED_INSTALLATION_MARKER`; i valori effettivi non devono essere copiati in Git, PR, issue o log condivisi. `SEQUENT_PREFLIGHT_ENV` può indicare un file privato alternativo.
 
 ## Layout e proprietari
 
@@ -43,5 +45,5 @@ Prerequisiti host M0: Git, rsync, unzip, `libxml2-utils`, `poppler-utils`, `pyth
 - non eseguire la working tree come servizio;
 - non montare `/opt/sequent/data` nel checkout;
 - eseguire restore, migrazioni e import DIZ rischiosi soltanto su copie in `/opt/sequent/tmp`;
-- non modificare Caddy, Dynu, firewall o `/opt/hub-fatture` senza autorizzazione separata;
+- non modificare Caddy, Dynu, firewall o l'installazione condivisa indicata dalla configurazione privata senza autorizzazione separata;
 - non eliminare il source bundle privato finché non esiste una copia di sicurezza indipendente verificata.

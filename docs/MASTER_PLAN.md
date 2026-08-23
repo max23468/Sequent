@@ -2745,7 +2745,7 @@ Il bootstrap non autorizza modifiche a Caddy, Dynu, firewall, Hub Fatture o serv
 Sequent e Hub Fatture condividono soltanto host fisico e Caddy.
 
 ```text
-/opt/hub-fatture/
+<directory-privata-co-tenant>/
 /opt/sequent/
 ```
 
