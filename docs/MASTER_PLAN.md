@@ -2552,6 +2552,19 @@ L'elenco definitivo nasce dallo scaffolding; `package.json`, lockfile, Dockerfil
 - Vitest;
 - Playwright.
 
+### 41.5.1 Svelte Doctor advisory
+
+`svelte-doctor` viene introdotto insieme allo scaffolding SvelteKit come analisi CI advisory e non come required check. La versione è esatta nel lockfile; la CI esegue soltanto scansioni in lettura e non abilita fix automatici, migrazioni, hook Git o funzioni AI. `svelte-check` resta il controllo autorevole per compilazione e diagnostica Svelte.
+
+I finding di Svelte Doctor seguono questa policy:
+
+- vengono pubblicati nel job summary della PR e restano visibili anche se il job non blocca il merge;
+- non ricevono automaticamente le priorità P0–P3 del gate Codex e non producono modifiche automatiche;
+- un finding confermato che evidenzia un difetto di sicurezza, correttezza, perdita dati o regressione rilevante viene classificato con il normale triage del progetto e può diventare blocker indipendentemente dal carattere advisory del job;
+- performance, architettura e manutenibilità non critiche restano advisory e vengono risolte soltanto quando pertinenti allo scope della PR o pianificate esplicitamente;
+- un falso positivo viene soppresso con regola stretta e motivazione versionata; non si abbassano soglie globali e non si crea una baseline per nascondere nuovi finding;
+- punteggio aggregato e variazioni del punteggio sono segnali diagnostici, non criteri di merge, finché lo strumento non supera una qualificazione esplicita su codice Sequent reale.
+
 ## 41.6 Esclusioni confermate
 
 Non installare inizialmente:
@@ -3027,6 +3040,8 @@ Golden file, modifiche one-field, round-trip semantico, unknown blocks, allegati
 ## 48.9 Gate CI
 
 Ogni PR e ogni release mantengono il livello di controllo definito nelle sezioni 46 e 52, inclusi Oxfmt, Oxlint, Svelte check, test, build, E2E pertinenti, browser matrix di release, benchmark e review Codex exact-HEAD. Non esiste un gate separato di tracciabilità documentale.
+
+Dallo scaffolding SvelteKit, Svelte Doctor gira in CI come job advisory sulle PR pertinenti e come scansione completa pianificata. Un errore operativo dello strumento o un finding non triagiato non rende rosso un required check; un difetto confermato può comunque bloccare la PR attraverso il normale processo di review. Il job non applica fix e non carica sorgenti, prompt o risultati verso servizi AI esterni.
 
 ## 48.10 Suite di conformità alle dieci fonti
 

@@ -18,6 +18,12 @@ La ruleset `main protection`, senza bypass, richiede HEAD aggiornato, conversazi
 
 La ruleset vieta eliminazione e non-fast-forward di `main`, consente soltanto squash merge, invalida le review obsolete e richiede approvazione aggiuntiva per modifiche non attribuite.
 
+## CI advisory
+
+Con lo scaffolding SvelteKit viene attivato `Svelte Doctor` come job non richiesto dalla ruleset. Il job esegue soltanto analisi in lettura, mostra i finding nel summary della PR e non applica fix, migrazioni, hook Git o funzioni AI.
+
+Il carattere advisory riguarda il meccanismo CI, non la gravità del difetto: sicurezza, correttezza, perdita dati e regressioni rilevanti confermate vengono triagiate e possono bloccare la PR. Gli altri finding restano consigli; i falsi positivi vengono soppressi puntualmente con una motivazione versionata. Il punteggio dello strumento non è una soglia di merge finché Svelte Doctor non viene qualificato sul codice reale di Sequent.
+
 ## Review Codex exact-HEAD
 
 Il workflow `Codex review gate` esegue il primo giro su apertura o passaggio a ready. Dopo ogni `synchronize`, un owner, member o collaborator deve aggiungere un commento top-level il cui corpo sia esattamente:
