@@ -2,6 +2,7 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
+import { isDeepStrictEqual } from "node:util";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,6 +23,7 @@ type SourceManifest = {
 
 type XsdEntry = { path: string; bytes: number; sha256: string };
 type XsdManifest = { mainSchema: string; fileCount: number; entries: XsdEntry[] };
+type CanonicalSourceManifest = SourceManifest & { xsdArchive: XsdManifest };
 
 const scriptPath = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptPath), "../..");
@@ -47,6 +49,19 @@ export function sha256File(filePath: string): string {
 
 export function compositeDigest(lines: string[]): string {
   return createHash("sha256").update(lines.join(""), "utf8").digest("hex");
+}
+
+export function assertCanonicalManifestParity(
+  privateManifest: CanonicalSourceManifest,
+  privateXsdManifest: XsdManifest,
+  canonicalManifest: CanonicalSourceManifest,
+): void {
+  if (!isDeepStrictEqual(privateManifest, canonicalManifest)) {
+    fail("manifest privato diverso dal manifest canonico versionato");
+  }
+  if (!isDeepStrictEqual(privateXsdManifest, canonicalManifest.xsdArchive)) {
+    fail("manifest XSD privato diverso dall'inventario XSD canonico versionato");
+  }
 }
 
 function readJson<T>(filePath: string): T {
@@ -87,8 +102,13 @@ function verifyFile(
 export function verifyOfficialSources(officialRoot: string): void {
   const manifestPath = path.join(officialRoot, "manifest.json");
   const xsdManifestPath = path.join(officialRoot, "xsd-manifest.json");
-  const manifest = readJson<SourceManifest>(manifestPath);
+  const privateManifest = readJson<CanonicalSourceManifest>(manifestPath);
   const xsdManifest = readJson<XsdManifest>(xsdManifestPath);
+  const manifest = readJson<CanonicalSourceManifest>(
+    path.join(repoRoot, "src/domain/official-catalog/source-manifest.json"),
+  );
+
+  assertCanonicalManifestParity(privateManifest, xsdManifest, manifest);
 
   if (manifest.sources.length !== 10) fail(`fonti attese 10, trovate ${manifest.sources.length}`);
   if (xsdManifest.entries.length !== xsdManifest.fileCount || xsdManifest.fileCount !== 13) {
