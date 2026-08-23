@@ -2552,18 +2552,18 @@ L'elenco definitivo nasce dallo scaffolding; `package.json`, lockfile, Dockerfil
 - Vitest;
 - Playwright.
 
-### 41.5.1 Svelte Doctor advisory
+### 41.5.1 Svelte Doctor
 
-`svelte-doctor` viene introdotto insieme allo scaffolding SvelteKit come analisi CI advisory e non come required check. La versione è esatta nel lockfile; la CI esegue soltanto scansioni in lettura e non abilita fix automatici, migrazioni, hook Git o funzioni AI. `svelte-check` resta il controllo autorevole per compilazione e diagnostica Svelte.
+`svelte-doctor` viene introdotto insieme allo scaffolding SvelteKit come required check bloccante. La versione è esatta nel lockfile; la CI esegue soltanto scansioni in lettura e non abilita fix automatici, migrazioni, hook Git o funzioni AI. `svelte-check` resta il controllo autorevole per compilazione e diagnostica Svelte, mentre Svelte Doctor è un gate complementare di qualità.
 
 I finding di Svelte Doctor seguono questa policy:
 
-- vengono pubblicati nel job summary della PR e restano visibili anche se il job non blocca il merge;
+- ogni finding non soppresso rende rosso il check `svelte-doctor` e blocca il merge, indipendentemente dalla categoria; metriche e punteggio privi di finding non bloccano;
 - non ricevono automaticamente le priorità P0–P3 del gate Codex e non producono modifiche automatiche;
-- un finding confermato che evidenzia un difetto di sicurezza, correttezza, perdita dati o regressione rilevante viene classificato con il normale triage del progetto e può diventare blocker indipendentemente dal carattere advisory del job;
-- performance, architettura e manutenibilità non critiche restano advisory e vengono risolte soltanto quando pertinenti allo scope della PR o pianificate esplicitamente;
-- un falso positivo viene soppresso con regola stretta e motivazione versionata; non si abbassano soglie globali e non si crea una baseline per nascondere nuovi finding;
-- punteggio aggregato e variazioni del punteggio sono segnali diagnostici, non criteri di merge, finché lo strumento non supera una qualificazione esplicita su codice Sequent reale.
+- un finding reale viene corretto prima del merge, con una regressione mirata quando riguarda sicurezza, correttezza, perdita dati o comportamento osservabile;
+- un falso positivo può essere soppresso soltanto con eccezione minima, motivazione versionata e review nella stessa PR; non sono ammessi bypass temporanei, `continue-on-error`, riduzioni globali delle soglie o baseline che nascondano finding nuovi o esistenti;
+- errori operativi, crash o output non interpretabili del tool mantengono il check rosso e richiedono diagnosi o retry, non un bypass;
+- l'attivazione iniziale richiede il triage completo e zero finding non soppressi prima di aggiungere `svelte-doctor` alla ruleset.
 
 ## 41.6 Esclusioni confermate
 
@@ -3041,7 +3041,7 @@ Golden file, modifiche one-field, round-trip semantico, unknown blocks, allegati
 
 Ogni PR e ogni release mantengono il livello di controllo definito nelle sezioni 46 e 52, inclusi Oxfmt, Oxlint, Svelte check, test, build, E2E pertinenti, browser matrix di release, benchmark e review Codex exact-HEAD. Non esiste un gate separato di tracciabilità documentale.
 
-Dallo scaffolding SvelteKit, Svelte Doctor gira in CI come job advisory sulle PR pertinenti e come scansione completa pianificata. Un errore operativo dello strumento o un finding non triagiato non rende rosso un required check; un difetto confermato può comunque bloccare la PR attraverso il normale processo di review. Il job non applica fix e non carica sorgenti, prompt o risultati verso servizi AI esterni.
+Dallo scaffolding SvelteKit, Svelte Doctor gira in CI sulle PR pertinenti e come scansione completa pianificata. `svelte-doctor` diventa required check dopo un'attivazione iniziale a zero finding non soppressi. Qualunque finding, errore operativo o output non interpretabile rende rosso il check; soltanto una soppressione stretta e motivata di un falso positivo può ripristinarlo. Il job non applica fix e non carica sorgenti, prompt o risultati verso servizi AI esterni.
 
 ## 48.10 Suite di conformità alle dieci fonti
 

@@ -18,11 +18,11 @@ La ruleset `main protection`, senza bypass, richiede HEAD aggiornato, conversazi
 
 La ruleset vieta eliminazione e non-fast-forward di `main`, consente soltanto squash merge, invalida le review obsolete e richiede approvazione aggiuntiva per modifiche non attribuite.
 
-## CI advisory
+## Svelte Doctor
 
-Con lo scaffolding SvelteKit viene attivato `Svelte Doctor` come job non richiesto dalla ruleset. Il job esegue soltanto analisi in lettura, mostra i finding nel summary della PR e non applica fix, migrazioni, hook Git o funzioni AI.
+Con lo scaffolding SvelteKit viene attivato `Svelte Doctor` come job in sola lettura. Dopo il triage iniziale a zero finding non soppressi, il check `svelte-doctor` viene aggiunto alla ruleset e diventa bloccante. Il job non applica fix, migrazioni, hook Git o funzioni AI.
 
-Il carattere advisory riguarda il meccanismo CI, non la gravità del difetto: sicurezza, correttezza, perdita dati e regressioni rilevanti confermate vengono triagiate e possono bloccare la PR. Gli altri finding restano consigli; i falsi positivi vengono soppressi puntualmente con una motivazione versionata. Il punteggio dello strumento non è una soglia di merge finché Svelte Doctor non viene qualificato sul codice reale di Sequent.
+Ogni finding non soppresso, crash o output non interpretabile rende rosso il check. Un finding reale viene corretto; un falso positivo viene soppresso soltanto con eccezione minima, motivazione versionata e review nella stessa PR. Non sono ammessi `continue-on-error`, bypass temporanei, riduzioni globali delle soglie o baseline usate per nascondere finding. Metriche e punteggio senza finding restano informativi.
 
 ## Review Codex exact-HEAD
 
