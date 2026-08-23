@@ -13,3 +13,4 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 - governance GitHub completa, supply-chain pinning e gate Codex exact-HEAD;
 - target amministrativo e identificatori dell'host rimossi dal repository pubblico e spostati nella configurazione VPS privata;
 - policy per Svelte Doctor come required check bloccante, salvo falsi positivi soppressi puntualmente e motivati.
+- governance documentale con fonti uniche per metadati ufficiali, versioni tecniche e sequenza di implementazione.

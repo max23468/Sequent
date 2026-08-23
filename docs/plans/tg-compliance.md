@@ -6,4 +6,4 @@
 4. Trasformare `SRC-10` in golden test con tutti i valori intermedi della catena `QE → ISN`.
 5. Generare catalogo, validator e report coverage da un'unica pipeline.
 6. Bloccare su elementi `unresolved`, provenance mancante o divergenza fra modello, istruzioni e XSD.
-7. Chiudere il gate soltanto dopo review deterministica e suite della sezione 48.10 verde.
+7. Chiudere il gate soltanto dopo review deterministica e suite di conformità alle fonti ufficiali verde.

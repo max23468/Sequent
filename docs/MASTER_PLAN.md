@@ -15,13 +15,13 @@
 - **Ambiente canonico:** unica istanza Sequent sulla VPS OCI; Codex sviluppa nello stesso host in un checkout Git separato dal runtime e dai dati operativi; nessun ambiente Development, Staging o Production distinto
 - **Bootstrap iniziale:** l'owner consegna a Codex un solo ZIP; Codex verifica, trasferisce, crea il layout VPS e inizializza il repository senza delegare comandi manuali all'owner
 - **Obiettivo primario:** ridurre drasticamente il lavoro manuale necessario per predisporre dichiarazioni di successione partendo dai documenti già disponibili, mantenendo pieno controllo professionale e interoperabilità modificabile con SuccessioniOnLine
-- **Pacchetto ufficiale vincolante:** i dieci artefatti identificati nella sezione 0.8 — nove PDF e l’archivio XSD ufficiale, con gli XSD estratti e verificati — costituiscono la baseline normativa, semantica, formale e tecnica obbligatoria della 1.0
+- **Pacchetto ufficiale vincolante:** tutti gli artefatti identificati dal manifest macchina, con l'albero XSD estratto e verificato, costituiscono la baseline normativa, semantica, formale e tecnica obbligatoria del perimetro iniziale
 
 > Questo documento consolida tutte le decisioni utili maturate durante la progettazione preliminare di Sequent. La conversazione originaria non deve essere necessaria per comprendere, progettare, implementare, testare, distribuire o mantenere il prodotto.
 >
 > Sequent opera in un dominio fiscale e successorio. Codex non deve trasformare un'informazione plausibile in una regola applicativa senza fonte ufficiale, evidenza osservata e approvazione dell'owner. Le dichiarazioni, i calcoli e i file prodotti devono essere verificabili, versionati e sempre sottoposti al controllo finale di SuccessioniOnLine.
 >
-> Il pacchetto ufficiale vincolante è trattato come specifica primaria: modello visibile, Fascicoli 1 e 2, aggiornamenti del 2025, guida ufficiale al calcolo, specifiche SUC13 e XSD macchina-leggibili non sono materiale orientativo ma requisiti da tradurre integralmente in catalogo, regole, validazioni, UI, allegati e test.
+> Il pacchetto ufficiale vincolante è trattato come specifica primaria: modello visibile, Fascicoli 1 e 2, aggiornamenti ufficiali qualificati, guida ufficiale al calcolo, specifiche SUC13 e XSD macchina-leggibili non sono materiale orientativo ma requisiti da tradurre integralmente in catalogo, regole, validazioni, UI, allegati e test.
 
 ---
 
@@ -32,7 +32,7 @@
 - [2. Visione, problema e opportunità](#2-visione-problema-e-opportunità)
 - [3. Contesto operativo e profilo d'uso](#3-contesto-operativo-e-profilo-duso)
 - [4. Definizione e principi del prodotto](#4-definizione-e-principi-del-prodotto)
-- [5. Scope e non-scope della 1.0](#5-scope-e-non-scope-della-10)
+- [5. Scope e non-scope iniziale](#5-scope-e-non-scope-iniziale)
 - [6. Criteri di successo](#6-criteri-di-successo)
 - [7. Terminologia e modello concettuale](#7-terminologia-e-modello-concettuale)
 - [8. Architettura dell'informazione e navigazione](#8-architettura-dellinformazione-e-navigazione)
@@ -99,7 +99,7 @@
 
 ## 0.1 Fonte canonica e gerarchia delle fonti ufficiali
 
-Questo Master Plan definisce prodotto, architettura, sequenza e criteri di accettazione. Le regole di compilazione, calcolo e trasmissione derivano invece dal **pacchetto ufficiale vincolante** della sezione 0.8.
+Questo Master Plan definisce prodotto, architettura, sequenza e criteri di accettazione. Le regole di compilazione, calcolo e trasmissione derivano invece dal **pacchetto ufficiale vincolante** descritto nel capitolo omonimo e identificato dal manifest macchina.
 
 | Domanda | Fonte canonica |
 |---|---|
@@ -136,7 +136,7 @@ Regole di prevalenza:
 - **Confermato:** decisione da implementare.
 - **Default tecnico:** dettaglio affidato all'implementatore; scegliere la soluzione più semplice compatibile.
 - **Technical Gate:** prova indispensabile prima delle funzioni che dipendono da un'incertezza reale.
-- **Rinviato:** escluso dalla 1.0 senza essere abbandonato.
+- **Rinviato:** escluso dal perimetro iniziale senza essere abbandonato.
 - **Superato:** proposta sostituita; non va reintrodotta senza nuova approvazione.
 
 Le decisioni fiscali non verificate non sono mai default tecnici. Un dato non qualificato resta da verificare o viene gestito manualmente.
@@ -176,6 +176,16 @@ Non è necessario creare documentazione, gate o audit separati quando un test, u
 
 La cronologia Git è l'unico storico del Master Plan. Il documento descrive sempre lo stato corrente e non riceve una nuova versione per ogni modifica.
 
+Ogni informazione variabile ha una sola fonte canonica:
+
+- milestone e sequenza di implementazione vivono soltanto nel capitolo «Milestone di implementazione»;
+- versioni tecniche esatte vivono nei manifest eseguibili, nel lockfile e nella CI;
+- identità, date, dimensioni e digest delle fonti ufficiali vivono in `src/domain/official-catalog/source-manifest.json`;
+- divergenze e stato degli overlay vivono nei cataloghi macchina pertinenti;
+- lo stato operativo corrente si legge da HEAD, gate e configurazione privata, non da dichiarazioni narrative replicate.
+
+README, contratti, runbook e istruzioni descrivono responsabilità, capacità, gate e procedure stabili. Non duplicano milestone corrente, versioni esatte, date di progetto, digest o inventari già rappresentati in una fonte canonica. Le date normative, fiscali o identificative restano dove sono parte del dominio o dell'identità di una fonte.
+
 Documenti iniziali sufficienti:
 
 - `docs/MASTER_PLAN.md`;
@@ -189,97 +199,53 @@ Non creare cartelle vuote, registri paralleli, evidence pack o audit formali per
 
 ## 0.6 Versioni tecniche
 
-Il piano fissa famiglie e policy; i pin esatti vivono in `package.json`, lockfile, Dockerfile e manifest.
+Il piano fissa famiglie e policy; i pin esatti vivono in `package.json`, lockfile, Dockerfile, workflow e manifest. La documentazione non li replica.
 
 Sono confermati:
 
-- Node 26, con pin e digest e immagine Node 24 di rollback finché Node 26 resta Current;
-- TypeScript 7 come compilatore principale;
-- TypeScript 6 affiancato finché richiesto dal tooling Svelte;
-- Svelte 5 e SvelteKit sulla più recente linea stabile compatibile;
+- Node.js su linea stabile qualificata, con pin, digest e rollback compatibile;
+- TypeScript come compilatore principale, con compatibility layer soltanto finché richiesto dal tooling;
+- Svelte e SvelteKit sulla linea stabile qualificata;
 - dipendenze esatte;
-- Oxfmt e Oxlint senza Prettier o ESLint diretti nella 1.0.
+- Oxfmt e Oxlint senza Prettier o ESLint diretti nel perimetro iniziale.
 
 ## 0.7 Regola di lettura per gli agenti
 
 Prima di un intervento, Codex legge sempre:
 
-1. questa sezione 0;
-2. principi e scope, sezioni 4 e 5;
-3. i Technical Gate pertinenti della sezione 55;
-4. le decisioni superate della sezione 61;
+1. «Come usare questo documento»;
+2. «Definizione e principi del prodotto» e «Scope e non-scope iniziale»;
+3. i Technical Gate pertinenti;
+4. «Decisioni esplicitamente sostituite»;
 5. le sole sezioni funzionali e tecniche toccate dal lavoro.
 
-Il DIZ richiede sempre le sezioni 23, 24 e 55. OCR/Codex richiedono le sezioni 14–17 e 49. Offline richiede le sezioni 31–33. Database e backup richiedono le sezioni 37, 39 e 40. Qualunque modifica di runtime, deploy o operazioni sulla VPS richiede anche le sezioni 43–46 e 52.
+Il DIZ richiede sempre «Interoperabilità DIZ», «Round-trip con SuccessioniOnLine» e i relativi Technical Gate. OCR/Codex richiedono i capitoli sulla pipeline documentale, Codex, estrazione, gerarchia delle fonti e benchmark. Offline richiede i capitoli su offline, sincronizzazione, browser e mobile. Database e backup richiedono i capitoli su backup, persistenza e coda lavori. Qualunque modifica di runtime, deploy o operazioni sulla VPS richiede anche i capitoli su infrastruttura, separazione da Hub Fatture, sviluppo VPS-first, workflow Git e release.
 
-Qualunque intervento su dominio, quadri, calcoli, allegati, DIZ o telematico richiede inoltre la sezione 0.8, la sezione 20 e il contratto di conformità ufficiale derivato.
+Qualunque intervento su dominio, quadri, calcoli, allegati, DIZ o telematico richiede inoltre «Pacchetto ufficiale vincolante», «Motore normativo e conformità ufficiale» e il contratto di conformità ufficiale derivato.
 
 ## 0.8 Pacchetto ufficiale vincolante
 
 ### 0.8.1 Identità del bundle
 
-- **ID logico:** `SUC-OFFICIAL-2025-07-15-FULL`
-- **Pagina ufficiale di provenienza tecnica:** `https://www.agenziaentrate.gov.it/portale/schede/dichiarazioni/dichiarazione-di-successione/specifiche-tecniche-dichiarazione-di-successione`
-- **SHA-256 composito dei dieci artefatti:** `f5c4dba027c36609216bd956bfb5dc29eef4978aaa2dc802d85b6e70277b1603`
-- **SHA-256 composito dell'albero XSD estratto:** `aa6ec0d226d213447d27a79a5407d2f6a178cfe4962a64954aeeb1b6e238bb83`
-- **Metodo del digest composito delle fonti:** SHA-256 delle righe ordinate `SRC-ID:sha256`, terminate da newline.
-- **Metodo del digest XSD:** SHA-256 delle righe ordinate `percorso-relativo:sha256`, terminate da newline.
+Identità, URL ufficiale, nomi, date, ruoli, dimensioni, hash, metodi di digest e stato di ogni fonte risiedono esclusivamente in `src/domain/official-catalog/source-manifest.json`. Il Master Plan usa gli ID stabili `SRC-*` e non replica questi metadati.
 
-| ID | Alias canonico locale | File ricevuto | Stato e contenuto vincolante | Pagine | SHA-256 |
-|---|---|---|---|---:|---|
-| `SRC-01` | `istruzioni-fascicolo-1-update-2025-07-15.pdf` | `elenco-modifiche-istruzioni-fascicolo-1.pdf` | **Corrente — overlay istruzioni.** Aggiornamento del 15 luglio 2025 al Fascicolo 1. | 2 | `fb1c14f1f8f04a7c9804c66128b6905b68a221472a4322f34324e54bcc8d8857` |
-| `SRC-02` | `specifiche-tecniche-delta-2025-02.pdf` | `903477a9-d3c9-f21b-3605-594ca021547f.pdf` | **Lineage ufficiale.** Modifiche di febbraio 2025 alle specifiche; conservate per regressione e riconciliazione, già consolidate nelle fonti correnti. | 7 | `fe2f724d38f19bc78dcb768835b20817f3e369179d8dac0393753f12771253f7` |
-| `SRC-03` | `modello-dichiarazione-successione-2025.pdf` | `88520cc9-d27e-71f2-de07-8cd6f2a2953a.pdf` | **Corrente — modello visibile.** Informativa, frontespizio e quadri della dichiarazione. | 18 | `26a93d2e30be6e8cead56f53b175e956df4e8c1187db5521e2f461c404e2cce0` |
-| `SRC-04` | `istruzioni-fascicolo-2-2025.pdf` | `7f369d23-164f-7679-a44e-fb941984bdcd.pdf` | **Corrente — istruzioni.** Quadri EL, EM, EN, EO, EP ed EQ. | 17 | `33b50daccaab59927e80e78962f2c13c7d22d0483d3f8f8eba317e3107b2a413` |
-| `SRC-05` | `istruzioni-fascicolo-1-2025-07-15.pdf` | `ebc28cca-a79f-5a00-5a9a-7e4b70611a6b.pdf` | **Corrente — istruzioni.** Istruzioni generali, frontespizio, quadri EA–EI/ER e Allegati 1–5, con `SRC-01` come overlay. | 70 | `a760fa067890b645db49da2c496ef3481d5e4d0989be684e22450166ad9040f5` |
-| `SRC-06` | `specifiche-tecniche-suc13-2025-02-03-superseded.pdf` | `1c3bb907-70d9-e4a3-2c1d-f0bbfe35f2ee.pdf` | **Superato — reference only.** Specifiche SUC13 del 3 febbraio 2025, conservate per diff e non-regressione; non governano il writer corrente. | 1158 | `04b0a6dd51028c8a937cc6b8c8242f52b914a4b8b2c9259b7db3c54d34ac63e8` |
-| `SRC-07` | `specifiche-tecniche-suc13-2025-07-02.pdf` | `Specifiche_SUC13_20250702.pdf` | **Corrente — specifica documentale.** Specifiche SUC13 consolidate del 2 luglio 2025, diagrammi, annotazioni e controlli. | 1103 | `1b01ebe137b8f870092f0334e8dabc81aecde79376b32c41cf066346365fcb1b` |
-| `SRC-08` | `specifiche-tecniche-suc13-xsd-2025-07-02.zip` | `SUC13_20250702 2.zip` | **Corrente — fonte macchina-leggibile.** Archivio ufficiale con 13 XSD; `SUC/xsd/fornituraSUC13_v1.xsd` e dipendenze costituiscono la base della validazione locale. | — | `1e63bd8bd4a79a401e4a2ce1a6580cf20eba2b533a2892361e375aa964c371e9` |
-| `SRC-09` | `specifiche-tecniche-delta-2025-07-15.pdf` | `Elenco modifiche specifiche tecniche_15-07-2025.pdf` | **Corrente — overlay tecnico.** Modifiche del 15 luglio 2025 a controlli, agevolazioni, trust, imposta e campi EA. | 3 | `af390406540a5763e55aa91bba1429c7f63dbd86907c16d4fcd12783ba291b07` |
-| `SRC-10` | `guida-calcolo-imposta-successione-autoliquidazione-2025.pdf` | `All. Specifiche tecniche (passaggi calcolo imposta di successione).pdf` | **Corrente — calcolo specialistico.** Procedimento ufficiale di autoliquidazione dell'imposta di successione dal 1° gennaio 2025, formule ed esempi. | 10 | `2570aacc73d0ab903fd4b265f50cbf761dd280cd1639653694c991c105b3c447` |
+`docs/OFFICIAL_SOURCES_MANIFEST.md` spiega come leggere e verificare la fonte macchina. `src/domain/official-catalog/delta-overlays.json` è la fonte unica per overlay, anomalie e mapping irrisolti.
 
 ### 0.8.2 Archivio XSD corrente
 
-`SRC-08` contiene 13 file XSD. Il progetto conserva sia lo ZIP originale sia l'albero estratto, senza rinominare o appiattire i percorsi perché gli `schemaLocation` sono relativi.
+Il progetto conserva sia lo ZIP originale sia l'albero estratto, senza rinominare o appiattire i percorsi perché gli `schemaLocation` sono relativi. Main schema, conteggio, dependency closure, file preservati, hash e stato delle verifiche risiedono nel manifest macchina.
 
-Il punto di ingresso corrente è:
-
-```text
-private/official-sources/xsd/SUC/xsd/fornituraSUC13_v1.xsd
-```
-
-Le dipendenze necessarie si trovano in:
-
-```text
-private/official-sources/xsd/common/xsd/
-private/official-sources/xsd/registro/xsd/
-```
-
-La dependency closure corrente del main schema è:
-
-```text
-SUC/xsd/fornituraSUC13_v1.xsd
-common/xsd/fornitura_v2.xsd
-common/xsd/typesDati_v2.xsd
-common/xsd/typesProvincie_v2.xsd
-common/xsd/datiFiscali_v3.xsd
-common/xsd/typesFiscali_v3.xsd
-common/xsd/typeEventi_v3.xsd
-common/xsd/telematico_v1.xsd
-registro/xsd/typesReg_v2.xsd
-```
-
-Il bundle ricevuto contiene inoltre quattro XSD comuni non direttamente raggiunti dal main schema; vengono conservati perché fanno parte dell'archivio ufficiale, ma non entrano nel ruleset corrente senza una dipendenza esplicita. La verifica iniziale ha accertato che tutti i 13 XSD sono XML well-formed e che il main schema compila con le sole dipendenze locali e senza accesso alla rete. Codex deve ripetere questa verifica in M0 con la libreria XML/XSD scelta e registrare il risultato nel contratto di conformità.
+La verifica di bootstrap e ogni verifica successiva accertano che tutti gli XSD dichiarati siano XML well-formed e che il main schema compili con sole dipendenze locali e senza accesso alla rete.
 
 ### 0.8.3 Custodia e riproducibilità
 
-I dieci artefatti devono essere disponibili localmente in:
+Tutti gli artefatti dichiarati dal manifest devono essere disponibili localmente in:
 
 ```text
 private/official-sources/
 ```
 
-con gli alias canonici sopra indicati. La stessa directory contiene:
+con gli alias canonici indicati dal manifest macchina. La stessa directory contiene:
 
 ```text
 manifest.json
@@ -296,7 +262,7 @@ docs/contracts/official-compliance.md
 tests/fixtures/official/
 ```
 
-- `verify.ts` controlla presenza, dimensione, pagine e SHA-256 dei nove PDF, SHA-256 dello ZIP, elenco e hash dei 13 XSD estratti, digest compositi e compilazione del main schema;
+- `verify.ts` controlla presenza, dimensione, pagine e SHA-256 delle fonti, archivio e albero XSD, digest compositi e compilazione del main schema;
 - il catalogo derivato, i validator e le fixture sintetiche sono versionati nel repository;
 - le fixture non contengono pratiche reali né riproduzioni estese dei PDF;
 - la rigenerazione del catalogo è bloccata se manca un artefatto, un hash non coincide, un percorso XSD cambia o lo schema non compila;
@@ -439,7 +405,7 @@ Scartata. OCR, parsing, calcoli, mapping e controlli deterministici non richiedo
 | Windows | Chrome ed Edge |
 | iPhone/iPad | Safari, senza app nativa |
 
-SuccessioniOnLine è già installato e funzionante sia su macOS sia su Windows. Quando M0/M1 richiedono prove sul software ufficiale, Codex può accedere direttamente a entrambe le installazioni e svolgere i test sui due sistemi.
+SuccessioniOnLine è già installato e funzionante sia su macOS sia su Windows. Quando le prove di interoperabilità richiedono il software ufficiale, Codex può accedere direttamente a entrambe le installazioni e svolgere i test sui due sistemi.
 
 ## 3.3 Vincoli economici
 
@@ -484,11 +450,11 @@ Sequent è un assistente operativo per dichiarazioni di successione, non un sost
 
 ---
 
-# 5. Scope e non-scope della 1.0
+# 5. Scope e non-scope iniziale
 
 ## 5.1 Scope funzionale
 
-La 1.0 comprende:
+Il perimetro iniziale comprende:
 
 - dichiarazioni telematiche correnti compatibili con il modello ufficiale per successioni aperte dal 3 ottobre 2006;
 - prima dichiarazione e dichiarazioni sostitutive di tipo 1, 2 e 3, oltre alle ulteriori dichiarazioni che secondo le istruzioni si affiancano senza sostituire la precedente;
@@ -513,7 +479,7 @@ La 1.0 comprende:
 - modalità manuale assistita per casistiche non ancora automatizzate;
 - copertura formale del frontespizio e dei quadri EA, EB, EC, ED, EE, EF, EG, EH, EI, EL, EM, EN, EO, EP, EQ ed ER secondo `SRC-03`;
 - mapping tecnico coerente con `Frontespizio`, `QuadroEA`, `QuadroEB`, `QuadroEC`, `QuadroED`, `QuadroEE`, `QuadroEF`, `QuadroEG`, `QuadroEH`, `QuadroEI_new`, `QuadroEL`, `QuadroEM`, `QuadroEN`, `QuadroEO`, `QuadroEP`, `QuadroEQ` e `QuadroER` secondo `SRC-08`, `SRC-07` e `SRC-09`;
-- conformità dei dati, degli allegati e del pacchetto finale al source bundle della sezione 0.8.
+- conformità dei dati, degli allegati e del pacchetto finale al source bundle identificato dal manifest macchina.
 
 Il supporto di una tipologia di dichiarazione non implica interpretazione automatica di ogni casistica giuridica. Aziende, partecipazioni complesse, beni esteri, trust, eredità giacenti e fattispecie internazionali possono essere completati manualmente **solo quando il modello telematico ufficiale ammette la fattispecie**. La modalità manual assisted non può aggirare un divieto: trust di scopo puro, ipotesi miste in cui non tutti i beni sono conferiti nel trust e ogni altro caso rinviato al Modello 4 o all’ufficio restano fuori dall’export Sequent.
 
@@ -533,7 +499,7 @@ Il supporto di una tipologia di dichiarazione non implica interpretazione automa
 
 ## 5.3 Non-scope
 
-Non rientrano nella 1.0:
+Non rientrano nel perimetro iniziale:
 
 - presentazione telematica diretta da Sequent;
 - sostituzione di SuccessioniOnLine;
@@ -582,7 +548,7 @@ senza interventi tecnici e con un risparmio sostanziale rispetto all'inserimento
 
 ## 6.2 Successo DIZ
 
-Il writer/parser supera il gate della sezione 55: round-trip su più pratiche, macOS e Windows, salvataggio ufficiale, generazione telematico, allegati e preservazione dei blocchi sconosciuti.
+Il writer/parser supera `TG-DIZ`: round-trip su più pratiche, macOS e Windows, salvataggio ufficiale, generazione telematico, allegati e preservazione dei blocchi sconosciuti.
 
 ## 6.3 Successo dell'estrazione
 
@@ -607,7 +573,7 @@ Prima del percorso ordinario:
 
 Sequent non è pronto finché:
 
-- i dieci artefatti e l’albero XSD coincidono con i manifest della sezione 0.8;
+- gli artefatti e l'albero XSD coincidono con i rispettivi manifest macchina;
 - il catalogo copre tutti i campi visibili e tecnici del perimetro telematico;
 - ogni regola applicativa possiede provenienza ufficiale;
 - gli overlay correnti `SRC-01` e `SRC-09` risultano applicati e testati, mentre `SRC-02` e `SRC-06` risultano riconciliati come lineage;
@@ -630,7 +596,7 @@ Sequent non è pronto finché:
 | **Fonte** | documento, pagina e posizione da cui deriva un dato |
 | **Fatto** | valore estratto o inserito, con origine e stato |
 | **Decisione** | scelta umana autorevole, per esempio devoluzione o fonte prevalente |
-| **Source bundle** | insieme immutabile dei dieci artefatti ufficiali e dell’albero XSD identificati da manifest e hash |
+| **Source bundle** | insieme immutabile degli artefatti ufficiali e dell’albero XSD identificati da manifest e hash |
 | **Catalogo ufficiale** | rappresentazione macchina-leggibile di modello, istruzioni, XSD, controlli e delta con provenienza puntuale |
 | **Ruleset** | insieme eseguibile delle regole derivate da uno specifico source bundle |
 | **Controllo** | verifica deterministica con severità |
@@ -792,7 +758,7 @@ Non deve essere possibile chiudere una scheda e perdere silenziosamente modifich
 
 ## 11.4 Scorciatoie
 
-La 1.0 offre scorciatoie documentate per:
+Il perimetro iniziale offre scorciatoie documentate per:
 
 - confermare e passare al successivo;
 - rifiutare una proposta;
@@ -905,7 +871,7 @@ L'utente può confermare o correggere. Il file ricevuto resta sempre disponibile
 
 Qualsiasi file può essere caricato e conservato. Soltanto i formati riconosciuti vengono elaborati automaticamente.
 
-Macro, script e contenuti attivi non vengono eseguiti. Gli archivi devono avere protezioni minime contro path traversal ed espansioni anomale. Non è prevista nella 1.0 una piattaforma antivirus o quarantena dedicata; un file sconosciuto resta inerte e scaricabile.
+Macro, script e contenuti attivi non vengono eseguiti. Gli archivi devono avere protezioni minime contro path traversal ed espansioni anomale. Nel perimetro iniziale non è prevista una piattaforma antivirus o quarantena dedicata; un file sconosciuto resta inerte e scaricabile.
 
 ## 13.5 Stato documento
 
@@ -1548,7 +1514,7 @@ In base alla pratica, Sequent:
 
 ## 21.2 Preparazione allegati telematici
 
-Sequent può accettare come originali tutti i formati della sezione 42, ma il **derivato finale da allegare alla dichiarazione** deve rispettare `SRC-08` e le relative prescrizioni documentate in `SRC-07`:
+Sequent può accettare come originali tutti i formati definiti in «Formati e limiti di caricamento», ma il **derivato finale da allegare alla dichiarazione** deve rispettare `SRC-08` e le relative prescrizioni documentate in `SRC-07`:
 
 - formato TIF/TIFF oppure PDF/A-1a/PDF/A-1b;
 - TIF/TIFF in bianco e nero, risoluzione non superiore a 300 DPI e compressione CCITT Group IV;
@@ -1636,7 +1602,7 @@ Documenti, soggetti e beni possono essere condivisi nel procedimento. Una dichia
 
 ## 22.3 Importazione storica
 
-La 1.0 non richiede migrazione massiva. Le pratiche storiche vengono importate quando servono, tramite:
+Il perimetro iniziale non richiede migrazione massiva. Le pratiche storiche vengono importate quando servono, tramite:
 
 - DIZ;
 - documenti;
@@ -1688,7 +1654,7 @@ Quando necessarie e compatibili con tali condizioni sono previste:
 - decompilazione limitata alle parti indispensabili;
 - costruzione autonoma di parser e writer.
 
-Se l'obiettivo richiede attività oltre il perimetro strettamente necessario all'interoperabilità, il lavoro si arresta e si apre la decisione legale condizionale della sezione 60 prima di procedere.
+Se l'obiettivo richiede attività oltre il perimetro strettamente necessario all'interoperabilità, il lavoro si arresta e si apre la decisione legale pertinente in «Decisioni condizionate dagli spike» prima di procedere.
 
 ## 23.4 Corpus
 
@@ -1889,7 +1855,7 @@ Omonimi, codici fiscali discordanti e identificativi incompleti non vengono unit
 
 ## 27.1 Scadenze
 
-La 1.0 gestisce le scadenze essenziali descritte nel Fascicolo 1:
+Il perimetro iniziale gestisce le scadenze essenziali descritte nel Fascicolo 1:
 
 - termine ordinario di dodici mesi dalla data del decesso;
 - decorrenze alternative previste per nomina di rappresentanti/curatori/trustee/esecutori, liquidazione giudiziale, possesso temporaneo, morte presunta, beneficio d'inventario, rinuncia, eventi sopravvenuti ed enti in attesa di riconoscimento;
@@ -2030,7 +1996,7 @@ L'audit residuo non deve conservare i documenti o i dati personali eliminati.
 
 La VPS è la fonte primaria. L'utente può rendere offline soltanto le pratiche selezionate; non esiste una replica modificabile automatica dell'intero archivio nel browser.
 
-Il download completo dell'archivio è il backup della sezione 37, non una funzione di sincronizzazione offline.
+Il download completo dell'archivio è il backup definito in «Backup e ripristino», non una funzione di sincronizzazione offline.
 
 ## 31.2 Funzioni garantite offline
 
@@ -2080,7 +2046,7 @@ Se la pratica è cambiata anche sul server, Sequent non costruisce un merge univ
 1. mantenere la versione server;
 2. salvare la versione locale come copia separata da confrontare e importare manualmente.
 
-Il confronto a tre vie resta obbligatorio soltanto per il round-trip DIZ della sezione 24.
+Il confronto a tre vie resta obbligatorio soltanto per il flusso definito in «Round-trip con SuccessioniOnLine».
 
 ## 32.2 Nessun blocco preventivo
 
@@ -2324,7 +2290,7 @@ Per le prove ordinarie bastano fixture sintetiche e il corpus privato. I risulta
 - web app pura e responsive;
 - SvelteKit come frontend e backend;
 - una sola codebase TypeScript;
-- un solo container/processo applicativo nella 1.0;
+- un solo container/processo applicativo nel perimetro iniziale;
 - nessuna app desktop o nativa;
 - eventuale componente locale soltanto come fallback DIZ dimostrato necessario.
 
@@ -2363,7 +2329,7 @@ I moduli hanno confini chiari e test, ma non diventano microservizi.
 
 Il processo SvelteKit gestisce web, API e coda persistente. OCRmyPDF, Tesseract, ImageMagick, LibreOffice e Codex vengono avviati come processi figli con timeout e limiti di risorse. Un solo lavoro pesante viene eseguito alla volta.
 
-Se il processo applicativo si riavvia, i job `running` vengono marcati come interrotti e ripresi o ritentati in modo idempotente. La separazione in un worker dedicato resta una futura ottimizzazione basata su misure, non una fondazione della 1.0.
+Se il processo applicativo si riavvia, i job `running` vengono marcati come interrotti e ripresi o ritentati in modo idempotente. La separazione in un worker dedicato resta una futura ottimizzazione basata su misure, non una fondazione del perimetro iniziale.
 
 ## 38.5 Browser-first
 
@@ -2375,9 +2341,9 @@ Il browser riceve soltanto ciò che serve alla pratica aperta. Funzioni server-o
 
 ## 39.1 Modello canonico semplice
 
-Lo stato completo di ogni dichiarazione è un documento JSON validato e versionato. SQLite governa elenco pratiche, documenti, job, sessioni, ricerca, audit essenziale e anagrafiche/beni condivisi già previsti dalla sezione 26.
+Lo stato completo di ogni dichiarazione è un documento JSON validato e versionato. SQLite governa elenco pratiche, documenti, job, sessioni, ricerca, audit essenziale e anagrafiche/beni condivisi definiti in «Anagrafiche e beni riutilizzabili».
 
-Non viene creata nella 1.0 una proiezione relazionale completa di ogni campo ministeriale.
+Nel perimetro iniziale non viene creata una proiezione relazionale completa di ogni campo ministeriale.
 
 Tabelle iniziali indicative:
 
@@ -2414,7 +2380,7 @@ La provenienza dei singoli campi può essere incorporata nel JSON anziché dupli
 
 - stato corrente aggiornato tramite autosave;
 - diff e cronologia per le modifiche ordinarie;
-- snapshot completi soltanto nei casi della sezione 29.2;
+- snapshot completi soltanto nei casi definiti in «Salvataggio, revisioni e storico»;
 - snapshot immutabile della dichiarazione presentata.
 
 ## 39.4 Documenti su filesystem
@@ -2502,15 +2468,15 @@ La UI mostra fase, avanzamento, errore, annullamento e retry. Chiudere il browse
 
 | Componente | Decisione |
 |---|---|
-| Node | linea 26 stabile, pin esatto; deroga consapevole alla raccomandazione LTS finché è Current |
-| TypeScript | 7 come compilatore principale |
-| Compatibility TS | TypeScript 6 richiesto inizialmente dal tooling Svelte; rimozione solo dopo gate |
+| Node | linea stabile qualificata e pin esatto nei manifest eseguibili |
+| TypeScript | compilatore principale qualificato dalla toolchain |
+| Compatibility TS | versione richiesta dal tooling Svelte; rimozione solo dopo gate |
 | Svelte | linea stabile corrente |
 | SvelteKit | linea stabile corrente |
 | Adapter | adapter-node |
 | Package manager | npm, versione esatta |
 
-Node 26 e TypeScript 7 richiedono il gate `TG-TOOLCHAIN`; l'approvazione non autorizza a ignorare incompatibilità osservate. Fino all'ingresso di Node 26 in LTS deve restare disponibile un'immagine Node 24 qualificata per rollback. Il check Svelte basato su TypeScript 6 è inizialmente autorevole; `--tsgo` è una verifica aggiuntiva finché il tooling Svelte non supporta pienamente l'API TS7.
+Le versioni selezionate di Node e TypeScript richiedono il gate `TG-TOOLCHAIN`; l'approvazione non autorizza a ignorare incompatibilità osservate. Deve restare disponibile una toolchain di rollback qualificata finché la linea corrente non è stabilizzata. Il check Svelte compatibile con il tooling è autorevole; `--tsgo` resta una verifica aggiuntiva finché l'integrazione non è pienamente supportata.
 
 ## 41.3 Dipendenze runtime previste
 
@@ -2546,8 +2512,8 @@ L'elenco definitivo nasce dallo scaffolding; `package.json`, lockfile, Dockerfil
 
 - Oxfmt come unico formatter diretto;
 - Oxlint come unico linter diretto;
-- `oxlint-tsgolint` o equivalente per type-aware lint TS7;
-- `svelte-check` con compatibility layer TS6 come controllo autorevole iniziale;
+- `oxlint-tsgolint` o equivalente per type-aware lint;
+- `svelte-check` con il compatibility layer richiesto come controllo autorevole iniziale;
 - `svelte-check --tsgo` come controllo aggiuntivo quando compatibile;
 - Vitest;
 - Playwright.
@@ -2599,7 +2565,7 @@ L'adozione di Oxfmt è consapevole nonostante lo stato beta. Vincoli obbligatori
 
 ## 41.8 Oxlint ed ESLint
 
-Oxlint non copre universalmente ogni regola template Svelte, ma la combinazione Oxlint + svelte-check + test è approvata per la v1. ESLint entra solo se una regola concreta e importante non è coperta.
+Oxlint non copre universalmente ogni regola template Svelte, ma la combinazione Oxlint + svelte-check + test è approvata per il perimetro iniziale. ESLint entra solo se una regola concreta e importante non è coperta.
 
 ---
 
@@ -2713,7 +2679,7 @@ I permessi devono impedire al processo di build/test ordinario di modificare acc
 - nessun pannello amministrativo pubblico;
 - virtual host Caddy separato da Hub Fatture.
 
-Durante M0/M1 il servizio può rimanere non pubblicato e raggiungibile soltanto tramite canale amministrativo. La stessa istanza viene poi resa operativa senza duplicazione dei dati o promozione fra ambienti.
+Prima dell'attivazione autorizzata il servizio può rimanere non pubblicato e raggiungibile soltanto tramite canale amministrativo. La stessa istanza viene poi resa operativa senza duplicazione dei dati o promozione fra ambienti.
 
 ## 43.5 Runtime e deployment
 
@@ -2922,7 +2888,7 @@ Fuori dal repository pubblico, sotto `/opt/sequent/`:
 private/
 └── official-sources/
     ├── manifest.json
-    ├── dieci artefatti ufficiali verificati
+    ├── artefatti ufficiali verificati dal manifest
     └── albero XSD estratto e verificato
 ```
 
@@ -3039,15 +3005,15 @@ Golden file, modifiche one-field, round-trip semantico, unknown blocks, allegati
 
 ## 48.9 Gate CI
 
-Ogni PR e ogni release mantengono il livello di controllo definito nelle sezioni 46 e 52, inclusi Oxfmt, Oxlint, Svelte check, test, build, E2E pertinenti, browser matrix di release, benchmark e review Codex exact-HEAD. Non esiste un gate separato di tracciabilità documentale.
+Ogni PR e ogni release mantengono il livello di controllo definito in «Repository e workflow Git» e «Versioning, release e aggiornamenti», inclusi Oxfmt, Oxlint, Svelte check, test, build, E2E pertinenti, browser matrix di release, benchmark e review Codex exact-HEAD. Non esiste un gate separato di tracciabilità documentale.
 
 Dallo scaffolding SvelteKit, Svelte Doctor gira in CI sulle PR pertinenti e come scansione completa pianificata. `svelte-doctor` diventa required check dopo un'attivazione iniziale a zero finding non soppressi. Qualunque finding, errore operativo o output non interpretabile rende rosso il check; soltanto una soppressione stretta e motivata di un falso positivo può ripristinarlo. Il job non applica fix e non carica sorgenti, prompt o risultati verso servizi AI esterni.
 
-## 48.10 Suite di conformità alle dieci fonti
+## 48.10 Suite di conformità alle fonti ufficiali
 
 La suite ufficiale deve includere:
 
-- verifica hash e manifest dei dieci artefatti e dei 13 XSD;
+- verifica hash e manifest di tutti gli artefatti e XSD dichiarati;
 - coverage report di tutte le pagine/campi di `SRC-03` e di tutti gli elementi dichiarativi SUC13;
 - XSD validation e test di tipi, sequenze, choice, cardinalità ed enumerazioni;
 - test positivi e negativi per ogni annotazione tecnica convertita in regola;
@@ -3188,7 +3154,7 @@ Il processo smette di accettare nuove operazioni rischiose, interrompe o marca i
 - log errori recenti e stato ultimo backup visibili nell'app;
 - e-mail OCI soltanto per indisponibilità o disco critico, senza dati pratica.
 
-Non sono richieste dashboard tecniche complesse, classificazioni P0–P3 o allarmi dettagliati CPU/memoria nella 1.0.
+Nel perimetro iniziale non sono richieste dashboard tecniche complesse, classificazioni P0–P3 o allarmi dettagliati CPU/memoria.
 
 ## 51.2 Feature flag operative
 
@@ -3217,12 +3183,7 @@ Il runbook dell'istanza VPS copre soltanto:
 
 ## 52.1 Semantic Versioning
 
-```text
-1.0.0  prima release stabile
-1.0.1  fix compatibile
-1.1.0  funzione compatibile
-2.0.0  cambiamento incompatibile
-```
+Le release seguono `MAJOR.MINOR.PATCH`: major per cambiamenti incompatibili deliberati, minor per funzioni compatibili e patch per correzioni compatibili. La versione della release stabile iniziale viene scelta al momento della sua approvazione, non anticipata negli altri documenti.
 
 `package.json`, tag Git, changelog, GitHub Release e digest Docker identificano la release. L'istanza attiva usa soltanto release stabili approvate.
 
@@ -3250,12 +3211,12 @@ Restano confermati i gate rigorosi già scelti:
 - review Codex exact-HEAD;
 - nessun blocker aperto;
 - rollback verificabile;
-- chiusura dei Technical Gate pertinenti della sezione 55, incluso `TG-COMPLIANCE`;
+- chiusura dei Technical Gate pertinenti, incluso `TG-COMPLIANCE`;
 - source bundle verificato;
 - report di coverage ufficiale senza campi o regole non classificati nel perimetro dichiarato;
 - pacchetto sintetico accettato dal controllo ufficiale.
 
-L'accessibilità viene verificata sui requisiti pratici della sezione 53.5, senza audit WCAG formale separato.
+L'accessibilità viene verificata sui requisiti pratici definiti in «Brand, UI, accessibilità e localizzazione», senza audit WCAG formale separato.
 
 ## 52.4 Preflight sulle modifiche rischiose
 
@@ -3338,7 +3299,7 @@ Direzione concettuale confermata:
 
 ## 53.5 Accessibilità proporzionata
 
-Requisiti della 1.0:
+Requisiti del perimetro iniziale:
 
 - HTML semantico;
 - label e descrizioni;
@@ -3354,7 +3315,7 @@ Non è previsto un gate formale WCAG o una matrice screen reader a ogni release,
 
 ## 53.6 Lingua
 
-Solo italiano nella 1.0, con formati italiani, euro e timezone `Europe/Rome`. Codice e nomi tecnici restano in inglese; le stringhe visibili sono centralizzate senza introdurre un framework i18n sproporzionato.
+Solo italiano nel perimetro iniziale, con formati italiani, euro e timezone `Europe/Rome`. Codice e nomi tecnici restano in inglese; le stringhe visibili sono centralizzate senza introdurre un framework i18n sproporzionato.
 
 ---
 
@@ -3407,25 +3368,25 @@ Il prodotto deve essere mantenibile da Codex con documentazione e test, senza ri
 
 # 55. Technical spike e validation gate
 
-Un Technical Gate esiste soltanto quando una prova può cambiare materialmente architettura o fattibilità. Tutto il resto è un normale requisito o test della milestone.
+Un Technical Gate esiste soltanto quando una prova può cambiare materialmente architettura o fattibilità. Tutto il resto è un normale requisito o test del relativo risultato di implementazione.
 
 ## TG-COMPLIANCE — Pacchetto ufficiale completo
 
 **Criteri:**
 
-- i dieci artefatti della sezione 0.8 coincidono per SHA-256, dimensione e, per i PDF, numero di pagine;
+- tutti gli artefatti dichiarati coincidono per SHA-256, dimensione e, per i PDF, numero di pagine;
 - manifest, digest composito delle fonti e digest dell'albero XSD sono riproducibili;
-- tutti i 13 XSD di `SRC-08` sono well-formed e `SUC/xsd/fornituraSUC13_v1.xsd` compila usando esclusivamente le dipendenze locali del bundle;
+- tutti gli XSD dichiarati sono well-formed e il main schema indicato dal manifest compila usando esclusivamente le dipendenze locali del bundle;
 - tutti i campi del modello e gli elementi SUC13 del perimetro hanno mapping e provenienza;
 - Fascicolo 1, Fascicolo 2, guida di calcolo e relativi allegati sono tradotti in regole o classificazioni esplicite;
 - gli overlay correnti `SRC-01` e `SRC-09` sono applicati e testati integralmente;
 - `SRC-02` e `SRC-06` sono riconciliati come lineage e non possono reintrodurre regole superate;
 - la catena di autoliquidazione e tutti gli esempi di `SRC-10` hanno golden test con valori intermedi;
-- XSD, validator, allegati, dichiarazioni sostitutive e regole temporali superano la suite della sezione 48.10;
+- XSD, validator, allegati, dichiarazioni sostitutive e regole temporali superano la suite di conformità alle fonti ufficiali;
 - non restano elementi `unresolved` che possano alterare DIZ, calcoli, allegati o telematico;
 - il report di conformità è comprensibile e riproducibile.
 
-**Blocca:** congelamento del dominio, writer DIZ productizzato, M4, M6 e go-live.
+**Blocca:** congelamento del dominio, writer DIZ productizzato, flusso ufficiale e go-live.
 
 ## TG-DIZ — Identificazione e round-trip
 
@@ -3443,7 +3404,7 @@ Un Technical Gate esiste soltanto quando una prova può cambiare materialmente a
 
 ## TG-DOCUMENTS — Pipeline documentale ARM64
 
-**Criteri:** formati della sezione 42, OCR italiano, conversioni, limiti risorse, processi figli e assenza di impatto critico su Hub Fatture.
+**Criteri:** formati definiti in «Formati e limiti di caricamento», OCR italiano, conversioni, limiti risorse, processi figli e assenza di impatto critico su Hub Fatture.
 
 ## TG-OFFLINE — Browser reali
 
@@ -3461,7 +3422,7 @@ Ogni milestone contiene già i propri criteri di uscita; non esistono Definition
 
 ## M0 — Bootstrap VPS, repository, source bundle e DIZ Lab
 
-**Obiettivo:** partendo dall'unico ZIP consegnato all'agente, Codex verifica localmente il pacchetto, individua e valida la VPS, trasferisce autonomamente i file, predispone il layout `/opt/sequent/`, inizializza checkout e repository GitHub, colloca fuori Git i dieci artefatti ufficiali e l'albero XSD, verifica manifest/hash e prepara pipeline del catalogo, corpus DIZ privato e strumenti di analisi.
+**Obiettivo:** partendo dall'unico ZIP consegnato all'agente, Codex verifica localmente il pacchetto, individua e valida la VPS, trasferisce autonomamente i file, predispone il layout `/opt/sequent/`, inizializza checkout e repository GitHub, colloca fuori Git gli artefatti ufficiali e l'albero XSD, verifica manifest/hash e prepara pipeline del catalogo, corpus DIZ privato e strumenti di analisi.
 
 **Uscita:** trasferimento e bootstrap eseguiti da Codex senza comandi manuali delegati all'owner; VPS preflight completato; checkout separato da runtime e dati; repository GitHub creato e privati esclusi; source bundle verificato localmente e sulla VPS; scheletro del catalogo derivato; ambiente riproducibile e piano eseguibile per `TG-COMPLIANCE` e `TG-DIZ`; nessun hostname pubblico o UI completa richiesti.
 
@@ -3569,7 +3530,7 @@ Ogni milestone contiene già i propri criteri di uscita; non esistono Definition
 
 | ID | Requisito |
 |---|---|
-| SEQ-C01 | I dieci artefatti della sezione 0.8, inclusi archivio e albero XSD verificato, costituiscono il source bundle vincolante della 1.0 |
+| SEQ-C01 | Tutti gli artefatti del manifest macchina, inclusi archivio e albero XSD verificato, costituiscono il source bundle vincolante del perimetro iniziale |
 | SEQ-C02 | Ogni campo e regola applicativa conserva provenienza fino a fonte, pagina/sezione e percorso tecnico |
 | SEQ-C03 | `SRC-01` e `SRC-09` sono overlay correnti e integralmente testati; `SRC-02` e `SRC-06` restano lineage non autorevole |
 | SEQ-C04 | Modello, istruzioni, guida di calcolo, XSD e specifiche sono riconciliati in un catalogo macchina-leggibile completo |
@@ -3597,7 +3558,7 @@ Ogni milestone contiene già i propri criteri di uscita; non esistono Definition
 | ID | Requisito |
 |---|---|
 | SEQ-D01 | Originali immutabili, hash e deduplicazione |
-| SEQ-D02 | Supporto ai formati e agli output definiti nelle sezioni 21 e 42 |
+| SEQ-D02 | Supporto ai formati e agli output definiti in «Checklist documentale, allegati e output» e «Formati e limiti di caricamento» |
 | SEQ-D03 | OCR/conversioni server-side con un solo job pesante |
 | SEQ-D04 | Ogni dato mostra fonte, pagina, metodo e affidabilità |
 | SEQ-D05 | Correzioni manuali autorevoli e non sovrascritte |
@@ -3658,7 +3619,7 @@ Ogni milestone contiene già i propri criteri di uscita; non esistono Definition
 | Rimozione del compatibility layer TypeScript 6 | tooling Svelte pienamente compatibile con TS7 |
 | Integrazione Codex disabilitata stabilmente sull'istanza | login headless/subscription non risulta mantenibile |
 | Limitazione ulteriore dell'offline | `TG-OFFLINE` evidenzia limiti reali di Safari/Chromium |
-| Modulo/librerie finali per DOCX/XLSX/PDF | implementazione degli output della sezione 21 |
+| Modulo/librerie finali per DOCX/XLSX/PDF | implementazione degli output definiti in «Checklist documentale, allegati e output» |
 | Stop legale sull'analisi DIZ | l'interoperabilità richiede attività oltre il perimetro strettamente necessario |
 
 La chiusura richiede una prova e, se la scelta è difficile da invertire, un ADR.
@@ -3708,7 +3669,7 @@ La chiusura richiede una prova e, se la scelta è difficile da invertire, un ADR
 
 # 62. Quality bar finale
 
-Sequent 1.0 è pronta quando:
+La release stabile iniziale di Sequent è pronta quando:
 
 1. `TG-COMPLIANCE` e `TG-DIZ` sono qualificati;
 2. ogni dato critico mostra la provenienza e non viene accettato erroneamente in silenzio;
@@ -3735,20 +3696,7 @@ Sequent 1.0 è pronta quando:
 
 ## Pacchetto Agenzia delle Entrate
 
-Le dieci fonti della sezione 0.8 sono incorporate nel progetto tramite manifest, catalogo e test. Non sono un semplice elenco di link.
-
-| ID | Titolo/contenuto | Autorità nel progetto |
-|---|---|---|
-| `SRC-01` | Aggiornamento 15 luglio 2025 delle istruzioni, Fascicolo 1 | override puntuale di `SRC-05` |
-| `SRC-02` | Elenco modifiche di febbraio 2025 alle specifiche tecniche | lineage e regressione; non prevale sulle fonti correnti |
-| `SRC-03` | Modello ufficiale della dichiarazione | campi, label, quadri, ordine e testi visibili |
-| `SRC-04` | Fascicolo 2 | semantica e istruzioni dei quadri EL–EQ |
-| `SRC-05` | Fascicolo 1 aggiornato | istruzioni generali, frontespizio, EA–EI/ER e Allegati 1–5 |
-| `SRC-06` | Specifiche tecniche SUC13 del 3 febbraio 2025 | baseline superata, conservata soltanto per diff |
-| `SRC-07` | Specifiche tecniche SUC13 consolidate del 2 luglio 2025 | documentazione umana corrente di struttura, controlli e annotazioni |
-| `SRC-08` | Archivio ufficiale XSD del 2 luglio 2025 | fonte macchina-leggibile corrente per XML/XSD e validazione locale |
-| `SRC-09` | Elenco modifiche tecniche del 15 luglio 2025 | override puntuale corrente di `SRC-07`/`SRC-08` |
-| `SRC-10` | Guida ai passaggi di calcolo dell'imposta di successione | fonte specialistica per l'autoliquidazione dal 1° gennaio 2025 |
+Le fonti identificate dal manifest macchina sono incorporate nel progetto tramite catalogo e test. Titoli, date, file, stato e autorità di ogni `SRC-*` non vengono duplicati qui; si leggono da `src/domain/official-catalog/source-manifest.json`.
 
 Vincoli espressamente recepiti:
 
@@ -3847,7 +3795,7 @@ I link pubblici dell'Agenzia servono a rilevare aggiornamenti e a riacquisire le
 
 ## Principio di verifica
 
-Il pacchetto ufficiale completo della sezione 0.8 è la baseline vincolante iniziale. Le versioni esatte delle altre dipendenze e capacità vanno confermate sulla documentazione ufficiale e nell'ambiente reale. Nessuna citazione secondaria sostituisce il catalogo derivato, i test SUC13, il round-trip DIZ o il controllo di SuccessioniOnLine.
+Il pacchetto ufficiale completo identificato dal manifest macchina è la baseline vincolante iniziale. Le versioni esatte delle altre dipendenze e capacità vanno confermate sulla documentazione ufficiale e nell'ambiente reale. Nessuna citazione secondaria sostituisce il catalogo derivato, i test SUC13, il round-trip DIZ o il controllo di SuccessioniOnLine.
 
 ---
 
@@ -3870,23 +3818,23 @@ Codex deve:
 5. creare il repository GitHub pubblico quando autorizzato, chiedendo all'owner soltanto l'eventuale autenticazione interattiva;
 6. non creare ambienti Development, Staging o Production separati;
 7. predisporre e rispettare la separazione fra `repo/`, `runtime/`, `data/`, `private/`, `releases/`, `snapshots/` e `tmp/`;
-8. leggere le sezioni obbligatorie indicate in 0.7;
-9. verificare prima di tutto i dieci artefatti, l'albero XSD e i digest della sezione 0.8 sia prima sia dopo il trasferimento;
-10. non iniziare dalla UI completa né pubblicare il servizio durante M0 senza approvazione;
+8. seguire la matrice tematica definita in «Regola di lettura per gli agenti»;
+9. verificare prima di tutto tutti gli artefatti, l'albero XSD e i digest dichiarati dai manifest sia prima sia dopo il trasferimento;
+10. non iniziare dalla UI completa né pubblicare il servizio durante il bootstrap senza approvazione;
 11. preparare repository, source manifest, catalog pipeline e DIZ Lab direttamente sulla VPS;
-12. chiudere `TG-COMPLIANCE` e `TG-DIZ` prima delle milestone funzionali ampie;
+12. chiudere `TG-COMPLIANCE` e `TG-DIZ` prima delle funzioni che ne dipendono;
 13. fermarsi al Decision Gate se il writer DIZ non è affidabile o una fonte è irrisolta;
 14. mantenere PDF, ZIP/XSD ufficiali e dati reali fuori dal repository pubblico;
 15. non eseguire la working tree come servizio live e non usare i dati reali come fixture;
 16. provare migrazioni e operazioni rischiose su copie temporanee isolate;
 17. non copiare regole a mano in componenti isolati: generare/consumare il catalogo ufficiale;
-18. rispettare la sequenza delle milestone;
+18. rispettare la sequenza definita nel capitolo «Milestone di implementazione»;
 19. creare ADR soltanto per scelte stabili;
 20. aggiornare insieme codice, catalogo, test e documentazione essenziale.
 
 ## 64.3 Primo messaggio operativo consigliato
 
-> Apri l'unico ZIP allegato, leggi `START_HERE.md` e `CODEX_START_PROMPT.md` e gestisci tu verifica, individuazione della VPS, preflight, trasferimento, bootstrap `/opt/sequent/`, inizializzazione Git e creazione del repository GitHub. Non delegare comandi manuali all'owner: chiedi soltanto autenticazioni, selezioni o autorizzazioni indispensabili. Lavora poi direttamente sulla VPS nella singola installazione Sequent, senza ambienti Development, Staging o Production separati. Colloca fuori Git i dieci artefatti e l'albero XSD, ripeti le verifiche sul server, compila il main schema e prepara catalog pipeline e DIZ Lab. Non pubblicare ancora il servizio e non eseguire la working tree sui dati operativi. Produci il piano eseguibile di `TG-COMPLIANCE` e `TG-DIZ`, con coverage, golden test di `SRC-10`, fixture sintetiche, copie temporanee per prove rischiose, criteri di arresto e nessuna regola completata per inferenza.
+> Apri l'unico ZIP allegato, leggi `START_HERE.md` e `CODEX_START_PROMPT.md` e gestisci tu verifica, individuazione della VPS, preflight, trasferimento, bootstrap `/opt/sequent/`, inizializzazione Git e creazione del repository GitHub. Non delegare comandi manuali all'owner: chiedi soltanto autenticazioni, selezioni o autorizzazioni indispensabili. Lavora poi direttamente sulla VPS nella singola installazione Sequent, senza ambienti Development, Staging o Production separati. Colloca fuori Git tutti gli artefatti dichiarati e l'albero XSD, ripeti le verifiche sul server, compila il main schema e prepara catalog pipeline e DIZ Lab. Non pubblicare ancora il servizio e non eseguire la working tree sui dati operativi. Produci il piano eseguibile di `TG-COMPLIANCE` e `TG-DIZ`, con coverage, golden test di `SRC-10`, fixture sintetiche, copie temporanee per prove rischiose, criteri di arresto e nessuna regola completata per inferenza.
 
 ## 64.4 Modifiche future
 
@@ -3896,4 +3844,4 @@ Una modifica sostanziale indica decisione, motivazione, impatto e approvazione o
 
 - **Owner:** Matteo
 - **Prodotto:** Sequent
-- **Stato:** pronto per bootstrap VPS, M0, `TG-COMPLIANCE` e `TG-DIZ`, con XSD macchina-leggibili disponibili
+- **Stato operativo:** determinato da HEAD, gate e configurazione privata; non duplicato nel piano
