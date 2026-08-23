@@ -10,6 +10,8 @@ M0 — bootstrap VPS, repository, source bundle e DIZ Lab.
 
 Il servizio non è pubblicato e nessuna funzione applicativa è attiva. Il piano canonico è [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md).
 
+La configurazione del repository, i required checks e la procedura di review Codex exact-HEAD sono descritti nel [`runbook GitHub`](docs/runbooks/github.md).
+
 ## Verifiche M0
 
 Sulla VPS canonica:
