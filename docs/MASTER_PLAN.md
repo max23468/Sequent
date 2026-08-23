@@ -2296,9 +2296,9 @@ Per le prove ordinarie bastano fixture sintetiche e il corpus privato. I risulta
 
 ## 38.2 Stack applicativo
 
-- Svelte 5 e SvelteKit;
-- Node 26;
-- TypeScript 7 con compatibility TS6 finché necessaria;
+- Svelte e SvelteKit sulla linea qualificata dai manifest eseguibili;
+- Node.js sulla linea qualificata dai manifest eseguibili;
+- TypeScript con compatibility layer finché richiesto dal tooling;
 - SQLite;
 - filesystem content-addressed;
 - Zod;
@@ -2738,16 +2738,19 @@ OCR, LibreOffice e Codex eseguono un solo job pesante alla volta con limiti misu
 
 ## 45.1 Ambiente canonico
 
-Lo sviluppo avviene direttamente sulla VPS OCI nel checkout `/opt/sequent/repo/`. Il primo collegamento, il trasferimento del pacchetto e la creazione del checkout sono orchestrati da Codex a partire dall'unico ZIP consegnato sul Mac o sul PC Windows; dopo il bootstrap Codex continua a lavorare sul checkout remoto tramite Tailscale/SSH.
+La VPS OCI ospita l'unica istanza operativa, il checkout remoto `/opt/sequent/repo/`, le fonti ufficiali e i corpus privati. Il primo collegamento, il trasferimento del pacchetto e la creazione del checkout sono orchestrati da Codex a partire dall'unico ZIP consegnato sul Mac o sul PC Windows.
+
+Un clone locale è un ambiente di sviluppo ordinario e completo per codice, documentazione, dipendenze e test sintetici. Può essere usato come checkout principale di una sessione Codex e si sincronizza con il checkout VPS tramite Git. Non diventa per questo una seconda istanza Sequent, non ospita dati operativi o fonti ufficiali e non autorizza un runtime locale sui dati reali.
 
 Non esistono installazioni permanenti separate `development`, `staging` e `production`. Esistono una sola istanza, un solo database operativo, un solo archivio documentale, un solo hostname e un solo set di segreti.
 
 Mac e Windows restano:
 
 - client per accedere al checkout remoto;
+- ambienti locali di sviluppo e verifica con fixture sintetiche;
 - browser reali per Safari, Chrome ed Edge;
 - banchi di prova per SuccessioniOnLine e Java;
-- eventuali clone Git di emergenza, non ambienti canonici completi.
+- copie private della configurazione amministrativa strettamente necessaria a raggiungere e verificare la VPS, sempre escluse da Git.
 
 ## 45.2 Separazione checkout/runtime
 
@@ -2810,9 +2813,9 @@ Questo è un collaudo multipiattaforma del software ufficiale, non un secondo am
 
 ## 46.1 Repository e checkout VPS
 
-Nome tecnico consigliato: `sequent-successioni`. Visibilità pubblica. Nessuna licenza, salvo futura decisione.
+Repository: `Sequent`. Visibilità pubblica. Nessuna licenza, salvo futura decisione.
 
-Il checkout canonico è `/opt/sequent/repo/`. Codex inizializza il repository sulla VPS, crea autonomamente il remote GitHub pubblico quando autorizzato, configura le esclusioni private prima del primo commit e lavora su branch brevi. L'owner può dover completare l'autenticazione GitHub, ma non deve creare manualmente repository, remote o primi commit. Un clone locale è facoltativo e non è fonte canonica.
+Il checkout operativo canonico è `/opt/sequent/repo/`; i clone locali sono normali ambienti di sviluppo. Codex inizializza il repository sulla VPS, crea autonomamente il remote GitHub pubblico quando autorizzato, configura le esclusioni private prima del primo commit e lavora su branch brevi. L'owner può dover completare l'autenticazione GitHub, ma non deve creare manualmente repository, remote o primi commit. Git e l'HEAD esatto mantengono allineati i checkout senza trasformare il clone locale in una seconda istanza.
 
 ## 46.2 Branch e merge
 
@@ -3394,9 +3397,9 @@ Un Technical Gate esiste soltanto quando una prova può cambiare materialmente a
 
 **Fallimento:** apre il Decision Gate sul componente locale/Java minimo.
 
-## TG-TOOLCHAIN — Node 26, TypeScript 7 e Svelte
+## TG-TOOLCHAIN — Toolchain web e ARM64
 
-**Criteri:** build/dev server, Svelte check con compatibility TS6, TS7/tsgo, Oxlint, Oxfmt Svelte, Vitest, Playwright, adapter-node e immagine ARM64; immagine Node 24 disponibile per rollback finché Node 26 resta Current.
+**Criteri:** build/dev server, Svelte check con il compatibility layer richiesto, compilatore TypeScript primario, verifica `tsgo` quando compatibile, Oxlint, Oxfmt Svelte, Vitest, Playwright, adapter-node e immagine ARM64; toolchain di rollback qualificata finché la linea corrente non è stabilizzata.
 
 ## TG-CODEX — Subscription sulla VPS
 
@@ -3616,7 +3619,7 @@ Ogni milestone contiene già i propri criteri di uscita; non esistono Definition
 | Decisione | Quando si apre |
 |---|---|
 | DIZ puro TypeScript oppure componente locale/Java minimo | `TG-DIZ` non dimostra un writer affidabile |
-| Rimozione del compatibility layer TypeScript 6 | tooling Svelte pienamente compatibile con TS7 |
+| Rimozione del compatibility layer TypeScript | tooling Svelte pienamente compatibile con il compilatore primario |
 | Integrazione Codex disabilitata stabilmente sull'istanza | login headless/subscription non risulta mantenibile |
 | Limitazione ulteriore dell'offline | `TG-OFFLINE` evidenzia limiti reali di Safari/Chromium |
 | Modulo/librerie finali per DOCX/XLSX/PDF | implementazione degli output definiti in «Checklist documentale, allegati e output» |
@@ -3738,7 +3741,7 @@ I link pubblici dell'Agenzia servono a rilevare aggiornamenti e a riacquisire le
 ## Runtime e dati
 
 - Node.js release policy;
-- TypeScript 7 e compatibility tooling;
+- TypeScript e compatibility tooling;
 - SQLite, WAL, Online Backup API e FTS5;
 - better-sqlite3;
 - Zod;

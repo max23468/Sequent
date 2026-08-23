@@ -30,6 +30,10 @@ for (const file of markdownFiles) {
     violations.push(`${file}: replica identità o digest del bundle ufficiale`);
   }
 
+  if (/\b(?:Node(?:\.js)?|TypeScript|Svelte)\s+\d+\b/u.test(content)) {
+    violations.push(`${file}: replica una major tecnica definita nei manifest eseguibili`);
+  }
+
   if (satelliteExceptions.has(file)) continue;
 
   const checks = [
