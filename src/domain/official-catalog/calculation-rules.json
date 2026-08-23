@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "SUC-OFFICIAL-2025-07-15-FULL",
+  "status": "scaffold",
+  "rules": [],
+  "requiredGoldenSeries": [
+    "quota-ereditaria",
+    "presunzione-DN",
+    "franchigia-condivisa",
+    "riduzioni",
+    "imposta-estera",
+    "nuda-proprieta",
+    "debiti-sei-mesi",
+    "precedenti-successioni-donazioni",
+    "ratei-titoli"
+  ]
+}

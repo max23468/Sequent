@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "SUC-OFFICIAL-2025-07-15-FULL",
+  "status": "scaffold",
+  "fields": [],
+  "blockers": [
+    "TG-COMPLIANCE richiede l'inventario completo di SRC-03 e il mapping verso SRC-08/SRC-09."
+  ]
+}

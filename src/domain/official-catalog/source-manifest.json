@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 3,
+  "bundleId": "SUC-OFFICIAL-2025-07-15-FULL",
+  "officialTechnicalPage": "https://www.agenziaentrate.gov.it/portale/schede/dichiarazioni/dichiarazione-di-successione/specifiche-tecniche-dichiarazione-di-successione",
+  "compositeSha256": "f5c4dba027c36609216bd956bfb5dc29eef4978aaa2dc802d85b6e70277b1603",
+  "compositeMethod": "SHA-256 of ordered UTF-8 lines SRC-ID:sha256\\n",
+  "xsdTreeCompositeSha256": "aa6ec0d226d213447d27a79a5407d2f6a178cfe4962a64954aeeb1b6e238bb83",
+  "xsdTreeCompositeMethod": "SHA-256 of ordered UTF-8 lines relative/path:sha256\\n",
+  "precedence": [
+    "SRC-01 overrides SRC-05 only for the instruction portions explicitly modified.",
+    "SRC-09 overrides SRC-08 and SRC-07 only for the technical elements and controls explicitly modified.",
+    "SRC-08 is the current machine-readable authority for XML/XSD syntax, namespaces, types, order, cardinality, enumerations and imports; SRC-07 is the corresponding human-readable technical documentation.",
+    "SRC-10 is the specialist authority for the autoliquidation calculation process from 1 January 2025, together with the applicable instructions and technical constraints.",
+    "SRC-03 governs visible labels, field inventory, sections and order; SRC-04 and SRC-05 govern semantics and compilation instructions.",
+    "SRC-02 and SRC-06 are retained only as official lineage and regression material and cannot override SRC-07–SRC-09.",
+    "Unresolved conflicts block the affected export."
+  ],
+  "sources": [
+    {
+      "id": "SRC-01",
+      "alias": "istruzioni-fascicolo-1-update-2025-07-15.pdf",
+      "original": "elenco-modifiche-istruzioni-fascicolo-1.pdf",
+      "title": "Aggiornamento delle istruzioni per la compilazione — Fascicolo 1 — 15 luglio 2025",
+      "pages": 2,
+      "status": "current-overlay",
+      "role": "Overlay puntuale corrente delle istruzioni del Fascicolo 1.",
+      "bytes": 201322,
+      "sha256": "fb1c14f1f8f04a7c9804c66128b6905b68a221472a4322f34324e54bcc8d8857"
+    },
+    {
+      "id": "SRC-02",
+      "alias": "specifiche-tecniche-delta-2025-02.pdf",
+      "original": "903477a9-d3c9-f21b-3605-594ca021547f.pdf",
+      "title": "Elenco delle modifiche alle specifiche tecniche — febbraio 2025",
+      "pages": 7,
+      "status": "lineage",
+      "role": "Lineage ufficiale e regressione; già consolidato nelle specifiche correnti e non autorevole rispetto a SRC-07–SRC-09.",
+      "bytes": 267980,
+      "sha256": "fe2f724d38f19bc78dcb768835b20817f3e369179d8dac0393753f12771253f7"
+    },
+    {
+      "id": "SRC-03",
+      "alias": "modello-dichiarazione-successione-2025.pdf",
+      "original": "88520cc9-d27e-71f2-de07-8cd6f2a2953a.pdf",
+      "title": "Modello ufficiale — Dichiarazione di successione e domanda di volture catastali",
+      "pages": 18,
+      "status": "current",
+      "role": "Inventario visuale vincolante di informativa, frontespizio, quadri, sezioni, righi, etichette e ordine.",
+      "bytes": 1407364,
+      "sha256": "26a93d2e30be6e8cead56f53b175e956df4e8c1187db5521e2f461c404e2cce0"
+    },
+    {
+      "id": "SRC-04",
+      "alias": "istruzioni-fascicolo-2-2025.pdf",
+      "original": "7f369d23-164f-7679-a44e-fb941984bdcd.pdf",
+      "title": "Dichiarazione di successione e domanda di volture catastali — Fascicolo 2",
+      "pages": 17,
+      "status": "current",
+      "role": "Semantica, istruzioni e calcoli dei quadri EL, EM, EN, EO, EP ed EQ.",
+      "bytes": 484746,
+      "sha256": "33b50daccaab59927e80e78962f2c13c7d22d0483d3f8f8eba317e3107b2a413"
+    },
+    {
+      "id": "SRC-05",
+      "alias": "istruzioni-fascicolo-1-2025-07-15.pdf",
+      "original": "ebc28cca-a79f-5a00-5a9a-7e4b70611a6b.pdf",
+      "title": "Dichiarazione di successione e domanda di volture catastali — Fascicolo 1",
+      "pages": 70,
+      "status": "current",
+      "role": "Istruzioni generali, termini, documenti, ricevute, volture, frontespizio, quadri EA–EI/ER e Allegati 1–5; modificato puntualmente da SRC-01.",
+      "bytes": 1944639,
+      "sha256": "a760fa067890b645db49da2c496ef3481d5e4d0989be684e22450166ad9040f5"
+    },
+    {
+      "id": "SRC-06",
+      "alias": "specifiche-tecniche-suc13-2025-02-03-superseded.pdf",
+      "original": "1c3bb907-70d9-e4a3-2c1d-f0bbfe35f2ee.pdf",
+      "title": "Specifiche tecniche SUC13 — 3 febbraio 2025",
+      "pages": 1158,
+      "status": "superseded-reference",
+      "role": "Baseline superata, conservata per diff e non-regressione; non governa il writer corrente.",
+      "bytes": 8896200,
+      "sha256": "04b0a6dd51028c8a937cc6b8c8242f52b914a4b8b2c9259b7db3c54d34ac63e8"
+    },
+    {
+      "id": "SRC-07",
+      "alias": "specifiche-tecniche-suc13-2025-07-02.pdf",
+      "original": "Specifiche_SUC13_20250702.pdf",
+      "title": "Specifiche tecniche SUC13 consolidate — 2 luglio 2025",
+      "pages": 1103,
+      "status": "current",
+      "role": "Documentazione umana corrente di struttura, diagrammi, annotazioni e controlli SUC13.",
+      "bytes": 8885123,
+      "sha256": "1b01ebe137b8f870092f0334e8dabc81aecde79376b32c41cf066346365fcb1b"
+    },
+    {
+      "id": "SRC-08",
+      "alias": "specifiche-tecniche-suc13-xsd-2025-07-02.zip",
+      "original": "SUC13_20250702 2.zip",
+      "title": "Archivio ufficiale XSD SUC13 — 2 luglio 2025",
+      "pages": null,
+      "status": "current-machine-readable",
+      "role": "Fonte macchina-leggibile corrente: 13 XSD, main schema e dipendenze locali.",
+      "bytes": 91773,
+      "sha256": "1e63bd8bd4a79a401e4a2ce1a6580cf20eba2b533a2892361e375aa964c371e9"
+    },
+    {
+      "id": "SRC-09",
+      "alias": "specifiche-tecniche-delta-2025-07-15.pdf",
+      "original": "Elenco modifiche specifiche tecniche_15-07-2025.pdf",
+      "title": "Elenco modifiche alle specifiche tecniche — 15 luglio 2025",
+      "pages": 3,
+      "status": "current-overlay",
+      "role": "Overlay tecnico corrente su controlli, agevolazioni, trust, imposta e campi EA.",
+      "bytes": 237787,
+      "sha256": "af390406540a5763e55aa91bba1429c7f63dbd86907c16d4fcd12783ba291b07"
+    },
+    {
+      "id": "SRC-10",
+      "alias": "guida-calcolo-imposta-successione-autoliquidazione-2025.pdf",
+      "original": "All. Specifiche tecniche (passaggi calcolo imposta di successione).pdf",
+      "title": "Modalità di calcolo dell’imposta di successione — autoliquidazione",
+      "pages": 10,
+      "status": "current-specialist",
+      "role": "Fonte specialistica per formule, passaggi e golden test dell’autoliquidazione dal 1° gennaio 2025.",
+      "bytes": 534348,
+      "sha256": "2570aacc73d0ab903fd4b265f50cbf761dd280cd1639653694c991c105b3c447"
+    }
+  ],
+  "xsdArchive": {
+    "sourceId": "SRC-08",
+    "mainSchema": "SUC/xsd/fornituraSUC13_v1.xsd",
+    "fileCount": 13,
+    "activeDependencyClosure": [
+      "SUC/xsd/fornituraSUC13_v1.xsd",
+      "common/xsd/fornitura_v2.xsd",
+      "common/xsd/typesDati_v2.xsd",
+      "common/xsd/typesProvincie_v2.xsd",
+      "common/xsd/datiFiscali_v3.xsd",
+      "common/xsd/typesFiscali_v3.xsd",
+      "common/xsd/typeEventi_v3.xsd",
+      "common/xsd/telematico_v1.xsd",
+      "registro/xsd/typesReg_v2.xsd"
+    ],
+    "packagedButNotInActiveClosure": [
+      "common/xsd/datiFiscali_v4.xsd",
+      "common/xsd/esitoFornitura_v3.xsd",
+      "common/xsd/typesDati_v3.xsd",
+      "common/xsd/typesFiscali_v4.xsd"
+    ],
+    "wellFormed": true,
+    "mainSchemaCompiled": true,
+    "networkAccessUsed": false,
+    "bootstrapValidation": "lxml.etree.XMLSchema",
+    "entries": [
+      {
+        "path": "SUC/xsd/fornituraSUC13_v1.xsd",
+        "bytes": 293774,
+        "sha256": "25fe2af4fb11143fe9464bed6fc536f5166c41fe20c70fca1a4ba38feb9659b6"
+      },
+      {
+        "path": "common/xsd/datiFiscali_v3.xsd",
+        "bytes": 9525,
+        "sha256": "78ee6420d5ff4c3442581bd5591df2fb6435e6d0f2543582927f8f95f156654f"
+      },
+      {
+        "path": "common/xsd/datiFiscali_v4.xsd",
+        "bytes": 9678,
+        "sha256": "b5ff239c0cfd79512223ee3e9593df82f4f1ba2b9c90196432f6dbef8959e4a7"
+      },
+      {
+        "path": "common/xsd/esitoFornitura_v3.xsd",
+        "bytes": 5002,
+        "sha256": "f14b756a70fbc62f277b13fd87637430ec45179f9abae94ed1df4a58dca5b805"
+      },
+      {
+        "path": "common/xsd/fornitura_v2.xsd",
+        "bytes": 2530,
+        "sha256": "5ecf4c4ab126c6a41d44803cc150697984bfc243cb59cc4dd7cb9d3b63e9840f"
+      },
+      {
+        "path": "common/xsd/telematico_v1.xsd",
+        "bytes": 1560,
+        "sha256": "26b308aae266a241eb0d8a986174c69025cb8d383585e2c3eac3550d94ea5547"
+      },
+      {
+        "path": "common/xsd/typeEventi_v3.xsd",
+        "bytes": 2566,
+        "sha256": "c5e51d4194760a9f68bd229ae8066bd25488898113219b8587dae274f6415d7e"
+      },
+      {
+        "path": "common/xsd/typesDati_v2.xsd",
+        "bytes": 8764,
+        "sha256": "e59d133c627ea710243b5cf3ee2bf7cd42bd3d9f07bae07b755ed77c4523da9c"
+      },
+      {
+        "path": "common/xsd/typesDati_v3.xsd",
+        "bytes": 7506,
+        "sha256": "a78387e21326e3f331f32d4ccd3b2b383ebd4675e5c42793bad2e00cc657b280"
+      },
+      {
+        "path": "common/xsd/typesFiscali_v3.xsd",
+        "bytes": 19740,
+        "sha256": "3d54babe6dc90414d1931f24d6c4aaefe28cfd8aa81ed38ea508fba593d01235"
+      },
+      {
+        "path": "common/xsd/typesFiscali_v4.xsd",
+        "bytes": 19794,
+        "sha256": "065911d00046240599a3bb5544c63f0ae1fa8ab3c5cee40336cbe013632819e9"
+      },
+      {
+        "path": "common/xsd/typesProvincie_v2.xsd",
+        "bytes": 8331,
+        "sha256": "f1c68c41cc070214c7a86fdcbe14fa1ecf26c50adf855d9ce332b7079a262eb4"
+      },
+      {
+        "path": "registro/xsd/typesReg_v2.xsd",
+        "bytes": 254962,
+        "sha256": "dd063ba70fa820af4fa8cac29a1f1e63eb7992f30721303eed7f306e692410fc"
+      }
+    ]
+  }
+}

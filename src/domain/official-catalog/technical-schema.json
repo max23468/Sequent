@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "SUC-OFFICIAL-2025-07-15-FULL",
+  "sourceId": "SRC-08",
+  "mainSchema": "SUC/xsd/fornituraSUC13_v1.xsd",
+  "status": "verified-source-scaffold",
+  "elements": [],
+  "types": [],
+  "blockers": [
+    "Estrarre deterministicamente tipi, sequenze, choice, cardinalità, enumerazioni e annotazioni."
+  ]
+}

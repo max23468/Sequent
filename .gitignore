@@ -1,0 +1,39 @@
+# Dipendenze e output locali
+node_modules/
+coverage/
+dist/
+.cache/
+*.log
+
+# Configurazione e segreti
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Dati e volumi dell'istanza
+private/
+data/
+runtime/
+releases/
+snapshots/
+tmp/
+
+# Corpus e artefatti non pubblicabili
+corpus/
+real-corpus/
+client-data/
+*.diz
+*.suc
+*.telematico
+*.sqlite
+*.sqlite3
+*.db
+
+# Sistema operativo e editor
+.DS_Store
+.idea/
+.vscode/

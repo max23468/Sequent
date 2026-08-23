@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "SUC-OFFICIAL-2025-07-15-FULL",
+  "status": "m0-inventory",
+  "overlays": [
+    {
+      "sourceId": "SRC-09",
+      "page": 1,
+      "items": ["a", "b"],
+      "targets": ["Agevolazioni"],
+      "state": "observed-in-src08-annotations"
+    },
+    {
+      "sourceId": "SRC-09",
+      "page": 2,
+      "items": ["c", "d", "e", "f", "g", "h", "i", "j", "k", "l"],
+      "targets": [
+        "Riduzioni",
+        "ImpostaBollo_CopiaConforme",
+        "ImpostaNonDovuta",
+        "ImpostaCalcolata",
+        "ImpostaDaVersare",
+        "TempisticaPagamento",
+        "ValorePrecSucc",
+        "CodiceFiscale",
+        "TipoSoggetto",
+        "GradoParentela"
+      ],
+      "state": "observed-in-src08-annotations"
+    },
+    {
+      "sourceId": "SRC-09",
+      "page": 3,
+      "items": ["m", "o", "p"],
+      "targets": ["GradoParentela", "PortatoreHandicap"],
+      "state": "observed-in-src08-annotations"
+    },
+    {
+      "sourceId": "SRC-09",
+      "page": 3,
+      "items": ["n"],
+      "targets": [],
+      "state": "document-anomaly-empty-item"
+    },
+    {
+      "sourceId": "SRC-09",
+      "page": 3,
+      "items": ["q"],
+      "targets": ["Provincia"],
+      "state": "unresolved-exact-xsd-path-and-type"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "SUC-OFFICIAL-2025-07-15-FULL",
+  "status": "scaffold",
+  "generatedFrom": [
+    "source-manifest.json",
+    "xsd-manifest.json",
+    "form-fields.json",
+    "semantic-rules.json",
+    "calculation-rules.json",
+    "technical-schema.json",
+    "delta-overlays.json"
+  ],
+  "releaseEligible": false,
+  "blockers": ["TG-COMPLIANCE aperto", "TG-DIZ aperto"]
+}
