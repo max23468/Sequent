@@ -6,10 +6,11 @@
   "scripts": {
     "format:check": "oxfmt --check scripts tests src package.json tsconfig.json",
     "lint": "oxlint scripts tests",
+    "shell:check": "bash -n scripts/vps/*.sh",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/**/*.test.ts",
     "verify:boundary": "node scripts/check-public-boundary.mjs",
-    "verify:public": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run verify:boundary",
+    "verify:public": "npm run format:check && npm run lint && npm run shell:check && npm run typecheck && npm test && npm run verify:boundary",
     "verify:sources": "node scripts/official-sources/verify.ts",
     "diz:inspect": "node scripts/diz/inspect.ts"
   },
