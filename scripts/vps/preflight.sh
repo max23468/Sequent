@@ -9,6 +9,15 @@ fail() {
   exit 1
 }
 
+assert_layout() {
+  local relative_path="$1"
+  local expected="$2"
+  local actual
+  actual="$(stat -c '%U:%G:%a' "$expected_root/$relative_path")"
+  [[ "$actual" == "$expected" ]] ||
+    fail "layout non conforme per $relative_path: $actual != $expected"
+}
+
 [[ "$(hostname -s)" == "$expected_host" ]] || fail "hostname inatteso"
 [[ "$(uname -m)" == "aarch64" ]] || fail "architettura non ARM64"
 [[ -d /opt/hub-fatture ]] || fail "installazione Hub Fatture non rilevata"
@@ -18,10 +27,14 @@ for directory in repo runtime data private releases snapshots tmp; do
 done
 
 [[ ! -w "$expected_root/data" ]] || fail "il checkout può scrivere nei dati operativi"
-[[ "$(stat -c '%U:%G:%a' "$expected_root/data")" == "sequent-runtime:sequent-runtime:700" ]] ||
-  fail "proprietà o permessi data non conformi"
-[[ "$(stat -c '%U:%G:%a' "$expected_root/private")" == "ubuntu:ubuntu:700" ]] ||
-  fail "proprietà o permessi private non conformi"
+assert_layout . ubuntu:ubuntu:750
+assert_layout repo ubuntu:ubuntu:750
+assert_layout runtime ubuntu:ubuntu:750
+assert_layout data sequent-runtime:sequent-runtime:700
+assert_layout private ubuntu:ubuntu:700
+assert_layout releases ubuntu:ubuntu:750
+assert_layout snapshots ubuntu:ubuntu:700
+assert_layout tmp ubuntu:ubuntu:700
 
 "$expected_root/repo/scripts/vps/with-node.sh" node --version
 "$expected_root/repo/scripts/vps/with-node.sh" npm --version
