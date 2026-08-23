@@ -16,9 +16,10 @@ Sulla VPS canonica:
 
 ```bash
 cd /opt/sequent/repo
-npm ci
-npm run verify:public
-npm run verify:sources
+scripts/vps/with-node.sh npm ci
+scripts/vps/with-node.sh npm run verify:public
+scripts/vps/with-node.sh npm run verify:sources
+scripts/vps/preflight.sh
 ```
 
 `verify:sources` legge per default `/opt/sequent/private/official-sources/`, controlla manifest, dimensioni, pagine, hash, sicurezza dello ZIP, XSD e compilazione offline dello schema principale.
