@@ -2,11 +2,13 @@
 
 ## Target canonico
 
-- host: `fatture-hub-vm`, VPS OCI Milano;
-- accesso amministrativo: SSH come `ubuntu` tramite `fatture.opik.net`;
+- identità reale dell'host e target amministrativo: configurazione privata fuori da Git;
+- accesso amministrativo: alias SSH configurato localmente, senza utente o endpoint nel repository pubblico;
 - architettura: ARM64;
 - checkout: `/opt/sequent/repo/`;
-- nessun hostname o servizio Sequent attivo durante M0.
+- hostname e servizio Sequent restano inattivi finché non esiste un'autorizzazione esplicita all'attivazione.
+
+Il preflight legge per default `/opt/sequent/private/preflight.env`, posseduto dall'utente amministrativo e con modalità `0600`. Il file definisce `SEQUENT_EXPECTED_HOST` e `SEQUENT_SHARED_INSTALLATION_MARKER`; i valori effettivi non devono essere copiati in Git, PR, issue o log condivisi. `SEQUENT_PREFLIGHT_ENV` può indicare un file privato alternativo.
 
 ## Layout e proprietari
 
@@ -22,9 +24,9 @@
 
 Il runtime applicativo non è ancora installato. L'utente di sistema `sequent-runtime` non possiede login né home e riserva il confine dei dati operativi.
 
-## Toolchain M0
+## Toolchain
 
-Node `26.7.0` e npm `11.19.0` provengono dall'archivio ARM64 ufficiale verificato con `SHASUMS256.txt`. Il puntatore stabile è `/opt/sequent/runtime/toolchains/node-current`; non viene aggiunto al `PATH` globale per non interferire con Hub Fatture.
+Le versioni richieste di Node e npm sono definite dagli `engines` di `package.json` e dal lockfile. Sulla VPS provengono dall'archivio ARM64 ufficiale verificato con `SHASUMS256.txt`. Il puntatore stabile è `/opt/sequent/runtime/toolchains/node-current`; non viene aggiunto al `PATH` globale per non interferire con Hub Fatture.
 
 Usare il wrapper versionato:
 
@@ -36,12 +38,12 @@ scripts/vps/with-node.sh npm run verify:sources
 scripts/vps/preflight.sh
 ```
 
-Prerequisiti host M0: Git, rsync, unzip, `libxml2-utils`, `poppler-utils`, `python3-lxml` e `libatomic1`.
+Prerequisiti host: Git, rsync, unzip, `libxml2-utils`, `poppler-utils`, `python3-lxml` e `libatomic1`.
 
 ## Confini operativi
 
 - non eseguire la working tree come servizio;
 - non montare `/opt/sequent/data` nel checkout;
 - eseguire restore, migrazioni e import DIZ rischiosi soltanto su copie in `/opt/sequent/tmp`;
-- non modificare Caddy, Dynu, firewall o `/opt/hub-fatture` senza autorizzazione separata;
+- non modificare Caddy, Dynu, firewall o l'installazione condivisa indicata dalla configurazione privata senza autorizzazione separata;
 - non eliminare il source bundle privato finché non esiste una copia di sicurezza indipendente verificata.

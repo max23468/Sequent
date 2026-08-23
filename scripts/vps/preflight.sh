@@ -2,7 +2,7 @@
 set -euo pipefail
 
 expected_root="${SEQUENT_ROOT:-/opt/sequent}"
-expected_host="${SEQUENT_EXPECTED_HOST:-fatture-hub-vm}"
+preflight_env="${SEQUENT_PREFLIGHT_ENV:-$expected_root/private/preflight.env}"
 
 fail() {
   echo "ERRORE: $*" >&2
@@ -18,9 +18,33 @@ assert_layout() {
     fail "layout non conforme per $relative_path: $actual != $expected"
 }
 
-[[ "$(hostname -s)" == "$expected_host" ]] || fail "hostname inatteso"
+load_private_config() {
+  if [[ -z "${SEQUENT_EXPECTED_HOST:-}" || -z "${SEQUENT_SHARED_INSTALLATION_MARKER:-}" ]]; then
+    [[ -f "$preflight_env" ]] || fail "configurazione preflight privata mancante"
+    [[ -r "$preflight_env" ]] || fail "configurazione preflight privata non leggibile"
+    [[ "$(stat -c '%U:%a' "$preflight_env")" == "$(id -un):600" ]] ||
+      fail "proprietà o permessi della configurazione preflight non conformi"
+
+    # Il file è fidato soltanto dopo la verifica di proprietario e modalità.
+    # shellcheck source=/dev/null
+    source "$preflight_env"
+  fi
+
+  [[ -n "${SEQUENT_EXPECTED_HOST:-}" ]] || fail "hostname atteso non configurato"
+  [[ -n "${SEQUENT_SHARED_INSTALLATION_MARKER:-}" ]] ||
+    fail "marker dell'installazione condivisa non configurato"
+  [[ "$SEQUENT_SHARED_INSTALLATION_MARKER" == /* ]] ||
+    fail "il marker dell'installazione condivisa deve essere un percorso assoluto"
+  [[ "$SEQUENT_SHARED_INSTALLATION_MARKER" != "/" ]] ||
+    fail "marker dell'installazione condivisa non valido"
+}
+
+load_private_config
+
+[[ "$(hostname -s)" == "$SEQUENT_EXPECTED_HOST" ]] || fail "hostname inatteso"
 [[ "$(uname -m)" == "aarch64" ]] || fail "architettura non ARM64"
-[[ -d /opt/hub-fatture ]] || fail "installazione Hub Fatture non rilevata"
+[[ -d "$SEQUENT_SHARED_INSTALLATION_MARKER" ]] ||
+  fail "installazione condivisa attesa non rilevata"
 
 for directory in repo runtime data private releases snapshots tmp; do
   [[ -d "$expected_root/$directory" ]] || fail "directory mancante: $directory"

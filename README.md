@@ -2,17 +2,15 @@
 
 Sequent è un assistente operativo per dichiarazioni di successione. È un prodotto deterministico-first: rende visibili fonti e divergenze, conserva gli originali e mantiene il controllo professionale umano.
 
-Questo repository pubblico contiene esclusivamente codice, documentazione, cataloghi derivati e fixture sintetiche. Le dieci fonti ufficiali, gli XSD originali, i DIZ reali e i documenti dei clienti restano fuori da Git in `/opt/sequent/private/`.
+Questo repository pubblico contiene esclusivamente codice, documentazione, cataloghi derivati e fixture sintetiche. Le fonti ufficiali dichiarate dal manifest, gli XSD originali, i DIZ reali e i documenti dei clienti restano fuori da Git in `/opt/sequent/private/`.
 
-## Stato
+## Piano e operatività
 
-M0 — bootstrap VPS, repository, source bundle e DIZ Lab.
-
-Il servizio non è pubblicato e nessuna funzione applicativa è attiva. Il piano canonico è [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md).
+Il piano canonico e la sequenza di implementazione sono in [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md). Lo stato effettivo del software deriva dall'HEAD corrente, dai gate e dalla configurazione privata dell'istanza: non viene duplicato in questo README.
 
 La configurazione del repository, i required checks e la procedura di review Codex exact-HEAD sono descritti nel [`runbook GitHub`](docs/runbooks/github.md).
 
-## Verifiche M0
+## Verifiche fondamentali
 
 Sulla VPS canonica:
 
