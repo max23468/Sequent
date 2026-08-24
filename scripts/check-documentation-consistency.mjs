@@ -49,6 +49,17 @@ for (const file of markdownFiles) {
 }
 
 const masterPlan = readFileSync("docs/MASTER_PLAN.md", "utf8");
+const requiredWindowsDizPolicy = [
+  "La mancata esecuzione del collaudo Windows non blocca",
+  "Una divergenza DIZ riproducibile e confermata blocca l'output interessato",
+];
+
+for (const policy of requiredWindowsDizPolicy) {
+  if (!masterPlan.includes(policy)) {
+    violations.push(`docs/MASTER_PLAN.md: policy DIZ Windows incompleta: ${policy}`);
+  }
+}
+
 const milestoneStart = masterPlan.indexOf("# 56. Milestone di implementazione");
 const milestoneEnd = masterPlan.indexOf("# 57. Risk register essenziale");
 
