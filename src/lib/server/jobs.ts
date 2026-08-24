@@ -116,12 +116,3 @@ export function finishJob(database: Database.Database, id: string, errorCode?: s
       id,
     );
 }
-
-export function countActiveJobs(database: Database.Database): number {
-  const row = database
-    .prepare("SELECT count(*) AS count FROM jobs WHERE status IN ('queued', 'running')")
-    .get() as {
-    count: number;
-  };
-  return row.count;
-}

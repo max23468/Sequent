@@ -5,6 +5,7 @@ export interface PracticeSummary {
   id: string;
   title: string;
   status: "active" | "archived" | "trashed";
+  declarationId: string;
   revision: number;
   documentCount: number;
   updatedAt: string;
@@ -25,23 +26,46 @@ export interface DocumentIndexItem extends DocumentSummary {
 
 export function createPractice(database: Database.Database, title: string): PracticeSummary {
   const id = randomUUID();
+  const declarationId = randomUUID();
   const now = new Date().toISOString();
   const declaration = { schemaVersion: 1, fields: {}, sources: {}, decisions: [] };
-  database
-    .prepare(
-      `INSERT INTO practices(id, title, status, revision, declaration_json, created_at, updated_at)
-       VALUES (?, ?, 'active', 1, ?, ?, ?)`,
-    )
-    .run(id, title, JSON.stringify(declaration), now, now);
-  return { id, title, status: "active", revision: 1, documentCount: 0, updatedAt: now };
+  database.transaction(() => {
+    database
+      .prepare(
+        `INSERT INTO practices(id, title, status, created_at, updated_at)
+         VALUES (?, ?, 'active', ?, ?)`,
+      )
+      .run(id, title, now, now);
+    database
+      .prepare(
+        `INSERT INTO declarations(id, practice_id, sequence, revision, declaration_json, created_at, updated_at)
+         VALUES (?, ?, 1, 1, ?, ?, ?)`,
+      )
+      .run(declarationId, id, JSON.stringify(declaration), now, now);
+  })();
+  return {
+    id,
+    title,
+    status: "active",
+    declarationId,
+    revision: 1,
+    documentCount: 0,
+    updatedAt: now,
+  };
 }
 
 export function listPractices(database: Database.Database): PracticeSummary[] {
   const rows = database
     .prepare(
-      `SELECT practices.id, practices.title, practices.status, practices.revision,
+      `SELECT practices.id, practices.title, practices.status,
+              declarations.id AS declaration_id, declarations.revision,
               practices.updated_at, count(documents.id) AS document_count
        FROM practices
+       JOIN declarations ON declarations.practice_id = practices.id
+         AND declarations.sequence = (
+           SELECT max(latest.sequence) FROM declarations AS latest
+           WHERE latest.practice_id = practices.id
+         )
        LEFT JOIN documents ON documents.practice_id = practices.id
        WHERE practices.status = 'active'
        GROUP BY practices.id
@@ -51,6 +75,7 @@ export function listPractices(database: Database.Database): PracticeSummary[] {
     id: string;
     title: string;
     status: PracticeSummary["status"];
+    declaration_id: string;
     revision: number;
     document_count: number;
     updated_at: string;
@@ -59,6 +84,7 @@ export function listPractices(database: Database.Database): PracticeSummary[] {
     id: row.id,
     title: row.title,
     status: row.status,
+    declarationId: row.declaration_id,
     revision: row.revision,
     documentCount: row.document_count,
     updatedAt: row.updated_at,
@@ -71,9 +97,15 @@ export function getPractice(
 ): PracticeSummary | null {
   const row = database
     .prepare(
-      `SELECT practices.id, practices.title, practices.status, practices.revision,
+      `SELECT practices.id, practices.title, practices.status,
+              declarations.id AS declaration_id, declarations.revision,
               practices.updated_at, count(documents.id) AS document_count
        FROM practices
+       JOIN declarations ON declarations.practice_id = practices.id
+         AND declarations.sequence = (
+           SELECT max(latest.sequence) FROM declarations AS latest
+           WHERE latest.practice_id = practices.id
+         )
        LEFT JOIN documents ON documents.practice_id = practices.id
        WHERE practices.id = ? AND practices.status = 'active'
        GROUP BY practices.id`,
@@ -83,6 +115,7 @@ export function getPractice(
         id: string;
         title: string;
         status: PracticeSummary["status"];
+        declaration_id: string;
         revision: number;
         document_count: number;
         updated_at: string;
@@ -93,6 +126,7 @@ export function getPractice(
         id: row.id,
         title: row.title,
         status: row.status,
+        declarationId: row.declaration_id,
         revision: row.revision,
         documentCount: row.document_count,
         updatedAt: row.updated_at,
@@ -159,18 +193,28 @@ export function listDocuments(database: Database.Database): DocumentIndexItem[] 
 
 export function saveDeclaration(
   database: Database.Database,
-  practiceId: string,
+  declarationId: string,
   expectedRevision: number,
   declaration: unknown,
 ): number {
   const now = new Date().toISOString();
-  const result = database
-    .prepare(
-      `UPDATE practices
-       SET declaration_json = ?, revision = revision + 1, updated_at = ?
-       WHERE id = ? AND revision = ?`,
-    )
-    .run(JSON.stringify(declaration), now, practiceId, expectedRevision);
+  const result = database.transaction(() => {
+    const update = database
+      .prepare(
+        `UPDATE declarations
+         SET declaration_json = ?, revision = revision + 1, updated_at = ?
+         WHERE id = ? AND revision = ?`,
+      )
+      .run(JSON.stringify(declaration), now, declarationId, expectedRevision);
+    if (update.changes !== 1) throw new Error("REVISION_CONFLICT");
+    database
+      .prepare(
+        `UPDATE practices SET updated_at = ?
+         WHERE id = (SELECT practice_id FROM declarations WHERE id = ?)`,
+      )
+      .run(now, declarationId);
+    return update;
+  })();
   if (result.changes !== 1) throw new Error("REVISION_CONFLICT");
   return expectedRevision + 1;
 }

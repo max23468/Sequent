@@ -2403,7 +2403,7 @@ Gli originali e i derivati vivono in un content-addressed store per SHA-256. Scr
 
 1. file temporaneo sullo stesso filesystem;
 2. flush/hash;
-3. rename atomico;
+3. collegamento atomico nel content-addressed store senza sovrascrivere un blob già presente;
 4. transazione breve che collega il blob al documento;
 5. pulizia periodica degli orfani dopo un grace period.
 

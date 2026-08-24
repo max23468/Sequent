@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir, open, rename, rm, stat } from "node:fs/promises";
+import { link, mkdir, open, rm, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import type Database from "better-sqlite3";
 import { getDataDirectory, MAX_UPLOAD_BYTES } from "./config.ts";
@@ -49,20 +49,37 @@ export async function storeUpload(
     const sha256 = hash.digest("hex");
     const blobPath = join("blobs", sha256.slice(0, 2), sha256.slice(2));
     const absoluteBlobPath = join(dataDirectory, blobPath);
+    const existing = database
+      .prepare(
+        `SELECT id, sha256, byte_size, blob_path
+         FROM documents WHERE practice_id = ? AND sha256 = ?`,
+      )
+      .get(practiceId, sha256) as
+      | { id: string; sha256: string; byte_size: number; blob_path: string }
+      | undefined;
+    if (existing) {
+      await rm(temporaryPath, { force: true });
+      return {
+        id: existing.id,
+        sha256: existing.sha256,
+        byteSize: existing.byte_size,
+        blobPath: existing.blob_path,
+      };
+    }
     await mkdir(dirname(absoluteBlobPath), { recursive: true, mode: 0o700 });
     try {
-      await rename(temporaryPath, absoluteBlobPath);
+      await link(temporaryPath, absoluteBlobPath);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      await rm(temporaryPath, { force: true });
     }
+    await rm(temporaryPath, { force: true });
 
     const id = randomUUID();
     const now = new Date().toISOString();
     const safeOriginalName = file.name.replaceAll("\\", "/").split("/").at(-1) || "documento";
-    database
+    const insert = database
       .prepare(
-        `INSERT INTO documents(id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at)
+        `INSERT OR IGNORE INTO documents(id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
@@ -75,8 +92,27 @@ export async function storeUpload(
         blobPath,
         now,
       );
-    database.prepare("UPDATE practices SET updated_at = ? WHERE id = ?").run(now, practiceId);
-    return { id, sha256, byteSize, blobPath };
+    if (insert.changes === 1) {
+      database.prepare("UPDATE practices SET updated_at = ? WHERE id = ?").run(now, practiceId);
+      return { id, sha256, byteSize, blobPath };
+    }
+    const concurrentDuplicate = database
+      .prepare(
+        `SELECT id, sha256, byte_size, blob_path
+         FROM documents WHERE practice_id = ? AND sha256 = ?`,
+      )
+      .get(practiceId, sha256) as {
+      id: string;
+      sha256: string;
+      byte_size: number;
+      blob_path: string;
+    };
+    return {
+      id: concurrentDuplicate.id,
+      sha256: concurrentDuplicate.sha256,
+      byteSize: concurrentDuplicate.byte_size,
+      blobPath: concurrentDuplicate.blob_path,
+    };
   } catch (error) {
     destination.destroy();
     await rm(temporaryPath, { force: true });

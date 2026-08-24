@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (path: string) => readFileSync(path, "utf8");
@@ -8,7 +8,7 @@ const read = (path: string) => readFileSync(path, "utf8");
 test("il repository non pubblica target amministrativi SSH", () => {
   const tracked = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
     .split("\0")
-    .filter(Boolean);
+    .filter((path) => path && existsSync(path));
   const administrativeTarget = /\b(?:root|ubuntu|admin)@[a-z0-9][a-z0-9.-]+\.[a-z]{2,}\b/i;
   const remoteShellUrl = /\b(?:ssh|sftp):\/\/[^\s`]+/i;
 

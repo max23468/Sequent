@@ -28,6 +28,12 @@ describe("backup base", () => {
     createPractice(database, "Pratica nel backup");
     const ownerId = await createOwner(database, "FondazioneM2Sicura2026");
     issueSession(database, ownerId);
+    database
+      .prepare(
+        `INSERT INTO login_attempts(client_key, failed_count, blocked_until, updated_at)
+         VALUES ('client-sintetico', 2, NULL, ?)`,
+      )
+      .run(new Date().toISOString());
     await mkdir(join(dataDirectory, "blobs", "aa"), { recursive: true });
     writeFileSync(join(dataDirectory, "blobs", "aa", "fixture"), "contenuto sintetico");
     const backup = await createBaseBackup(database, dataDirectory, destination);
@@ -42,6 +48,10 @@ describe("backup base", () => {
     ).toBe(0);
     expect(
       (snapshot.prepare("SELECT count(*) AS count FROM sessions").get() as { count: number }).count,
+    ).toBe(0);
+    expect(
+      (snapshot.prepare("SELECT count(*) AS count FROM login_attempts").get() as { count: number })
+        .count,
     ).toBe(0);
     snapshot.close();
   });

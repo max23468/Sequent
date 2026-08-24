@@ -34,4 +34,29 @@ describe("content-addressed store", () => {
     };
     expect(row.original_name).toBe("visura.txt");
   });
+
+  it("deduplica i byte identici nella stessa pratica senza riscrivere l'originale", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-blob-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica sintetica");
+    const first = await storeUpload(
+      database,
+      practice.id,
+      new File(["stessi byte"], "prima-copia.pdf", { type: "application/pdf" }),
+      directory,
+    );
+    const duplicate = await storeUpload(
+      database,
+      practice.id,
+      new File(["stessi byte"], "seconda-copia.pdf", { type: "application/pdf" }),
+      directory,
+    );
+
+    expect(duplicate).toEqual(first);
+    expect(database.prepare("SELECT count(*) AS count FROM documents").get()).toMatchObject({
+      count: 1,
+    });
+    expect(readFileSync(join(directory, first.blobPath), "utf8")).toBe("stessi byte");
+  });
 });

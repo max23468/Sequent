@@ -109,11 +109,10 @@
         <div class="panel-empty recent-empty"><p>Non ci sono ancora pratiche.</p><span>Crea la prima pratica o carica un documento per iniziare.</span></div>
       {:else}
         <div class="responsive-table">
-          <div class="table-row table-header" aria-hidden="true"><span>Pratica</span><span>Documenti</span><span>Revisione</span><span>Stato</span><span>Aggiornato</span><span></span></div>
+          <div class="table-row table-header" aria-hidden="true"><span>Pratica</span><span>Documenti</span><span>Revisione</span><span>Aggiornato</span><span></span></div>
           {#each data.practices.slice(0, 6) as practice (practice.id)}
             <a class="table-row practice-row" href={`/pratiche/${practice.id}`}>
               <strong>{practice.title}</strong><span>{practice.documentCount}</span><span>{practice.revision}</span>
-              <span class="status-cell"><i aria-hidden="true"></i>Attiva</span>
               <time datetime={practice.updatedAt}>{formatDate(practice.updatedAt)}</time><ChevronRight size={19} aria-hidden="true" />
             </a>
           {/each}

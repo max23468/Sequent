@@ -52,3 +52,20 @@ test("su mobile nasconde i launcher e mantiene le azioni interne", async ({ page
   await expect(page.getByRole("button", { name: "Carica documenti" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Riprendi ultima pratica" })).toBeVisible();
 });
+
+test("su mobile carica un documento senza interferenze dalla navigazione fissa", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 402, height: 874 });
+  await authenticate(page);
+  await page.getByRole("link", { name: /Pratica sintetica E2E/ }).click();
+  await page.getByLabel("Aggiungi un documento").setInputFiles({
+    name: "documento-sintetico.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("fixture sintetica per il caricamento mobile"),
+  });
+  await page.getByRole("button", { name: "Carica" }).click();
+
+  await expect(page).toHaveURL(/documento=/);
+  await expect(page.getByRole("heading", { name: "documento-sintetico.txt" })).toBeVisible();
+});

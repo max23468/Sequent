@@ -28,7 +28,7 @@
     "diz:inventory": "node scripts/diz/inventory.ts"
   },
   "dependencies": {
-    "@lucide/svelte": "^1.34.0",
+    "@lucide/svelte": "1.34.0",
     "@sveltejs/adapter-node": "5.5.7",
     "@sveltejs/kit": "2.70.3",
     "argon2": "0.45.1",

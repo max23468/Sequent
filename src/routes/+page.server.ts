@@ -3,7 +3,6 @@ import { z } from "zod";
 import type { Actions, PageServerLoad } from "./$types";
 import { hasOwner } from "$lib/server/auth";
 import { openDatabase } from "$lib/server/database";
-import { countActiveJobs } from "$lib/server/jobs";
 import { createPractice, listPractices } from "$lib/server/practices";
 import { storeUpload } from "$lib/server/blob-store";
 import { enqueueJob } from "$lib/server/jobs";
@@ -22,7 +21,6 @@ export const load: PageServerLoad = ({ locals }) => {
   const practices = listPractices(database);
   return {
     practices,
-    activeJobs: countActiveJobs(database),
     launchers: getLauncherCapabilities(),
     lastPractice: practices.at(0) ?? null,
   };

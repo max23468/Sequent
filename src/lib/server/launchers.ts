@@ -1,4 +1,4 @@
-import { getQualifiedLauncherUrl } from "./config.ts";
+import { getQualifiedSuccessioniOnLineUrl } from "./config.ts";
 
 type LauncherState = "available" | "unsupported" | "unknown";
 
@@ -11,14 +11,13 @@ export interface LauncherCapability {
 }
 
 export function getLauncherCapabilities(): LauncherCapability[] {
-  const desktopUrl = getQualifiedLauncherUrl("desktopTelematico");
-  const successioniUrl = getQualifiedLauncherUrl("successioniOnLine");
+  const successioniUrl = getQualifiedSuccessioniOnLineUrl();
   return [
     {
       id: "desktopTelematico",
       label: "Desktop Telematico",
-      state: desktopUrl ? "available" : "unsupported",
-      url: desktopUrl,
+      state: "unsupported",
+      url: null,
       instructions:
         "Apri Desktop Telematico dalla cartella Applicazioni. Sequent non trasmette dichiarazioni e non controlla il programma.",
     },

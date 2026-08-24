@@ -69,7 +69,7 @@ Il tema segue il sistema e consente override chiaro/scuro persistito localmente.
 - percorsi locali e dati privati non vengono committati;
 - i launcher non compaiono su iPhone o iPad.
 
-Le configurazioni opzionali sono `SEQUENT_DESKTOP_TELEMATICO_URL` e `SEQUENT_SUCCESSIONI_ONLINE_URL`. Accettano soltanto URI `https:`, `jnlp:` o `jnlps:` già qualificati nell’ambiente di destinazione; valori assenti o non ammessi mantengono l’apertura manuale.
+`Desktop Telematico` resta sempre in apertura manuale finché non viene qualificato e versionato un protocollo browser specifico. `SEQUENT_SUCCESSIONI_ONLINE_URL` accetta soltanto un URI `jnlp:` dopo la prova sui browser supportati; un valore assente o diverso mantiene l’apertura manuale.
 
 ## Design lab
 

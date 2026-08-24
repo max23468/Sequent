@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowLeft, CheckCircle2, FileText, FolderOpen, Home, PanelLeftClose, Upload } from "@lucide/svelte";
+  import { ArrowLeft, CheckCircle2, FileText, FolderOpen, Upload } from "@lucide/svelte";
   let { data, form } = $props();
   const formatDate = (value: string) => new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
   const formatBytes = (bytes: number) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 1 }).format(bytes / 1024 / 1024) + " MB";
@@ -9,12 +9,12 @@
 <div class="practice-page page-frame">
   <div class="practice-heading">
     <div><p class="breadcrumbs"><a href="/pratiche" data-sveltekit-prefetch data-sveltekit-preload-data="hover">Pratiche</a><span>/</span>{data.practice.title}</p><h1>{data.practice.title}</h1></div>
-    <div class="practice-meta"><span>Aggiornata {formatDate(data.practice.updatedAt)}</span><i></i><span class="saved-state"><CheckCircle2 size={18} />Salvato</span><a class="button secondary" href="/" data-sveltekit-prefetch data-sveltekit-preload-data="hover"><ArrowLeft size={18} />Dashboard</a></div>
+    <div class="practice-meta"><span>Revisione {data.practice.revision}</span><i></i><span>Aggiornata {formatDate(data.practice.updatedAt)}</span><i></i><span class="saved-state"><CheckCircle2 size={18} />Salvato</span><a class="button secondary" href="/" data-sveltekit-prefetch data-sveltekit-preload-data="hover"><ArrowLeft size={18} />Dashboard</a></div>
   </div>
   <div class="practice-workspace">
     <aside class="workspace-sections">
-      <div class="workspace-panel-heading"><h2>Sezioni</h2><PanelLeftClose size={19} /></div>
-      <nav aria-label="Sezioni pratica"><a href={`/pratiche/${data.practice.id}`}><Home size={19} />Panoramica</a><a class="active" href={`/pratiche/${data.practice.id}`}><FolderOpen size={19} />Documenti</a></nav>
+      <div class="workspace-panel-heading"><h2>Sezioni</h2></div>
+      <nav aria-label="Sezioni pratica"><a class="active" href={`/pratiche/${data.practice.id}`} aria-current="page"><FolderOpen size={19} />Documenti</a></nav>
     </aside>
     <section class="workspace-main">
       <div class="workspace-panel-heading"><h2>Documenti</h2><span>{data.documents.length}</span></div>

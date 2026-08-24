@@ -52,7 +52,9 @@ export async function createBaseBackup(
     await database.backup(databaseBackupPath);
     const sanitizedDatabase = new Sqlite(databaseBackupPath);
     try {
-      sanitizedDatabase.exec("DELETE FROM sessions; DELETE FROM owner; VACUUM;");
+      sanitizedDatabase.exec(
+        "DELETE FROM sessions; DELETE FROM owner; DELETE FROM login_attempts; VACUUM;",
+      );
     } finally {
       sanitizedDatabase.close();
     }

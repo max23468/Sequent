@@ -1,29 +1,27 @@
 <script lang="ts">
-  import { CalendarClock, ChevronRight, ExternalLink, FileCheck2, FileText, History, House, Plus, RotateCcw, Upload, UserRound } from "@lucide/svelte";
+  import { CalendarClock, ChevronRight, ExternalLink, FileCheck2, FileText, History, Plus, RotateCcw, Upload, UserRound } from "@lucide/svelte";
 
   const checks = [
-    { id: "PR-2026-048", item: "Documento d’identità mancante", source: "Documento · p. 1", updated: "24 ago 2026", icon: UserRound },
-    { id: "PR-2026-047", item: "Atto di morte da verificare", source: "Allegato · p. 2", updated: "23 ago 2026", icon: FileText },
-    { id: "PR-2026-046", item: "Visura catastale da aggiornare", source: "Documento · p. 3", updated: "22 ago 2026", icon: House },
-    { id: "PR-2026-045", item: "Dati anagrafici incompleti", source: "Documento · p. 1", updated: "21 ago 2026", icon: UserRound },
-    { id: "PR-2026-044", item: "Documento di reddito non valido", source: "Allegato · p. 4", updated: "20 ago 2026", icon: FileText },
+    { id: "PR-2026-048", item: "Documento illeggibile", source: "Documento · p. 1", updated: "24 ago 2026", icon: FileText },
+    { id: "PR-2026-047", item: "Classificazione da confermare", source: "Documento · p. 2", updated: "23 ago 2026", icon: FileText },
+    { id: "PR-2026-046", item: "Differenza DIZ da riconciliare", source: "Importazione DIZ", updated: "22 ago 2026", icon: RotateCcw },
+    { id: "PR-2026-045", item: "Dato anagrafico incompleto", source: "Documento · p. 1", updated: "21 ago 2026", icon: UserRound },
+    { id: "PR-2026-044", item: "Fonte da confrontare", source: "Due documenti", updated: "20 ago 2026", icon: FileText },
   ];
 
   const deadlines = [
-    ["PR-2026-048", "Termine raccolta documenti", "30 ago 2026", "tra 6 giorni"],
-    ["PR-2026-047", "Bozza dichiarazione", "10 set 2026", "tra 17 giorni"],
-    ["PR-2026-046", "Invio dichiarazione", "20 set 2026", "tra 27 giorni"],
-    ["PR-2026-045", "Firma documenti", "25 set 2026", "tra 32 giorni"],
-    ["PR-2026-044", "Pagamento bollo", "02 ott 2026", "tra 39 giorni"],
+    ["PR-2026-048", "Termine della dichiarazione", "30 ago 2026", "tra 6 giorni"],
+    ["PR-2026-047", "Domanda di voltura", "10 set 2026", "tra 17 giorni"],
+    ["PR-2026-046", "Dichiarazione sostitutiva", "20 set 2026", "tra 27 giorni"],
   ];
 
   const practices = [
-    ["PR-2026-048", "Rossi Mario", "In raccolta documenti", "Carica i documenti richiesti", "24 ago 2026"],
-    ["PR-2026-047", "Bianchi Anna", "Bozza in preparazione", "Verifica e completa la bozza", "23 ago 2026"],
-    ["PR-2026-046", "Verdi Luigi", "In verifica", "Controllo dei documenti", "22 ago 2026"],
-    ["PR-2026-045", "Esposito Sara", "In attesa firma", "Invia per firma", "21 ago 2026"],
-    ["PR-2026-044", "Romano Paolo", "Pagamento in attesa", "Effettua il pagamento bollo", "20 ago 2026"],
-    ["PR-2026-043", "Conti Laura", "Completata", "Archivia pratica", "19 ago 2026"],
+    ["PR-2026-048", "Rossi Mario", "Raccolta documenti", "Completa il fascicolo", "24 ago 2026"],
+    ["PR-2026-047", "Bianchi Anna", "Da verificare", "Apri le verifiche pendenti", "23 ago 2026"],
+    ["PR-2026-046", "Verdi Luigi", "Devoluzione da confermare", "Controlla il riepilogo", "22 ago 2026"],
+    ["PR-2026-045", "Esposito Sara", "Esportata in DIZ", "Apri in SuccessioniOnLine", "21 ago 2026"],
+    ["PR-2026-044", "Romano Paolo", "Reimportata", "Riconcilia le differenze", "20 ago 2026"],
+    ["PR-2026-043", "Conti Laura", "Chiusa", "Consulta il fascicolo", "19 ago 2026"],
   ];
 </script>
 

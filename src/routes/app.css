@@ -501,7 +501,7 @@ h3 {
 }
 .table-row {
   display: grid;
-  grid-template-columns: minmax(190px, 1.3fr) 0.7fr 0.6fr 0.9fr 0.9fr 24px;
+  grid-template-columns: minmax(190px, 1.5fr) 0.7fr 0.7fr 0.9fr 24px;
   align-items: center;
   gap: 18px;
   min-height: 54px;
@@ -1335,13 +1335,6 @@ input[type="file"] {
   .design-lab-notice {
     align-items: flex-start;
     flex-direction: column;
-  }
-  .lab-rows > div {
-    grid-template-columns: 1fr;
-    padding: 12px 0;
-  }
-  .lab-rows strong {
-    grid-row: auto;
   }
   .practice-meta > i {
     display: none;

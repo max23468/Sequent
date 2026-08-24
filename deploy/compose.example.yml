@@ -9,6 +9,7 @@ services:
       - /tmp:size=256m,mode=1770
     environment:
       NODE_ENV: production
+      BODY_SIZE_LIMIT: 260M
       SEQUENT_DATA_DIR: /var/lib/sequent
       SEQUENT_SECURE_COOKIES: "true"
     volumes:
@@ -28,4 +29,3 @@ services:
 networks:
   sequent:
     name: sequent
-    internal: true

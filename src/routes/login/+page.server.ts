@@ -1,7 +1,13 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { z } from "zod";
 import type { Actions, PageServerLoad } from "./$types";
-import { authenticate, hasOwner, issueSession, SESSION_COOKIE } from "$lib/server/auth";
+import {
+  authenticate,
+  hasOwner,
+  issueSession,
+  SESSION_COOKIE,
+  sessionCookieOptions,
+} from "$lib/server/auth";
 import { useSecureCookies } from "$lib/server/config";
 import { openDatabase } from "$lib/server/database";
 
@@ -23,11 +29,10 @@ export const actions = {
     if (!ownerId) return fail(400, { error: "Credenziali non valide." });
     const session = issueSession(database, ownerId);
     cookies.set(SESSION_COOKIE, session.token, {
-      path: "/",
+      ...sessionCookieOptions(),
       httpOnly: true,
       sameSite: "strict",
       secure: useSecureCookies(),
-      maxAge: 365 * 86_400,
     });
     redirect(303, "/");
   },
