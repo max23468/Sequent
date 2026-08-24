@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
-import { link, mkdir, open, rm, stat } from "node:fs/promises";
+import { link, mkdir, open, rename, rm, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import type Database from "better-sqlite3";
 import { getDataDirectory, MAX_UPLOAD_BYTES } from "./config.ts";
@@ -18,6 +18,44 @@ async function syncDirectory(directoryPath: string): Promise<void> {
     await handle.sync();
   } finally {
     await handle.close();
+  }
+}
+
+async function verifyAbsoluteBlob(absolutePath: string, expectedHash: string): Promise<void> {
+  const metadata = await stat(absolutePath);
+  if (!metadata.isFile()) throw new Error("BLOB_NOT_FILE");
+  const hash = createHash("sha256");
+  for await (const chunk of createReadStream(absolutePath)) hash.update(chunk);
+  if (hash.digest("hex") !== expectedHash) throw new Error("BLOB_HASH_MISMATCH");
+}
+
+async function persistUploadedBlob(
+  temporaryPath: string,
+  absoluteBlobPath: string,
+  expectedHash: string,
+  onDirectorySynced?: (directoryPath: string) => void | Promise<void>,
+): Promise<void> {
+  const blobDirectory = dirname(absoluteBlobPath);
+  await mkdir(blobDirectory, { recursive: true, mode: 0o700 });
+  try {
+    await verifyAbsoluteBlob(absoluteBlobPath, expectedHash);
+    await rm(temporaryPath, { force: true });
+    return;
+  } catch {
+    // Il temporaneo appena sincronizzato è la fonte di ripristino per blob assenti o corrotti.
+  }
+
+  const replacementPath = `${absoluteBlobPath}.${randomUUID()}.repair`;
+  try {
+    await link(temporaryPath, replacementPath);
+    await syncDirectory(blobDirectory);
+    await rename(replacementPath, absoluteBlobPath);
+    await syncDirectory(blobDirectory);
+    await onDirectorySynced?.(blobDirectory);
+    await rm(temporaryPath, { force: true });
+  } catch (error) {
+    await rm(replacementPath, { force: true });
+    throw error;
   }
 }
 
@@ -59,6 +97,7 @@ export async function storeUpload(
     const sha256 = hash.digest("hex");
     const blobPath = join("blobs", sha256.slice(0, 2), sha256.slice(2));
     const absoluteBlobPath = join(dataDirectory, blobPath);
+    await persistUploadedBlob(temporaryPath, absoluteBlobPath, sha256, onDirectorySynced);
     const existing = database
       .prepare(
         `SELECT id, sha256, byte_size, blob_path
@@ -68,7 +107,6 @@ export async function storeUpload(
       | { id: string; sha256: string; byte_size: number; blob_path: string }
       | undefined;
     if (existing) {
-      await rm(temporaryPath, { force: true });
       return {
         id: existing.id,
         sha256: existing.sha256,
@@ -76,15 +114,6 @@ export async function storeUpload(
         blobPath: existing.blob_path,
       };
     }
-    await mkdir(dirname(absoluteBlobPath), { recursive: true, mode: 0o700 });
-    try {
-      await link(temporaryPath, absoluteBlobPath);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-    }
-    await syncDirectory(dirname(absoluteBlobPath));
-    await onDirectorySynced?.(dirname(absoluteBlobPath));
-    await rm(temporaryPath, { force: true });
 
     const id = randomUUID();
     const now = new Date().toISOString();
@@ -139,10 +168,5 @@ export async function verifyBlob(
   blobPath: string,
   expectedHash: string,
 ): Promise<void> {
-  const absolutePath = join(dataDirectory, blobPath);
-  const metadata = await stat(absolutePath);
-  if (!metadata.isFile()) throw new Error("BLOB_NOT_FILE");
-  const hash = createHash("sha256");
-  for await (const chunk of createReadStream(absolutePath)) hash.update(chunk);
-  if (hash.digest("hex") !== expectedHash) throw new Error("BLOB_HASH_MISMATCH");
+  await verifyAbsoluteBlob(join(dataDirectory, blobPath), expectedHash);
 }

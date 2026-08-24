@@ -3,6 +3,9 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "tests/e2e",
   fullyParallel: false,
+  // I progetti browser condividono intenzionalmente un solo runtime e database sintetico.
+  // Eseguirli in parallelo renderebbe concorrenti setup, sessioni e logout della stessa app.
+  workers: 1,
   use: {
     baseURL: "http://127.0.0.1:4173",
     trace: "retain-on-failure",

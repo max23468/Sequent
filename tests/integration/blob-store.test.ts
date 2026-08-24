@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { storeUpload, verifyBlob } from "../../src/lib/server/blob-store.ts";
@@ -81,5 +81,30 @@ describe("content-addressed store", () => {
       count: 1,
     });
     expect(readFileSync(join(directory, first.blobPath), "utf8")).toBe("stessi byte");
+  });
+
+  it("ripristina il blob mancante o corrotto quando riceve di nuovo gli stessi byte", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-blob-repair-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica da ripristinare");
+    const upload = () =>
+      storeUpload(
+        database,
+        practice.id,
+        new File(["originale integro"], "originale.txt", { type: "text/plain" }),
+        directory,
+      );
+    const first = await upload();
+    const absoluteBlobPath = join(directory, first.blobPath);
+
+    rmSync(absoluteBlobPath);
+    expect(await upload()).toEqual(first);
+    expect(readFileSync(absoluteBlobPath, "utf8")).toBe("originale integro");
+
+    writeFileSync(absoluteBlobPath, "contenuto corrotto");
+    expect(await upload()).toEqual(first);
+    expect(readFileSync(absoluteBlobPath, "utf8")).toBe("originale integro");
+    await expect(verifyBlob(directory, first.blobPath, first.sha256)).resolves.toBeUndefined();
   });
 });
