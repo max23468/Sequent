@@ -35,9 +35,39 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    if (event.key === "Escape") open = false;
+    if (event.key === "Escape") {
+      open = false;
+      return;
+    }
+    if (event.key === "ArrowDown" && open) {
+      event.preventDefault();
+      document.querySelector<HTMLAnchorElement>("#global-search-results a")?.focus();
+      return;
+    }
+    if (event.key === "Enter" && open && results.length > 0) {
+      event.preventDefault();
+      window.location.href = results[0]!.href;
+    }
+  }
+
+  function handleGlobalKeydown(event: KeyboardEvent) {
+    const target = event.target as HTMLElement | null;
+    const isTyping =
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target?.isContentEditable;
+    const isSearchShortcut =
+      ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") ||
+      (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey && !isTyping);
+    if (isSearchShortcut) {
+      event.preventDefault();
+      document.querySelector<HTMLInputElement>("#global-search")?.focus();
+      if (query.trim()) open = true;
+    }
   }
 </script>
+
+<svelte:window onkeydown={handleGlobalKeydown} />
 
 <div class="search-box" role="search">
   <Search size={19} strokeWidth={1.8} aria-hidden="true" />
@@ -58,7 +88,11 @@
     </button>
   {/if}
   {#if open}
-    <div class="search-results" aria-live="polite">
+    <div
+      id="global-search-results"
+      class="search-results"
+      aria-live="polite"
+    >
       {#if loading}
         <p class="search-message">Ricerca…</p>
       {:else if results.length === 0}

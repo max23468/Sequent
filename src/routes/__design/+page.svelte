@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CalendarClock, ChevronRight, ExternalLink, FileCheck2, FileText, History, Plus, RotateCcw, Upload, UserRound } from "@lucide/svelte";
+  import { CalendarClock, ChevronRight, ExternalLink, FileCheck2, FileText, History, MoreVertical, Plus, RotateCcw, Upload, UserRound } from "@lucide/svelte";
 
   const checks = [
     { id: "PR-2026-048", item: "Documento illeggibile", source: "Documento · p. 1", updated: "24 ago 2026", icon: FileText },
@@ -27,7 +27,6 @@
 
 <svelte:head><title>Design lab · Sequent</title><meta name="robots" content="noindex" /></svelte:head>
 <div class="page-frame design-lab">
-  <div class="design-lab-notice"><strong>Design lab M2</strong><span>Dati sintetici · solo sviluppo e test</span></div>
   <div class="dashboard-heading">
     <h1>Dashboard</h1>
     <div class="desktop-quick-actions" aria-label="Azioni prototipo Dashboard">
@@ -36,6 +35,13 @@
       <a class="action-link" href="/" data-sveltekit-prefetch><RotateCcw size={19} />Riprendi ultima pratica</a>
       <a class="button secondary" href="/" data-sveltekit-prefetch><Upload size={18} />Carica documenti</a>
       <a class="button primary" href="/" data-sveltekit-prefetch><Plus size={20} />Nuova pratica</a>
+    </div>
+    <div class="mobile-heading-actions">
+      <a class="button primary" href="/" data-sveltekit-prefetch><Plus size={23} />Nuova</a>
+      <div class="quick-actions-menu">
+        <button class="button icon-only" type="button" aria-label="Azioni rapide"><MoreVertical size={25} /></button>
+        <span>Azioni rapide</span>
+      </div>
     </div>
   </div>
   <div class="dashboard-grid">
@@ -71,4 +77,5 @@
       <a class="lab-see-all" href="/" data-sveltekit-prefetch><span>Vedi tutte</span><ChevronRight size={18} /></a>
     </section>
   </div>
+  <div class="design-lab-notice"><strong>Design lab</strong><span>Dati sintetici · solo sviluppo e test</span></div>
 </div>

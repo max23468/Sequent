@@ -36,6 +36,8 @@ Il wordmark usa Georgia con fallback Times New Roman. Nell’app è testo reale 
 
 Il tema scuro usa fondi grafite neutri. Navy e teal restano dettagli di marca e di stato, senza trasformare l’interfaccia in una modalità blu. I colori non sono mai l’unico segnale di stato.
 
+Il navy è riservato a marchio e titoli editoriali. Testo operativo, righe e valori usano un grafite neutro; metadati e intestazioni secondarie usano il grigio semantico. Il teal identifica azioni, focus e segnali puntuali, evitando una dominante blu nei contenuti dei pannelli.
+
 ## Tipografia e icone
 
 - titoli editoriali e wordmark: `Georgia, "Times New Roman", serif`;

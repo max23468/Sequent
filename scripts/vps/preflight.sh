@@ -60,7 +60,9 @@ assert_layout releases ubuntu:ubuntu:750
 assert_layout snapshots ubuntu:ubuntu:700
 assert_layout tmp ubuntu:ubuntu:700
 
-"$expected_root/repo/scripts/vps/with-node.sh" node --version
-"$expected_root/repo/scripts/vps/with-node.sh" npm --version
+SEQUENT_NODE_SLOT=current "$expected_root/repo/scripts/vps/with-node.sh" node --version
+SEQUENT_NODE_SLOT=current "$expected_root/repo/scripts/vps/with-node.sh" npm --version
+SEQUENT_NODE_SLOT=rollback "$expected_root/repo/scripts/vps/with-node.sh" node --version
+SEQUENT_NODE_SLOT=rollback "$expected_root/repo/scripts/vps/with-node.sh" npm --version
 
 echo "OK: preflight VPS Sequent"

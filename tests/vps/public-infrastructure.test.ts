@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 const read = (path: string) => readFileSync(path, "utf8");
@@ -34,4 +45,39 @@ test("il runbook non include utente, hostname o endpoint amministrativi reali", 
   assert.doesNotMatch(runbook, /accesso amministrativo:[^\n]*\b(?:come|tramite)\b/);
   assert.match(runbook, /alias SSH configurato localmente/);
   assert.match(runbook, /preflight\.env/);
+});
+
+test("la toolchain conserva e qualifica lo slot di rollback", () => {
+  const root = mkdtempSync(join(tmpdir(), "sequent-toolchains-"));
+  const versions = join(root, "versions");
+  mkdirSync(versions, { recursive: true });
+
+  const createToolchain = (name: string, version: string) => {
+    const binaryDirectory = join(versions, name, "bin");
+    mkdirSync(binaryDirectory, { recursive: true });
+    for (const binary of ["node", "npm"]) {
+      const path = join(binaryDirectory, binary);
+      writeFileSync(path, `#!/usr/bin/env bash\nprintf '%s\\n' '${version}'\n`, { mode: 0o755 });
+    }
+  };
+
+  try {
+    createToolchain("linea-precedente", "precedente");
+    createToolchain("linea-candidata", "candidata");
+    symlinkSync("versions/linea-precedente", join(root, "node-current"));
+
+    execFileSync("bash", ["scripts/vps/select-node-toolchain.sh", "linea-candidata"], {
+      env: { ...process.env, SEQUENT_TOOLCHAIN_ROOT: root },
+    });
+    assert.equal(readlinkSync(join(root, "node-current")), "versions/linea-candidata");
+    assert.equal(readlinkSync(join(root, "node-rollback")), "versions/linea-precedente");
+
+    execFileSync("bash", ["scripts/vps/select-node-toolchain.sh", "--rollback"], {
+      env: { ...process.env, SEQUENT_TOOLCHAIN_ROOT: root },
+    });
+    assert.equal(readlinkSync(join(root, "node-current")), "versions/linea-precedente");
+    assert.equal(readlinkSync(join(root, "node-rollback")), "versions/linea-candidata");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

@@ -53,7 +53,7 @@ jobs:
           node-version: 26.7.0
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
 
   arm64-image:
@@ -71,4 +71,26 @@ jobs:
           context: .
           platforms: linux/arm64
           push: false
+          load: true
           tags: sequent:${{ github.sha }}
+      - name: Esegue la release identificata in un container isolato
+        run: |
+          docker run --platform linux/arm64 --detach --name sequent-m2-smoke \
+            --read-only --user 10001:10001 --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --tmpfs /tmp:rw,size=64m,mode=1770,uid=10001,gid=10001 \
+            --tmpfs /var/lib/sequent:rw,size=64m,mode=0700,uid=10001,gid=10001 \
+            --env SEQUENT_DATA_DIR=/var/lib/sequent \
+            --publish 127.0.0.1:3300:3000 \
+            sequent:${{ github.sha }}
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:3300/api/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs sequent-m2-smoke
+          exit 1
+      - name: Rimuove il container di smoke
+        if: always()
+        run: docker rm --force sequent-m2-smoke || true

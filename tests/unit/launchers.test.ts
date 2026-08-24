@@ -14,8 +14,13 @@ describe("launcher locali", () => {
   it("accetta soltanto protocolli esplicitamente ammessi", () => {
     process.env.SEQUENT_SUCCESSIONI_ONLINE_URL = "jnlp:https://example.invalid/SUC13.jnlp";
     expect(getQualifiedSuccessioniOnLineUrl()).toBe("jnlp:https://example.invalid/SUC13.jnlp");
+    expect(getLauncherCapabilities()[1]).toMatchObject({
+      id: "successioniOnLine",
+      state: "available",
+      url: "jnlp:https://example.invalid/SUC13.jnlp",
+    });
     process.env.SEQUENT_SUCCESSIONI_ONLINE_URL = "https://example.invalid/SUC13.jnlp";
     expect(getQualifiedSuccessioniOnLineUrl()).toBeNull();
-    expect(getLauncherCapabilities()[0]).toMatchObject({ state: "unsupported", url: null });
+    expect(getLauncherCapabilities()[1]).toMatchObject({ state: "unknown", url: null });
   });
 });

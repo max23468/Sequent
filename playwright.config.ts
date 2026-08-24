@@ -14,7 +14,11 @@ export default defineConfig({
     env: {
       SEQUENT_DATA_DIR: process.env.SEQUENT_E2E_DATA_DIR ?? ".test-data/e2e",
       SEQUENT_SECURE_COOKIES: "false",
+      SEQUENT_DESIGN_LAB: "test",
     },
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "webkit", use: { ...devices["Desktop Safari"] } },
+  ],
 });
