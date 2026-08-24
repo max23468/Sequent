@@ -480,6 +480,29 @@ test("separa la modifica ufficiale dalla normalizzazione interna aggiunta da SUC
   assert.equal(comparison.conflicts.length, 0);
 });
 
+test("mantiene opaca una modifica non qualificata uguale nel corrente e nell'ufficiale", () => {
+  const field = (value: string) => ({
+    quadro: "VV",
+    module: "00000001",
+    field: "999999",
+    value,
+  });
+  const comparison = compareDizFields([field("base")], [field("nuovo")], [field("nuovo")]);
+
+  assert.equal(comparison.unchanged.length, 0);
+  assert.equal(comparison.importFromOfficial.length, 0);
+  assert.deepEqual(comparison.opaque, [
+    {
+      quadro: "VV",
+      module: "00000001",
+      field: "999999",
+      base: "base",
+      current: "nuovo",
+      official: "nuovo",
+    },
+  ]);
+});
+
 test("l'inspector non espone il nome fiscale del file", () => {
   const directory = mkdtempSync(path.join(tmpdir(), "sequent-diz-"));
   try {

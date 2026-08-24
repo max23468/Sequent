@@ -60,8 +60,10 @@ export function compareDizFields(
       current: currentField?.value,
       official: officialField?.value,
     };
-    if (comparison.current === comparison.official) result.unchanged.push(comparison);
-    else if (!qualifiedMappingFor(comparison)) result.opaque.push(comparison);
+    if (comparison.base === comparison.current && comparison.current === comparison.official) {
+      result.unchanged.push(comparison);
+    } else if (!qualifiedMappingFor(comparison)) result.opaque.push(comparison);
+    else if (comparison.current === comparison.official) result.unchanged.push(comparison);
     else if (comparison.current === comparison.base) result.importFromOfficial.push(comparison);
     else if (comparison.official === comparison.base) result.keepCurrent.push(comparison);
     else result.conflicts.push(comparison);
