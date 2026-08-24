@@ -16,7 +16,7 @@ Ogni campione registra fuori da Git: hash, dimensione, provenienza legittima, ve
 6. provare apertura, salvataggio e telematico in SuccessioniOnLine su macOS;
 7. eseguire confronto a tre vie e registrare le divergenze.
 
-Il laboratorio deve inoltre verificare deterministicamente che il DIZ non dipenda da percorsi assoluti, separatori, codifiche, terminatori di riga o metadati specifici del sistema operativo. A sviluppo concluso, se è già disponibile un ambiente Windows, il ciclo può essere ripetuto come collaudo facoltativo e advisory: non richiede una VM dedicata e non blocca `TG-DIZ`, fasi di implementazione o release.
+Il laboratorio deve inoltre verificare deterministicamente che il DIZ non dipenda da percorsi assoluti, separatori, codifiche, terminatori di riga o metadati specifici del sistema operativo. A sviluppo concluso, se è già disponibile un ambiente Windows, il ciclo può essere ripetuto come collaudo facoltativo e advisory: non richiede una VM dedicata e la sua mancata esecuzione non blocca `TG-DIZ`, fasi di implementazione o release. Una divergenza DIZ riproducibile e confermata segue invece i criteri di arresto e blocca l'output interessato.
 
 ## Arresto
 

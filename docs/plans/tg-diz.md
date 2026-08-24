@@ -10,4 +10,4 @@
 8. Verificare automaticamente percorsi relativi, separatori, codifiche, terminatori di riga e metadati per escludere dipendenze del DIZ dal sistema operativo.
 9. Se il writer non è affidabile, fermarsi e aprire il Decision Gate locale/Java.
 
-Dopo il completamento dello sviluppo, se è già disponibile un ambiente Windows, ripetere facoltativamente il ciclo ufficiale come verifica advisory. L'assenza dell'ambiente o un esito negativo non bloccano `TG-DIZ`, fasi di implementazione o release e non richiedono la predisposizione di una VM o di un PC dedicato.
+Dopo il completamento dello sviluppo, se è già disponibile un ambiente Windows, ripetere facoltativamente il ciclo ufficiale come verifica advisory. L'assenza dell'ambiente, la mancata esecuzione o un problema esclusivamente ambientale non bloccano `TG-DIZ`, fasi di implementazione o release e non richiedono la predisposizione di una VM o di un PC dedicato. Una divergenza DIZ riproducibile e confermata segue invece i criteri di arresto e blocca l'output interessato.

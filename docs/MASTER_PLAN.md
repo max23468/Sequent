@@ -313,7 +313,7 @@ Il prodotto sarà:
 - sviluppato in un repository GitHub pubblico senza licenza d'uso implicita;
 - aggiornato sull'istanza operativa soltanto tramite release stabili approvate e deploy automatico controllato; il checkout di lavoro sulla stessa VPS non viene mai eseguito direttamente come servizio live.
 
-Il primo gate del progetto è l'interoperabilità DIZ. Prima di costruire l'app completa, il laboratorio deve dimostrare un round-trip reale e ripetibile con l'installazione qualificata di SuccessioniOnLine su macOS e deve escludere dipendenze del formato da percorsi, separatori o codifiche del sistema operativo. A sviluppo concluso, un eventuale collaudo con SuccessioniOnLine su Windows è facoltativo, best-effort e non blocca gate, milestone o release. Se il writer DIZ puro non risultasse affidabile, è ammesso un componente locale o Java minimo e limitato all'interoperabilità; la web app resta il prodotto principale.
+Il primo gate del progetto è l'interoperabilità DIZ. Prima di costruire l'app completa, il laboratorio deve dimostrare un round-trip reale e ripetibile con l'installazione qualificata di SuccessioniOnLine su macOS e deve escludere dipendenze del formato da percorsi, separatori o codifiche del sistema operativo. A sviluppo concluso, un eventuale collaudo con SuccessioniOnLine su Windows è facoltativo e best-effort: la disponibilità dell'ambiente e l'esecuzione della prova non sono criteri di gate, milestone o release. Se il writer DIZ puro non risultasse affidabile, è ammesso un componente locale o Java minimo e limitato all'interoperabilità; la web app resta il prodotto principale.
 
 ---
 
@@ -405,7 +405,7 @@ Scartata. OCR, parsing, calcoli, mapping e controlli deterministici non richiedo
 | Windows | Chrome ed Edge |
 | iPhone/iPad | Safari, senza app nativa |
 
-SuccessioniOnLine è installato e funzionante su macOS, che è la piattaforma canonica per le prove ufficiali di interoperabilità DIZ. Non è richiesta un'installazione Windows né una VM dedicata. Se a sviluppo concluso sarà disponibile un ambiente Windows, Codex potrà eseguire un collaudo facoltativo e non bloccante con il software ufficiale; il supporto della web app nei browser Windows resta invece parte della matrice obbligatoria.
+SuccessioniOnLine è installato e funzionante su macOS, che è la piattaforma canonica per le prove ufficiali di interoperabilità DIZ. Non è richiesta un'installazione Windows né una VM dedicata. Se a sviluppo concluso sarà disponibile un ambiente Windows, Codex potrà eseguire un collaudo facoltativo con il software ufficiale; la mancata disponibilità o esecuzione non blocca il progetto, mentre un difetto DIZ riproducibile eventualmente osservato segue i normali criteri di arresto. Il supporto della web app nei browser Windows resta invece parte della matrice obbligatoria.
 
 ## 3.3 Vincoli economici
 
@@ -548,7 +548,7 @@ senza interventi tecnici e con un risparmio sostanziale rispetto all'inserimento
 
 ## 6.2 Successo DIZ
 
-Il writer/parser supera `TG-DIZ`: round-trip su più pratiche con SuccessioniOnLine su macOS, salvataggio ufficiale, generazione telematico, allegati, preservazione dei blocchi sconosciuti e test automatici di portabilità per percorsi e codifiche. L'eventuale collaudo finale su Windows è advisory e non concorre alla chiusura del gate.
+Il writer/parser supera `TG-DIZ`: round-trip su più pratiche con SuccessioniOnLine su macOS, salvataggio ufficiale, generazione telematico, allegati, preservazione dei blocchi sconosciuti e test automatici di portabilità per percorsi e codifiche. La disponibilità e l'esecuzione dell'eventuale collaudo finale su Windows non concorrono alla chiusura del gate; una divergenza DIZ riproducibile emersa dalla prova resta invece un difetto effettivo.
 
 ## 6.3 Successo dell'estrazione
 
@@ -1699,8 +1699,9 @@ Dopo il completamento dello sviluppo, se è disponibile senza introdurre costi o
 
 - è best-effort e advisory;
 - non richiede una VM o un PC dedicato;
-- non blocca alcun Technical Gate, fase di implementazione o release stabile;
-- registra eventuali divergenze come osservazioni di compatibilità da valutare separatamente;
+- se non è disponibile, non viene eseguita o fallisce per ragioni esclusivamente ambientali, non blocca alcun Technical Gate, fase di implementazione o release stabile;
+- registra le osservazioni non riconducibili al formato come compatibilità advisory da valutare separatamente;
+- non rende advisory un difetto del formato: una divergenza DIZ riproducibile e confermata blocca l'output interessato finché non viene risolta o esclusa dal perimetro dichiarato;
 - non modifica il supporto obbligatorio della web app su Chrome ed Edge per Windows.
 
 ---
@@ -2765,7 +2766,7 @@ Il Mac resta:
 - banco di prova canonico per SuccessioniOnLine e Java;
 - sede della copia privata della configurazione amministrativa strettamente necessaria a raggiungere e verificare la VPS, sempre esclusa da Git.
 
-Windows resta una piattaforma browser supportata per Chrome ed Edge, ma non è un ambiente di sviluppo richiesto. Un eventuale banco di prova Windows per SuccessioniOnLine viene usato soltanto a sviluppo concluso, se già disponibile, come verifica facoltativa e non bloccante.
+Windows resta una piattaforma browser supportata per Chrome ed Edge, ma non è un ambiente di sviluppo richiesto. Un eventuale banco di prova Windows per SuccessioniOnLine viene usato soltanto a sviluppo concluso, se già disponibile; la sua predisposizione e l'esecuzione del collaudo non sono requisiti di accettazione.
 
 ## 45.2 Separazione checkout/runtime
 
@@ -3008,7 +3009,7 @@ Non sono gate permanenti matrici enterprise su egress, Turnstile, migrazione RP 
 
 ## 48.7 DIZ
 
-Golden file, modifiche one-field, round-trip semantico, unknown blocks, allegati, versioni, dichiarazioni successive, salvataggio e telematico ufficiale su macOS, oltre a test automatici su percorsi relativi, separatori, codifiche, terminatori di riga e metadati. Un ciclo Windows può essere eseguito a sviluppo concluso come verifica advisory non bloccante.
+Golden file, modifiche one-field, round-trip semantico, unknown blocks, allegati, versioni, dichiarazioni successive, salvataggio e telematico ufficiale su macOS, oltre a test automatici su percorsi relativi, separatori, codifiche, terminatori di riga e metadati. Un ciclo Windows può essere eseguito a sviluppo concluso come verifica advisory facoltativa; una divergenza DIZ riproducibile eventualmente osservata segue i normali criteri di arresto.
 
 ## 48.8 Backup e restore
 
@@ -3492,7 +3493,7 @@ Ogni milestone contiene già i propri criteri di uscita; non esistono Definition
 
 **Uscita:** `TG-GOLIVE` chiuso e approvazione owner.
 
-Dopo il completamento dello sviluppo, se un ambiente Windows è già disponibile, può essere eseguito un collaudo finale di SuccessioniOnLine. L'assenza dell'ambiente o un esito negativo non impediscono l'uscita da M7 né la release: il risultato viene registrato come osservazione advisory e non modifica la qualificazione macOS.
+Dopo il completamento dello sviluppo, se un ambiente Windows è già disponibile, può essere eseguito un collaudo finale di SuccessioniOnLine. L'assenza dell'ambiente, la mancata esecuzione o un problema esclusivamente ambientale non impediscono l'uscita da M7 né la release. Una divergenza DIZ riproducibile e confermata viene invece trattata come difetto del formato e blocca l'output interessato secondo i criteri ordinari.
 
 ---
 
@@ -3598,7 +3599,7 @@ Dopo il completamento dello sviluppo, se un ambiente Windows è già disponibile
 | SEQ-F04 | Checklist dinamica, allegati e output operativi |
 | SEQ-F05 | Procedimento unico per defunto con dichiarazioni successive separate |
 | SEQ-Z01 | Import DIZ crea o riallinea la pratica |
-| SEQ-Z02 | Writer DIZ e round-trip qualificato con SuccessioniOnLine su macOS; portabilità del formato verificata deterministicamente; collaudo Windows finale facoltativo e non bloccante |
+| SEQ-Z02 | Writer DIZ e round-trip qualificato con SuccessioniOnLine su macOS; portabilità del formato verificata deterministicamente; disponibilità ed esecuzione del collaudo Windows finale facoltative |
 | SEQ-Z03 | Preservazione di allegati e blocchi sconosciuti |
 | SEQ-Z04 | Confronto a tre vie soltanto nel round-trip DIZ |
 | SEQ-Z05 | Fascicolo conclusivo con telematico, stampa, ricevute ed esiti |
@@ -3684,7 +3685,7 @@ La chiusura richiede una prova e, se la scelta è difficile da invertire, un ADR
 | Successioni Web | non utilizzabile per assenza frequente di delega |
 | `.suc` come formato modificabile | `.diz` come file di lavoro; telematico separato |
 | DIZ solo export | round-trip completo |
-| collaudo DIZ obbligatorio su macOS e Windows | qualificazione DIZ su macOS con test deterministici di portabilità; collaudo Windows finale facoltativo e non bloccante |
+| collaudo DIZ obbligatorio su macOS e Windows | qualificazione DIZ su macOS con test deterministici di portabilità; disponibilità ed esecuzione del collaudo Windows finale facoltative, senza rendere advisory un difetto DIZ confermato |
 | app si ferma al DIZ | fascicolo completo fino agli esiti |
 | tutto AI | deterministic-first, AI-assisted |
 
@@ -3713,7 +3714,7 @@ La release stabile iniziale di Sequent è pronta quando:
 17. ogni regola eseguibile ha una provenienza ufficiale verificabile e nessun elemento rilevante resta `unresolved`;
 18. le pratiche fuori perimetro telematico sono bloccate e il ciclo ricevute/volture è verificato con fixture ufficiali.
 
-Se a sviluppo concluso è disponibile un ambiente Windows, il round-trip con SuccessioniOnLine può essere ripetuto come collaudo facoltativo. La sua assenza o il suo esito non bloccano la release e vengono registrati soltanto come osservazione advisory.
+Se a sviluppo concluso è disponibile un ambiente Windows, il round-trip con SuccessioniOnLine può essere ripetuto come collaudo facoltativo. La mancata esecuzione del collaudo Windows non blocca la release; un problema esclusivamente ambientale viene registrato come osservazione advisory. Una divergenza DIZ riproducibile e confermata blocca l'output interessato secondo i criteri ordinari.
 
 ---
 
