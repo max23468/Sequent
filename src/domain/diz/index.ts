@@ -26,6 +26,15 @@ export type DizFieldChange = DizFieldLocator & {
   readonly value: string;
 };
 
+export const MAX_OFFICIAL_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+
+export type DizWritePreflight = {
+  readonly qualifiedAttachments: readonly {
+    readonly sha256: string;
+    readonly source: "official-control";
+  }[];
+};
+
 export type ParsedDiz = {
   readonly format: "xstream-zip-v1";
   readonly bytes: number;
@@ -125,10 +134,39 @@ function assertQualifiedChange(change: DizFieldChange): QualifiedDizFieldMapping
   return mapping;
 }
 
-export function rewriteDizFields(input: Uint8Array, changes: readonly DizFieldChange[]): Buffer {
+function assertQualifiedAttachments(parsed: ParsedDiz, preflight?: DizWritePreflight): void {
+  if (parsed.attachments.length === 0) return;
+  for (const attachment of parsed.attachments) {
+    if (attachment.bytes > MAX_OFFICIAL_ATTACHMENT_BYTES) {
+      throw new Error("DIZ writer bloccato: allegato oltre il limite ufficiale di 5 MiB");
+    }
+    if (attachment.kind !== "pdf" && attachment.kind !== "tiff") {
+      throw new Error("DIZ writer bloccato: formato allegato finale non ammesso");
+    }
+  }
+
+  const qualifiedHashes = preflight?.qualifiedAttachments.map((item) => item.sha256) ?? [];
+  if (
+    preflight?.qualifiedAttachments.some((item) => item.source !== "official-control") ||
+    qualifiedHashes.length !== parsed.attachments.length ||
+    new Set(qualifiedHashes).size !== qualifiedHashes.length ||
+    parsed.attachments.some((attachment) => !qualifiedHashes.includes(attachment.sha256))
+  ) {
+    throw new Error(
+      "DIZ writer bloccato: preflight ufficiale PDF/A o TIFF assente per gli allegati",
+    );
+  }
+}
+
+export function rewriteDizFields(
+  input: Uint8Array,
+  changes: readonly DizFieldChange[],
+  preflight?: DizWritePreflight,
+): Buffer {
   if (changes.length === 0) return Buffer.from(input);
   for (const change of changes) assertQualifiedChange(change);
   const parsed = parseDiz(input);
+  assertQualifiedAttachments(parsed, preflight);
   const updatedXml = rewriteXstreamFields(parsed.xstream, changes);
   return rewriteArchiveEntry(parsed.source, parsed.xmlEntryName, updatedXml);
 }

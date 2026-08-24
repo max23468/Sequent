@@ -14,6 +14,8 @@ import {
 import {
   catalogFieldForMapping,
   compareDizFields,
+  type DizWritePreflight,
+  MAX_OFFICIAL_ATTACHMENT_BYTES,
   parseDiz,
   QUALIFIED_DIZ_FIELD_MAPPINGS,
   rewriteDizFields,
@@ -121,6 +123,15 @@ function fixture(xml = syntheticXml()): Buffer {
   ]);
 }
 
+function attachmentPreflight(input: Buffer): DizWritePreflight {
+  return {
+    qualifiedAttachments: parseDiz(input).attachments.map((attachment) => ({
+      sha256: attachment.sha256,
+      source: "official-control" as const,
+    })),
+  };
+}
+
 test("legge il contenitore XStream e collega gli allegati", () => {
   const parsed = parseDiz(fixture());
   assert.equal(parsed.format, "xstream-zip-v1");
@@ -147,15 +158,19 @@ test("il no-op restituisce gli stessi byte", () => {
 test("modifica un solo valore e preserva allegato e blocchi sconosciuti", () => {
   const input = fixture();
   const before = parseDiz(input);
-  const output = rewriteDizFields(input, [
-    {
-      quadro: "EA",
-      module: "00000001",
-      field: "001005",
-      expectedValue: "ROSSI & FIGLI",
-      value: "A&B<C",
-    },
-  ]);
+  const output = rewriteDizFields(
+    input,
+    [
+      {
+        quadro: "EA",
+        module: "00000001",
+        field: "001005",
+        expectedValue: "ROSSI & FIGLI",
+        value: "A&B<C",
+      },
+    ],
+    attachmentPreflight(input),
+  );
   const after = parseDiz(output);
 
   assert.equal(
@@ -201,55 +216,117 @@ test("blocca campi non qualificati, valori base divergenti e valori fuori catalo
   const input = fixture();
   assert.throws(
     () =>
-      rewriteDizFields(input, [
-        {
-          quadro: "EA",
-          module: "00000001",
-          field: "001001",
-          expectedValue: "AAAAAA00A00A000A",
-          value: "BBBBBB00B00B000B",
-        },
-      ]),
+      rewriteDizFields(
+        input,
+        [
+          {
+            quadro: "EA",
+            module: "00000001",
+            field: "001001",
+            expectedValue: "AAAAAA00A00A000A",
+            value: "BBBBBB00B00B000B",
+          },
+        ],
+        attachmentPreflight(input),
+      ),
     /mapping ufficiale non qualificato/,
   );
   assert.throws(
     () =>
-      rewriteDizFields(input, [
-        {
-          quadro: "EA",
-          module: "00000001",
-          field: "001005",
-          expectedValue: "valore obsoleto",
-          value: "BIANCHI",
-        },
-      ]),
+      rewriteDizFields(
+        input,
+        [
+          {
+            quadro: "EA",
+            module: "00000001",
+            field: "001005",
+            expectedValue: "valore obsoleto",
+            value: "BIANCHI",
+          },
+        ],
+        attachmentPreflight(input),
+      ),
     /valore corrente diverso/,
   );
   assert.throws(
     () =>
-      rewriteDizFields(input, [
-        {
-          quadro: "EA",
-          module: "00000001",
-          field: "001005",
-          expectedValue: "ROSSI & FIGLI",
-          value: "X".repeat(81),
-        },
-      ]),
+      rewriteDizFields(
+        input,
+        [
+          {
+            quadro: "EA",
+            module: "00000001",
+            field: "001005",
+            expectedValue: "ROSSI & FIGLI",
+            value: "X".repeat(81),
+          },
+        ],
+        attachmentPreflight(input),
+      ),
     /limite ufficiale di 80 caratteri/,
   );
   assert.throws(
     () =>
-      rewriteDizFields(input, [
-        {
-          quadro: "EA",
-          module: "00000001",
-          field: "001005",
-          expectedValue: "ROSSI & FIGLI",
-          value: "ROSSI\u0000BIANCHI",
-        },
-      ]),
+      rewriteDizFields(
+        input,
+        [
+          {
+            quadro: "EA",
+            module: "00000001",
+            field: "001005",
+            expectedValue: "ROSSI & FIGLI",
+            value: "ROSSI\u0000BIANCHI",
+          },
+        ],
+        attachmentPreflight(input),
+      ),
     /carattere fuori intervallo XML 1\.0/,
+  );
+});
+
+test("blocca allegati senza preflight, oltre 5 MiB o in formato finale non ammesso", () => {
+  const change = {
+    quadro: "EA",
+    module: "00000001",
+    field: "001005",
+    expectedValue: "ROSSI & FIGLI",
+    value: "BIANCHI",
+  };
+  const input = fixture();
+  assert.throws(
+    () => rewriteDizFields(input, [change]),
+    /preflight ufficiale PDF\/A o TIFF assente/,
+  );
+  assert.throws(
+    () =>
+      rewriteDizFields(input, [change], {
+        qualifiedAttachments: [{ sha256: "0".repeat(64), source: "official-control" }],
+      }),
+    /preflight ufficiale PDF\/A o TIFF assente/,
+  );
+
+  const jpeg = makeZip([
+    { name: "allegato", content: Buffer.from([0xff, 0xd8, 0xff, 0xd9]) },
+    { name: "data.xml", content: syntheticXml() },
+  ]);
+  assert.throws(
+    () => rewriteDizFields(jpeg, [change], attachmentPreflight(jpeg)),
+    /formato allegato finale non ammesso/,
+  );
+
+  const oversized = makeZip([
+    {
+      name: "allegato",
+      content: Buffer.concat([
+        Buffer.from("%PDF", "ascii"),
+        Buffer.alloc(MAX_OFFICIAL_ATTACHMENT_BYTES - 3),
+      ]),
+    },
+    { name: "data.xml", content: syntheticXml() },
+  ]);
+  assert.throws(
+    () => rewriteDizFields(oversized, [change], attachmentPreflight(oversized)),
+    /allegato oltre il limite ufficiale di 5 MiB/,
   );
 });
 
@@ -333,15 +410,19 @@ test("rifiuta entità XML sconosciute, ampersand grezzi e markup nei valori", ()
 
 test("preserva terminatori CRLF e metadati non interpretati", () => {
   const xml = Buffer.from(syntheticXml().toString().replaceAll("><", ">\r\n<"), "utf8");
-  const output = rewriteDizFields(fixture(xml), [
-    {
-      quadro: "EA",
-      module: "00000001",
-      field: "001005",
-      expectedValue: "ROSSI & FIGLI",
-      value: "BIANCHI",
-    },
-  ]);
+  const output = rewriteDizFields(
+    fixture(xml),
+    [
+      {
+        quadro: "EA",
+        module: "00000001",
+        field: "001005",
+        expectedValue: "ROSSI & FIGLI",
+        value: "BIANCHI",
+      },
+    ],
+    attachmentPreflight(fixture(xml)),
+  );
   const source = parseDiz(output).xstream.source;
   assert.match(source, /\r\n/);
   assert.doesNotMatch(source.replaceAll("\r\n", ""), /\n/);
@@ -423,15 +504,19 @@ test("il confronto CLI non espone nomi di file o valori fiscali", () => {
     writeFileSync(current, fixture());
     writeFileSync(
       official,
-      rewriteDizFields(fixture(), [
-        {
-          quadro: "EA",
-          module: "00000001",
-          field: "001005",
-          expectedValue: "ROSSI & FIGLI",
-          value: "BIANCHI",
-        },
-      ]),
+      rewriteDizFields(
+        fixture(),
+        [
+          {
+            quadro: "EA",
+            module: "00000001",
+            field: "001005",
+            expectedValue: "ROSSI & FIGLI",
+            value: "BIANCHI",
+          },
+        ],
+        attachmentPreflight(fixture()),
+      ),
     );
     const output = execFileSync(
       process.execPath,
