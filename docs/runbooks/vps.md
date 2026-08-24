@@ -22,7 +22,9 @@ Il preflight legge per default `/opt/sequent/private/preflight.env`, posseduto d
 | `/opt/sequent/snapshots` | `ubuntu:ubuntu` | `0700` | rollback tecnico |
 | `/opt/sequent/tmp` | `ubuntu:ubuntu` | `0700` | copie isolate per prove rischiose |
 
-Il runtime applicativo non è ancora installato. L'utente di sistema `sequent-runtime` non possiede login né home e riserva il confine dei dati operativi.
+Il runtime applicativo resta inattivo finché non viene approvata una release. L'utente di sistema `sequent-runtime` non possiede login né home e riserva il confine dei dati operativi. `deploy/compose.example.yml` descrive il singolo servizio isolato, ma non è una configurazione attiva e non autorizza il deploy.
+
+La configurazione privata del runtime valorizza `SEQUENT_RUNTIME_UID` e `SEQUENT_RUNTIME_GID` con gli identificativi numerici reali di `sequent-runtime`. Compose esegue il processo con questi valori: il bind mount `/opt/sequent/data` resta scrivibile senza allargare i permessi e l’immagine conserva comunque un utente non-root predefinito per gli smoke isolati.
 
 ## Toolchain
 

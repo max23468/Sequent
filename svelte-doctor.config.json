@@ -1,0 +1,12 @@
+{
+  "lint": true,
+  "deadCode": true,
+  "cache": true,
+  "ignore": {
+    "files": [".svelte-kit/", "build/", "private/", "scripts/", "src/domain/diz/", "tests/"]
+  },
+  "ci": {
+    "failOn": "warning",
+    "minScore": 100
+  }
+}

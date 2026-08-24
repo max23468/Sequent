@@ -1,0 +1,31 @@
+services:
+  sequent:
+    image: ${SEQUENT_IMAGE:?Immagine Sequent identificata per digest obbligatoria}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    user: ${SEQUENT_RUNTIME_UID:?UID runtime obbligatorio}:${SEQUENT_RUNTIME_GID:?GID runtime obbligatorio}
+    tmpfs:
+      - /tmp:size=256m,mode=1770
+    environment:
+      NODE_ENV: production
+      SEQUENT_DATA_DIR: /var/lib/sequent
+      SEQUENT_SECURE_COOKIES: "true"
+    volumes:
+      - /opt/sequent/data:/var/lib/sequent
+    networks:
+      - sequent
+    ports:
+      - 127.0.0.1:3300:3000
+    mem_limit: 4g
+    cpus: 2
+    pids_limit: 256
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+networks:
+  sequent:
+    name: sequent
+    internal: true

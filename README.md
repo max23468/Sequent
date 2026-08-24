@@ -24,6 +24,17 @@ scripts/vps/preflight.sh
 
 `verify:sources` legge per default `/opt/sequent/private/official-sources/`, controlla manifest, dimensioni, pagine, hash, sicurezza dello ZIP, XSD e compilazione offline dello schema principale.
 
+## Sviluppo applicativo
+
+La fondazione SvelteKit usa dati locali sintetici in `.local-data/` per impostazione predefinita:
+
+```bash
+npm ci
+npm run dev
+```
+
+`SEQUENT_DATA_DIR` seleziona una directory isolata. Non deve puntare ai dati operativi dal checkout. I gate applicativi sono inclusi in `npm run verify:public`; l’E2E browser è separato in `npm run test:e2e`.
+
 ## Confini
 
 - checkout: `/opt/sequent/repo/`;
