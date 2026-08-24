@@ -13,6 +13,34 @@ function clientKeyHash(clientKey: string): string {
   return createHash("sha256").update(clientKey).digest("hex");
 }
 
+function recordFailedAttempt(
+  database: Database.Database,
+  storedClientKey: string,
+  now: Date,
+): void {
+  const update = database.transaction(() => {
+    const latest = database
+      .prepare("SELECT failed_count FROM login_attempts WHERE client_key = ?")
+      .get(storedClientKey) as { failed_count: number } | undefined;
+    const failedCount = (latest?.failed_count ?? 0) + 1;
+    const delaySeconds = failedCount < 3 ? 0 : Math.min(60, 2 ** (failedCount - 3));
+    const blockedUntil = delaySeconds
+      ? new Date(now.getTime() + delaySeconds * 1_000).toISOString()
+      : null;
+    database
+      .prepare(
+        `INSERT INTO login_attempts(client_key, failed_count, blocked_until, updated_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(client_key) DO UPDATE SET
+           failed_count = excluded.failed_count,
+           blocked_until = excluded.blocked_until,
+           updated_at = excluded.updated_at`,
+      )
+      .run(storedClientKey, failedCount, blockedUntil, now.toISOString());
+  });
+  update.immediate();
+}
+
 export function hasOwner(database: Database.Database): boolean {
   return Boolean(database.prepare("SELECT 1 FROM owner LIMIT 1").get());
 }
@@ -45,21 +73,7 @@ export async function authenticate(
     | { id: string; password_hash: string }
     | undefined;
   if (!owner || !(await verify(owner.password_hash, password))) {
-    const failedCount = (attempt?.failed_count ?? 0) + 1;
-    const delaySeconds = failedCount < 3 ? 0 : Math.min(60, 2 ** (failedCount - 3));
-    const blockedUntil = delaySeconds
-      ? new Date(now.getTime() + delaySeconds * 1_000).toISOString()
-      : null;
-    database
-      .prepare(
-        `INSERT INTO login_attempts(client_key, failed_count, blocked_until, updated_at)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT(client_key) DO UPDATE SET
-           failed_count = excluded.failed_count,
-           blocked_until = excluded.blocked_until,
-           updated_at = excluded.updated_at`,
-      )
-      .run(storedClientKey, failedCount, blockedUntil, now.toISOString());
+    recordFailedAttempt(database, storedClientKey, now);
     return null;
   }
   database.prepare("DELETE FROM login_attempts WHERE client_key = ?").run(storedClientKey);
