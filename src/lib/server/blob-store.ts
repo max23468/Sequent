@@ -12,11 +12,21 @@ export interface StoredDocument {
   blobPath: string;
 }
 
+async function syncDirectory(directoryPath: string): Promise<void> {
+  const handle = await open(directoryPath, "r");
+  try {
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+}
+
 export async function storeUpload(
   database: Database.Database,
   practiceId: string,
   file: File,
   dataDirectory = getDataDirectory(),
+  onDirectorySynced?: (directoryPath: string) => void | Promise<void>,
 ): Promise<StoredDocument> {
   if (file.size > MAX_UPLOAD_BYTES) throw new Error("FILE_TOO_LARGE");
   if (file.size === 0) throw new Error("EMPTY_FILE");
@@ -72,6 +82,8 @@ export async function storeUpload(
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
     }
+    await syncDirectory(dirname(absoluteBlobPath));
+    await onDirectorySynced?.(dirname(absoluteBlobPath));
     await rm(temporaryPath, { force: true });
 
     const id = randomUUID();
