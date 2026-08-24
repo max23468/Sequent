@@ -16,7 +16,7 @@ Quando alcuni campioni hanno completato il ciclo ufficiale, la stessa esecuzione
 - `npm run diz:compare -- <base.diz> <corrente.diz> <ufficiale.diz>` esegue il confronto a tre vie senza stampare nomi di file o valori fiscali;
 - il parser read-only espone campi tramite localizzatori `quadro/modulo/campo` e conserva sorgente, entry e metadati non interpretati;
 - il writer richiede valore base atteso e mapping qualificato collegato a `SRC-08`, applica i vincoli del campo presenti nel catalogo e restituisce gli stessi byte per un no-op; se il DIZ contiene allegati, la riscrittura richiede inoltre evidenza per hash di un precedente controllo ufficiale PDF/A/TIFF e blocca formati non ammessi o file oltre 5 MiB;
-- il confronto a tre vie separa modifiche ufficiali qualificate, modifiche locali, conflitti e campi opachi senza scegliere automaticamente in caso di divergenza;
+- il confronto a tre vie separa modifiche ufficiali qualificate, modifiche locali, conflitti e campi opachi senza scegliere automaticamente in caso di divergenza; blocca inoltre la riconciliazione se cambiano i blocchi XML opachi o gli allegati;
 
 Il registro di produzione accetta soltanto mapping dimostrati da una coppia differenziale a campo singolo, verificati mediante apertura e salvataggio nell'applicazione ufficiale e collegati a un percorso del catalogo derivato da `SRC-08`. Le normalizzazioni interne prive di corrispondenza nel catalogo ufficiale restano dati opachi da preservare e non diventano automaticamente campi scrivibili.
 

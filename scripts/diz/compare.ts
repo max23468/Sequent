@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 import {
   compareDizFields,
+  opaqueDizEvidence,
   parseDiz,
   type ThreeWayFieldComparison,
 } from "../../src/domain/diz/index.ts";
@@ -37,12 +38,27 @@ const [base, current, official] = paths.map((file) => parseDiz(readFileSync(file
 if (!base || !current || !official) usage();
 
 const comparison = compareDizFields(base.fields, current.fields, official.fields);
+const opaqueEvidence = {
+  base: opaqueDizEvidence(base),
+  current: opaqueDizEvidence(current),
+  official: opaqueDizEvidence(official),
+};
 const acceptedCurrentChanges = comparison.unchanged.filter((item) => item.base !== item.current);
 const unchangedFromBase = comparison.unchanged.length - acceptedCurrentChanges.length;
+const blockers = [
+  ...(comparison.conflicts.length > 0 ? ["qualified-field-conflict"] : []),
+  ...(comparison.opaque.length > 0 ? ["unqualified-field-divergence"] : []),
+  ...(new Set(Object.values(opaqueEvidence).map((item) => item.xmlSha256)).size > 1
+    ? ["opaque-xml-divergence"]
+    : []),
+  ...(new Set(Object.values(opaqueEvidence).map((item) => item.attachmentsSha256)).size > 1
+    ? ["attachment-divergence"]
+    : []),
+];
 console.log(
   JSON.stringify(
     {
-      schemaVersion: 2,
+      schemaVersion: 3,
       inputs: {
         base: { sha256: base.sha256, bytes: base.bytes, fields: base.fields.length },
         current: { sha256: current.sha256, bytes: current.bytes, fields: current.fields.length },
@@ -59,9 +75,15 @@ console.log(
         unchangedFromBase,
         conflicts: sanitize(comparison.conflicts),
         opaque: sanitize(comparison.opaque),
+        safety: {
+          reconciliationAllowed: blockers.length === 0,
+          blockers,
+          opaqueEvidence,
+        },
       },
     },
     null,
     2,
   ),
 );
+if (blockers.length > 0) process.exitCode = 2;

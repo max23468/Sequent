@@ -305,6 +305,22 @@ export function parseXstreamDiz(input: Uint8Array): ParsedXstreamDiz {
   };
 }
 
+export function opaqueXstreamProjection(parsed: ParsedXstreamDiz): string {
+  const ranges = [...parsed.fieldElements.values()]
+    .map((element) => ({ start: element.contentStart, end: element.endTagStart }))
+    .sort((left, right) => left.start - right.start);
+  let cursor = 0;
+  let projection = "";
+  for (const range of ranges) {
+    if (range.start < cursor || range.end < range.start) {
+      throw new Error("DIZ XML non valido: intervalli dei campi sovrapposti");
+    }
+    projection += parsed.source.slice(cursor, range.start) + "\u0000DIZ-FIELD-VALUE\u0000";
+    cursor = range.end;
+  }
+  return projection + parsed.source.slice(cursor);
+}
+
 export function rewriteXstreamFields(
   parsed: ParsedXstreamDiz,
   changes: readonly (DizFieldLocator & {

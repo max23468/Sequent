@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -16,6 +16,7 @@ import {
   compareDizFields,
   type DizWritePreflight,
   MAX_OFFICIAL_ATTACHMENT_BYTES,
+  opaqueDizEvidence,
   parseDiz,
   QUALIFIED_DIZ_FIELD_MAPPINGS,
   rewriteDizFields,
@@ -111,11 +112,14 @@ function makeZip(entries: readonly SyntheticEntry[]): Buffer {
   return Buffer.concat([...localRecords, ...centralRecords, eocd]);
 }
 
-function fixture(xml = syntheticXml()): Buffer {
+function fixture(
+  xml = syntheticXml(),
+  attachment = Buffer.from("%PDF-1.7\nfixture sintetica\n%%EOF", "ascii"),
+): Buffer {
   return makeZip([
     {
       name: "allegato",
-      content: Buffer.from("%PDF-1.7\nfixture sintetica\n%%EOF", "ascii"),
+      content: attachment,
       extra: Buffer.from([0xfe, 0xca, 0x00, 0x00]),
       comment: Buffer.from("unknown-metadata", "ascii"),
     },
@@ -558,6 +562,65 @@ test("il confronto CLI non espone nomi di file o valori fiscali", () => {
       assert.doesNotMatch(output, new RegExp(privateValue.replaceAll("&", "&amp;")));
     }
     assert.match(output, /"locator": "EA\/00000001\/001005"/);
+    assert.match(output, /"reconciliationAllowed": true/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("il confronto CLI blocca una divergenza nel contenuto XML opaco", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "sequent-diz-opaque-"));
+  try {
+    const paths = ["base.diz", "current.diz", "official.diz"].map((name) =>
+      path.join(directory, name),
+    );
+    writeFileSync(paths[0]!, fixture());
+    writeFileSync(paths[1]!, fixture());
+    writeFileSync(
+      paths[2]!,
+      fixture(Buffer.from(syntheticXml().toString().replace("immutabile", "normalizzato"), "utf8")),
+    );
+
+    const result = spawnSync(process.execPath, ["scripts/diz/compare.ts", ...paths], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 2);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.result.safety.reconciliationAllowed, false);
+    assert.deepEqual(report.result.safety.blockers, ["opaque-xml-divergence"]);
+    assert.notEqual(
+      opaqueDizEvidence(parseDiz(readFileSync(paths[0]!))).xmlSha256,
+      opaqueDizEvidence(parseDiz(readFileSync(paths[2]!))).xmlSha256,
+    );
+    assert.doesNotMatch(result.stdout, /immutabile|normalizzato/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("il confronto CLI blocca una divergenza nei byte degli allegati", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "sequent-diz-attachment-"));
+  try {
+    const paths = ["base.diz", "current.diz", "official.diz"].map((name) =>
+      path.join(directory, name),
+    );
+    writeFileSync(paths[0]!, fixture());
+    writeFileSync(paths[1]!, fixture());
+    writeFileSync(
+      paths[2]!,
+      fixture(syntheticXml(), Buffer.from("%PDF-1.7\nallegato modificato\n%%EOF", "ascii")),
+    );
+
+    const result = spawnSync(process.execPath, ["scripts/diz/compare.ts", ...paths], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 2);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.result.safety.reconciliationAllowed, false);
+    assert.deepEqual(report.result.safety.blockers, ["attachment-divergence"]);
+    assert.doesNotMatch(result.stdout, /allegato modificato/);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

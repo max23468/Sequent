@@ -7,6 +7,7 @@ import {
   type QualifiedDizFieldMapping,
 } from "./qualified-mappings.ts";
 import {
+  opaqueXstreamProjection,
   parseXstreamDiz,
   rewriteXstreamFields,
   type DizField,
@@ -52,6 +53,12 @@ export type ParsedDiz = {
   }[];
   readonly source: ReturnType<typeof parseDizArchive>;
   readonly xstream: ReturnType<typeof parseXstreamDiz>;
+};
+
+export type OpaqueDizEvidence = {
+  readonly xmlSha256: string;
+  readonly attachmentsSha256: string;
+  readonly attachmentCount: number;
 };
 
 function sha256(bytes: Uint8Array): string {
@@ -110,6 +117,21 @@ export function parseDiz(input: Uint8Array): ParsedDiz {
     attachments,
     source: archive,
     xstream,
+  };
+}
+
+export function opaqueDizEvidence(parsed: ParsedDiz): OpaqueDizEvidence {
+  const attachments = [...parsed.attachments]
+    .map(({ name, bytes, sha256: attachmentSha256 }) => ({
+      name,
+      bytes,
+      sha256: attachmentSha256,
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+  return {
+    xmlSha256: sha256(Buffer.from(opaqueXstreamProjection(parsed.xstream), "utf8")),
+    attachmentsSha256: sha256(Buffer.from(JSON.stringify(attachments), "utf8")),
+    attachmentCount: attachments.length,
   };
 }
 
