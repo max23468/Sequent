@@ -2,7 +2,7 @@ import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 import { storeUpload } from "$lib/server/blob-store";
 import { openDatabase } from "$lib/server/database";
-import { enqueueJob } from "$lib/server/jobs";
+import { enqueueJob, listFailedBlobVerifications } from "$lib/server/jobs";
 import { getPractice, listPracticeDocuments } from "$lib/server/practices";
 
 export const load: PageServerLoad = ({ locals, params, url }) => {
@@ -15,6 +15,7 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
   return {
     practice,
     documents,
+    failedVerifications: listFailedBlobVerifications(database, params.id),
     selectedDocument:
       documents.find((document) => document.id === selectedId) ?? documents.at(0) ?? null,
   };

@@ -5,7 +5,7 @@ import { hasOwner } from "$lib/server/auth";
 import { openDatabase } from "$lib/server/database";
 import { createPractice, listPractices } from "$lib/server/practices";
 import { storeUpload } from "$lib/server/blob-store";
-import { enqueueJob } from "$lib/server/jobs";
+import { enqueueJob, listFailedBlobVerifications } from "$lib/server/jobs";
 import { getLauncherCapabilities } from "$lib/server/launchers";
 
 const titleSchema = z
@@ -21,6 +21,7 @@ export const load: PageServerLoad = ({ locals }) => {
   const practices = listPractices(database);
   return {
     practices,
+    failedVerifications: listFailedBlobVerifications(database),
     launchers: getLauncherCapabilities(),
     lastPractice: practices.at(0) ?? null,
   };

@@ -23,6 +23,17 @@
         <div><input id="workspace-file" name="file" type="file" required /><button class="button primary" type="submit"><Upload size={17} />Carica</button></div>
         {#if form?.uploadError}<p class="form-error" role="alert">{form.uploadError}</p>{/if}
       </form>
+      {#if data.failedVerifications.length > 0}
+        <div class="technical-alert" role="alert">
+          <strong>Verifica tecnica non riuscita</strong>
+          <p>Ricarica {data.failedVerifications.length === 1 ? "il documento indicato" : "i documenti indicati"} per ripristinare e verificare gli originali.</p>
+          <ul>
+            {#each data.failedVerifications as verification (verification.jobId)}
+              <li><a href={`?documento=${verification.documentId}`}>{verification.documentName}</a></li>
+            {/each}
+          </ul>
+        </div>
+      {/if}
       {#if data.documents.length === 0}
         <div class="panel-empty workspace-empty"><FileText size={27} /><p>Nessun documento caricato.</p><span>Gli originali aggiunti alla pratica compariranno qui.</span></div>
       {:else}

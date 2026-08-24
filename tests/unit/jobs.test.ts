@@ -7,8 +7,11 @@ import {
   claimNextJob,
   enqueueJob,
   finishJob,
+  listFailedBlobVerifications,
   recoverInterruptedJobs,
 } from "../../src/lib/server/jobs.ts";
+import { createPractice } from "../../src/lib/server/practices.ts";
+import { storeUpload } from "../../src/lib/server/blob-store.ts";
 
 const directories: string[] = [];
 
@@ -48,5 +51,39 @@ describe("coda persistente", () => {
     expect(claimNextJob(database)?.status).toBe("running");
     expect(recoverInterruptedJobs(database)).toBe(1);
     expect(claimNextJob(database)?.attempts).toBe(2);
+  });
+
+  it("espone alla Dashboard e al workspace le verifiche dei blob fallite", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-job-visible-failure-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica con verifica fallita");
+    const document = await storeUpload(
+      database,
+      practice.id,
+      new File(["originale sintetico"], "originale.pdf", { type: "application/pdf" }),
+      directory,
+    );
+    const job = enqueueJob(
+      database,
+      "foundation.verify_blob",
+      { sha256: document.sha256 },
+      { practiceId: practice.id, documentId: document.id },
+    );
+    expect(claimNextJob(database)?.id).toBe(job.id);
+    finishJob(database, job.id, "BLOB_HASH_MISMATCH");
+
+    expect(listFailedBlobVerifications(database)).toEqual([
+      expect.objectContaining({
+        jobId: job.id,
+        practiceId: practice.id,
+        practiceTitle: "Pratica con verifica fallita",
+        documentId: document.id,
+        documentName: "originale.pdf",
+        errorCode: "BLOB_HASH_MISMATCH",
+      }),
+    ]);
+    expect(listFailedBlobVerifications(database, practice.id)).toHaveLength(1);
+    expect(listFailedBlobVerifications(database, "altra-pratica")).toEqual([]);
   });
 });

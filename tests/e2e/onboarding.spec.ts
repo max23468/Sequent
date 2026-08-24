@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import Database from "better-sqlite3";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 test.describe.configure({ mode: "serial" });
 
@@ -7,6 +10,20 @@ const suffix = `${process.pid}-${Date.now()}`;
 const practiceTitle = `Pratica sintetica ${suffix}`;
 const uploadedPracticeTitle = `Pratica da upload ${suffix}`;
 const documentName = `documento-${suffix}.txt`;
+
+test.afterEach(() => {
+  const databasePath = join(process.env.SEQUENT_E2E_DATA_DIR ?? ".test-data/e2e", "sequent.sqlite");
+  if (!existsSync(databasePath)) return;
+  const database = new Database(databasePath);
+  database
+    .prepare(
+      `UPDATE jobs
+       SET status = 'completed', progress = 100, error_code = NULL, updated_at = ?
+       WHERE type = 'foundation.verify_blob' AND error_code = 'BLOB_HASH_MISMATCH'`,
+    )
+    .run(new Date().toISOString());
+  database.close();
+});
 
 async function authenticate(page: import("@playwright/test").Page) {
   await page.goto("/");
@@ -96,6 +113,32 @@ test("ricerca da tastiera una pratica e un documento", async ({ page }) => {
   await search.press("Enter");
   await expect(page).toHaveURL(/\/pratiche\/.+\?documento=/);
   await expect(page.getByRole("heading", { name: documentName })).toBeVisible();
+});
+
+test("mostra una verifica tecnica fallita nella Dashboard e nella pratica", async ({ page }) => {
+  await authenticate(page);
+  const dataDirectory = process.env.SEQUENT_E2E_DATA_DIR ?? ".test-data/e2e";
+  const database = new Database(join(dataDirectory, "sequent.sqlite"));
+  const failedAt = new Date().toISOString();
+  const result = database
+    .prepare(
+      `UPDATE jobs
+       SET status = 'failed', attempts = 3, progress = 0,
+           error_code = 'BLOB_HASH_MISMATCH', updated_at = ?
+       WHERE document_id = (SELECT id FROM documents WHERE original_name = ?)`,
+    )
+    .run(failedAt, documentName);
+  expect(result.changes).toBe(1);
+  database.close();
+
+  await page.goto("/");
+  const issue = page.getByRole("link", {
+    name: new RegExp(`Verifica tecnica non riuscita.*${documentName}`),
+  });
+  await expect(issue).toBeVisible();
+  await issue.click();
+  await expect(page.getByRole("alert")).toContainText("Verifica tecnica non riuscita");
+  await expect(page.getByRole("alert").getByRole("link", { name: documentName })).toBeVisible();
 });
 
 test("persiste i temi chiaro e scuro e ripristina il tema di sistema", async ({ page }) => {

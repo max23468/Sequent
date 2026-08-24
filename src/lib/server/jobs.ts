@@ -16,6 +16,17 @@ export interface JobRecord {
   errorCode: string | null;
 }
 
+export interface FailedBlobVerification {
+  jobId: string;
+  practiceId: string;
+  practiceTitle: string;
+  documentId: string;
+  documentName: string;
+  attempts: number;
+  errorCode: string;
+  updatedAt: string;
+}
+
 function mapJob(row: Record<string, unknown>): JobRecord {
   return {
     id: String(row.id),
@@ -139,4 +150,45 @@ export function finishJob(database: Database.Database, id: string, errorCode?: s
       new Date().toISOString(),
       id,
     );
+}
+
+export function listFailedBlobVerifications(
+  database: Database.Database,
+  practiceId?: string,
+): FailedBlobVerification[] {
+  const rows = database
+    .prepare(
+      `SELECT jobs.id AS job_id, jobs.practice_id, practices.title AS practice_title,
+              jobs.document_id, documents.original_name AS document_name,
+              jobs.attempts, jobs.error_code, jobs.updated_at
+       FROM jobs
+       JOIN practices ON practices.id = jobs.practice_id
+       JOIN documents ON documents.id = jobs.document_id
+       WHERE jobs.type = 'foundation.verify_blob'
+         AND jobs.status = 'failed'
+         AND practices.status = 'active'
+         AND (? IS NULL OR jobs.practice_id = ?)
+       ORDER BY jobs.updated_at DESC
+       LIMIT 20`,
+    )
+    .all(practiceId ?? null, practiceId ?? null) as Array<{
+    job_id: string;
+    practice_id: string;
+    practice_title: string;
+    document_id: string;
+    document_name: string;
+    attempts: number;
+    error_code: string;
+    updated_at: string;
+  }>;
+  return rows.map((row) => ({
+    jobId: row.job_id,
+    practiceId: row.practice_id,
+    practiceTitle: row.practice_title,
+    documentId: row.document_id,
+    documentName: row.document_name,
+    attempts: row.attempts,
+    errorCode: row.error_code,
+    updatedAt: row.updated_at,
+  }));
 }

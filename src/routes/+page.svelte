@@ -97,7 +97,20 @@
   <div class="dashboard-grid">
     <section class="dashboard-panel attention-panel" aria-labelledby="attention-title">
       <div class="panel-title"><FileCheck2 size={22} aria-hidden="true" /><h2 id="attention-title">Da verificare</h2></div>
-      <div class="panel-empty"><p>Nessuna verifica da mostrare.</p><span>Le verifiche documentali compariranno qui quando saranno disponibili.</span></div>
+      {#if data.failedVerifications.length === 0}
+        <div class="panel-empty"><p>Nessuna verifica da mostrare.</p><span>Le verifiche documentali compariranno qui quando saranno disponibili.</span></div>
+      {:else}
+        <ul class="verification-list">
+          {#each data.failedVerifications as verification (verification.jobId)}
+            <li>
+              <a href={`/pratiche/${verification.practiceId}?documento=${verification.documentId}`}>
+                <span><strong>Verifica tecnica non riuscita</strong><small>{verification.documentName} · {verification.practiceTitle}</small></span>
+                <ChevronRight size={19} aria-hidden="true" />
+              </a>
+            </li>
+          {/each}
+        </ul>
+      {/if}
     </section>
     <section class="dashboard-panel deadlines-panel" aria-labelledby="deadlines-title">
       <div class="panel-title"><CalendarClock size={22} aria-hidden="true" /><h2 id="deadlines-title">Scadenze</h2></div>
