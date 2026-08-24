@@ -1,9 +1,20 @@
 {
   "schemaVersion": 1,
   "bundleId": "SUC-OFFICIAL-2025-07-15-FULL",
-  "status": "scaffold",
-  "fields": [],
+  "status": "partial-m1-qualified",
+  "fields": [
+    {
+      "id": "quadro-ea.soggetto.dati-anagrafici.cognome",
+      "quadro": "EA",
+      "label": "Cognome",
+      "technicalPath": "/Fornitura/Dichiarazione/QuadroEA/Modulo/Soggetto/DatiAnagrafici/Cognome",
+      "technicalType": "reg:Dati_Anagrafici_Type/Cognome",
+      "maxLength": 80,
+      "sourceIds": ["SRC-08"],
+      "status": "qualified-for-diz"
+    }
+  ],
   "blockers": [
-    "TG-COMPLIANCE richiede l'inventario completo di SRC-03 e il mapping verso SRC-08/SRC-09."
+    "TG-COMPLIANCE richiede ancora l'inventario completo di SRC-03 e il mapping verso SRC-08/SRC-09."
   ]
 }

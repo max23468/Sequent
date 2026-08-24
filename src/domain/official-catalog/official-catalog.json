@@ -12,5 +12,6 @@
     "delta-overlays.json"
   ],
   "releaseEligible": false,
-  "blockers": ["TG-COMPLIANCE aperto", "TG-DIZ aperto"]
+  "qualifiedCapabilities": ["diz-prototype-round-trip"],
+  "blockers": ["TG-COMPLIANCE aperto"]
 }
