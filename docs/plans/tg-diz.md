@@ -11,3 +11,17 @@
 9. Se il writer non è affidabile, fermarsi e aprire il Decision Gate locale/Java.
 
 Dopo il completamento dello sviluppo, se è già disponibile un ambiente Windows, ripetere facoltativamente il ciclo ufficiale come verifica advisory. L'assenza dell'ambiente, la mancata esecuzione o un problema esclusivamente ambientale non bloccano `TG-DIZ`, fasi di implementazione o release e non richiedono la predisposizione di una VM o di un PC dedicato. Una divergenza DIZ riproducibile e confermata segue invece i criteri di arresto e blocca l'output interessato.
+
+## Verdetto
+
+`TG-DIZ` è superato per il perimetro del prototipo:
+
+- il preflight legale e l'inventario privato coprono cinque campioni autorizzati;
+- parser e inspector leggono l'intero corpus senza esporre nomi fiscali o valori;
+- il writer modifica soltanto campi presenti nel registro qualificato e preserva byte, metadati, blocchi sconosciuti e allegati non interessati;
+- due pratiche differenti sono state aperte e risalvate in SuccessioniOnLine su macOS, inclusa una pratica completa con dieci allegati;
+- il confronto a tre vie non ha rilevato conflitti e separa le normalizzazioni interne del programma ufficiale dai campi collegati al catalogo;
+- il telematico generato dal programma ufficiale è risultato ben formato, conforme a `SRC-08` e accettato dal controllo SUC13 senza errori o anomalie;
+- la suite automatica copre no-op byte-identico, percorsi relativi, separatori, codifica, terminatori di riga, metadati, CRC, limiti e contenuti non riconosciuti.
+
+Gli artefatti reali e le evidenze con hash restano nel laboratorio privato. I campi privi di mapping qualificato continuano a bloccare il writer interessato. Il collaudo Windows resta facoltativo e advisory come stabilito dal piano canonico.

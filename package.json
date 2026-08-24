@@ -14,7 +14,9 @@
     "verify:boundary": "node scripts/check-public-boundary.mjs",
     "verify:public": "npm run docs:check && npm run format:check && npm run lint && npm run shell:check && npm run typecheck && npm test && npm run test:codex-review && npm run verify:boundary",
     "verify:sources": "node scripts/official-sources/verify.ts",
-    "diz:inspect": "node scripts/diz/inspect.ts"
+    "diz:compare": "node scripts/diz/compare.ts",
+    "diz:inspect": "node scripts/diz/inspect.ts",
+    "diz:inventory": "node scripts/diz/inventory.ts"
   },
   "devDependencies": {
     "@types/node": "26.2.0",
