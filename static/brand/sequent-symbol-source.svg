@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 82" role="img" aria-labelledby="title description">
+  <title id="title">Simbolo Sequent</title>
+  <desc id="description">Quattro moduli geometrici compongono una sequenza astratta nei colori blu profondo e teal.</desc>
+
+  <!-- Modulo superiore: apre la sequenza con un avanzamento verso destra. -->
+  <path id="sequence-start" fill="#001E42" d="M0 18 18 0H48V24H0Z" />
+
+  <!-- Modulo centrale sinistro: ripiega il percorso verso il basso. -->
+  <path id="sequence-fold" fill="#001E42" d="M0 28H29V54H18L0 35Z" />
+
+  <!-- Modulo centrale destro: ricompone il passaggio nel colore funzionale. -->
+  <path id="sequence-join" fill="#035A64" d="M47 28H52L72 48V54H47Z" />
+
+  <!-- Modulo inferiore: chiude la sequenza con una direzione in avanti. -->
+  <path id="sequence-forward" fill="#035A64" d="M4 58H72V64L54 82H4Z" />
+</svg>

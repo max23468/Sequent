@@ -3,6 +3,13 @@ node_modules/
 coverage/
 dist/
 .cache/
+.svelte-kit/
+.svelte-doctor/
+.local-data/
+.test-data/
+build/
+playwright-report/
+test-results/
 *.log
 
 # Configurazione e segreti
@@ -37,3 +44,4 @@ client-data/
 .DS_Store
 .idea/
 .vscode/
+.svelte-doctor/*

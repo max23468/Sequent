@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const markdownFiles = execFileSync(
   "git",
@@ -9,7 +9,7 @@ const markdownFiles = execFileSync(
   { encoding: "utf8" },
 )
   .split("\0")
-  .filter(Boolean)
+  .filter((file) => file && existsSync(file))
   .sort();
 
 const satelliteExceptions = new Set(["CHANGELOG.md", "docs/MASTER_PLAN.md"]);

@@ -1,0 +1,91 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
+import { createPractice, listPractices, saveDeclaration } from "../../src/lib/server/practices.ts";
+import Sqlite from "better-sqlite3";
+
+const directories: string[] = [];
+
+afterEach(() => {
+  for (const directory of directories.splice(0)) {
+    closeDatabase(directory);
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+describe("persistenza delle pratiche", () => {
+  it("rifiuta un salvataggio basato su una revisione superata", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-practice-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica sintetica");
+    expect(
+      saveDeclaration(database, practice.declarationId, 1, {
+        schemaVersion: 1,
+        fields: { note: "prima" },
+      }),
+    ).toBe(2);
+    expect(() =>
+      saveDeclaration(database, practice.declarationId, 1, {
+        schemaVersion: 1,
+        fields: { note: "persa" },
+      }),
+    ).toThrow("REVISION_CONFLICT");
+  });
+
+  it("ordina le pratiche per attività recente e conta i documenti reali", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-practice-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const older = createPractice(database, "Pratica precedente");
+    const latest = createPractice(database, "Pratica recente");
+    database
+      .prepare("UPDATE practices SET updated_at = ? WHERE id = ?")
+      .run("2026-01-01T00:00:00.000Z", older.id);
+    database
+      .prepare(
+        `INSERT INTO documents(id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at)
+         VALUES ('doc-count', ?, 'documento.pdf', 'application/pdf', 10, 'count-hash', 'blobs/count', ?)`,
+      )
+      .run(latest.id, new Date().toISOString());
+    expect(listPractices(database)).toMatchObject([
+      { id: latest.id, documentCount: 1 },
+      { id: older.id, documentCount: 0 },
+    ]);
+  });
+
+  it("separa una dichiarazione incorporata da una pratica creata dallo scaffolding iniziale", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-practice-"));
+    directories.push(directory);
+    const legacy = new Sqlite(join(directory, "sequent.sqlite"));
+    legacy.exec(`
+      CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);
+      INSERT INTO schema_migrations VALUES (1, '2026-08-24T00:00:00.000Z');
+      CREATE TABLE practices (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('active', 'archived', 'trashed')),
+        revision INTEGER NOT NULL DEFAULT 1,
+        declaration_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      INSERT INTO practices VALUES (
+        'practice-legacy', 'Pratica esistente', 'active', 2,
+        '{"schemaVersion":1}', '2026-08-24T00:00:00.000Z', '2026-08-24T00:00:00.000Z'
+      );
+    `);
+    legacy.close();
+
+    const database = openDatabase(directory);
+    expect(listPractices(database)).toMatchObject([
+      { id: "practice-legacy", declarationId: "practice-legacy:declaration:1", revision: 2 },
+    ]);
+    expect(createPractice(database, "Nuovo procedimento").revision).toBe(1);
+    expect(
+      (database.pragma("table_info(practices)") as Array<{ name: string }>).map(({ name }) => name),
+    ).not.toContain("declaration_json");
+  });
+});

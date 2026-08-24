@@ -1,0 +1,16 @@
+.git
+.github
+.local-data
+.test-data
+build
+coverage
+node_modules
+playwright-report
+test-results
+private
+data
+runtime
+releases
+snapshots
+tmp
+*.log
