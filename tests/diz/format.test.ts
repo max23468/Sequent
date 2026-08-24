@@ -429,10 +429,10 @@ test("preserva terminatori CRLF e metadati non interpretati", () => {
 });
 
 test("classifica deterministicamente il confronto a tre vie", () => {
-  const field = (fieldName: string, value: string) => ({
+  const field = (module: string, value: string) => ({
     quadro: "EA",
-    module: "00000001",
-    field: fieldName,
+    module,
+    field: "001005",
     value,
   });
   const comparison = compareDizFields(
@@ -441,17 +441,18 @@ test("classifica deterministicamente il confronto a tre vie", () => {
     [field("001001", "ufficiale"), field("001005", "base"), field("001006", "ufficiale")],
   );
   assert.deepEqual(
-    comparison.importFromOfficial.map((item) => item.field),
+    comparison.importFromOfficial.map((item) => item.module),
     ["001001"],
   );
   assert.deepEqual(
-    comparison.keepCurrent.map((item) => item.field),
+    comparison.keepCurrent.map((item) => item.module),
     ["001005"],
   );
   assert.deepEqual(
-    comparison.conflicts.map((item) => item.field),
+    comparison.conflicts.map((item) => item.module),
     ["001006"],
   );
+  assert.equal(comparison.opaque.length, 0);
   assert.equal(comparison.unchanged.length, 0);
 });
 
@@ -470,10 +471,11 @@ test("separa la modifica ufficiale dalla normalizzazione interna aggiunta da SUC
 
   assert.deepEqual(
     comparison.importFromOfficial.map(({ quadro, field: fieldName }) => [quadro, fieldName]),
-    [
-      ["EA", "001005"],
-      ["VV", "999999"],
-    ],
+    [["EA", "001005"]],
+  );
+  assert.deepEqual(
+    comparison.opaque.map(({ quadro, field: fieldName }) => [quadro, fieldName]),
+    [["VV", "999999"]],
   );
   assert.equal(comparison.conflicts.length, 0);
 });

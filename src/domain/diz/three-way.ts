@@ -1,4 +1,5 @@
 import type { DizField, DizFieldLocator } from "./xstream.ts";
+import { qualifiedMappingFor } from "./qualified-mappings.ts";
 
 export type ThreeWayValue = DizFieldLocator & {
   readonly base?: string;
@@ -11,6 +12,7 @@ export type ThreeWayFieldComparison = {
   readonly keepCurrent: readonly ThreeWayValue[];
   readonly unchanged: readonly ThreeWayValue[];
   readonly conflicts: readonly ThreeWayValue[];
+  readonly opaque: readonly ThreeWayValue[];
 };
 
 function key(field: DizFieldLocator): string {
@@ -41,7 +43,8 @@ export function compareDizFields(
     keepCurrent: ThreeWayValue[];
     unchanged: ThreeWayValue[];
     conflicts: ThreeWayValue[];
-  } = { importFromOfficial: [], keepCurrent: [], unchanged: [], conflicts: [] };
+    opaque: ThreeWayValue[];
+  } = { importFromOfficial: [], keepCurrent: [], unchanged: [], conflicts: [], opaque: [] };
 
   for (const fieldKey of keys) {
     const baseField = base.get(fieldKey);
@@ -58,6 +61,7 @@ export function compareDizFields(
       official: officialField?.value,
     };
     if (comparison.current === comparison.official) result.unchanged.push(comparison);
+    else if (!qualifiedMappingFor(comparison)) result.opaque.push(comparison);
     else if (comparison.current === comparison.base) result.importFromOfficial.push(comparison);
     else if (comparison.official === comparison.base) result.keepCurrent.push(comparison);
     else result.conflicts.push(comparison);

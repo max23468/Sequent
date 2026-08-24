@@ -42,7 +42,7 @@ const unchangedFromBase = comparison.unchanged.length - acceptedCurrentChanges.l
 console.log(
   JSON.stringify(
     {
-      schemaVersion: 1,
+      schemaVersion: 2,
       inputs: {
         base: { sha256: base.sha256, bytes: base.bytes, fields: base.fields.length },
         current: { sha256: current.sha256, bytes: current.bytes, fields: current.fields.length },
@@ -58,6 +58,7 @@ console.log(
         acceptedCurrentChanges: sanitize(acceptedCurrentChanges),
         unchangedFromBase,
         conflicts: sanitize(comparison.conflicts),
+        opaque: sanitize(comparison.opaque),
       },
     },
     null,
