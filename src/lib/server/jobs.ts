@@ -2,6 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 type JobStatus = "queued" | "running" | "completed" | "failed" | "cancelled" | "interrupted";
+const MAX_JOB_ATTEMPTS = 3;
+const RETRYABLE_JOB_TYPES = new Set(["foundation.verify_blob"]);
 
 export interface JobRecord {
   id: string;
@@ -42,7 +44,29 @@ export function enqueueJob(
   const existing = database
     .prepare("SELECT * FROM jobs WHERE type = ? AND input_hash = ?")
     .get(type, inputHash) as Record<string, unknown> | undefined;
-  if (existing) return mapJob(existing);
+  if (existing) {
+    const mapped = mapJob(existing);
+    if (
+      mapped.status === "failed" &&
+      mapped.attempts < MAX_JOB_ATTEMPTS &&
+      RETRYABLE_JOB_TYPES.has(mapped.type)
+    ) {
+      database
+        .prepare(
+          `UPDATE jobs
+           SET status = 'queued', progress = 0, error_code = NULL, updated_at = ?
+           WHERE id = ? AND status = 'failed' AND attempts < ?`,
+        )
+        .run(new Date().toISOString(), mapped.id, MAX_JOB_ATTEMPTS);
+      return mapJob(
+        database.prepare("SELECT * FROM jobs WHERE id = ?").get(mapped.id) as Record<
+          string,
+          unknown
+        >,
+      );
+    }
+    return mapped;
+  }
 
   const id = randomUUID();
   const now = new Date().toISOString();
@@ -76,9 +100,9 @@ export function recoverInterruptedJobs(database: Database.Database): number {
       .run(now).changes;
     database
       .prepare(
-        "UPDATE jobs SET status = 'queued', updated_at = ? WHERE status = 'interrupted' AND attempts < 3",
+        "UPDATE jobs SET status = 'queued', updated_at = ? WHERE status = 'interrupted' AND attempts < ?",
       )
-      .run(now);
+      .run(now, MAX_JOB_ATTEMPTS);
     return interrupted;
   });
   return transaction();
