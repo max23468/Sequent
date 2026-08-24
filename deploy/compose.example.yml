@@ -12,6 +12,9 @@ services:
       BODY_SIZE_LIMIT: 260M
       SEQUENT_DATA_DIR: /var/lib/sequent
       SEQUENT_SECURE_COOKIES: "true"
+      ORIGIN: ${SEQUENT_ORIGIN:?Origine HTTPS pubblica obbligatoria}
+      ADDRESS_HEADER: X-Forwarded-For
+      XFF_DEPTH: "1"
     volumes:
       - /opt/sequent/data:/var/lib/sequent
     networks:
