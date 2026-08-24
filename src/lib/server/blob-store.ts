@@ -75,6 +75,7 @@ export async function storeUpload(
         blobPath,
         now,
       );
+    database.prepare("UPDATE practices SET updated_at = ? WHERE id = ?").run(now, practiceId);
     return { id, sha256, byteSize, blobPath };
   } catch (error) {
     destination.destroy();

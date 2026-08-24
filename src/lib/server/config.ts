@@ -13,3 +13,20 @@ export function useSecureCookies(): boolean {
 
 export const SESSION_COOKIE = "sequent_session";
 export const MAX_UPLOAD_BYTES = 250 * 1024 * 1024;
+
+export function getQualifiedLauncherUrl(
+  name: "desktopTelematico" | "successioniOnLine",
+): string | null {
+  const value =
+    name === "desktopTelematico"
+      ? process.env.SEQUENT_DESKTOP_TELEMATICO_URL
+      : process.env.SEQUENT_SUCCESSIONI_ONLINE_URL;
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (!["jnlp:", "jnlps:", "https:"].includes(url.protocol)) return null;
+    return value;
+  } catch {
+    return null;
+  }
+}

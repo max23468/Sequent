@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
-import { createPractice, saveDeclaration } from "../../src/lib/server/practices.ts";
+import { createPractice, listPractices, saveDeclaration } from "../../src/lib/server/practices.ts";
 
 const directories: string[] = [];
 
@@ -26,5 +26,26 @@ describe("persistenza delle pratiche", () => {
     expect(() =>
       saveDeclaration(database, practice.id, 1, { schemaVersion: 1, fields: { note: "persa" } }),
     ).toThrow("REVISION_CONFLICT");
+  });
+
+  it("ordina le pratiche per attività recente e conta i documenti reali", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-practice-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const older = createPractice(database, "Pratica precedente");
+    const latest = createPractice(database, "Pratica recente");
+    database
+      .prepare("UPDATE practices SET updated_at = ? WHERE id = ?")
+      .run("2026-01-01T00:00:00.000Z", older.id);
+    database
+      .prepare(
+        `INSERT INTO documents(id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at)
+         VALUES ('doc-count', ?, 'documento.pdf', 'application/pdf', 10, 'count-hash', 'blobs/count', ?)`,
+      )
+      .run(latest.id, new Date().toISOString());
+    expect(listPractices(database)).toMatchObject([
+      { id: latest.id, documentCount: 1 },
+      { id: older.id, documentCount: 0 },
+    ]);
   });
 });

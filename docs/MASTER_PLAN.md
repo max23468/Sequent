@@ -3297,7 +3297,7 @@ Nessun rapporto visivo esplicito con Pratix, Hub Fatture o Routally. Si possono 
 
 ## 53.3 Direzione visiva
 
-Prima della UI definitiva vengono proposte 2–3 direzioni con simbolo SVG, wordmark, favicon, palette chiaro/scuro, applicazione Dashboard/workspace e verifica monocromia/piccole dimensioni.
+La direzione approvata è documentata nella Brand Foundation, con simbolo SVG sorgente, wordmark, favicon, palette chiaro/scuro, applicazione Dashboard/workspace e verifica monocromia/piccole dimensioni.
 
 Direzione concettuale confermata:
 
@@ -3461,7 +3461,9 @@ Ogni milestone contiene già i propri criteri di uscita; non esistono Definition
 
 **Risultato:** SvelteKit, processo unico, SQLite/filesystem, autenticazione semplice, job persistenti, Docker ARM64, CI, runtime a release separato dal checkout e separazione da Hub Fatture.
 
-**Uscita:** `TG-TOOLCHAIN` chiuso; servizio non pubblico o live eseguito da release identificata; upload/salvataggio/job/restart/backup base verificati senza eseguire la working tree sui dati operativi.
+M2 comprende inoltre Brand Foundation, design token, shell responsive, Dashboard sui soli dati già disponibili, ricerca iniziale su pratiche e nomi documento, workspace minimo reale e design lab sintetico non esposto nell’istanza normale. Questa anticipazione definisce il linguaggio frontend senza introdurre campi, regole o stati fiscali non qualificati.
+
+**Uscita:** `TG-TOOLCHAIN` chiuso; Brand Foundation e asset vettoriali approvati; shell verificata su desktop, mobile e tema scuro; ricerca, upload e workspace minimo basati su dati reali; servizio non pubblico o live eseguito da release identificata; upload/salvataggio/job/restart/backup base verificati senza eseguire la working tree sui dati operativi.
 
 ## M3 — Documenti, OCR e Codex
 
@@ -3471,7 +3473,7 @@ Ogni milestone contiene già i propri criteri di uscita; non esistono Definition
 
 ## M4 — Dominio, UX e output
 
-**Risultato:** catalogo ministeriale, procedimento/dichiarazioni, anagrafiche e beni condivisi, checklist, devoluzione, calcoli, regole versionate, Dashboard, doppia vista, ricerca, output e Brand Foundation.
+**Risultato:** catalogo ministeriale, procedimento/dichiarazioni, anagrafiche e beni condivisi, checklist, devoluzione, calcoli, regole versionate, completamento della Dashboard e della ricerca con dati di dominio qualificati, doppia vista e output.
 
 **Uscita:** `TG-COMPLIANCE` chiuso; flusso completo interno dalla pratica ai controlli, con conferme professionali richieste e test dominio verdi.
 
