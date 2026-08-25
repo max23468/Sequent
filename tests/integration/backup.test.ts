@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -54,5 +54,25 @@ describe("backup base", () => {
         .count,
     ).toBe(0);
     snapshot.close();
+  });
+
+  it("rifiuta manifest incompleti e file non inventariati", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sequent-backup-inventory-"));
+    directories.push(root);
+    const dataDirectory = join(root, "data");
+    const database = openDatabase(dataDirectory);
+    createPractice(database, "Pratica nel backup incompleto");
+    const backup = await createBaseBackup(database, dataDirectory, join(root, "backups"));
+    const manifestPath = join(backup, "manifest.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+      files: Array<{ path: string }>;
+    };
+    manifest.files = manifest.files.filter(({ path }) => path !== "sequent.sqlite");
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    await expect(verifyBaseBackup(backup)).rejects.toThrow("BACKUP_INVENTORY_INVALID");
+
+    const validBackup = await createBaseBackup(database, dataDirectory, join(root, "backups-2"));
+    writeFileSync(join(validBackup, "non-inventariato.txt"), "contenuto estraneo");
+    await expect(verifyBaseBackup(validBackup)).rejects.toThrow("BACKUP_INVENTORY_MISMATCH");
   });
 });

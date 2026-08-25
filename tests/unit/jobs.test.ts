@@ -53,6 +53,47 @@ describe("coda persistente", () => {
     expect(claimNextJob(database)?.attempts).toBe(2);
   });
 
+  it("rende visibile come fallito un job interrotto dopo l'ultimo tentativo", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-job-exhausted-restart-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica interrotta");
+    const document = await storeUpload(
+      database,
+      practice.id,
+      new File(["originale sintetico"], "interrotto.pdf", { type: "application/pdf" }),
+      directory,
+    );
+    const job = enqueueJob(
+      database,
+      "foundation.verify_blob",
+      { sha256: document.sha256 },
+      { practiceId: practice.id, documentId: document.id },
+    );
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      expect(claimNextJob(database)?.attempts).toBe(attempt);
+      if (attempt < 3) {
+        finishJob(database, job.id, "READ_TRANSIENT");
+        enqueueJob(
+          database,
+          "foundation.verify_blob",
+          { sha256: document.sha256 },
+          { practiceId: practice.id, documentId: document.id },
+        );
+      }
+    }
+
+    expect(recoverInterruptedJobs(database)).toBe(1);
+    expect(claimNextJob(database)).toBeNull();
+    expect(listFailedBlobVerifications(database, practice.id)).toEqual([
+      expect.objectContaining({
+        jobId: job.id,
+        attempts: 3,
+        errorCode: "PROCESS_RESTART",
+      }),
+    ]);
+  });
+
   it("espone alla Dashboard e al workspace le verifiche dei blob fallite", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-job-visible-failure-"));
     directories.push(directory);

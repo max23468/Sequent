@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { CalendarClock, ChevronRight, ExternalLink, FileCheck2, FileText, History, MoreVertical, Plus, RotateCcw, Upload, UserRound } from "@lucide/svelte";
+  import { CalendarClock, ChevronRight, ExternalLink, FileText, History, Home, MoreVertical, Plus, Upload, UserRound } from "@lucide/svelte";
 
   const checks = [
-    { id: "PR-2026-048", item: "Documento illeggibile", source: "Documento · p. 1", updated: "24 ago 2026", icon: FileText },
+    { id: "PR-2026-048", item: "Documento illeggibile", source: "Documento · p. 1", updated: "24 ago 2026", icon: UserRound },
     { id: "PR-2026-047", item: "Classificazione da confermare", source: "Documento · p. 2", updated: "23 ago 2026", icon: FileText },
-    { id: "PR-2026-046", item: "Differenza DIZ da riconciliare", source: "Importazione DIZ", updated: "22 ago 2026", icon: RotateCcw },
+    { id: "PR-2026-046", item: "Differenza DIZ da riconciliare", source: "Importazione DIZ", updated: "22 ago 2026", icon: Home },
     { id: "PR-2026-045", item: "Dato anagrafico incompleto", source: "Documento · p. 1", updated: "21 ago 2026", icon: UserRound },
     { id: "PR-2026-044", item: "Fonte da confrontare", source: "Due documenti", updated: "20 ago 2026", icon: FileText },
   ];
@@ -13,6 +13,8 @@
     ["PR-2026-048", "Termine della dichiarazione", "30 ago 2026", "tra 6 giorni"],
     ["PR-2026-047", "Domanda di voltura", "10 set 2026", "tra 17 giorni"],
     ["PR-2026-046", "Dichiarazione sostitutiva", "20 set 2026", "tra 27 giorni"],
+    ["PR-2026-045", "Revisione dei documenti", "25 set 2026", "tra 32 giorni"],
+    ["PR-2026-044", "Verifica del fascicolo", "02 ott 2026", "tra 39 giorni"],
   ];
 
   const practices = [
@@ -32,7 +34,7 @@
     <div class="desktop-quick-actions" aria-label="Azioni prototipo Dashboard">
       <a class="action-link" href="/impostazioni" data-sveltekit-prefetch><ExternalLink size={18} />Desktop Telematico</a>
       <a class="action-link" href="/impostazioni" data-sveltekit-prefetch><ExternalLink size={18} />SuccessioniOnLine</a>
-      <a class="action-link" href="/" data-sveltekit-prefetch><RotateCcw size={19} />Riprendi ultima pratica</a>
+      <a class="action-link" href="/" data-sveltekit-prefetch><History size={19} />Riprendi ultima pratica</a>
       <a class="button secondary" href="/" data-sveltekit-prefetch><Upload size={18} />Carica documenti</a>
       <a class="button primary" href="/" data-sveltekit-prefetch><Plus size={20} />Nuova pratica</a>
     </div>
@@ -46,28 +48,37 @@
   </div>
   <div class="dashboard-grid">
     <section class="dashboard-panel attention-panel">
-      <div class="panel-title"><FileCheck2 size={22} /><h2>Da verificare</h2></div>
+      <div class="panel-title dashboard-panel-title">
+        <span class="mobile-panel-mark attention-mark" aria-hidden="true"></span>
+        <h2>Da verificare</h2>
+      </div>
       <div class="lab-table lab-checks">
         <div class="lab-table-head"><span>Pratica</span><span>Elemento</span><span>Origine</span><span>Aggiornato</span></div>
         {#each checks as check (check.id)}
           {@const Icon = check.icon}
-          <div class="lab-table-row"><i aria-hidden="true"></i><Icon size={18} /><strong>{check.id}</strong><span>{check.item}</span><span>{check.source}</span><small>{check.updated}</small></div>
+          <a class="lab-table-row" href="/" data-sveltekit-prefetch><i aria-hidden="true"></i><Icon size={18} /><strong>{check.id}</strong><span>{check.item}</span><span class="desktop-cell">{check.source}</span><small class="desktop-cell">{check.updated}</small><span class="mobile-row-meta">{check.source} · Aggiornato {check.updated}</span><ChevronRight class="mobile-row-chevron" size={19} aria-hidden="true" /></a>
         {/each}
       </div>
       <a class="lab-see-all" href="/" data-sveltekit-prefetch><span>Vedi tutte</span><ChevronRight size={18} /></a>
     </section>
     <section class="dashboard-panel deadlines-panel">
-      <div class="panel-title"><CalendarClock size={22} /><h2>Scadenze</h2></div>
+      <div class="panel-title dashboard-panel-title">
+        <span class="mobile-panel-mark" aria-hidden="true"><CalendarClock size={21} /></span>
+        <h2>Scadenze</h2>
+      </div>
       <div class="lab-table lab-deadlines">
         <div class="lab-table-head"><span>Pratica</span><span>Attività</span><span>Scadenza</span><span>Tempo residuo</span></div>
         {#each deadlines as deadline (deadline[0])}
-          <div class="lab-table-row"><CalendarClock size={18} /><strong>{deadline[0]}</strong><span>{deadline[1]}</span><span>{deadline[2]}</span><small>{deadline[3]}</small></div>
+          <a class="lab-table-row" href="/" data-sveltekit-prefetch><CalendarClock size={18} /><strong>{deadline[0]}</strong><span>{deadline[1]}</span><span class="desktop-cell">{deadline[2]}</span><small class="desktop-cell">{deadline[3]}</small><span class="mobile-row-meta">{deadline[2]} · {deadline[3]}</span><ChevronRight class="mobile-row-chevron" size={19} aria-hidden="true" /></a>
         {/each}
       </div>
       <a class="lab-see-all" href="/" data-sveltekit-prefetch><span>Vedi tutte</span><ChevronRight size={18} /></a>
     </section>
     <section class="dashboard-panel recent-panel">
-      <div class="panel-title"><History size={22} /><h2>Pratiche recenti</h2></div>
+      <div class="panel-title dashboard-panel-title">
+        <span class="mobile-panel-mark" aria-hidden="true"><History size={21} /></span>
+        <h2>Pratiche recenti</h2>
+      </div>
       <div class="responsive-table lab-recent-table">
         <div class="table-row table-header"><span>Pratica</span><span>Defunto</span><span>Stato</span><span>Prossimo passo</span><span>Aggiornato</span><span></span></div>
         {#each practices as practice (practice[0])}

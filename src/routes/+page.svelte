@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CalendarClock, ChevronRight, ExternalLink, FileCheck2, FolderOpen, History, MoreVertical, Plus, Upload, X } from "@lucide/svelte";
+  import { CalendarClock, ChevronRight, ExternalLink, FolderOpen, History, MoreVertical, Plus, Upload, X } from "@lucide/svelte";
 
   let { data, form } = $props();
   let createDialog: HTMLDialogElement | undefined = undefined;
@@ -96,7 +96,10 @@
 
   <div class="dashboard-grid">
     <section class="dashboard-panel attention-panel" aria-labelledby="attention-title">
-      <div class="panel-title"><FileCheck2 size={22} aria-hidden="true" /><h2 id="attention-title">Da verificare</h2></div>
+      <div class="panel-title dashboard-panel-title">
+        <span class="mobile-panel-mark attention-mark" aria-hidden="true"></span>
+        <h2 id="attention-title">Da verificare</h2>
+      </div>
       {#if data.failedVerifications.length === 0}
         <div class="panel-empty"><p>Nessuna verifica da mostrare.</p><span>Le verifiche documentali compariranno qui quando saranno disponibili.</span></div>
       {:else}
@@ -113,11 +116,17 @@
       {/if}
     </section>
     <section class="dashboard-panel deadlines-panel" aria-labelledby="deadlines-title">
-      <div class="panel-title"><CalendarClock size={22} aria-hidden="true" /><h2 id="deadlines-title">Scadenze</h2></div>
+      <div class="panel-title dashboard-panel-title">
+        <span class="mobile-panel-mark" aria-hidden="true"><CalendarClock size={21} /></span>
+        <h2 id="deadlines-title">Scadenze</h2>
+      </div>
       <div class="panel-empty"><p>Nessuna scadenza registrata.</p><span>Sequent mostrerà soltanto le scadenze essenziali della pratica.</span></div>
     </section>
     <section class="dashboard-panel recent-panel" aria-labelledby="recent-title">
-      <div class="panel-title"><History size={22} aria-hidden="true" /><h2 id="recent-title">Pratiche recenti</h2></div>
+      <div class="panel-title dashboard-panel-title">
+        <span class="mobile-panel-mark" aria-hidden="true"><History size={21} /></span>
+        <h2 id="recent-title">Pratiche recenti</h2>
+      </div>
       {#if data.practices.length === 0}
         <div class="panel-empty recent-empty"><p>Non ci sono ancora pratiche.</p><span>Crea la prima pratica o carica un documento per iniziare.</span></div>
       {:else}

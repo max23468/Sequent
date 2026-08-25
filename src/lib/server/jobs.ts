@@ -114,6 +114,13 @@ export function recoverInterruptedJobs(database: Database.Database): number {
         "UPDATE jobs SET status = 'queued', updated_at = ? WHERE status = 'interrupted' AND attempts < ?",
       )
       .run(now, MAX_JOB_ATTEMPTS);
+    database
+      .prepare(
+        `UPDATE jobs
+         SET status = 'failed', progress = 0, error_code = 'PROCESS_RESTART', updated_at = ?
+         WHERE status = 'interrupted' AND attempts >= ?`,
+      )
+      .run(now, MAX_JOB_ATTEMPTS);
     return interrupted;
   });
   return transaction();

@@ -46,4 +46,26 @@ describe("ricerca del workspace", () => {
     createPractice(database, "Pratica 100%_sintetica");
     expect(searchWorkspace(database, "%_")).toHaveLength(1);
   });
+
+  it("ignora le differenze di maiuscolo anche per i caratteri italiani accentati", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-search-unicode-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Eredità Bianchi");
+    database
+      .prepare(
+        `INSERT INTO documents(id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at)
+         VALUES ('doc-accentato', ?, 'QUALITÀ.pdf', 'application/pdf', 120, 'hash-accentato', 'blobs/hash-accentato', ?)`,
+      )
+      .run(practice.id, new Date().toISOString());
+
+    expect(searchWorkspace(database, "EREDITÀ")[0]).toMatchObject({
+      kind: "practice",
+      practiceId: practice.id,
+    });
+    expect(searchWorkspace(database, "qualità")[0]).toMatchObject({
+      kind: "document",
+      practiceId: practice.id,
+    });
+  });
 });

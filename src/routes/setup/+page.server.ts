@@ -2,9 +2,8 @@ import { fail, redirect } from "@sveltejs/kit";
 import { z } from "zod";
 import type { Actions, PageServerLoad } from "./$types";
 import {
-  createOwner,
+  createOwnerSession,
   hasOwner,
-  issueSession,
   SESSION_COOKIE,
   sessionCookieOptions,
 } from "$lib/server/auth";
@@ -32,8 +31,7 @@ export const actions = {
     if (!parsed.success) return fail(400, { error: parsed.error.issues[0]?.message });
     if (formData.get("passwordConfirm") !== parsed.data)
       return fail(400, { error: "Le password non coincidono." });
-    const ownerId = await createOwner(database, parsed.data);
-    const session = issueSession(database, ownerId);
+    const session = await createOwnerSession(database, parsed.data);
     cookies.set(SESSION_COOKIE, session.token, {
       ...sessionCookieOptions(),
       httpOnly: true,

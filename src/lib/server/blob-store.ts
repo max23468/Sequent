@@ -2,6 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import { link, mkdir, open, rename, rm, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
+import { Readable, Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import type Database from "better-sqlite3";
 import { getDataDirectory, MAX_UPLOAD_BYTES } from "./config.ts";
 
@@ -73,26 +75,29 @@ export async function storeUpload(
   const temporaryPath = join(temporaryDirectory, `${randomUUID()}.upload`);
   const hash = createHash("sha256");
   let byteSize = 0;
-  const source = file.stream();
-  const destination = createWriteStream(temporaryPath, { flags: "wx", mode: 0o600 });
-  const reader = source.getReader();
   try {
-    while (true) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      byteSize += chunk.value.byteLength;
-      if (byteSize > MAX_UPLOAD_BYTES) throw new Error("FILE_TOO_LARGE");
-      hash.update(chunk.value);
-      if (!destination.write(chunk.value)) {
-        await new Promise<void>((resolve) => destination.once("drain", resolve));
-      }
-    }
-    await new Promise<void>((resolve, reject) =>
-      destination.end((error?: Error | null) => (error ? reject(error) : resolve())),
+    const inspect = new Transform({
+      transform(chunk: Buffer, _encoding, callback) {
+        byteSize += chunk.byteLength;
+        if (byteSize > MAX_UPLOAD_BYTES) {
+          callback(new Error("FILE_TOO_LARGE"));
+          return;
+        }
+        hash.update(chunk);
+        callback(null, chunk);
+      },
+    });
+    await pipeline(
+      Readable.from(file.stream()),
+      inspect,
+      createWriteStream(temporaryPath, { flags: "wx", mode: 0o600 }),
     );
     const handle = await open(temporaryPath, "r");
-    await handle.sync();
-    await handle.close();
+    try {
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
 
     const sha256 = hash.digest("hex");
     const blobPath = join("blobs", sha256.slice(0, 2), sha256.slice(2));
@@ -118,23 +123,27 @@ export async function storeUpload(
     const id = randomUUID();
     const now = new Date().toISOString();
     const safeOriginalName = file.name.replaceAll("\\", "/").split("/").at(-1) || "documento";
-    const insert = database
-      .prepare(
-        `INSERT OR IGNORE INTO documents(id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        id,
-        practiceId,
-        basename(safeOriginalName),
-        file.type || "application/octet-stream",
-        byteSize,
-        sha256,
-        blobPath,
-        now,
-      );
-    if (insert.changes === 1) {
-      database.prepare("UPDATE practices SET updated_at = ? WHERE id = ?").run(now, practiceId);
+    const inserted = database.transaction(() => {
+      const insert = database
+        .prepare(
+          `INSERT OR IGNORE INTO documents(id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          id,
+          practiceId,
+          basename(safeOriginalName),
+          file.type || "application/octet-stream",
+          byteSize,
+          sha256,
+          blobPath,
+          now,
+        );
+      if (insert.changes === 1)
+        database.prepare("UPDATE practices SET updated_at = ? WHERE id = ?").run(now, practiceId);
+      return insert.changes === 1;
+    })();
+    if (inserted) {
       return { id, sha256, byteSize, blobPath };
     }
     const concurrentDuplicate = database
@@ -155,11 +164,8 @@ export async function storeUpload(
       blobPath: concurrentDuplicate.blob_path,
     };
   } catch (error) {
-    destination.destroy();
     await rm(temporaryPath, { force: true });
     throw error;
-  } finally {
-    reader.releaseLock();
   }
 }
 

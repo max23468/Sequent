@@ -16,7 +16,7 @@ export function searchWorkspace(
 ): SearchResult[] {
   const query = rawQuery.trim().slice(0, 120);
   if (!query) return [];
-  const pattern = `%${query.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_")}%`;
+  const foldedQuery = query.normalize("NFC").toLocaleLowerCase("it-IT");
   return database
     .prepare(
       `SELECT kind, id, practice_id, label, context, updated_at
@@ -24,7 +24,7 @@ export function searchWorkspace(
          SELECT 'practice' AS kind, id, id AS practice_id, title AS label,
                 'Pratica' AS context, updated_at
          FROM practices
-         WHERE status = 'active' AND title LIKE ? ESCAPE '\\' COLLATE NOCASE
+         WHERE status = 'active'
          UNION ALL
          SELECT 'document' AS kind, documents.id, documents.practice_id,
                 documents.original_name AS label, practices.title AS context,
@@ -32,12 +32,10 @@ export function searchWorkspace(
          FROM documents
          JOIN practices ON practices.id = documents.practice_id
          WHERE practices.status = 'active'
-           AND documents.original_name LIKE ? ESCAPE '\\' COLLATE NOCASE
        )
-       ORDER BY updated_at DESC
-       LIMIT ?`,
+       ORDER BY updated_at DESC`,
     )
-    .all(pattern, pattern, limit)
+    .all()
     .map((row) => {
       const item = row as {
         kind: SearchResult["kind"];
@@ -55,5 +53,7 @@ export function searchWorkspace(
         context: item.context,
         updatedAt: item.updated_at,
       };
-    });
+    })
+    .filter((item) => item.label.normalize("NFC").toLocaleLowerCase("it-IT").includes(foldedQuery))
+    .slice(0, Math.max(0, limit));
 }

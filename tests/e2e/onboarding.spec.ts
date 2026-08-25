@@ -47,6 +47,14 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
   await authenticate(page);
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByText("Nessuna verifica da mostrare.")).toBeVisible();
+  await expect(page.locator(".topbar-divider")).toBeVisible();
+  expect((await page.locator(".attention-panel").boundingBox())?.height).toBeGreaterThanOrEqual(
+    420,
+  );
+  expect((await page.locator(".recent-panel").boundingBox())?.height).toBeGreaterThanOrEqual(380);
+  const dashboardTitleSize = await page
+    .getByRole("heading", { name: "Dashboard" })
+    .evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
   await page.getByRole("button", { name: "Nuova pratica" }).click();
   await page.getByLabel("Nome della pratica").fill(practiceTitle);
   await page.getByRole("button", { name: "Crea pratica" }).click();
@@ -54,6 +62,27 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
   await expect(page.getByRole("heading", { name: practiceTitle })).toBeVisible();
   await expect(page.getByText("Revisione 1")).toBeVisible();
   await expect(page.getByText("Nessun documento caricato.")).toBeVisible();
+  const practiceTitleSize = await page
+    .getByRole("heading", { name: practiceTitle })
+    .evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+  expect(practiceTitleSize).toBeLessThan(dashboardTitleSize);
+
+  const workspaceActions = page.locator(".workspace-actions-menu summary");
+  await workspaceActions.click();
+  await expect(page.getByRole("button", { name: "Carica documento" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Esporta riepilogo/ })).toBeDisabled();
+  await workspaceActions.click();
+
+  await page.getByRole("button", { name: /Defunto e dichiarazione/ }).click();
+  await expect(page.getByRole("heading", { name: "Da verificare" })).toBeVisible();
+  expect(
+    (await page.locator(".workspace-panel-heading").nth(1).locator(":scope > span").boundingBox())
+      ?.width,
+  ).toBeGreaterThanOrEqual(46);
+  await expect(page.getByText("Non disponibile in M2")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Conferma" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Modifica" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Rifiuta" })).toBeDisabled();
 });
 
 test("esercita tutte le azioni desktop e i due percorsi di upload", async ({ page }) => {
@@ -83,6 +112,15 @@ test("esercita tutte le azioni desktop e i due percorsi di upload", async ({ pag
 
   await page.goto("/");
   await page.getByRole("button", { name: "Carica documenti" }).click();
+  const incompletePracticeTitle = `Pratica senza documento ${suffix}`;
+  await page.getByLabel("Nome della nuova pratica").fill(incompletePracticeTitle);
+  await page.getByLabel("Documento").evaluate((input) => input.removeAttribute("required"));
+  await page.getByRole("button", { name: "Carica", exact: true }).click();
+  await expect(page.getByRole("alert")).toHaveText("Scegli un documento da caricare.");
+  await page.getByRole("button", { name: "Chiudi" }).click();
+  await expect(page.getByRole("link", { name: incompletePracticeTitle })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Carica documenti" }).click();
   await page.getByLabel("Nome della nuova pratica").fill(uploadedPracticeTitle);
   await page.getByLabel("Documento").setInputFiles({
     name: `nuova-pratica-${suffix}.txt`,
@@ -100,12 +138,15 @@ test("ricerca da tastiera una pratica e un documento", async ({ page }) => {
   const search = page.getByPlaceholder("Cerca in Sequent");
   await expect(search).toBeFocused();
   await search.fill(practiceTitle);
-  await expect(
-    page.locator(".search-results").getByRole("link", { name: new RegExp(practiceTitle) }),
-  ).toBeVisible();
-  await search.press("Escape");
+  const practiceResult = page
+    .locator(".search-results")
+    .getByRole("link", { name: new RegExp(practiceTitle) });
+  await expect(practiceResult).toBeVisible();
+  await practiceResult.click();
+  await expect(page.getByRole("heading", { name: practiceTitle })).toBeVisible();
   await expect(page.locator(".search-results")).toBeHidden();
 
+  await page.goto("/");
   await search.fill(documentName);
   await expect(
     page.locator(".search-results").getByRole("link", { name: new RegExp(documentName) }),
@@ -147,19 +188,34 @@ test("persiste i temi chiaro e scuro e ripristina il tema di sistema", async ({ 
   await expect(page.locator("html")).not.toHaveAttribute("data-theme");
   await expect(page.locator("body")).toHaveCSS("background-color", "rgb(15, 18, 20)");
 
-  await openAccountMenu(page);
-  await page.getByRole("button", { name: "Chiaro" }).click();
+  await page.goto("/impostazioni");
+  const settingsTheme = page.locator(".appearance-panel").getByRole("group", {
+    name: "Tema dell’interfaccia",
+  });
+  await settingsTheme.getByRole("button", { name: "Chiaro" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
   await openAccountMenu(page);
-  await page.getByRole("button", { name: "Scuro" }).click();
+  const compactTheme = page.locator(".account-popover").getByRole("group", {
+    name: "Tema dell’interfaccia",
+  });
+  const compactButtonRows = await compactTheme
+    .locator("button")
+    .evaluateAll((buttons) =>
+      buttons.map((button) => Math.round(button.getBoundingClientRect().y)),
+    );
+  expect(new Set(compactButtonRows).size).toBe(1);
+  await compactTheme.getByRole("button", { name: "Scuro" }).click();
+  await expect(settingsTheme.getByRole("button", { name: "Scuro" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
-  await openAccountMenu(page);
-  await page.getByRole("button", { name: "Sistema" }).click();
+  await settingsTheme.getByRole("button", { name: "Sistema" }).click();
   await expect(page.locator("html")).not.toHaveAttribute("data-theme");
   await expect(page.locator("body")).toHaveCSS("background-color", "rgb(15, 18, 20)");
 });
@@ -208,6 +264,12 @@ test("il design lab mobile segue la tavola senza overflow", async ({ page }) => 
   const checks = page.locator(".lab-checks");
   await expect(checks.getByText("PR-2026-046", { exact: true })).toBeVisible();
   await expect(checks.getByText("PR-2026-045", { exact: true })).toBeHidden();
+  await expect(checks.locator(".mobile-row-chevron").first()).toBeVisible();
+  const activeHome = page
+    .getByRole("navigation", { name: "Navigazione principale mobile" })
+    .getByRole("link", { name: "Dashboard" })
+    .locator("svg");
+  await expect(activeHome).toHaveAttribute("fill", "currentColor");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
