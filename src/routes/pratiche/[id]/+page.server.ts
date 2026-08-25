@@ -1,8 +1,8 @@
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
-import { storeUpload } from "$lib/server/blob-store";
 import { openDatabase } from "$lib/server/database";
-import { enqueueJob, listFailedBlobVerifications } from "$lib/server/jobs";
+import { describeDocumentIngestionFailure, ingestDocument } from "$lib/server/document-ingestion";
+import { listFailedBlobVerifications } from "$lib/server/jobs";
 import { getPractice, listPracticeDocuments } from "$lib/server/practices";
 
 export const load: PageServerLoad = ({ locals, params, url }) => {
@@ -30,17 +30,11 @@ export const actions = {
     if (!(file instanceof File) || file.size === 0)
       return fail(400, { uploadError: "Scegli un documento da caricare." });
     try {
-      const document = await storeUpload(database, params.id, file);
-      enqueueJob(
-        database,
-        "foundation.verify_blob",
-        { sha256: document.sha256 },
-        { practiceId: params.id, documentId: document.id },
-      );
+      const document = await ingestDocument(database, file, { practiceId: params.id });
       redirect(303, `/pratiche/${params.id}?documento=${document.id}`);
     } catch (uploadError) {
-      if (uploadError instanceof Error && uploadError.message === "FILE_TOO_LARGE")
-        return fail(413, { uploadError: "Il documento supera il limite consentito." });
+      const failure = describeDocumentIngestionFailure(uploadError);
+      if (failure) return fail(failure.status, { uploadError: failure.message });
       throw uploadError;
     }
   },
