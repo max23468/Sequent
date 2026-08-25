@@ -11,7 +11,7 @@ import {
   recoverInterruptedJobs,
 } from "../../src/lib/server/jobs.ts";
 import { createPractice } from "../../src/lib/server/practices.ts";
-import { storeUpload } from "../../src/lib/server/blob-store.ts";
+import { ingestDocument } from "../../src/lib/server/document-ingestion.ts";
 
 const directories: string[] = [];
 
@@ -58,18 +58,15 @@ describe("coda persistente", () => {
     directories.push(directory);
     const database = openDatabase(directory);
     const practice = createPractice(database, "Pratica interrotta");
-    const document = await storeUpload(
+    const document = await ingestDocument(
       database,
-      practice.id,
       new File(["originale sintetico"], "interrotto.pdf", { type: "application/pdf" }),
+      { practiceId: practice.id },
       directory,
     );
-    const job = enqueueJob(
-      database,
-      "foundation.verify_blob",
-      { sha256: document.sha256 },
-      { practiceId: practice.id, documentId: document.id },
-    );
+    const job = database.prepare("SELECT id FROM jobs WHERE document_id = ?").get(document.id) as {
+      id: string;
+    };
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       expect(claimNextJob(database)?.attempts).toBe(attempt);
       if (attempt < 3) {
@@ -99,18 +96,15 @@ describe("coda persistente", () => {
     directories.push(directory);
     const database = openDatabase(directory);
     const practice = createPractice(database, "Pratica con verifica fallita");
-    const document = await storeUpload(
+    const document = await ingestDocument(
       database,
-      practice.id,
       new File(["originale sintetico"], "originale.pdf", { type: "application/pdf" }),
+      { practiceId: practice.id },
       directory,
     );
-    const job = enqueueJob(
-      database,
-      "foundation.verify_blob",
-      { sha256: document.sha256 },
-      { practiceId: practice.id, documentId: document.id },
-    );
+    const job = database.prepare("SELECT id FROM jobs WHERE document_id = ?").get(document.id) as {
+      id: string;
+    };
     expect(claimNextJob(database)?.id).toBe(job.id);
     finishJob(database, job.id, "BLOB_HASH_MISMATCH");
 

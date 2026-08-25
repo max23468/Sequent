@@ -3,10 +3,10 @@ import { z } from "zod";
 import type { Actions, PageServerLoad } from "./$types";
 import { hasOwner } from "$lib/server/auth";
 import { openDatabase } from "$lib/server/database";
-import { createPractice, listPractices } from "$lib/server/practices";
-import { storeUpload } from "$lib/server/blob-store";
-import { enqueueJob, listFailedBlobVerifications } from "$lib/server/jobs";
+import { describeDocumentIngestionFailure, ingestDocument } from "$lib/server/document-ingestion";
+import { listFailedBlobVerifications } from "$lib/server/jobs";
 import { getLauncherCapabilities } from "$lib/server/launchers";
+import { createPractice, listPractices } from "$lib/server/practices";
 
 const titleSchema = z
   .string()
@@ -40,35 +40,24 @@ export const actions = {
     if (!locals.ownerId) redirect(303, "/login");
     const formData = await request.formData();
     const database = openDatabase();
-    let practiceId = String(formData.get("practiceId") ?? "");
+    const practiceId = String(formData.get("practiceId") ?? "");
     const newTitle = titleSchema.safeParse(formData.get("newTitle"));
     const file = formData.get("file");
     if (!(file instanceof File) || file.size === 0)
       return fail(400, { uploadError: "Scegli un documento da caricare." });
-    if (!practiceId) {
+    let destination: { practiceId: string } | { newPracticeTitle: string };
+    if (practiceId) destination = { practiceId };
+    else {
       if (!newTitle.success)
         return fail(400, { uploadError: "Scegli una pratica o assegna un nome a quella nuova." });
-      practiceId = createPractice(database, newTitle.data).id;
+      destination = { newPracticeTitle: newTitle.data };
     }
-    const exists = database
-      .prepare("SELECT 1 FROM practices WHERE id = ? AND status = 'active'")
-      .get(practiceId);
-    if (!exists) return fail(404, { uploadError: "Pratica non trovata." });
     try {
-      const document = await storeUpload(database, practiceId, file);
-      enqueueJob(
-        database,
-        "foundation.verify_blob",
-        { sha256: document.sha256 },
-        { practiceId, documentId: document.id },
-      );
-      redirect(303, `/pratiche/${practiceId}?documento=${document.id}`);
+      const document = await ingestDocument(database, file, destination);
+      redirect(303, `/pratiche/${document.practiceId}?documento=${document.id}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "UPLOAD_FAILED";
-      if (message === "FILE_TOO_LARGE")
-        return fail(413, { uploadError: "Il documento supera il limite consentito." });
-      if (message === "EMPTY_FILE")
-        return fail(400, { uploadError: "Il documento selezionato è vuoto." });
+      const failure = describeDocumentIngestionFailure(error);
+      if (failure) return fail(failure.status, { uploadError: failure.message });
       throw error;
     }
   },

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { createReadStream, type Stats } from "node:fs";
 import { cp, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { isAbsolute, join, relative } from "node:path";
 import type Database from "better-sqlite3";
 import Sqlite from "better-sqlite3";
 
@@ -119,6 +119,34 @@ export async function verifyBaseBackup(backupPath: string): Promise<void> {
   try {
     if (database.pragma("quick_check", { simple: true }) !== "ok")
       throw new Error("BACKUP_DATABASE_INVALID");
+    const documents = database
+      .prepare("SELECT blob_path, byte_size, sha256 FROM documents")
+      .all() as Array<{ blob_path: string; byte_size: number; sha256: string }>;
+    for (const document of documents) {
+      if (
+        isAbsolute(document.blob_path) ||
+        !document.blob_path.startsWith("blobs/") ||
+        document.blob_path.split("/").includes("..")
+      ) {
+        throw new Error("BACKUP_BLOB_PATH_INVALID");
+      }
+      const blobPath = join(backupPath, document.blob_path);
+      let metadata: Stats;
+      try {
+        metadata = await stat(blobPath);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT")
+          throw new Error("BACKUP_BLOB_MISSING");
+        throw error;
+      }
+      if (
+        !metadata.isFile() ||
+        metadata.size !== document.byte_size ||
+        (await checksum(blobPath)) !== document.sha256
+      ) {
+        throw new Error("BACKUP_BLOB_MISMATCH");
+      }
+    }
   } finally {
     database.close();
   }

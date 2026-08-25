@@ -1,16 +1,21 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { storeUpload, verifyBlob } from "../../src/lib/server/blob-store.ts";
-import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
-import { createPractice } from "../../src/lib/server/practices.ts";
+import { cleanupStaleUploads, persistUpload, verifyBlob } from "../../src/lib/server/blob-store.ts";
 
 const directories: string[] = [];
 
 afterEach(() => {
   for (const directory of directories.splice(0)) {
-    closeDatabase(directory);
     rmSync(directory, { recursive: true, force: true });
   }
 });
@@ -19,13 +24,9 @@ describe("content-addressed store", () => {
   it("sincronizza la directory del blob prima di rimuovere il temporaneo", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-blob-durability-"));
     directories.push(directory);
-    const database = openDatabase(directory);
-    const practice = createPractice(database, "Pratica durevole");
     let synchronizedDirectory = "";
 
-    const stored = await storeUpload(
-      database,
-      practice.id,
+    const stored = await persistUpload(
       new File(["byte durevoli"], "durevole.txt", { type: "text/plain" }),
       directory,
       (directoryPath) => {
@@ -42,43 +43,31 @@ describe("content-addressed store", () => {
   it("scrive il file per hash e normalizza un nome proveniente da Windows", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-blob-"));
     directories.push(directory);
-    const database = openDatabase(directory);
-    const practice = createPractice(database, "Pratica sintetica");
     const file = new File(["contenuto immutabile"], "C:\\documenti\\visura.txt", {
       type: "text/plain",
     });
-    const stored = await storeUpload(database, practice.id, file, directory);
+    const stored = await persistUpload(file, directory);
     await expect(verifyBlob(directory, stored.blobPath, stored.sha256)).resolves.toBeUndefined();
     expect(readFileSync(join(directory, stored.blobPath), "utf8")).toBe("contenuto immutabile");
-    const row = database
-      .prepare("SELECT original_name FROM documents WHERE id = ?")
-      .get(stored.id) as {
-      original_name: string;
-    };
-    expect(row.original_name).toBe("visura.txt");
+    expect(stored.originalName).toBe("visura.txt");
   });
 
   it("deduplica i byte identici nella stessa pratica senza riscrivere l'originale", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-blob-"));
     directories.push(directory);
-    const database = openDatabase(directory);
-    const practice = createPractice(database, "Pratica sintetica");
-    const first = await storeUpload(
-      database,
-      practice.id,
+    const first = await persistUpload(
       new File(["stessi byte"], "prima-copia.pdf", { type: "application/pdf" }),
       directory,
     );
-    const duplicate = await storeUpload(
-      database,
-      practice.id,
+    const duplicate = await persistUpload(
       new File(["stessi byte"], "seconda-copia.pdf", { type: "application/pdf" }),
       directory,
     );
 
-    expect(duplicate).toEqual(first);
-    expect(database.prepare("SELECT count(*) AS count FROM documents").get()).toMatchObject({
-      count: 1,
+    expect(duplicate).toMatchObject({
+      sha256: first.sha256,
+      byteSize: first.byteSize,
+      blobPath: first.blobPath,
     });
     expect(readFileSync(join(directory, first.blobPath), "utf8")).toBe("stessi byte");
   });
@@ -86,12 +75,8 @@ describe("content-addressed store", () => {
   it("ripristina il blob mancante o corrotto quando riceve di nuovo gli stessi byte", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-blob-repair-"));
     directories.push(directory);
-    const database = openDatabase(directory);
-    const practice = createPractice(database, "Pratica da ripristinare");
     const upload = () =>
-      storeUpload(
-        database,
-        practice.id,
+      persistUpload(
         new File(["originale integro"], "originale.txt", { type: "text/plain" }),
         directory,
       );
@@ -106,5 +91,23 @@ describe("content-addressed store", () => {
     expect(await upload()).toEqual(first);
     expect(readFileSync(absoluteBlobPath, "utf8")).toBe("originale integro");
     await expect(verifyBlob(directory, first.blobPath, first.sha256)).resolves.toBeUndefined();
+  });
+
+  it("rimuove soltanto i temporanei di upload oltre il grace period", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-upload-cleanup-"));
+    directories.push(directory);
+    const temporaryDirectory = join(directory, "tmp");
+    mkdirSync(temporaryDirectory, { recursive: true });
+    const stale = join(temporaryDirectory, "stale.upload");
+    const recent = join(temporaryDirectory, "recent.upload");
+    const unrelated = join(temporaryDirectory, "keep.txt");
+    writeFileSync(stale, "stale");
+    writeFileSync(recent, "recent");
+    writeFileSync(unrelated, "keep");
+    const now = Date.now();
+    utimesSync(stale, new Date(now - 7 * 60 * 60 * 1_000), new Date(now - 7 * 60 * 60 * 1_000));
+
+    await expect(cleanupStaleUploads(directory, now)).resolves.toBe(1);
+    expect(readdirSync(temporaryDirectory).sort()).toEqual(["keep.txt", "recent.upload"]);
   });
 });

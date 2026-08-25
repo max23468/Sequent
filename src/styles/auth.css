@@ -1,0 +1,44 @@
+.auth-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 28px;
+  background: var(--surface-soft);
+}
+.auth-panel {
+  width: min(100%, 480px);
+  padding: 42px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.auth-panel.compact {
+  width: min(100%, 420px);
+}
+.auth-panel .brand-logo {
+  margin-bottom: 38px;
+}
+.auth-panel h1 {
+  margin-bottom: 10px;
+  font-size: 2rem;
+  font-weight: 550;
+}
+.auth-panel > p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+.auth-panel form {
+  display: grid;
+  margin-top: 25px;
+}
+.auth-panel input {
+  margin-bottom: 17px;
+}
+.button.full {
+  width: 100%;
+  margin-top: 7px;
+}
+.error-home {
+  margin-top: 17px;
+}

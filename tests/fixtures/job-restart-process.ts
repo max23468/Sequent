@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
-import { storeUpload } from "../../src/lib/server/blob-store.ts";
+import { ingestDocument } from "../../src/lib/server/document-ingestion.ts";
 import { createPractice } from "../../src/lib/server/practices.ts";
 import { startJobRunner } from "../../src/lib/server/job-runner.ts";
-import { claimNextJob, enqueueJob, recoverInterruptedJobs } from "../../src/lib/server/jobs.ts";
+import { claimNextJob, recoverInterruptedJobs } from "../../src/lib/server/jobs.ts";
 
 const phase = process.argv[2];
 const dataDirectory = process.argv[3];
@@ -14,18 +14,15 @@ const database = openDatabase(dataDirectory);
 
 if (phase === "interrupt") {
   const practice = createPractice(database, "Riavvio sintetico");
-  const document = await storeUpload(
+  const document = await ingestDocument(
     database,
-    practice.id,
     new File(["contenuto persistente"], "riavvio.txt", { type: "text/plain" }),
+    { practiceId: practice.id },
     dataDirectory,
   );
-  const job = enqueueJob(
-    database,
-    "foundation.verify_blob",
-    { sha256: document.sha256 },
-    { practiceId: practice.id, documentId: document.id },
-  );
+  const job = database.prepare("SELECT id FROM jobs WHERE document_id = ?").get(document.id) as {
+    id: string;
+  };
   const claimed = claimNextJob(database);
   if (claimed?.id !== job.id || claimed.status !== "running")
     throw new Error("JOB_NOT_INTERRUPTED");

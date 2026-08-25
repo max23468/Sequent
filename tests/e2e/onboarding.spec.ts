@@ -7,9 +7,10 @@ test.describe.configure({ mode: "serial" });
 
 const password = "FondazioneM2Sicura2026";
 const suffix = `${process.pid}-${Date.now()}`;
-const practiceTitle = `Pratica sintetica ${suffix}`;
-const uploadedPracticeTitle = `Pratica da upload ${suffix}`;
-const documentName = `documento-${suffix}.txt`;
+
+function unique(label: string) {
+  return `${label} ${suffix}`;
+}
 
 test.afterEach(() => {
   const databasePath = join(process.env.SEQUENT_E2E_DATA_DIR ?? ".test-data/e2e", "sequent.sqlite");
@@ -43,7 +44,35 @@ async function openAccountMenu(page: import("@playwright/test").Page) {
   await page.getByLabel("Apri menu utente").click();
 }
 
+async function createPracticeFromDashboard(
+  page: import("@playwright/test").Page,
+  practiceTitle: string,
+) {
+  await page.goto("/");
+  await page.getByRole("button", { name: /^Nuova(?: pratica)?$/ }).click();
+  await page.getByLabel("Nome della pratica").fill(practiceTitle);
+  await page.getByRole("button", { name: "Crea pratica" }).click();
+  await expect(page.getByRole("heading", { name: practiceTitle })).toBeVisible();
+}
+
+async function uploadFromWorkspace(
+  page: import("@playwright/test").Page,
+  documentName: string,
+  content = "fixture sintetica indipendente",
+) {
+  await page.getByLabel("Aggiungi un documento").setInputFiles({
+    name: documentName,
+    mimeType: "text/plain",
+    buffer: Buffer.from(content),
+  });
+  await page.getByRole("button", { name: "Carica", exact: true }).click();
+  await expect(page).toHaveURL(/documento=/);
+  await expect(page.getByRole("heading", { name: documentName })).toBeVisible();
+}
+
 test("crea una pratica e usa il workspace minimo", async ({ page }) => {
+  const practiceTitle = unique("Pratica workspace");
+  const workspaceDocument = `workspace-${suffix}.txt`;
   await authenticate(page);
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByText("Nessuna verifica da mostrare.")).toBeVisible();
@@ -55,9 +84,7 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
   const dashboardTitleSize = await page
     .getByRole("heading", { name: "Dashboard" })
     .evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
-  await page.getByRole("button", { name: "Nuova pratica" }).click();
-  await page.getByLabel("Nome della pratica").fill(practiceTitle);
-  await page.getByRole("button", { name: "Crea pratica" }).click();
+  await createPracticeFromDashboard(page, practiceTitle);
   await expect(page).toHaveURL(/\/pratiche\/.+/);
   await expect(page.getByRole("heading", { name: practiceTitle })).toBeVisible();
   await expect(page.getByText("Revisione 1")).toBeVisible();
@@ -66,12 +93,6 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
     .getByRole("heading", { name: practiceTitle })
     .evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
   expect(practiceTitleSize).toBeLessThan(dashboardTitleSize);
-
-  const workspaceActions = page.locator(".workspace-actions-menu summary");
-  await workspaceActions.click();
-  await expect(page.getByRole("button", { name: "Carica documento" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Esporta riepilogo/ })).toBeDisabled();
-  await workspaceActions.click();
 
   await page.getByRole("button", { name: /Defunto e dichiarazione/ }).click();
   await expect(page.getByRole("heading", { name: "Da verificare" })).toBeVisible();
@@ -83,10 +104,42 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Conferma" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Modifica" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Rifiuta" })).toBeDisabled();
+
+  const workspaceActions = page.locator(".workspace-actions-menu summary");
+  await workspaceActions.click();
+  await expect(page.getByRole("button", { name: /Esporta riepilogo/ })).toBeDisabled();
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Carica documento" }).click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: workspaceDocument,
+    mimeType: "text/plain",
+    buffer: Buffer.from("fixture dal menu azioni"),
+  });
+  await expect(page.getByRole("heading", { name: "Documenti" })).toBeVisible();
+  await expect(page.getByText(workspaceDocument, { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Carica", exact: true }).click();
+  await expect(page.getByRole("heading", { name: workspaceDocument })).toBeVisible();
+
+  await page.getByRole("button", { name: /Defunto e dichiarazione/ }).click();
+  await expect(page).not.toHaveURL(/documento=/);
+  const search = page.getByPlaceholder("Cerca in Sequent");
+  await search.fill(workspaceDocument);
+  await page
+    .locator(".search-results")
+    .getByRole("link", { name: new RegExp(workspaceDocument) })
+    .click();
+  await expect(page.getByRole("heading", { name: "Documenti" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: workspaceDocument })).toBeVisible();
 });
 
 test("esercita tutte le azioni desktop e i due percorsi di upload", async ({ page }) => {
+  const practiceTitle = unique("Pratica azioni desktop");
+  const uploadedPracticeTitle = unique("Pratica creata da upload");
+  const documentName = `desktop-${suffix}.txt`;
   await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  await page.goto("/");
   await expect(page.getByRole("link", { name: "Riprendi ultima pratica" })).toBeVisible();
 
   await page.getByRole("button", { name: "Desktop Telematico" }).click();
@@ -132,7 +185,12 @@ test("esercita tutte le azioni desktop e i due percorsi di upload", async ({ pag
 });
 
 test("ricerca da tastiera una pratica e un documento", async ({ page }) => {
+  const practiceTitle = unique("Pratica ricerca");
+  const documentName = `ricerca-${suffix}.txt`;
   await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  await uploadFromWorkspace(page, documentName);
+  await page.goto("/");
   await page.getByRole("link", { name: "Impostazioni" }).focus();
   await page.keyboard.press("Tab");
   const search = page.getByPlaceholder("Cerca in Sequent");
@@ -157,7 +215,11 @@ test("ricerca da tastiera una pratica e un documento", async ({ page }) => {
 });
 
 test("mostra una verifica tecnica fallita nella Dashboard e nella pratica", async ({ page }) => {
+  const practiceTitle = unique("Pratica verifica fallita");
+  const documentName = `verifica-${suffix}.txt`;
   await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  await uploadFromWorkspace(page, documentName);
   const dataDirectory = process.env.SEQUENT_E2E_DATA_DIR ?? ".test-data/e2e";
   const database = new Database(join(dataDirectory, "sequent.sqlite"));
   const failedAt = new Date().toISOString();
@@ -221,8 +283,11 @@ test("persiste i temi chiaro e scuro e ripristina il tema di sistema", async ({ 
 });
 
 test("su mobile nasconde i launcher e mantiene soltanto le azioni interne", async ({ page }) => {
+  const practiceTitle = unique("Pratica azioni mobile");
   await page.setViewportSize({ width: 402, height: 874 });
   await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  await page.goto("/");
   await expect(
     page.getByRole("navigation", { name: "Navigazione principale mobile" }),
   ).toBeVisible();
@@ -240,19 +305,12 @@ test("su mobile nasconde i launcher e mantiene soltanto le azioni interne", asyn
 test("su mobile carica un documento senza interferenze dalla navigazione fissa", async ({
   page,
 }) => {
+  const practiceTitle = unique("Pratica upload mobile");
+  const documentName = `mobile-${suffix}.txt`;
   await page.setViewportSize({ width: 402, height: 874 });
   await authenticate(page);
-  await page.getByRole("link", { name: uploadedPracticeTitle }).click();
-  const mobileDocumentName = `mobile-${documentName}`;
-  await page.getByLabel("Aggiungi un documento").setInputFiles({
-    name: mobileDocumentName,
-    mimeType: "text/plain",
-    buffer: Buffer.from("fixture sintetica per il caricamento mobile"),
-  });
-  await page.getByRole("button", { name: "Carica", exact: true }).click();
-
-  await expect(page).toHaveURL(/documento=/);
-  await expect(page.getByRole("heading", { name: mobileDocumentName })).toBeVisible();
+  await createPracticeFromDashboard(page, practiceTitle);
+  await uploadFromWorkspace(page, documentName, "fixture sintetica per il caricamento mobile");
 });
 
 test("il design lab mobile segue la tavola senza overflow", async ({ page }) => {

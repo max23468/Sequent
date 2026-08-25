@@ -1,5 +1,6 @@
 <script lang="ts">
   import { CalendarClock, ChevronRight, ExternalLink, FolderOpen, History, MoreVertical, Plus, Upload, X } from "@lucide/svelte";
+  import { formatItalianDate } from "$lib/format";
 
   let { data, form } = $props();
   let createDialog: HTMLDialogElement | undefined = undefined;
@@ -57,9 +58,6 @@
     launcherDialog?.close();
   }
 
-  function formatDate(value: string) {
-    return new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
-  }
 </script>
 
 <svelte:head><title>Dashboard · Sequent</title></svelte:head>
@@ -135,7 +133,7 @@
           {#each data.practices.slice(0, 6) as practice (practice.id)}
             <a class="table-row practice-row" href={`/pratiche/${practice.id}`}>
               <strong>{practice.title}</strong><span>{practice.documentCount}</span><span>{practice.revision}</span>
-              <time datetime={practice.updatedAt}>{formatDate(practice.updatedAt)}</time><ChevronRight size={19} aria-hidden="true" />
+              <time datetime={practice.updatedAt}>{formatItalianDate(practice.updatedAt)}</time><ChevronRight size={19} aria-hidden="true" />
             </a>
           {/each}
         </div>

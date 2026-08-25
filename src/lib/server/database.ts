@@ -67,64 +67,16 @@ CREATE TABLE IF NOT EXISTS jobs (
   updated_at TEXT NOT NULL,
   UNIQUE (type, input_hash)
 );
-CREATE INDEX IF NOT EXISTS sessions_expires_at ON sessions(expires_at);
-CREATE INDEX IF NOT EXISTS declarations_practice_sequence ON declarations(practice_id, sequence);
-CREATE INDEX IF NOT EXISTS jobs_status_created_at ON jobs(status, created_at);
-`;
-
-const loginRateLimitMigration = `
 CREATE TABLE IF NOT EXISTS login_attempts (
   client_key TEXT PRIMARY KEY,
   failed_count INTEGER NOT NULL,
   blocked_until TEXT,
   updated_at TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS sessions_expires_at ON sessions(expires_at);
+CREATE INDEX IF NOT EXISTS declarations_practice_sequence ON declarations(practice_id, sequence);
+CREATE INDEX IF NOT EXISTS jobs_status_created_at ON jobs(status, created_at);
 `;
-
-function migratePracticeDeclarationSplit(database: Database.Database): void {
-  const applied = database.prepare("SELECT 1 FROM schema_migrations WHERE version = 3").get();
-  if (applied) return;
-  const legacyColumns = database.pragma("table_info(practices)") as Array<{ name: string }>;
-  const hasEmbeddedDeclaration = legacyColumns.some(({ name }) => name === "declaration_json");
-  if (!hasEmbeddedDeclaration) {
-    database
-      .prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (3, ?)")
-      .run(new Date().toISOString());
-    return;
-  }
-
-  database.pragma("foreign_keys = OFF");
-  try {
-    database.transaction(() => {
-      database.exec(`
-        INSERT OR IGNORE INTO declarations(
-          id, practice_id, sequence, revision, declaration_json, created_at, updated_at
-        )
-        SELECT id || ':declaration:1', id, 1, revision, declaration_json, created_at, updated_at
-        FROM practices;
-        CREATE TABLE practices_next (
-          id TEXT PRIMARY KEY,
-          title TEXT NOT NULL,
-          status TEXT NOT NULL CHECK (status IN ('active', 'archived', 'trashed')),
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL
-        );
-        INSERT INTO practices_next(id, title, status, created_at, updated_at)
-        SELECT id, title, status, created_at, updated_at FROM practices;
-        DROP TABLE practices;
-        ALTER TABLE practices_next RENAME TO practices;
-      `);
-      database
-        .prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (3, ?)")
-        .run(new Date().toISOString());
-    })();
-  } finally {
-    database.pragma("foreign_keys = ON");
-  }
-  if ((database.pragma("foreign_key_check") as unknown[]).length > 0) {
-    throw new Error("MIGRATION_FOREIGN_KEY_CHECK_FAILED");
-  }
-}
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {
   mkdirSync(dataDirectory, { recursive: true, mode: 0o700 });
@@ -139,16 +91,6 @@ export function openDatabase(dataDirectory = getDataDirectory()): Database.Datab
   database
     .prepare("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (1, ?)")
     .run(new Date().toISOString());
-  const applyLoginRateLimitMigration = database.transaction(() => {
-    const applied = database.prepare("SELECT 1 FROM schema_migrations WHERE version = 2").get();
-    if (applied) return;
-    database.exec(loginRateLimitMigration);
-    database
-      .prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (2, ?)")
-      .run(new Date().toISOString());
-  });
-  applyLoginRateLimitMigration();
-  migratePracticeDeclarationSplit(database);
   connections.set(dataDirectory, database);
   return database;
 }

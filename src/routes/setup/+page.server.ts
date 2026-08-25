@@ -5,7 +5,7 @@ import {
   createOwnerSession,
   hasOwner,
   SESSION_COOKIE,
-  sessionCookieOptions,
+  SESSION_COOKIE_MAX_AGE,
 } from "$lib/server/auth";
 import { useSecureCookies } from "$lib/server/config";
 import { openDatabase } from "$lib/server/database";
@@ -33,10 +33,11 @@ export const actions = {
       return fail(400, { error: "Le password non coincidono." });
     const session = await createOwnerSession(database, parsed.data);
     cookies.set(SESSION_COOKIE, session.token, {
-      ...sessionCookieOptions(),
+      path: "/",
       httpOnly: true,
       sameSite: "strict",
       secure: useSecureCookies(),
+      maxAge: SESSION_COOKIE_MAX_AGE,
     });
     redirect(303, "/");
   },

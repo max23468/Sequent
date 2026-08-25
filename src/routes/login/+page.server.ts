@@ -6,7 +6,7 @@ import {
   hasOwner,
   issueSession,
   SESSION_COOKIE,
-  sessionCookieOptions,
+  SESSION_COOKIE_MAX_AGE,
 } from "$lib/server/auth";
 import { useSecureCookies } from "$lib/server/config";
 import { openDatabase } from "$lib/server/database";
@@ -29,10 +29,11 @@ export const actions = {
     if (!ownerId) return fail(400, { error: "Credenziali non valide." });
     const session = issueSession(database, ownerId);
     cookies.set(SESSION_COOKIE, session.token, {
-      ...sessionCookieOptions(),
+      path: "/",
       httpOnly: true,
       sameSite: "strict",
       secure: useSecureCookies(),
+      maxAge: SESSION_COOKIE_MAX_AGE,
     });
     redirect(303, "/");
   },

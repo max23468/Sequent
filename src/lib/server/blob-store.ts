@@ -1,17 +1,19 @@
 import { createHash, randomUUID } from "node:crypto";
-import { createReadStream, createWriteStream } from "node:fs";
-import { link, mkdir, open, rename, rm, stat } from "node:fs/promises";
+import { createReadStream, createWriteStream, type Stats } from "node:fs";
+import { link, mkdir, open, readdir, rename, rm, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import type Database from "better-sqlite3";
 import { getDataDirectory, MAX_UPLOAD_BYTES } from "./config.ts";
 
-export interface StoredDocument {
-  id: string;
+const STALE_UPLOAD_GRACE_MS = 6 * 60 * 60 * 1_000;
+
+export interface PersistedUpload {
   sha256: string;
   byteSize: number;
   blobPath: string;
+  originalName: string;
+  mediaType: string;
 }
 
 async function syncDirectory(directoryPath: string): Promise<void> {
@@ -61,13 +63,42 @@ async function persistUploadedBlob(
   }
 }
 
-export async function storeUpload(
-  database: Database.Database,
-  practiceId: string,
+export async function cleanupStaleUploads(
+  dataDirectory = getDataDirectory(),
+  now = Date.now(),
+): Promise<number> {
+  const temporaryDirectory = join(dataDirectory, "tmp");
+  let names: string[];
+  try {
+    names = await readdir(temporaryDirectory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return 0;
+    throw error;
+  }
+
+  let removed = 0;
+  for (const name of names) {
+    if (!name.endsWith(".upload")) continue;
+    const path = join(temporaryDirectory, name);
+    let metadata: Stats;
+    try {
+      metadata = await stat(path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+      throw error;
+    }
+    if (!metadata.isFile() || now - metadata.mtimeMs < STALE_UPLOAD_GRACE_MS) continue;
+    await rm(path, { force: true });
+    removed += 1;
+  }
+  return removed;
+}
+
+export async function persistUpload(
   file: File,
   dataDirectory = getDataDirectory(),
   onDirectorySynced?: (directoryPath: string) => void | Promise<void>,
-): Promise<StoredDocument> {
+): Promise<PersistedUpload> {
   if (file.size > MAX_UPLOAD_BYTES) throw new Error("FILE_TOO_LARGE");
   if (file.size === 0) throw new Error("EMPTY_FILE");
   const temporaryDirectory = join(dataDirectory, "tmp");
@@ -103,65 +134,13 @@ export async function storeUpload(
     const blobPath = join("blobs", sha256.slice(0, 2), sha256.slice(2));
     const absoluteBlobPath = join(dataDirectory, blobPath);
     await persistUploadedBlob(temporaryPath, absoluteBlobPath, sha256, onDirectorySynced);
-    const existing = database
-      .prepare(
-        `SELECT id, sha256, byte_size, blob_path
-         FROM documents WHERE practice_id = ? AND sha256 = ?`,
-      )
-      .get(practiceId, sha256) as
-      | { id: string; sha256: string; byte_size: number; blob_path: string }
-      | undefined;
-    if (existing) {
-      return {
-        id: existing.id,
-        sha256: existing.sha256,
-        byteSize: existing.byte_size,
-        blobPath: existing.blob_path,
-      };
-    }
-
-    const id = randomUUID();
-    const now = new Date().toISOString();
     const safeOriginalName = file.name.replaceAll("\\", "/").split("/").at(-1) || "documento";
-    const inserted = database.transaction(() => {
-      const insert = database
-        .prepare(
-          `INSERT OR IGNORE INTO documents(id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .run(
-          id,
-          practiceId,
-          basename(safeOriginalName),
-          file.type || "application/octet-stream",
-          byteSize,
-          sha256,
-          blobPath,
-          now,
-        );
-      if (insert.changes === 1)
-        database.prepare("UPDATE practices SET updated_at = ? WHERE id = ?").run(now, practiceId);
-      return insert.changes === 1;
-    })();
-    if (inserted) {
-      return { id, sha256, byteSize, blobPath };
-    }
-    const concurrentDuplicate = database
-      .prepare(
-        `SELECT id, sha256, byte_size, blob_path
-         FROM documents WHERE practice_id = ? AND sha256 = ?`,
-      )
-      .get(practiceId, sha256) as {
-      id: string;
-      sha256: string;
-      byte_size: number;
-      blob_path: string;
-    };
     return {
-      id: concurrentDuplicate.id,
-      sha256: concurrentDuplicate.sha256,
-      byteSize: concurrentDuplicate.byte_size,
-      blobPath: concurrentDuplicate.blob_path,
+      sha256,
+      byteSize,
+      blobPath,
+      originalName: basename(safeOriginalName),
+      mediaType: file.type || "application/octet-stream",
     };
   } catch (error) {
     await rm(temporaryPath, { force: true });

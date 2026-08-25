@@ -1,9 +1,10 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { hash, verify } from "argon2";
 import type Database from "better-sqlite3";
-import { SESSION_COOKIE, useSecureCookies } from "./config.ts";
+import { SESSION_COOKIE } from "./config.ts";
 
 const SESSION_DAYS = 365;
+const SESSION_TOUCH_INTERVAL_MS = 24 * 60 * 60 * 1_000;
 const developmentOwnerPromises = new WeakMap<Database.Database, Promise<string>>();
 
 function tokenHash(token: string): string {
@@ -140,8 +141,9 @@ export async function authenticate(
 export function issueSession(
   database: Database.Database,
   ownerId: string,
+  now = new Date(),
 ): { id: string; token: string } {
-  const session = prepareSession(ownerId, new Date());
+  const session = prepareSession(ownerId, now);
   insertSession(database, session);
   return { id: session.id, token: session.token };
 }
@@ -187,29 +189,32 @@ function insertSession(database: Database.Database, session: PreparedSession): v
 export function readSession(
   database: Database.Database,
   token: string | undefined,
-): { id: string; ownerId: string } | null {
+  now = new Date(),
+): { id: string; ownerId: string; renewed: boolean } | null {
   if (!token) return null;
-  const now = new Date().toISOString();
+  const nowIso = now.toISOString();
   const session = database
-    .prepare("SELECT id, owner_id FROM sessions WHERE token_hash = ? AND expires_at > ?")
-    .get(tokenHash(token), now) as { id: string; owner_id: string } | undefined;
+    .prepare(
+      "SELECT id, owner_id, last_seen_at FROM sessions WHERE token_hash = ? AND expires_at > ?",
+    )
+    .get(tokenHash(token), nowIso) as
+    | { id: string; owner_id: string; last_seen_at: string }
+    | undefined;
   if (!session) return null;
-  database.prepare("UPDATE sessions SET last_seen_at = ? WHERE id = ?").run(now, session.id);
-  return { id: session.id, ownerId: session.owner_id };
+  const renewed =
+    now.getTime() - new Date(session.last_seen_at).getTime() >= SESSION_TOUCH_INTERVAL_MS;
+  if (renewed) {
+    const expiresAt = new Date(now.getTime() + SESSION_DAYS * 86_400_000).toISOString();
+    database
+      .prepare("UPDATE sessions SET last_seen_at = ?, expires_at = ? WHERE id = ?")
+      .run(nowIso, expiresAt, session.id);
+  }
+  return { id: session.id, ownerId: session.owner_id, renewed };
 }
 
 export function revokeSession(database: Database.Database, sessionId: string): void {
   database.prepare("DELETE FROM sessions WHERE id = ?").run(sessionId);
 }
 
-export function sessionCookieOptions() {
-  return {
-    path: "/",
-    httpOnly: true,
-    sameSite: "strict" as const,
-    secure: useSecureCookies(),
-    maxAge: SESSION_DAYS * 86_400,
-  };
-}
-
+export const SESSION_COOKIE_MAX_AGE = SESSION_DAYS * 86_400;
 export { SESSION_COOKIE };

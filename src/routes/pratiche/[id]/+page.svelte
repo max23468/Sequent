@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { goto } from "$app/navigation";
+  import { page } from "$app/state";
+  import { tick } from "svelte";
   import {
     ArrowLeft,
     Building2,
@@ -17,9 +20,15 @@
     UsersRound,
     X,
   } from "@lucide/svelte";
+  import { formatItalianDate, formatMegabytes } from "$lib/format";
 
   let { data, form } = $props();
   let selectedSection = $state("documents");
+  let selectedFileName = $state("");
+
+  $effect(() => {
+    if (page.url.searchParams.has("documento")) selectedSection = "documents";
+  });
 
   const sections = [
     { id: "overview", label: "Panoramica", stage: "M4", icon: LayoutDashboard },
@@ -31,23 +40,26 @@
     { id: "history", label: "Cronologia", stage: "M6", icon: History },
   ] as const;
 
-  const formatDate = (value: string) =>
-    new Intl.DateTimeFormat("it-IT", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(value));
-  const formatBytes = (bytes: number) =>
-    new Intl.NumberFormat("it-IT", { maximumFractionDigits: 1 }).format(
-      bytes / 1024 / 1024,
-    ) + " MB";
-
-  function selectSection(event: MouseEvent) {
+  async function selectSection(event: MouseEvent) {
     selectedSection = (event.currentTarget as HTMLButtonElement).dataset.section ?? "documents";
+    if (selectedSection !== "documents" && page.url.searchParams.has("documento")) {
+      await goto(page.url.pathname, {
+        replaceState: true,
+        noScroll: true,
+        keepFocus: true,
+        invalidateAll: false,
+      });
+    }
   }
 
-  function chooseWorkspaceFile() {
+  async function chooseWorkspaceFile() {
+    selectedSection = "documents";
+    await tick();
     document.querySelector<HTMLInputElement>("#workspace-file")?.click();
+  }
+
+  function handleWorkspaceFile(event: Event) {
+    selectedFileName = (event.currentTarget as HTMLInputElement).files?.[0]?.name ?? "";
   }
 </script>
 
@@ -58,7 +70,7 @@
       <p class="breadcrumbs"><a href="/pratiche" data-sveltekit-prefetch data-sveltekit-preload-data="hover">Pratiche</a><span>/</span>{data.practice.title}</p>
       <div class="practice-title-line">
         <h1>{data.practice.title}</h1>
-        <span>Aggiornata {formatDate(data.practice.updatedAt)}</span>
+        <span>Aggiornata {formatItalianDate(data.practice.updatedAt)}</span>
         <span class="saved-state"><CheckCircle2 size={18} />Salvato</span>
       </div>
     </div>
@@ -102,8 +114,8 @@
         <form class="inline-upload" method="POST" action="?/upload" enctype="multipart/form-data">
           <label for="workspace-file">Aggiungi un documento</label>
           <div class="file-picker-row">
-            <label class="file-picker" for="workspace-file"><Upload size={17} aria-hidden="true" /><span>Scegli documento</span></label>
-            <input id="workspace-file" name="file" type="file" required />
+            <label class="file-picker" for="workspace-file"><Upload size={17} aria-hidden="true" /><span>{selectedFileName || "Scegli documento"}</span></label>
+            <input id="workspace-file" name="file" type="file" required onchange={handleWorkspaceFile} />
             <button class="button primary" type="submit"><Upload size={17} />Carica</button>
           </div>
           {#if form?.uploadError}<p class="form-error" role="alert">{form.uploadError}</p>{/if}
@@ -124,7 +136,7 @@
         {:else}
           <ul class="document-list">
             {#each data.documents as file (file.id)}
-              <li class:selected={data.selectedDocument?.id === file.id}><a href={`?documento=${file.id}`}><FileText size={20} /><span><strong>{file.originalName}</strong><small>{formatBytes(file.byteSize)} · {formatDate(file.createdAt)}</small></span></a></li>
+              <li class:selected={data.selectedDocument?.id === file.id}><a href={`?documento=${file.id}`}><FileText size={20} /><span><strong>{file.originalName}</strong><small>{formatMegabytes(file.byteSize)} · {formatItalianDate(file.createdAt)}</small></span></a></li>
             {/each}
           </ul>
         {/if}
@@ -157,7 +169,7 @@
     <aside class="workspace-source">
       <div class="workspace-panel-heading"><h2>Fonte</h2></div>
       {#if selectedSection === "documents" && data.selectedDocument}
-        <div class="source-summary"><FileText size={34} /><h3>{data.selectedDocument.originalName}</h3><dl><div><dt>Formato</dt><dd>{data.selectedDocument.mediaType}</dd></div><div><dt>Dimensione</dt><dd>{formatBytes(data.selectedDocument.byteSize)}</dd></div><div><dt>Caricato</dt><dd>{formatDate(data.selectedDocument.createdAt)}</dd></div></dl><p>L’anteprima della fonte verrà introdotta con la pipeline documentale qualificata.</p></div>
+        <div class="source-summary"><FileText size={34} /><h3>{data.selectedDocument.originalName}</h3><dl><div><dt>Formato</dt><dd>{data.selectedDocument.mediaType}</dd></div><div><dt>Dimensione</dt><dd>{formatMegabytes(data.selectedDocument.byteSize)}</dd></div><div><dt>Caricato</dt><dd>{formatItalianDate(data.selectedDocument.createdAt)}</dd></div></dl><p>L’anteprima della fonte verrà introdotta con la pipeline documentale qualificata.</p></div>
       {:else}
         <div class="panel-empty source-empty"><FileText size={27} /><p>Nessuna fonte selezionata.</p><span>{selectedSection === "documents" ? "Seleziona un documento per consultarne i dati tecnici." : "Le fonti compariranno quando questa sezione sarà qualificata."}</span></div>
       {/if}

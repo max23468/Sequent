@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
 import { createPractice, listPractices, saveDeclaration } from "../../src/lib/server/practices.ts";
-import Sqlite from "better-sqlite3";
 
 const directories: string[] = [];
 
@@ -56,36 +55,17 @@ describe("persistenza delle pratiche", () => {
     ]);
   });
 
-  it("separa una dichiarazione incorporata da una pratica creata dallo scaffolding iniziale", () => {
+  it("crea direttamente lo schema corrente senza colonne incorporate obsolete", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-practice-"));
     directories.push(directory);
-    const legacy = new Sqlite(join(directory, "sequent.sqlite"));
-    legacy.exec(`
-      CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);
-      INSERT INTO schema_migrations VALUES (1, '2026-08-24T00:00:00.000Z');
-      CREATE TABLE practices (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL,
-        status TEXT NOT NULL CHECK (status IN ('active', 'archived', 'trashed')),
-        revision INTEGER NOT NULL DEFAULT 1,
-        declaration_json TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      INSERT INTO practices VALUES (
-        'practice-legacy', 'Pratica esistente', 'active', 2,
-        '{"schemaVersion":1}', '2026-08-24T00:00:00.000Z', '2026-08-24T00:00:00.000Z'
-      );
-    `);
-    legacy.close();
-
     const database = openDatabase(directory);
-    expect(listPractices(database)).toMatchObject([
-      { id: "practice-legacy", declarationId: "practice-legacy:declaration:1", revision: 2 },
-    ]);
     expect(createPractice(database, "Nuovo procedimento").revision).toBe(1);
     expect(
       (database.pragma("table_info(practices)") as Array<{ name: string }>).map(({ name }) => name),
     ).not.toContain("declaration_json");
+    expect(
+      (database.prepare("SELECT count(*) AS count FROM declarations").get() as { count: number })
+        .count,
+    ).toBe(1);
   });
 });

@@ -7,6 +7,8 @@ import {
   createOwner,
   createOwnerSession,
   ensureDevelopmentOwner,
+  issueSession,
+  readSession,
 } from "../../src/lib/server/auth.ts";
 import { getDevelopmentPassword, useDevelopmentAutoLogin } from "../../src/lib/server/config.ts";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
@@ -116,5 +118,32 @@ describe("difesa del login", () => {
       (database.prepare("SELECT count(*) AS count FROM login_attempts").get() as { count: number })
         .count,
     ).toBe(0);
+  });
+
+  it("rinnova una sessione attiva senza scrivere a ogni richiesta", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-auth-renewal-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const ownerId = await createOwner(database, "FondazioneM2Sicura2026");
+    const start = new Date("2026-08-24T10:00:00.000Z");
+    const session = issueSession(database, ownerId, start);
+
+    expect(readSession(database, session.token, new Date(start.getTime() + 60_000))).toMatchObject({
+      id: session.id,
+      renewed: false,
+    });
+    const renewal = new Date(start.getTime() + 25 * 60 * 60 * 1_000);
+    expect(readSession(database, session.token, renewal)).toMatchObject({
+      id: session.id,
+      renewed: true,
+    });
+    expect(
+      database
+        .prepare("SELECT last_seen_at, expires_at FROM sessions WHERE id = ?")
+        .get(session.id),
+    ).toEqual({
+      last_seen_at: renewal.toISOString(),
+      expires_at: new Date(renewal.getTime() + 365 * 86_400_000).toISOString(),
+    });
   });
 });
