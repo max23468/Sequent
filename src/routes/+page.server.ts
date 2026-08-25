@@ -42,14 +42,14 @@ export const actions = {
     const database = openDatabase();
     let practiceId = String(formData.get("practiceId") ?? "");
     const newTitle = titleSchema.safeParse(formData.get("newTitle"));
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0)
+      return fail(400, { uploadError: "Scegli un documento da caricare." });
     if (!practiceId) {
       if (!newTitle.success)
         return fail(400, { uploadError: "Scegli una pratica o assegna un nome a quella nuova." });
       practiceId = createPractice(database, newTitle.data).id;
     }
-    const file = formData.get("file");
-    if (!(file instanceof File) || file.size === 0)
-      return fail(400, { uploadError: "Scegli un documento da caricare." });
     const exists = database
       .prepare("SELECT 1 FROM practices WHERE id = ? AND status = 'active'")
       .get(practiceId);

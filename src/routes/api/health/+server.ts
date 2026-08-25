@@ -8,5 +8,9 @@ export const GET: RequestHandler = () => {
   const sqliteVersion = (
     database.prepare("SELECT sqlite_version() AS version").get() as { version: string }
   ).version;
-  return json({ status: integrity === "ok" ? "ok" : "degraded", sqliteVersion });
+  const healthy = integrity === "ok";
+  return json(
+    { status: healthy ? "ok" : "degraded", sqliteVersion },
+    { status: healthy ? 200 : 503 },
+  );
 };

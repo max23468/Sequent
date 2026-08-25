@@ -101,7 +101,7 @@
         <ul>
           {#each results as result (result.kind + result.id)}
             <li>
-              <a href={result.href}>
+              <a href={result.href} onclick={clear}>
                 {#if result.kind === "practice"}<Folder size={18} aria-hidden="true" />{:else}<FileText size={18} aria-hidden="true" />{/if}
                 <span><strong>{result.label}</strong><small>{result.context}</small></span>
               </a>

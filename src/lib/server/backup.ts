@@ -92,6 +92,18 @@ export async function verifyBaseBackup(backupPath: string): Promise<void> {
   };
   if (manifest.format !== "sequent-base-backup" || manifest.version !== 1)
     throw new Error("BACKUP_FORMAT_INVALID");
+  const declaredPaths = manifest.files.map(({ path }) => path);
+  if (
+    !declaredPaths.includes("sequent.sqlite") ||
+    new Set(declaredPaths).size !== declaredPaths.length
+  )
+    throw new Error("BACKUP_INVENTORY_INVALID");
+  const actualFiles = await inventory(backupPath);
+  if (
+    actualFiles.length !== manifest.files.length ||
+    actualFiles.some((entry, index) => entry.path !== manifest.files[index]?.path)
+  )
+    throw new Error("BACKUP_INVENTORY_MISMATCH");
   for (const entry of manifest.files) {
     if (entry.path.startsWith("/") || entry.path.split("/").includes(".."))
       throw new Error("BACKUP_PATH_INVALID");
@@ -99,5 +111,15 @@ export async function verifyBaseBackup(backupPath: string): Promise<void> {
     const metadata = await stat(path);
     if (metadata.size !== entry.bytes || (await checksum(path)) !== entry.sha256)
       throw new Error("BACKUP_HASH_MISMATCH");
+  }
+  const database = new Sqlite(join(backupPath, "sequent.sqlite"), {
+    readonly: true,
+    fileMustExist: true,
+  });
+  try {
+    if (database.pragma("quick_check", { simple: true }) !== "ok")
+      throw new Error("BACKUP_DATABASE_INVALID");
+  } finally {
+    database.close();
   }
 }
