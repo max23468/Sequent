@@ -307,6 +307,10 @@ function containsLiteralValue(pageText: string, value: string): boolean {
   return normalized.length > 0 && pageText.includes(normalized);
 }
 
+function codexSubjectKey(subjectId: string): string {
+  return `codex.${createHash("sha256").update(subjectId).digest("hex").slice(0, 24)}`;
+}
+
 function validateAnalysisEvidence(
   analysis: AnalysisOutput,
   documents: PracticeSnapshotDocument[],
@@ -491,7 +495,7 @@ export async function analyzePracticeWithCodex(
           practiceId,
           documentId: proposal.documentId,
           pageNumber: proposal.pageNumber,
-          subjectKey: `codex.${createHash("sha256").update(proposal.subjectId).digest("hex").slice(0, 24)}`,
+          subjectKey: codexSubjectKey(proposal.subjectId),
           label: proposal.label,
           proposedValue: proposal.value,
           alternatives: proposal.alternatives,
@@ -516,7 +520,7 @@ export async function analyzePracticeWithCodex(
           practiceId,
           documentId: primarySource.documentId,
           pageNumber: primarySource.pageNumber,
-          subjectKey: `codex.conflict.${createHash("sha256").update(conflict.subjectId).digest("hex").slice(0, 24)}`,
+          subjectKey: codexSubjectKey(conflict.subjectId),
           label: conflict.label,
           proposedValue: null,
           alternatives: conflict.sources.map((source) => source.value),

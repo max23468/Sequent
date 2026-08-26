@@ -12,7 +12,7 @@ import {
 import { resolveBlobPath } from "../../src/lib/server/blob-store.ts";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
 import { processDocument } from "../../src/lib/server/document-processing.ts";
-import { listReviewItems } from "../../src/lib/server/documents.ts";
+import { decideReviewItem, listReviewItems } from "../../src/lib/server/documents.ts";
 import { ingestDocument } from "../../src/lib/server/document-ingestion.ts";
 
 const directories: string[] = [];
@@ -159,6 +159,118 @@ describe("analisi pratica con Codex", () => {
     );
     expect(listReviewItems(database, document.practiceId)).toHaveLength(2);
   });
+
+  it.each(["proposal", "conflict"] as const)(
+    "mantiene autorevole la decisione nella transizione da %s",
+    async (initialKind) => {
+      const directory = mkdtempSync(join(tmpdir(), `sequent-codex-${initialKind}-transition-`));
+      directories.push(directory);
+      const database = openDatabase(directory);
+      const first = await ingestDocument(
+        database,
+        new File(["Il riferimento della pratica è AB-12."], "prima.txt", {
+          type: "text/plain",
+        }),
+        { newPracticeTitle: "Pratica transizione Codex" },
+        directory,
+      );
+      const second = await ingestDocument(
+        database,
+        new File(["Il riferimento della pratica è AB-13."], "seconda.txt", {
+          type: "text/plain",
+        }),
+        { practiceId: first.practiceId },
+        directory,
+      );
+      await processDocument(database, first.id, { dataDirectory: directory });
+      await processDocument(database, second.id, { dataDirectory: directory });
+      let invocation = 0;
+      const adapter: CodexAnalysisAdapter = {
+        async run() {
+          const kind =
+            invocation++ === 0 ? initialKind : initialKind === "proposal" ? "conflict" : "proposal";
+          return {
+            threadId: `thread-${initialKind}-transition`,
+            usage: null,
+            finalResponse: JSON.stringify({
+              summary: "Transizione sintetica",
+              proposals:
+                kind === "proposal"
+                  ? [
+                      {
+                        subjectId: "practice.reference",
+                        label: "Riferimento pratica",
+                        value: "AB-12",
+                        documentId: first.id,
+                        pageNumber: 1,
+                        excerpt: "riferimento della pratica è AB-12",
+                        confidence: 0.95,
+                        alternatives: [],
+                      },
+                    ]
+                  : [],
+              conflicts:
+                kind === "conflict"
+                  ? [
+                      {
+                        subjectId: "practice.reference",
+                        label: "Riferimento pratica",
+                        sources: [
+                          {
+                            documentId: first.id,
+                            pageNumber: 1,
+                            excerpt: "riferimento della pratica è AB-12",
+                            value: "AB-12",
+                          },
+                          {
+                            documentId: second.id,
+                            pageNumber: 1,
+                            excerpt: "riferimento della pratica è AB-13",
+                            value: "AB-13",
+                          },
+                        ],
+                        explanation: "Valori discordanti",
+                      },
+                    ]
+                  : [],
+            }),
+          };
+        },
+      };
+
+      await analyzePracticeWithCodex(database, first.practiceId, {
+        dataDirectory: directory,
+        adapter,
+      });
+      const authoritative = listReviewItems(database, first.practiceId)[0];
+      expect(authoritative).toBeDefined();
+      expect(
+        decideReviewItem(database, first.practiceId, authoritative!.id, {
+          status: initialKind === "proposal" ? "confirmed" : "edited",
+          value: "AB-12",
+        }),
+      ).toBe(true);
+
+      await analyzePracticeWithCodex(database, first.practiceId, {
+        dataDirectory: directory,
+        adapter,
+      });
+      expect(
+        database
+          .prepare(
+            `SELECT id, status, decided_value_json
+             FROM review_items WHERE practice_id = ? AND subject_key = ?`,
+          )
+          .all(first.practiceId, authoritative!.subjectKey),
+      ).toEqual([
+        {
+          id: authoritative!.id,
+          status: initialKind === "proposal" ? "confirmed" : "edited",
+          decided_value_json: '"AB-12"',
+        },
+      ]);
+    },
+  );
 
   it.each([
     {
