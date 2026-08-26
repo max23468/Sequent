@@ -31,12 +31,26 @@ const observedFieldSchema = z.object({
   reviewStatus: z.enum(["pending", "confirmed", "edited", "rejected", "ignored"]),
 });
 
+const expectedConflictSchema = z.object({
+  key: z.string().min(1),
+  documentIds: z.array(z.string().min(1)).min(2),
+  critical: z.boolean(),
+});
+
+const observedConflictSchema = z.object({
+  key: z.string().min(1),
+  documentIds: z.array(z.string().min(1)).min(2),
+  reviewStatus: z.enum(["pending", "confirmed", "edited", "rejected", "ignored"]),
+});
+
 const caseSchema = z.object({
   id: z.string().min(1),
   category: z.enum(benchmarkCategories),
   knownDocumentIds: z.array(z.string().min(1)).min(1),
   expected: z.array(expectedFieldSchema),
   observed: z.array(observedFieldSchema),
+  expectedConflicts: z.array(expectedConflictSchema).default([]),
+  observedConflicts: z.array(observedConflictSchema).default([]),
 });
 
 const benchmarkDatasetSchema = z.object({
@@ -51,6 +65,8 @@ type BenchmarkOutcome =
   | "wrong"
   | "not_found"
   | "correctly_pending"
+  | "conflict_detected"
+  | "conflict_ignored"
   | "invented"
   | "invented_source";
 
@@ -77,6 +93,8 @@ const emptyTotals = (): Record<BenchmarkOutcome, number> => ({
   wrong: 0,
   not_found: 0,
   correctly_pending: 0,
+  conflict_detected: 0,
+  conflict_ignored: 0,
   invented: 0,
   invented_source: 0,
 });
@@ -92,6 +110,12 @@ export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
   for (const fixture of dataset.cases) {
     const expectedByKey = new Map(fixture.expected.map((field) => [field.key, field]));
     const observedByKey = new Map(fixture.observed.map((field) => [field.key, field]));
+    const expectedConflictsByKey = new Map(
+      fixture.expectedConflicts.map((conflict) => [conflict.key, conflict]),
+    );
+    const observedConflictsByKey = new Map(
+      fixture.observedConflicts.map((conflict) => [conflict.key, conflict]),
+    );
     for (const expected of fixture.expected) {
       const observed = observedByKey.get(expected.key);
       let outcome: BenchmarkOutcome;
@@ -99,10 +123,16 @@ export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
       else if (!fixture.knownDocumentIds.includes(observed.documentId)) outcome = "invented_source";
       else if (observed.value !== expected.value) {
         outcome = observed.reviewStatus === "pending" ? "correctly_pending" : "wrong";
-        if (expected.critical && observed.reviewStatus !== "pending") criticalSilentErrors += 1;
+      } else if (
+        observed.documentId !== expected.documentId ||
+        observed.pageNumber !== expected.pageNumber
+      ) {
+        outcome = observed.reviewStatus === "pending" ? "correctly_pending" : "wrong";
       } else if (!observed.sourceExcerpt || observed.pageNumber === null) {
         outcome = "correct_incomplete_source";
       } else outcome = "correct_source";
+      if (expected.critical && outcome !== "correct_source" && outcome !== "correctly_pending")
+        criticalSilentErrors += 1;
       totals[outcome] += 1;
       results.push({
         caseId: fixture.id,
@@ -130,6 +160,54 @@ export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
         outcome,
         critical: false,
       });
+      nonCriticalObserved += 1;
+    }
+    for (const expected of fixture.expectedConflicts) {
+      const observed = observedConflictsByKey.get(expected.key);
+      const knownSources = observed?.documentIds.every((id) =>
+        fixture.knownDocumentIds.includes(id),
+      );
+      const observedSources = new Set(observed?.documentIds ?? []);
+      const expectedSources = new Set(expected.documentIds);
+      const sameSources =
+        observed !== undefined &&
+        observed.documentIds.length === expected.documentIds.length &&
+        observedSources.size === observed.documentIds.length &&
+        expectedSources.size === expected.documentIds.length &&
+        expected.documentIds.every((id) => observedSources.has(id));
+      let outcome: BenchmarkOutcome;
+      if (observed && !knownSources) {
+        outcome = "invented_source";
+        if (expected.critical) criticalSilentErrors += 1;
+      } else if (!observed || !sameSources) {
+        outcome = "conflict_ignored";
+        if (expected.critical) criticalSilentErrors += 1;
+      } else {
+        outcome = "conflict_detected";
+      }
+      totals[outcome] += 1;
+      results.push({
+        caseId: fixture.id,
+        category: fixture.category,
+        key: expected.key,
+        outcome,
+        critical: expected.critical,
+      });
+    }
+    for (const observed of fixture.observedConflicts) {
+      if (expectedConflictsByKey.has(observed.key)) continue;
+      const outcome = observed.documentIds.every((id) => fixture.knownDocumentIds.includes(id))
+        ? "invented"
+        : "invented_source";
+      totals[outcome] += 1;
+      results.push({
+        caseId: fixture.id,
+        category: fixture.category,
+        key: observed.key,
+        outcome,
+        critical: false,
+      });
+      nonCriticalObserved += 1;
     }
   }
 
@@ -142,7 +220,11 @@ export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
     criticalSilentErrors,
     inventedSources: totals.invented_source,
     nonCriticalPrecision,
-    passedM3Safety: criticalSilentErrors === 0 && totals.invented_source === 0,
+    passedM3Safety:
+      criticalSilentErrors === 0 &&
+      totals.invented === 0 &&
+      totals.invented_source === 0 &&
+      nonCriticalPrecision >= 0.98,
     results,
   };
 }

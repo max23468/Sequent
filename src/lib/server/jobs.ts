@@ -157,6 +157,13 @@ export function recoverInterruptedJobs(database: Database.Database): number {
       .run(now).changes;
     database
       .prepare(
+        `UPDATE codex_runs
+         SET status = 'failed', error_code = 'PROCESS_RESTART', updated_at = ?
+         WHERE status = 'running'`,
+      )
+      .run(now);
+    database
+      .prepare(
         "UPDATE jobs SET status = 'queued', updated_at = ? WHERE status = 'interrupted' AND attempts < ?",
       )
       .run(now, MAX_JOB_ATTEMPTS);
@@ -223,9 +230,24 @@ export function retryJob(database: Database.Database, id: string, practiceId: st
     .prepare(
       `UPDATE jobs
        SET status = 'queued', progress = 0, error_code = NULL, updated_at = ?
-       WHERE id = ? AND practice_id = ? AND status = 'failed' AND attempts < ?`,
+       WHERE id = ? AND practice_id = ? AND status IN ('failed', 'cancelled') AND attempts < ?`,
     )
     .run(new Date().toISOString(), id, practiceId, MAX_JOB_ATTEMPTS);
+  return result.changes === 1;
+}
+
+export function cancelQueuedJob(
+  database: Database.Database,
+  id: string,
+  practiceId: string,
+): boolean {
+  const result = database
+    .prepare(
+      `UPDATE jobs
+       SET status = 'cancelled', error_code = 'USER_CANCELLED', updated_at = ?
+       WHERE id = ? AND practice_id = ? AND status = 'queued'`,
+    )
+    .run(new Date().toISOString(), id, practiceId);
   return result.changes === 1;
 }
 

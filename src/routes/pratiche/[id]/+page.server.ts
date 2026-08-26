@@ -9,7 +9,8 @@ import {
   listPracticeJobs,
   retryJob,
 } from "$lib/server/jobs";
-import { listCodexRuns } from "$lib/server/codex-analysis";
+import { hasCodexThread, listCodexRuns, resetCodexThread } from "$lib/server/codex-analysis";
+import { cancelPracticeJob } from "$lib/server/job-runner";
 import { getPractice, listPracticeDocuments } from "$lib/server/practices";
 
 export const load: PageServerLoad = ({ locals, params, url }) => {
@@ -38,8 +39,9 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     reviewItems,
     selectedReview,
     activeJobs: jobs.filter((job) => job.status === "queued" || job.status === "running"),
-    failedJobs: jobs.filter((job) => job.status === "failed"),
+    failedJobs: jobs.filter((job) => job.status === "failed" || job.status === "cancelled"),
     codexRuns: listCodexRuns(database, params.id),
+    hasCodexThread: hasCodexThread(database, params.id),
   };
 };
 
@@ -105,5 +107,20 @@ export const actions = {
     if (!retryJob(openDatabase(), jobId, params.id))
       return fail(409, { retryError: "Il lavoro non può essere ritentato." });
     redirect(303, `/pratiche/${params.id}`);
+  },
+  cancel: async ({ locals, params, request }) => {
+    if (!locals.ownerId) redirect(303, "/login");
+    const formData = await request.formData();
+    const jobId = String(formData.get("jobId") ?? "");
+    if (!cancelPracticeJob(openDatabase(), jobId, params.id))
+      return fail(409, { cancelError: "Il lavoro non può più essere annullato." });
+    redirect(303, `/pratiche/${params.id}`);
+  },
+  resetCodex: ({ locals, params }) => {
+    if (!locals.ownerId) redirect(303, "/login");
+    const database = openDatabase();
+    if (!getPractice(database, params.id)) error(404, "Pratica non trovata");
+    resetCodexThread(database, params.id);
+    redirect(303, `/pratiche/${params.id}?sezione=verifications`);
   },
 } satisfies Actions;

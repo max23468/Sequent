@@ -27,7 +27,11 @@ describe("elaborazione documentale", () => {
       directory,
     );
 
-    await processDocument(database, document.id, { dataDirectory: directory });
+    const progress: number[] = [];
+    await processDocument(database, document.id, {
+      dataDirectory: directory,
+      onProgress: (value) => progress.push(value),
+    });
 
     expect(getDocument(database, document.id)).toMatchObject({
       status: "processed",
@@ -43,5 +47,6 @@ describe("elaborazione documentale", () => {
         .prepare("SELECT kind, tool_name FROM document_artifacts WHERE document_id = ?")
         .all(document.id),
     ).toEqual([{ kind: "extracted_text", tool_name: "native" }]);
+    expect(progress).toEqual([5, 12, 20, 85, 95]);
   });
 });

@@ -42,6 +42,19 @@ describe("pipeline documentale", () => {
     ]);
   });
 
+  it("richiede OCR se anche una sola pagina PDF non contiene testo utile", () => {
+    expect(
+      documentProcessingInternals.needsPdfOcr(
+        "Questa prima pagina contiene testo nativo sufficiente.\f   \f",
+      ),
+    ).toBe(true);
+    expect(
+      documentProcessingInternals.needsPdfOcr(
+        "Questa prima pagina contiene testo nativo sufficiente.\fAnche la seconda pagina contiene testo nativo sufficiente.\f",
+      ),
+    ).toBe(false);
+  });
+
   it("blocca traversal e rapporti di compressione anomali negli archivi", async () => {
     await expect(
       documentProcessingInternals.inspectArchive("fixture.zip", async (_command, arguments_) => ({

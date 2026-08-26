@@ -9,7 +9,7 @@ interface CommandResult {
 export type CommandRunner = (
   command: string,
   arguments_: string[],
-  options?: { timeoutMs?: number; maxOutputBytes?: number; cwd?: string },
+  options?: { timeoutMs?: number; maxOutputBytes?: number; cwd?: string; signal?: AbortSignal },
 ) => Promise<CommandResult>;
 
 function processTable(): Array<{ pid: number; parentPid: number }> {
@@ -89,6 +89,7 @@ function killProcessTree(rootPid: number, useProcessGroup: boolean): void {
 }
 
 export const runCommand: CommandRunner = async (command, arguments_, options = {}) => {
+  if (options.signal?.aborted) throw new Error("TOOL_CANCELLED");
   const timeoutMs = options.timeoutMs ?? 120_000;
   const maxOutputBytes = options.maxOutputBytes ?? 2 * 1024 * 1024;
   return await new Promise<CommandResult>((resolve, reject) => {
@@ -114,6 +115,8 @@ export const runCommand: CommandRunner = async (command, arguments_, options = {
       pendingError = error;
       terminate();
     };
+    const cancel = () => stop(new Error("TOOL_CANCELLED"));
+    options.signal?.addEventListener("abort", cancel, { once: true });
     const timer = setTimeout(() => stop(new Error("TOOL_TIMEOUT")), timeoutMs);
     child.stdout.on("data", (chunk: Buffer) => {
       outputBytes += chunk.byteLength;
@@ -128,6 +131,7 @@ export const runCommand: CommandRunner = async (command, arguments_, options = {
     child.on("error", (error) => stop(new Error(`TOOL_UNAVAILABLE:${command}:${error.message}`)));
     child.on("close", (code) => {
       clearTimeout(timer);
+      options.signal?.removeEventListener("abort", cancel);
       if (settled) return;
       settled = true;
       if (pendingError) {

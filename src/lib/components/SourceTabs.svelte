@@ -1,6 +1,10 @@
 <script lang="ts">
   let { sourceRefs, documents, selectedDocumentId, reviewId } = $props<{
-    sourceRefs: Array<{ documentId: string; value?: string | null }>;
+    sourceRefs: Array<{
+      documentId: string;
+      pageNumber: number | null;
+      value?: string | null;
+    }>;
     documents: Array<{ id: string; originalName: string }>;
     selectedDocumentId: string | null;
     reviewId: string;

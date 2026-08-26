@@ -54,7 +54,12 @@ export interface ReviewItem {
   method: "structured" | "native_text" | "ocr" | "rule" | "codex" | "calculation" | "manual";
   confidence: number | null;
   sourceExcerpt: string | null;
-  sourceRefs: Array<{ documentId: string; pageNumber: number | null; value?: string }>;
+  sourceRefs: Array<{
+    documentId: string;
+    pageNumber: number | null;
+    excerpt?: string;
+    value?: string;
+  }>;
   ruleVersion: string | null;
   promptVersion: string | null;
   critical: boolean;
@@ -250,7 +255,12 @@ export function createReviewItem(
     method: ReviewItem["method"];
     confidence?: number | null;
     sourceExcerpt?: string;
-    sourceRefs?: Array<{ documentId: string; pageNumber: number | null; value?: string }>;
+    sourceRefs?: Array<{
+      documentId: string;
+      pageNumber: number | null;
+      excerpt?: string;
+      value?: string;
+    }>;
     ruleVersion?: string;
     promptVersion?: string;
     critical?: boolean;

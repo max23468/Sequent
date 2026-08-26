@@ -4,11 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
 import {
+  cancelQueuedJob,
   claimNextJob,
   enqueueJob,
   finishJob,
   listFailedBlobVerifications,
   recoverInterruptedJobs,
+  retryJob,
 } from "../../src/lib/server/jobs.ts";
 import { createPractice } from "../../src/lib/server/practices.ts";
 import { ingestDocument } from "../../src/lib/server/document-ingestion.ts";
@@ -23,6 +25,24 @@ afterEach(() => {
 });
 
 describe("coda persistente", () => {
+  it("annulla un job in coda e consente il retry manuale", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-job-cancel-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica annullamento");
+    const job = enqueueJob(
+      database,
+      "document.process",
+      { input: "cancel" },
+      { practiceId: practice.id },
+    );
+
+    expect(cancelQueuedJob(database, job.id, practice.id)).toBe(true);
+    expect(claimNextJob(database)).toBeNull();
+    expect(retryJob(database, job.id, practice.id)).toBe(true);
+    expect(claimNextJob(database)).toMatchObject({ id: job.id, status: "running" });
+  });
+
   it("riaccoda un job di verifica fallito soltanto entro il limite dei tentativi", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-job-retry-"));
     directories.push(directory);
@@ -51,6 +71,29 @@ describe("coda persistente", () => {
     expect(claimNextJob(database)?.status).toBe("running");
     expect(recoverInterruptedJobs(database)).toBe(1);
     expect(claimNextJob(database)?.attempts).toBe(2);
+  });
+
+  it("chiude come fallita una run Codex rimasta attiva al riavvio", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-codex-run-restart-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica Codex interrotta");
+    const now = new Date().toISOString();
+    database
+      .prepare(
+        `INSERT INTO codex_runs(
+           id, practice_id, snapshot_hash, prompt_version, model, effort,
+           status, created_at, updated_at
+         ) VALUES ('run-interrotta', ?, 'hash', 'prompt', 'model', 'high', 'running', ?, ?)`,
+      )
+      .run(practice.id, now, now);
+
+    recoverInterruptedJobs(database);
+
+    expect(database.prepare("SELECT status, error_code FROM codex_runs").get()).toEqual({
+      status: "failed",
+      error_code: "PROCESS_RESTART",
+    });
   });
 
   it("rende visibile come fallito un job interrotto dopo l'ultimo tentativo", async () => {

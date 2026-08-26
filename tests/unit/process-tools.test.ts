@@ -12,7 +12,7 @@ afterEach(() => {
 });
 
 async function waitForFile(path: string): Promise<void> {
-  const deadline = Date.now() + 2_000;
+  const deadline = Date.now() + 4_000;
   while (Date.now() < deadline) {
     try {
       readFileSync(path, "utf8");
@@ -52,11 +52,39 @@ describe("esecuzione strumenti documentali", () => {
         `writeFileSync(${JSON.stringify(pidPath)}, String(child.pid));`,
         "setInterval(() => {}, 1000);",
       ].join("\n");
-      const command = runCommand(process.execPath, ["-e", parentScript], { timeoutMs: 150 });
+      const command = runCommand(process.execPath, ["-e", parentScript], { timeoutMs: 5_000 });
+      const timedOut = expect(command).rejects.toThrow("TOOL_TIMEOUT");
       await waitForFile(pidPath);
       const descendantPid = Number(readFileSync(pidPath, "utf8"));
 
-      await expect(command).rejects.toThrow("TOOL_TIMEOUT");
+      await timedOut;
+      await waitForProcessExit(descendantPid);
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "annulla il comando e i discendenti prima di restituire il controllo",
+    async () => {
+      const directory = mkdtempSync(join(tmpdir(), "sequent-process-cancel-"));
+      directories.push(directory);
+      const pidPath = join(directory, "cancelled-descendant.pid");
+      const parentScript = [
+        'const { spawn } = require("node:child_process");',
+        'const { writeFileSync } = require("node:fs");',
+        'const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore", detached: true });',
+        `writeFileSync(${JSON.stringify(pidPath)}, String(child.pid));`,
+        "setInterval(() => {}, 1000);",
+      ].join("\n");
+      const controller = new AbortController();
+      const command = runCommand(process.execPath, ["-e", parentScript], {
+        timeoutMs: 10_000,
+        signal: controller.signal,
+      });
+      await waitForFile(pidPath);
+      const descendantPid = Number(readFileSync(pidPath, "utf8"));
+      controller.abort();
+
+      await expect(command).rejects.toThrow("TOOL_CANCELLED");
       await waitForProcessExit(descendantPid);
     },
   );

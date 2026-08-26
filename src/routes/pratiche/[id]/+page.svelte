@@ -8,6 +8,10 @@
     MoreHorizontal, Pencil, ShieldCheck, Upload, UserRound, UsersRound, X,
   } from "@lucide/svelte";
   import ProcessingErrors from "$lib/components/ProcessingErrors.svelte";
+  import ActiveProcessing from "$lib/components/ActiveProcessing.svelte";
+  import CodexRunHistory from "$lib/components/CodexRunHistory.svelte";
+  import DocumentList from "$lib/components/DocumentList.svelte";
+  import ReviewQueue from "$lib/components/ReviewQueue.svelte";
   import SourceTabs from "$lib/components/SourceTabs.svelte";
   import { uploadFilesResumably } from "$lib/client/resumable-upload";
   import { formatItalianDate, formatMegabytes } from "$lib/format";
@@ -35,7 +39,14 @@
     unreadable: "Illeggibile", authoritative: "Fonte autorevole",
   };
 
-  let selectedReviewPage = $derived(data.selectedReview?.pageNumber ?? null);
+  let selectedSourceRef = $derived(
+    data.selectedReview?.sourceRefs.find(
+      (source: { documentId: string }) => source.documentId === data.selectedDocument?.id,
+    ),
+  );
+  let selectedReviewPage = $derived(
+    selectedSourceRef?.pageNumber ?? data.selectedReview?.pageNumber ?? null,
+  );
   let selectedSourcePage = $derived(
     selectedReviewPage
       ? data.selectedDocumentPages.find((candidate: { pageNumber: number }) => candidate.pageNumber === selectedReviewPage)
@@ -135,6 +146,11 @@
     </aside>
 
     <section class="workspace-main">
+      {#if data.activeJobs.length > 0}
+        <ActiveProcessing jobs={data.activeJobs} />
+      {/if}
+      {#if form?.retryError}<p class="workspace-form-error" role="alert">{form.retryError}</p>{/if}
+      {#if form?.cancelError}<p class="workspace-form-error" role="alert">{form.cancelError}</p>{/if}
       {#if selectedSection === "documents"}
         <div class="workspace-panel-heading"><h2>Documenti</h2><span>{data.documents.length}</span></div>
         <form class="inline-upload" method="POST" action="?/upload" enctype="multipart/form-data" onsubmit={uploadDocument}>
@@ -153,14 +169,7 @@
         {#if data.documents.length === 0}
           <div class="panel-empty workspace-empty"><FileText size={27} /><p>Nessun documento caricato.</p><span>Gli originali aggiunti alla pratica compariranno qui.</span></div>
         {:else}
-          <ul class="document-list">
-            {#each data.documents as file (file.id)}
-              <li class:selected={data.selectedDocument?.id === file.id}><a href={`?sezione=documents&documento=${file.id}`}>
-                {#if ["processing", "classifying", "received"].includes(file.status)}<LoaderCircle class="spinning" size={20} />{:else}<FileText size={20} />{/if}
-                <span><strong>{file.originalName}</strong><small>{formatMegabytes(file.byteSize)} · {statusLabels[file.status] ?? file.status}{file.pageCount ? ` · ${file.pageCount} pag.` : ""}</small></span>
-              </a></li>
-            {/each}
-          </ul>
+          <DocumentList documents={data.documents} selectedDocumentId={data.selectedDocument?.id ?? null} {statusLabels} />
         {/if}
       {:else if selectedSection === "verifications"}
         <div class="workspace-panel-heading"><h2>Da verificare</h2><span>{data.reviewItems.length}</span></div>
@@ -170,6 +179,9 @@
             {#if data.activeJobs.some((job: { type: string }) => job.type === "codex.analyze_practice")}<LoaderCircle class="spinning" size={17} />Analisi in corso{:else}<Bot size={17} />{data.codexRuns.length > 0 ? "Rianalizza con Codex" : "Analizza con Codex"}{/if}
           </button></form>
         </div>
+        {#if data.codexRuns.length > 0}
+          <CodexRunHistory runs={data.codexRuns} hasThread={data.hasCodexThread} />
+        {/if}
         {#if form?.analyzeError}<p class="workspace-form-error" role="alert">{form.analyzeError}</p>{/if}
         {#if form?.reviewError}<p class="workspace-form-error" role="alert">{form.reviewError}</p>{/if}
         {#if data.reviewItems.length === 0}
@@ -184,16 +196,14 @@
                 <div><dt>Metodo</dt><dd>{data.selectedReview.method === "codex" ? "Codex" : data.selectedReview.method === "ocr" ? "OCR" : data.selectedReview.method}</dd></div>
                 <div><dt>Affidabilità</dt><dd>{data.selectedReview.confidence === null ? "Non dichiarata" : `${Math.round(data.selectedReview.confidence * 100)}%`}</dd></div>
                 <div><dt>Fonte</dt><dd>{data.selectedReview.documentName ?? "—"}{data.selectedReview.pageNumber ? `, pagina ${data.selectedReview.pageNumber}` : ""}</dd></div>
-                {#if data.selectedReview.sourceExcerpt}<div><dt>Estratto</dt><dd class="source-excerpt">{data.selectedReview.sourceExcerpt}</dd></div>{/if}
+                {#if selectedSourceRef?.excerpt ?? data.selectedReview.sourceExcerpt}<div><dt>Estratto</dt><dd class="source-excerpt">{selectedSourceRef?.excerpt ?? data.selectedReview.sourceExcerpt}</dd></div>{/if}
               </dl>
               <form class="review-decision-form" method="POST" action="?/review">
                 <input type="hidden" name="itemId" value={data.selectedReview.id} /><label for="review-edit">Correggi prima di confermare</label><input id="review-edit" name="value" value={editedValue} oninput={handleEditedValue} placeholder={displayValue(data.selectedReview.proposedValue)} maxlength="2000" />
                 <div class="review-actions"><button class="button primary" type="submit" name="decision" value="confirmed"><Check size={17} />Conferma</button><button class="button secondary" type="submit" name="decision" value="edited" disabled={!editedValue.trim()}><Pencil size={17} />Conferma correzione</button><button class="button secondary" type="submit" name="decision" value="rejected"><X size={17} />Rifiuta</button><button class="button text" type="submit" name="decision" value="ignored">Ignora</button></div>
               </form>
             </section>
-            {#if data.reviewItems.length > 1}
-              <div class="review-queue-heading">Altre verifiche</div><ul class="review-queue">{#each data.reviewItems.filter((item: { id: string }) => item.id !== data.selectedReview?.id) as item (item.id)}<li><a href={`?sezione=verifications&verifica=${item.id}`}><span><strong>{item.label}</strong><small>{item.documentName ?? "Senza documento"}{item.pageNumber ? ` · pag. ${item.pageNumber}` : ""}</small></span><Eye size={17} /></a></li>{/each}</ul>
-            {/if}
+            <ReviewQueue items={data.reviewItems} selectedId={data.selectedReview.id} />
           </div>
         {/if}
       {:else}

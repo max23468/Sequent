@@ -117,7 +117,7 @@ async function readTextLimited(path: string): Promise<string> {
 
 function splitTextPages(text: string, method: ExtractedPage["method"]): ExtractedPage[] {
   const chunks = text.split("\f");
-  while (chunks.length > 1 && chunks.at(-1)?.trim() === "") chunks.pop();
+  if (chunks.length > 1 && chunks.at(-1)?.trim() === "") chunks.pop();
   return (chunks.length === 0 ? [""] : chunks).map((chunk, index) => ({
     pageNumber: index + 1,
     text: chunk.trim(),
@@ -125,6 +125,12 @@ function splitTextPages(text: string, method: ExtractedPage["method"]): Extracte
     language: "it",
     method,
   }));
+}
+
+function needsPdfOcr(text: string): boolean {
+  const pages = text.split("\f");
+  if (pages.length > 1 && pages.at(-1)?.trim() === "") pages.pop();
+  return pages.some((page) => page.replaceAll(/\s/g, "").length < 20);
 }
 
 function decodeXmlText(value: string): string {
@@ -266,7 +272,7 @@ async function extractPdf(
   let method: ExtractedPage["method"] = "native";
   let bboxInput = inputPath;
   let searchablePath: string | null = null;
-  if (text.replaceAll(/\s/g, "").length < 20) {
+  if (needsPdfOcr(text)) {
     searchablePath = join(directory, "searchable.pdf");
     await runner(
       "ocrmypdf",
@@ -578,12 +584,22 @@ async function extractOffice(
 export async function processDocument(
   database: Database.Database,
   documentId: string,
-  options: { dataDirectory?: string; runner?: CommandRunner } = {},
+  options: {
+    dataDirectory?: string;
+    runner?: CommandRunner;
+    signal?: AbortSignal;
+    onProgress?: (progress: number) => void;
+  } = {},
 ): Promise<void> {
   const dataDirectory = options.dataDirectory ?? getDataDirectory();
-  const runner = options.runner ?? runCommand;
+  const baseRunner = options.runner ?? runCommand;
+  const runner: CommandRunner = (command, arguments_, runnerOptions = {}) =>
+    baseRunner(command, arguments_, { ...runnerOptions, signal: options.signal });
+  if (options.signal?.aborted) throw new Error("TOOL_CANCELLED");
   const document = getDocument(database, documentId);
   if (!document) throw new Error("DOCUMENT_NOT_FOUND");
+  const previousStatus = document.status;
+  options.onProgress?.(5);
   updateDocumentProcessing(database, documentId, { status: "classifying", processingError: null });
   const originalPath = resolveBlobPath(dataDirectory, document.blobPath);
   const detection = detectFormat(
@@ -591,6 +607,7 @@ export async function processDocument(
     document.mediaType,
     await readPrefix(originalPath),
   );
+  options.onProgress?.(12);
   if (!SUPPORTED_EXTENSIONS.has(detection.extension)) {
     updateDocumentProcessing(database, documentId, {
       status: "unsupported",
@@ -606,11 +623,13 @@ export async function processDocument(
   const inputPath = join(directory, `input${detection.extension || ".bin"}`);
   try {
     await copyFile(originalPath, inputPath);
+    if (options.signal?.aborted) throw new Error("TOOL_CANCELLED");
     updateDocumentProcessing(database, documentId, {
       status: "processing",
       detectedFormat: detection.format,
       processingError: null,
     });
+    options.onProgress?.(20);
     let result: ProcessResult;
     if (detection.kind === "pdf") {
       result = await extractPdf(database, documentId, inputPath, directory, dataDirectory, runner);
@@ -693,6 +712,7 @@ export async function processDocument(
         status: "unsupported",
       };
     }
+    options.onProgress?.(85);
     replaceDocumentPages(database, documentId, result.pages);
     updateDocumentProcessing(database, documentId, {
       status: result.status,
@@ -701,6 +721,7 @@ export async function processDocument(
       language: result.language,
       processingError: null,
     });
+    options.onProgress?.(95);
     const lowConfidence = result.pages.find(
       (page) => page.method === "ocr" && (page.confidence ?? 0) < 0.85,
     );
@@ -728,6 +749,15 @@ export async function processDocument(
   } catch (error) {
     const code =
       error instanceof Error ? error.message.slice(0, 240) : "DOCUMENT_PROCESSING_FAILED";
+    if (code === "TOOL_CANCELLED") {
+      updateDocumentProcessing(database, documentId, {
+        status: ["classifying", "processing"].includes(previousStatus)
+          ? "received"
+          : previousStatus,
+        processingError: null,
+      });
+      throw error;
+    }
     updateDocumentProcessing(database, documentId, {
       status: code.startsWith("ARCHIVE_") ? "unsupported" : "unreadable",
       detectedFormat: detection.format,
@@ -747,4 +777,5 @@ export const documentProcessingInternals = {
   inspectArchive,
   splitTextPages,
   decodeXmlText,
+  needsPdfOcr,
 };

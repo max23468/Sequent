@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   analyzePracticeWithCodex,
+  hasCodexThread,
+  listCodexRuns,
+  resetCodexThread,
   type CodexAnalysisAdapter,
 } from "../../src/lib/server/codex-analysis.ts";
+import { resolveBlobPath } from "../../src/lib/server/blob-store.ts";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
 import { processDocument } from "../../src/lib/server/document-processing.ts";
 import { listReviewItems } from "../../src/lib/server/documents.ts";
@@ -78,6 +82,18 @@ describe("analisi pratica con Codex", () => {
         .prepare("SELECT thread_id FROM codex_threads WHERE practice_id = ?")
         .get(document.practiceId),
     ).toEqual({ thread_id: "thread-sintetico" });
+    expect(hasCodexThread(database, document.practiceId)).toBe(true);
+    expect(listCodexRuns(database, document.practiceId)).toEqual([
+      expect.objectContaining({
+        status: "completed",
+        summary: "Analisi sintetica",
+        proposalCount: 1,
+        conflictCount: 0,
+      }),
+    ]);
+    expect(resetCodexThread(database, document.practiceId)).toBe(true);
+    expect(hasCodexThread(database, document.practiceId)).toBe(false);
+    expect(listCodexRuns(database, document.practiceId)).toHaveLength(1);
   });
 
   it.each([
@@ -192,8 +208,20 @@ describe("analisi pratica con Codex", () => {
             conflicts: [
               {
                 label: "Riferimento pratica",
-                values: ["AB-12", "AB-13"],
-                documentIds: [document.id, "documento-estraneo"],
+                sources: [
+                  {
+                    documentId: document.id,
+                    pageNumber: 1,
+                    excerpt: "riferimento pratica AB-12",
+                    value: "AB-12",
+                  },
+                  {
+                    documentId: "documento-estraneo",
+                    pageNumber: 1,
+                    excerpt: "riferimento pratica AB-13",
+                    value: "AB-13",
+                  },
+                ],
                 explanation: "Valori discordanti",
               },
             ],
@@ -209,5 +237,142 @@ describe("analisi pratica con Codex", () => {
       }),
     ).rejects.toThrow("CODEX_UNKNOWN_DOCUMENT");
     expect(listReviewItems(database, document.practiceId)).toEqual([]);
+  });
+
+  it("conserva pagina ed estratto di ogni fonte di un conflitto", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-codex-conflict-sources-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const first = await ingestDocument(
+      database,
+      new File(["Il riferimento della pratica è AB-12."], "prima.txt", { type: "text/plain" }),
+      { newPracticeTitle: "Pratica conflitto Codex" },
+      directory,
+    );
+    const second = await ingestDocument(
+      database,
+      new File(["Il riferimento della pratica è AB-13."], "seconda.txt", { type: "text/plain" }),
+      { practiceId: first.practiceId },
+      directory,
+    );
+    await processDocument(database, first.id, { dataDirectory: directory });
+    await processDocument(database, second.id, { dataDirectory: directory });
+    const adapter: CodexAnalysisAdapter = {
+      async run() {
+        return {
+          threadId: "thread-conflitto-valido",
+          usage: null,
+          finalResponse: JSON.stringify({
+            summary: "Due riferimenti discordanti",
+            proposals: [],
+            conflicts: [
+              {
+                label: "Riferimento pratica",
+                sources: [
+                  {
+                    documentId: first.id,
+                    pageNumber: 1,
+                    excerpt: "riferimento della pratica è AB-12",
+                    value: "AB-12",
+                  },
+                  {
+                    documentId: second.id,
+                    pageNumber: 1,
+                    excerpt: "riferimento della pratica è AB-13",
+                    value: "AB-13",
+                  },
+                ],
+                explanation: "I documenti riportano riferimenti diversi.",
+              },
+            ],
+          }),
+        };
+      },
+    };
+
+    await expect(
+      analyzePracticeWithCodex(database, first.practiceId, {
+        dataDirectory: directory,
+        adapter,
+      }),
+    ).resolves.toMatchObject({ proposals: 0, conflicts: 1 });
+    expect(listReviewItems(database, first.practiceId)).toEqual([
+      expect.objectContaining({
+        pageNumber: 1,
+        alternatives: ["AB-12", "AB-13"],
+        sourceRefs: [
+          expect.objectContaining({
+            documentId: first.id,
+            pageNumber: 1,
+            excerpt: "riferimento della pratica è AB-12",
+          }),
+          expect.objectContaining({
+            documentId: second.id,
+            pageNumber: 1,
+            excerpt: "riferimento della pratica è AB-13",
+          }),
+        ],
+      }),
+    ]);
+  });
+
+  it("marca come annullata una run Codex interrotta dall'utente", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-codex-cancel-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const document = await ingestDocument(
+      database,
+      new File(["Documento sintetico da analizzare."], "nota.txt", { type: "text/plain" }),
+      { newPracticeTitle: "Pratica Codex annullata" },
+      directory,
+    );
+    await processDocument(database, document.id, { dataDirectory: directory });
+    const controller = new AbortController();
+    const adapter: CodexAnalysisAdapter = {
+      async run(request) {
+        if (request.signal?.aborted) throw new Error("ABORTED");
+        return await new Promise((_resolve, reject) => {
+          request.signal?.addEventListener("abort", () => reject(new Error("ABORTED")), {
+            once: true,
+          });
+        });
+      },
+    };
+    const analysis = analyzePracticeWithCodex(database, document.practiceId, {
+      dataDirectory: directory,
+      adapter,
+      signal: controller.signal,
+    });
+    controller.abort();
+
+    await expect(analysis).rejects.toThrow("TOOL_CANCELLED");
+    expect(database.prepare("SELECT status, error_code FROM codex_runs").get()).toEqual({
+      status: "cancelled",
+      error_code: "TOOL_CANCELLED",
+    });
+  });
+
+  it("marca come fallita una run se non riesce a preparare il workspace", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-codex-workspace-failure-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const document = await ingestDocument(
+      database,
+      new File(["Documento sintetico da analizzare."], "nota.txt", { type: "text/plain" }),
+      { newPracticeTitle: "Pratica Codex senza blob" },
+      directory,
+    );
+    await processDocument(database, document.id, { dataDirectory: directory });
+    const row = database
+      .prepare("SELECT blob_path FROM documents WHERE id = ?")
+      .get(document.id) as {
+      blob_path: string;
+    };
+    unlinkSync(resolveBlobPath(directory, row.blob_path));
+
+    await expect(
+      analyzePracticeWithCodex(database, document.practiceId, { dataDirectory: directory }),
+    ).rejects.toThrow();
+    expect(database.prepare("SELECT status FROM codex_runs").get()).toEqual({ status: "failed" });
   });
 });

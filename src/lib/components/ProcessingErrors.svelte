@@ -2,7 +2,7 @@
   import { AlertTriangle, RotateCcw } from "@lucide/svelte";
 
   let { jobs } = $props<{
-    jobs: Array<{ id: string; type: string; errorCode: string | null }>;
+    jobs: Array<{ id: string; type: string; status: string; errorCode: string | null }>;
   }>();
 </script>
 
@@ -12,9 +12,11 @@
       <AlertTriangle size={18} />
       <span>
         <strong>
-          {job.type === "document.process"
-            ? "Elaborazione documento non riuscita"
-            : "Analisi Codex non riuscita"}
+          {job.status === "cancelled"
+            ? "Elaborazione annullata"
+            : job.type === "document.process"
+              ? "Elaborazione documento non riuscita"
+              : "Analisi Codex non riuscita"}
         </strong>
         <small>{job.errorCode}</small>
       </span>

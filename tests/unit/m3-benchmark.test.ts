@@ -61,4 +61,114 @@ describe("benchmark M3", () => {
     expect(report.passedM3Safety).toBe(true);
     expect(report.totals.correctly_pending).toBe(1);
   });
+
+  it("blocca fonte o pagina sbagliata anche quando il valore coincide", () => {
+    const report = evaluateM3Benchmark({
+      corpusId: "sintetico",
+      corpusHash,
+      cases: [
+        {
+          id: "caso-fonte",
+          category: "pdf_native",
+          knownDocumentIds: ["doc-1", "doc-2"],
+          expected: [
+            { key: "codice", value: "ABC", documentId: "doc-1", pageNumber: 1, critical: true },
+          ],
+          observed: [
+            {
+              key: "codice",
+              value: "ABC",
+              documentId: "doc-2",
+              pageNumber: 7,
+              sourceExcerpt: "ABC",
+              reviewStatus: "confirmed",
+            },
+          ],
+        },
+      ],
+    });
+    expect(report.passedM3Safety).toBe(false);
+    expect(report.criticalSilentErrors).toBe(1);
+    expect(report.totals.wrong).toBe(1);
+  });
+
+  it("blocca conflitti critici ignorati e risultati inventati", () => {
+    const report = evaluateM3Benchmark({
+      corpusId: "sintetico",
+      corpusHash,
+      cases: [
+        {
+          id: "caso-conflitto",
+          category: "bank_certificate",
+          knownDocumentIds: ["doc-1", "doc-2"],
+          expected: [],
+          observed: [
+            {
+              key: "campo-inventato",
+              value: "XYZ",
+              documentId: "doc-1",
+              pageNumber: 1,
+              sourceExcerpt: "XYZ",
+              reviewStatus: "pending",
+            },
+          ],
+          expectedConflicts: [{ key: "saldo", documentIds: ["doc-1", "doc-2"], critical: true }],
+          observedConflicts: [],
+        },
+      ],
+    });
+    expect(report.passedM3Safety).toBe(false);
+    expect(report.totals.invented).toBe(1);
+    expect(report.totals.conflict_ignored).toBe(1);
+    expect(report.criticalSilentErrors).toBe(1);
+  });
+
+  it("blocca un campo critico non trovato", () => {
+    const report = evaluateM3Benchmark({
+      corpusId: "sintetico",
+      corpusHash,
+      cases: [
+        {
+          id: "caso-mancante",
+          category: "identity_document",
+          knownDocumentIds: ["doc-1"],
+          expected: [
+            {
+              key: "codice-fiscale",
+              value: "RSSMRA00A00H501Z",
+              documentId: "doc-1",
+              pageNumber: 1,
+              critical: true,
+            },
+          ],
+          observed: [],
+        },
+      ],
+    });
+    expect(report.passedM3Safety).toBe(false);
+    expect(report.totals.not_found).toBe(1);
+    expect(report.criticalSilentErrors).toBe(1);
+  });
+
+  it("non accetta un conflitto con la stessa fonte duplicata", () => {
+    const report = evaluateM3Benchmark({
+      corpusId: "sintetico",
+      corpusHash,
+      cases: [
+        {
+          id: "caso-fonti-duplicate",
+          category: "bank_certificate",
+          knownDocumentIds: ["doc-1", "doc-2"],
+          expected: [],
+          observed: [],
+          expectedConflicts: [{ key: "saldo", documentIds: ["doc-1", "doc-2"], critical: true }],
+          observedConflicts: [
+            { key: "saldo", documentIds: ["doc-1", "doc-1"], reviewStatus: "pending" },
+          ],
+        },
+      ],
+    });
+    expect(report.passedM3Safety).toBe(false);
+    expect(report.totals.conflict_ignored).toBe(1);
+  });
 });

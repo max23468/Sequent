@@ -478,12 +478,21 @@
   .analysis-toolbar .button {
     width: 100%;
   }
-  .processing-errors > div {
+  .codex-history-heading,
+  .codex-history summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .processing-errors > div,
+  .processing-active > div {
     align-items: flex-start;
     flex-wrap: wrap;
   }
   .processing-errors form,
-  .processing-errors .button {
+  .processing-errors .button,
+  .processing-active form,
+  .processing-active .button,
+  .processing-active progress {
     width: 100%;
   }
   .source-viewer iframe {
