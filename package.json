@@ -46,7 +46,7 @@
     "oxlint": "1.80.0",
     "svelte-check": "4.7.6",
     "svelte-doctor": "0.3.6",
-    "typescript": "~6.0.3",
+    "typescript": "6.0.3",
     "vite": "8.2.2",
     "vitest": "4.1.11"
   },
