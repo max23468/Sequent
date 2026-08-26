@@ -19,6 +19,28 @@ afterEach(() => {
 });
 
 describe("decisioni di revisione", () => {
+  it("non conferma un conflitto senza un valore autorevole", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-review-conflict-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica conflitto");
+    const itemId = createReviewItem(database, {
+      practiceId: practice.id,
+      subjectKey: "document.conflict",
+      label: "Valore discordante",
+      proposedValue: null,
+      alternatives: ["A", "B"],
+      method: "codex",
+    });
+
+    expect(
+      decideReviewItem(database, practice.id, itemId, { status: "confirmed", value: null }),
+    ).toBe(false);
+    expect(listReviewItems(database, practice.id)).toEqual([
+      expect.objectContaining({ id: itemId, status: "pending", decidedValue: null }),
+    ]);
+  });
+
   it("non ricrea una proposta sopra una correzione manuale autorevole", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-review-"));
     directories.push(directory);

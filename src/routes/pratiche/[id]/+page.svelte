@@ -200,7 +200,7 @@
               </dl>
               <form class="review-decision-form" method="POST" action="?/review">
                 <input type="hidden" name="itemId" value={data.selectedReview.id} /><label for="review-edit">Correggi prima di confermare</label><input id="review-edit" name="value" value={editedValue} oninput={handleEditedValue} placeholder={displayValue(data.selectedReview.proposedValue)} maxlength="2000" />
-                <div class="review-actions"><button class="button primary" type="submit" name="decision" value="confirmed"><Check size={17} />Conferma</button><button class="button secondary" type="submit" name="decision" value="edited" disabled={!editedValue.trim()}><Pencil size={17} />Conferma correzione</button><button class="button secondary" type="submit" name="decision" value="rejected"><X size={17} />Rifiuta</button><button class="button text" type="submit" name="decision" value="ignored">Ignora</button></div>
+                <div class="review-actions"><button class="button primary" type="submit" name="decision" value="confirmed" disabled={data.selectedReview.proposedValue === null}><Check size={17} />Conferma</button><button class="button secondary" type="submit" name="decision" value="edited" disabled={!editedValue.trim()}><Pencil size={17} />Conferma correzione</button><button class="button secondary" type="submit" name="decision" value="rejected"><X size={17} />Rifiuta</button><button class="button text" type="submit" name="decision" value="ignored">Ignora</button></div>
               </form>
             </section>
             <ReviewQueue items={data.reviewItems} selectedId={data.selectedReview.id} />

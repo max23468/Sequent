@@ -93,6 +93,10 @@ export const actions = {
     const editedValue = String(formData.get("value") ?? "").trim();
     if (decision === "edited" && (!editedValue || editedValue.length > 2_000))
       return fail(400, { reviewError: "Inserisci un valore valido da confermare." });
+    if (decision === "confirmed" && item.proposedValue === null)
+      return fail(400, {
+        reviewError: "Scegli o inserisci il valore autorevole prima di confermare il conflitto.",
+      });
     const accepted = decideReviewItem(database, params.id, itemId, {
       status: decision as "confirmed" | "edited" | "rejected" | "ignored",
       value: decision === "edited" ? editedValue : item.proposedValue,

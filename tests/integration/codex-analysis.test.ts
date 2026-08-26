@@ -47,6 +47,7 @@ describe("analisi pratica con Codex", () => {
             summary: "Analisi sintetica",
             proposals: [
               {
+                subjectId: "practice.reference",
                 label: "Riferimento pratica",
                 value: "AB-12",
                 documentId: document.id,
@@ -94,6 +95,69 @@ describe("analisi pratica con Codex", () => {
     expect(resetCodexThread(database, document.practiceId)).toBe(true);
     expect(hasCodexThread(database, document.practiceId)).toBe(false);
     expect(listCodexRuns(database, document.practiceId)).toHaveLength(1);
+  });
+
+  it("conserva proposte omonime riferite a soggetti distinti", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-codex-distinct-subjects-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const document = await ingestDocument(
+      database,
+      new File(["Mario: codice fiscale AAA. Lucia: codice fiscale BBB."], "soggetti.txt", {
+        type: "text/plain",
+      }),
+      { newPracticeTitle: "Pratica soggetti distinti" },
+      directory,
+    );
+    await processDocument(database, document.id, { dataDirectory: directory });
+    const adapter: CodexAnalysisAdapter = {
+      async run() {
+        return {
+          threadId: "thread-soggetti-distinti",
+          usage: null,
+          finalResponse: JSON.stringify({
+            summary: "Due soggetti",
+            proposals: [
+              {
+                subjectId: "person.mario.tax-code",
+                label: "Codice fiscale",
+                value: "AAA",
+                documentId: document.id,
+                pageNumber: 1,
+                excerpt: "Mario: codice fiscale AAA",
+                confidence: 0.95,
+                alternatives: [],
+              },
+              {
+                subjectId: "person.lucia.tax-code",
+                label: "Codice fiscale",
+                value: "BBB",
+                documentId: document.id,
+                pageNumber: 1,
+                excerpt: "Lucia: codice fiscale BBB",
+                confidence: 0.95,
+                alternatives: [],
+              },
+            ],
+            conflicts: [],
+          }),
+        };
+      },
+    };
+
+    await expect(
+      analyzePracticeWithCodex(database, document.practiceId, {
+        dataDirectory: directory,
+        adapter,
+      }),
+    ).resolves.toMatchObject({ proposals: 2, conflicts: 0 });
+    expect(listReviewItems(database, document.practiceId)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "Codice fiscale", proposedValue: "AAA" }),
+        expect.objectContaining({ label: "Codice fiscale", proposedValue: "BBB" }),
+      ]),
+    );
+    expect(listReviewItems(database, document.practiceId)).toHaveLength(2);
   });
 
   it.each([
@@ -149,6 +213,7 @@ describe("analisi pratica con Codex", () => {
             summary: "Analisi sintetica",
             proposals: [
               {
+                subjectId: "practice.reference",
                 label: "Riferimento pratica",
                 value: "AB-12",
                 documentId: document.id,
@@ -207,6 +272,7 @@ describe("analisi pratica con Codex", () => {
             proposals: [],
             conflicts: [
               {
+                subjectId: "practice.reference",
                 label: "Riferimento pratica",
                 sources: [
                   {
@@ -267,6 +333,7 @@ describe("analisi pratica con Codex", () => {
             proposals: [],
             conflicts: [
               {
+                subjectId: "practice.reference",
                 label: "Riferimento pratica",
                 sources: [
                   {

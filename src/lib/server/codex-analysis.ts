@@ -14,10 +14,11 @@ import { resolveBlobPath } from "./blob-store.ts";
 import { getCodexHome, getCodexModel, getDataDirectory } from "./config.ts";
 import { createReviewItem, getDocumentText } from "./documents.ts";
 
-const CODEX_PROMPT_VERSION = "m3-practice-analysis-v2";
+const CODEX_PROMPT_VERSION = "m3-practice-analysis-v3";
 const CODEX_PERMISSION_PROFILE = "sequent_practice";
 
 const proposalSchema = z.object({
+  subjectId: z.string().trim().min(1).max(200),
   label: z.string().min(1).max(160),
   value: z.string().nullable(),
   documentId: z.string().min(1),
@@ -40,6 +41,7 @@ const analysisSchema = z.object({
   conflicts: z
     .array(
       z.object({
+        subjectId: z.string().trim().min(1).max(200),
         label: z.string().min(1).max(160),
         sources: z.array(conflictSourceSchema).min(2).max(8),
         explanation: z.string().max(1_000),
@@ -59,6 +61,7 @@ const outputSchema = {
       items: {
         type: "object",
         properties: {
+          subjectId: { type: "string", minLength: 1 },
           label: { type: "string" },
           value: { type: ["string", "null"] },
           documentId: { type: "string" },
@@ -68,6 +71,7 @@ const outputSchema = {
           alternatives: { type: "array", items: { type: "string" } },
         },
         required: [
+          "subjectId",
           "label",
           "value",
           "documentId",
@@ -84,6 +88,7 @@ const outputSchema = {
       items: {
         type: "object",
         properties: {
+          subjectId: { type: "string", minLength: 1 },
           label: { type: "string" },
           sources: {
             type: "array",
@@ -101,7 +106,7 @@ const outputSchema = {
           },
           explanation: { type: "string" },
         },
-        required: ["label", "sources", "explanation"],
+        required: ["subjectId", "label", "sources", "explanation"],
         additionalProperties: false,
       },
     },
@@ -301,6 +306,11 @@ function validateAnalysisEvidence(
   analysis: AnalysisOutput,
   documents: PracticeSnapshotDocument[],
 ): void {
+  const subjectIds = new Set<string>();
+  for (const item of [...analysis.proposals, ...analysis.conflicts]) {
+    if (subjectIds.has(item.subjectId)) throw new Error("CODEX_DUPLICATE_SUBJECT_ID");
+    subjectIds.add(item.subjectId);
+  }
   const pagesByDocument = new Map(
     documents.map((document) => [
       document.id,
@@ -346,6 +356,7 @@ async function prepareWorkspace(
           "Proponi soltanto informazioni letteralmente supportate da documento, pagina ed estratto.",
           "Non applicare interpretazioni fiscali o giuridiche, non inventare fonti e usa null quando manca un valore.",
           "Segnala valori alternativi e conflitti. Tutte le proposte saranno sottoposte a revisione umana.",
+          "Per ogni proposta o conflitto usa un subjectId stabile e specifico del soggetto e del campo; non riusare lo stesso subjectId per soggetti distinti.",
           "Usa gli ID documento esatti contenuti in manifest.json.",
         ].join("\n"),
       },
@@ -469,7 +480,7 @@ export async function analyzePracticeWithCodex(
           practiceId,
           documentId: proposal.documentId,
           pageNumber: proposal.pageNumber,
-          subjectKey: `codex.${proposal.documentId}.${createHash("sha256").update(proposal.label).digest("hex").slice(0, 16)}`,
+          subjectKey: `codex.${createHash("sha256").update(proposal.subjectId).digest("hex").slice(0, 24)}`,
           label: proposal.label,
           proposedValue: proposal.value,
           alternatives: proposal.alternatives,
@@ -494,7 +505,7 @@ export async function analyzePracticeWithCodex(
           practiceId,
           documentId: primarySource.documentId,
           pageNumber: primarySource.pageNumber,
-          subjectKey: `codex.conflict.${createHash("sha256").update(conflict.label).digest("hex").slice(0, 16)}`,
+          subjectKey: `codex.conflict.${createHash("sha256").update(conflict.subjectId).digest("hex").slice(0, 24)}`,
           label: conflict.label,
           proposedValue: null,
           alternatives: conflict.sources.map((source) => source.value),

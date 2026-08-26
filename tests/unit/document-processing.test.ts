@@ -3,6 +3,10 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { documentProcessingInternals } from "../../src/lib/server/document-processing.ts";
+import { processDocument } from "../../src/lib/server/document-processing.ts";
+import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
+import { getDocument, getDocumentText } from "../../src/lib/server/documents.ts";
+import { ingestDocument } from "../../src/lib/server/document-ingestion.ts";
 
 describe("pipeline documentale", () => {
   it("riconosce il contenuto PDF senza fidarsi dell'estensione", () => {
@@ -88,5 +92,47 @@ describe("pipeline documentale", () => {
         stderr: "",
       })),
     ).rejects.toThrow("ARCHIVE_COMPRESSION_RATIO_LIMIT");
+  });
+
+  it("non marca elaborato uno ZIP di cui ha letto soltanto l'indice", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "sequent-archive-index-"));
+    const database = openDatabase(directory);
+    try {
+      const document = await ingestDocument(
+        database,
+        new File([Buffer.from("PK\u0003\u0004fixture")], "documenti.zip", {
+          type: "application/zip",
+        }),
+        { newPracticeTitle: "Pratica archivio" },
+        directory,
+      );
+      await processDocument(database, document.id, {
+        dataDirectory: directory,
+        runner: async (command, arguments_) => {
+          if (command !== "unzip") throw new Error(`UNEXPECTED_COMMAND:${command}`);
+          if (arguments_.includes("-Z1"))
+            return { stdout: "documento.pdf\nnota.txt\n", stderr: "" };
+          if (arguments_.includes("-t"))
+            return { stdout: "100 bytes uncompressed, 80 bytes compressed", stderr: "" };
+          if (arguments_.includes("-v")) return { stdout: "UnZip 6.00", stderr: "" };
+          throw new Error(`UNEXPECTED_ARGUMENTS:${arguments_.join(",")}`);
+        },
+      });
+
+      expect(getDocument(database, document.id)).toMatchObject({
+        status: "to_review",
+        detectedFormat: "ZIP",
+        pageCount: 0,
+      });
+      expect(getDocumentText(database, document.id)).toEqual([]);
+      expect(
+        database
+          .prepare("SELECT kind FROM document_artifacts WHERE document_id = ?")
+          .all(document.id),
+      ).toContainEqual({ kind: "extracted_text" });
+    } finally {
+      closeDatabase(directory);
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });

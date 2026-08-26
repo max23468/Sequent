@@ -19,7 +19,7 @@ const report = {
   commit: process.env.GITHUB_SHA ?? process.env.SEQUENT_COMMIT ?? "working-tree",
   model: process.env.SEQUENT_CODEX_MODEL ?? "gpt-5.6-terra",
   effort: "high",
-  promptVersion: "m3-practice-analysis-v2",
+  promptVersion: "m3-practice-analysis-v3",
   ocrVersion: process.env.SEQUENT_OCR_VERSION ?? "runtime",
   rulesVersion: "m3-source-hierarchy-v1",
   ...evaluateM3Benchmark(dataset),

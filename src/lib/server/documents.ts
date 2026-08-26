@@ -408,6 +408,7 @@ export function decideReviewItem(
     note?: string;
   },
 ): boolean {
+  if (decision.status === "confirmed" && decision.value === null) return false;
   const now = new Date().toISOString();
   const result = database.transaction(() => {
     const update = database

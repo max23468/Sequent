@@ -513,12 +513,12 @@ async function extractSignedContainer(
       status: text.trim() ? "processed" : "unreadable",
     };
   } else if (detection.kind === "archive") {
-    const listing = await inspectArchive(processingPath, runner);
+    await inspectArchive(processingPath, runner);
     result = {
-      pages: splitTextPages(listing, "structured"),
+      pages: [],
       detectedFormat: `P7M/${detection.format}`,
       language: null,
-      status: "processed",
+      status: "to_review",
     };
   } else {
     result = { pages: [], detectedFormat: "P7M", language: null, status: "unsupported" };
@@ -682,18 +682,10 @@ export async function processDocument(
         await readToolVersion("unzip", ["-v"], runner),
       );
       result = {
-        pages: [
-          {
-            pageNumber: 1,
-            text: listing,
-            confidence: 1,
-            language: null,
-            method: "structured",
-          },
-        ],
+        pages: [],
         detectedFormat: detection.format,
         language: null,
-        status: "processed",
+        status: "to_review",
       };
     } else if (detection.kind === "signed") {
       result = await extractSignedContainer(
