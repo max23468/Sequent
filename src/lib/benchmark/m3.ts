@@ -19,6 +19,7 @@ const expectedFieldSchema = z.object({
   value: z.string().nullable(),
   documentId: z.string().min(1),
   pageNumber: z.number().int().positive().nullable(),
+  sourceText: z.string().min(1),
   critical: z.boolean(),
 });
 
@@ -99,6 +100,10 @@ const emptyTotals = (): Record<BenchmarkOutcome, number> => ({
   invented_source: 0,
 });
 
+function normalizeEvidenceText(value: string): string {
+  return value.normalize("NFC").replace(/\s+/g, " ").trim();
+}
+
 export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
   const dataset = benchmarkDatasetSchema.parse(input);
   const totals = emptyTotals();
@@ -130,6 +135,12 @@ export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
         outcome = observed.reviewStatus === "pending" ? "correctly_pending" : "wrong";
       } else if (!observed.sourceExcerpt || observed.pageNumber === null) {
         outcome = "correct_incomplete_source";
+      } else if (
+        !normalizeEvidenceText(expected.sourceText).includes(
+          normalizeEvidenceText(observed.sourceExcerpt),
+        )
+      ) {
+        outcome = "invented_source";
       } else outcome = "correct_source";
       if (expected.critical && outcome !== "correct_source" && outcome !== "correctly_pending")
         criticalSilentErrors += 1;

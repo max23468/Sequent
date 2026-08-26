@@ -36,6 +36,8 @@
     "@sveltejs/kit": "2.70.3",
     "argon2": "0.45.1",
     "better-sqlite3": "13.0.3",
+    "fflate": "0.8.3",
+    "read-excel-file": "9.3.10",
     "svelte": "5.56.10",
     "zod": "4.4.3"
   },

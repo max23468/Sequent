@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 import { copyFile, mkdir, mkdtemp, open, rm, writeFile } from "node:fs/promises";
 import { basename, extname, join } from "node:path";
+import readExcelFile, { type CellValue } from "read-excel-file/node";
 import { persistGeneratedArtifact, resolveBlobPath } from "./blob-store.ts";
 import { getDataDirectory } from "./config.ts";
 import {
@@ -126,6 +127,45 @@ function splitTextPages(text: string, method: ExtractedPage["method"]): Extracte
     language: "it",
     method,
   }));
+}
+
+function spreadsheetCellValue(value: CellValue): string {
+  if (value instanceof Date) return value.toISOString();
+  return JSON.stringify(value);
+}
+
+function spreadsheetColumn(index: number): string {
+  let result = "";
+  for (let value = index; value > 0; value = Math.floor((value - 1) / 26)) {
+    result = String.fromCharCode(65 + ((value - 1) % 26)) + result;
+  }
+  return result;
+}
+
+async function extractXlsxPages(path: string): Promise<ExtractedPage[]> {
+  const sheets = await readExcelFile(path);
+  let extractedBytes = 0;
+  return sheets.map(({ sheet, data }, sheetIndex) => {
+    const cells: string[] = [];
+    for (const [rowIndex, row] of data.entries()) {
+      for (const [columnIndex, value] of row.entries()) {
+        if (value === null) continue;
+        cells.push(
+          `${spreadsheetColumn(columnIndex + 1)}${rowIndex + 1} = ${spreadsheetCellValue(value)}`,
+        );
+      }
+    }
+    const text = [`Foglio: ${sheet}`, ...cells].join("\n");
+    extractedBytes += Buffer.byteLength(text, "utf8");
+    if (extractedBytes > MAX_TEXT_BYTES) throw new Error("EXTRACTED_TEXT_TOO_LARGE");
+    return {
+      pageNumber: sheetIndex + 1,
+      text,
+      confidence: 1,
+      language: "it",
+      method: "structured" as const,
+    };
+  });
 }
 
 function needsPdfOcr(text: string): boolean {
@@ -544,6 +584,7 @@ async function extractOffice(
   dataDirectory: string,
   runner: CommandRunner,
 ): Promise<ProcessResult> {
+  const spreadsheetPages = inputPath.endsWith(".xlsx") ? await extractXlsxPages(inputPath) : null;
   const outputDirectory = join(directory, "office-output");
   await mkdir(outputDirectory, { mode: 0o700 });
   await runner(
@@ -579,6 +620,24 @@ async function extractOffice(
     dataDirectory,
     runner,
   );
+  if (spreadsheetPages) {
+    const text = spreadsheetPages.map((page) => page.text).join("\f");
+    await persistTextArtifact(
+      database,
+      documentId,
+      directory,
+      dataDirectory,
+      text,
+      "read-excel-file",
+      "9.3.10",
+    );
+    return {
+      pages: spreadsheetPages,
+      detectedFormat: "XLSX",
+      language: "it",
+      status: spreadsheetPages.some((page) => page.text.trim()) ? "processed" : "unreadable",
+    };
+  }
   return { ...result, detectedFormat: "OFFICE" };
 }
 
@@ -772,4 +831,5 @@ export const documentProcessingInternals = {
   decodeXmlText,
   needsPdfOcr,
   readTextLimited,
+  extractXlsxPages,
 };

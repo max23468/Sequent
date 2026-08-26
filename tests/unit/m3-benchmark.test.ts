@@ -14,7 +14,14 @@ describe("benchmark M3", () => {
           category: "pdf_native",
           knownDocumentIds: ["doc-1"],
           expected: [
-            { key: "codice", value: "ABC", documentId: "doc-1", pageNumber: 1, critical: true },
+            {
+              key: "codice",
+              value: "ABC",
+              documentId: "doc-1",
+              pageNumber: 1,
+              sourceText: "Codice ABC",
+              critical: true,
+            },
           ],
           observed: [
             {
@@ -43,7 +50,14 @@ describe("benchmark M3", () => {
           category: "pdf_scanned",
           knownDocumentIds: ["doc-1"],
           expected: [
-            { key: "saldo", value: "100", documentId: "doc-1", pageNumber: 1, critical: true },
+            {
+              key: "saldo",
+              value: "100",
+              documentId: "doc-1",
+              pageNumber: 1,
+              sourceText: "Saldo 100",
+              critical: true,
+            },
           ],
           observed: [
             {
@@ -72,7 +86,14 @@ describe("benchmark M3", () => {
           category: "pdf_native",
           knownDocumentIds: ["doc-1", "doc-2"],
           expected: [
-            { key: "codice", value: "ABC", documentId: "doc-1", pageNumber: 1, critical: true },
+            {
+              key: "codice",
+              value: "ABC",
+              documentId: "doc-1",
+              pageNumber: 1,
+              sourceText: "Codice ABC",
+              critical: true,
+            },
           ],
           observed: [
             {
@@ -90,6 +111,43 @@ describe("benchmark M3", () => {
     expect(report.passedM3Safety).toBe(false);
     expect(report.criticalSilentErrors).toBe(1);
     expect(report.totals.wrong).toBe(1);
+  });
+
+  it("blocca un estratto inventato anche con valore, documento e pagina corretti", () => {
+    const report = evaluateM3Benchmark({
+      corpusId: "sintetico",
+      corpusHash,
+      cases: [
+        {
+          id: "caso-estratto",
+          category: "pdf_native",
+          knownDocumentIds: ["doc-1"],
+          expected: [
+            {
+              key: "codice",
+              value: "ABC",
+              documentId: "doc-1",
+              pageNumber: 1,
+              sourceText: "Il codice presente nella fonte è ABC.",
+              critical: true,
+            },
+          ],
+          observed: [
+            {
+              key: "codice",
+              value: "ABC",
+              documentId: "doc-1",
+              pageNumber: 1,
+              sourceExcerpt: "Testo inventato ABC",
+              reviewStatus: "confirmed",
+            },
+          ],
+        },
+      ],
+    });
+    expect(report.passedM3Safety).toBe(false);
+    expect(report.inventedSources).toBe(1);
+    expect(report.criticalSilentErrors).toBe(1);
   });
 
   it("blocca conflitti critici ignorati e risultati inventati", () => {
@@ -138,6 +196,7 @@ describe("benchmark M3", () => {
               value: "RSSMRA00A00H501Z",
               documentId: "doc-1",
               pageNumber: 1,
+              sourceText: "Codice fiscale RSSMRA00A00H501Z",
               critical: true,
             },
           ],

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { strToU8, zipSync } from "fflate";
 import { documentProcessingInternals } from "../../src/lib/server/document-processing.ts";
 import { processDocument } from "../../src/lib/server/document-processing.ts";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
@@ -99,6 +100,49 @@ describe("pipeline documentale", () => {
         "Questa prima pagina contiene testo nativo sufficiente.\fAnche la seconda pagina contiene testo nativo sufficiente.\f",
       ),
     ).toBe(false);
+  });
+
+  it("legge direttamente tutti i fogli XLSX anche fuori dall’area di stampa", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "sequent-xlsx-structured-"));
+    const path = join(directory, "fogli.xlsx");
+    const archive = zipSync({
+      "[Content_Types].xml": strToU8(
+        '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+      ),
+      "_rels/.rels": strToU8(
+        '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+      ),
+      "xl/workbook.xml": strToU8(
+        '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Visibile" sheetId="1" r:id="rId1"/><sheet name="Secondo" sheetId="2" r:id="rId2"/></sheets><definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">Visibile!$A$1:$B$2</definedName></definedNames></workbook>',
+      ),
+      "xl/_rels/workbook.xml.rels": strToU8(
+        '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/></Relationships>',
+      ),
+      "xl/worksheets/sheet1.xml": strToU8(
+        '<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Dentro area</t></is></c></row><row r="5"><c r="D5" t="inlineStr"><is><t>Fuori area</t></is></c></row></sheetData></worksheet>',
+      ),
+      "xl/worksheets/sheet2.xml": strToU8(
+        '<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="2"><c r="C2" t="inlineStr"><is><t>Secondo foglio</t></is></c></row></sheetData></worksheet>',
+      ),
+    });
+    try {
+      await writeFile(path, archive);
+      const pages = await documentProcessingInternals.extractXlsxPages(path);
+      expect(pages).toEqual([
+        expect.objectContaining({
+          pageNumber: 1,
+          method: "structured",
+          text: expect.stringContaining('D5 = "Fuori area"'),
+        }),
+        expect.objectContaining({
+          pageNumber: 2,
+          method: "structured",
+          text: expect.stringContaining('C2 = "Secondo foglio"'),
+        }),
+      ]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   it("blocca esplicitamente il testo estratto oltre il limite", async () => {
