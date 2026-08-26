@@ -1,0 +1,149 @@
+name: Release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: Commit completo di main da qualificare
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-candidate-${{ inputs.commit }}
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    name: Qualifica candidata
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tree: ${{ steps.identity.outputs.tree }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: identity
+        env:
+          CANDIDATE_COMMIT: ${{ inputs.commit }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_COMMIT"
+          test "$(git rev-parse origin/main)" = "$CANDIDATE_COMMIT"
+          printf 'tree=%s\n' "$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
+
+  public-suite:
+    name: Suite pubblica release
+    needs: qualify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26.7.0
+          cache: npm
+      - run: npm ci
+      - run: npm run verify:public
+      - run: npm run doctor
+
+  browser-suite:
+    name: Browser matrix automatica release
+    needs: qualify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26.7.0
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:e2e
+
+  build-arm64:
+    name: Costruisce artefatto ARM64 una sola volta
+    needs: qualify
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+      - name: Costruisce e prova l'immagine candidata
+        env:
+          IMAGE_TAG: sequent-release:${{ inputs.commit }}
+        run: |
+          docker build --platform linux/arm64 --tag "$IMAGE_TAG" .
+          docker run --platform linux/arm64 --detach --name sequent-release-smoke \
+            --read-only --user 10001:10001 --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --tmpfs /tmp:rw,size=64m,mode=1770,uid=10001,gid=10001 \
+            --tmpfs /var/lib/sequent:rw,size=64m,mode=0700,uid=10001,gid=10001 \
+            --env SEQUENT_DATA_DIR=/var/lib/sequent \
+            --publish 127.0.0.1:3300:3000 "$IMAGE_TAG"
+          for _attempt in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:3300/api/health && break
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:3300/api/health
+          docker rm --force sequent-release-smoke
+          docker save --output sequent-release-arm64.tar "$IMAGE_TAG"
+          node scripts/github/release-artifact.mjs create \
+            --image "$IMAGE_TAG" \
+            --archive sequent-release-arm64.tar \
+            --output release-manifest.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sequent-release-${{ inputs.commit }}
+          path: |
+            sequent-release-arm64.tar
+            release-manifest.json
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14
+
+  readback-artifact:
+    name: Rilegge artefatto ARM64 senza ricostruirlo
+    needs: [qualify, build-arm64]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sequent-release-${{ inputs.commit }}
+      - name: Verifica manifest, digest, commit, tree e immagine
+        run: |
+          node scripts/github/release-artifact.mjs verify \
+            --archive sequent-release-arm64.tar \
+            --manifest release-manifest.json
+
+  release-candidate-gate:
+    name: Release candidate gate
+    if: always()
+    needs: [qualify, public-suite, browser-suite, build-arm64, readback-artifact]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Richiede l'intera matrice pubblica
+        run: |
+          test '${{ needs.qualify.result }}' = success
+          test '${{ needs.public-suite.result }}' = success
+          test '${{ needs.browser-suite.result }}' = success
+          test '${{ needs.build-arm64.result }}' = success
+          test '${{ needs.readback-artifact.result }}' = success

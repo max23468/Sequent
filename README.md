@@ -10,6 +10,8 @@ Il piano canonico e la sequenza di implementazione sono in [`docs/MASTER_PLAN.md
 
 La configurazione del repository, i required checks e la procedura di review Codex exact-HEAD sono descritti nel [`runbook GitHub`](docs/runbooks/github.md).
 
+Il preflight proporzionato di una pubblicazione GitHub si avvia con `npm run publication:github`. Senza l'opzione esplicita di esecuzione il comando non esegue push, non apre PR e non effettua merge.
+
 ## Verifiche fondamentali
 
 Sulla VPS canonica:
@@ -35,7 +37,7 @@ npm run dev
 
 In `vite dev` Sequent crea, se necessario, un owner sintetico e apre automaticamente una sessione di sviluppo per le sole richieste provenienti dal loopback locale. Non serve quindi inserire la password durante il normale lavoro. Il fallback locale è `FondazioneM2Sicura2026` e può essere sostituito con `SEQUENT_DEV_PASSWORD`; l’auto-login è escluso dalle build preview e di produzione. Per collaudare manualmente setup e login durante lo sviluppo si può avviare con `SEQUENT_DEV_AUTO_LOGIN=false`.
 
-`SEQUENT_DATA_DIR` seleziona una directory isolata. Non deve puntare ai dati operativi dal checkout. I gate applicativi sono inclusi in `npm run verify:public`; l’E2E browser è separato in `npm run test:e2e`.
+`SEQUENT_DATA_DIR` seleziona una directory isolata. Non deve puntare ai dati operativi dal checkout. `verify:rapid` copre il preflight documentale, `verify:public` i gate applicativi senza duplicare Svelte Doctor e `verify:publication` aggiunge Doctor ed E2E browser.
 
 ## Confini
 
