@@ -46,11 +46,42 @@ describe("caricamento riprendibile", () => {
       byteSize: 11,
       status: "received",
     });
-    expect(getUploadSession(database, session.id)).toBeNull();
+    expect(getUploadSession(database, session.id)).toMatchObject({
+      status: "completed",
+      resultDocumentId: document.id,
+    });
     expect(existsSync(session.tempPath)).toBe(false);
     expect(
       database.prepare("SELECT count(*) AS count FROM jobs WHERE document_id = ?").get(document.id),
     ).toEqual({ count: 2 });
+    await expect(completeUploadSession(database, directory, session.id)).resolves.toEqual(document);
+    expect(database.prepare("SELECT count(*) AS count FROM documents").get()).toEqual({ count: 1 });
+    expect(database.prepare("SELECT count(*) AS count FROM practices").get()).toEqual({ count: 1 });
+  });
+
+  it("riprende una sessione rimasta in completamento dopo il riavvio", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-resumable-restart-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const session = await createUploadSession(database, directory, {
+      newPracticeTitle: "Pratica dopo riavvio",
+      originalName: "documento.txt",
+      mediaType: "text/plain",
+      totalSize: 8,
+    });
+    await appendUploadChunk(database, session.id, 0, Buffer.from("completo"));
+    database
+      .prepare("UPDATE upload_sessions SET status = 'completing' WHERE id = ?")
+      .run(session.id);
+
+    const document = await completeUploadSession(database, directory, session.id);
+
+    expect(getUploadSession(database, session.id)).toMatchObject({
+      status: "completed",
+      resultDocumentId: document.id,
+    });
+    expect(database.prepare("SELECT count(*) AS count FROM documents").get()).toEqual({ count: 1 });
+    expect(database.prepare("SELECT count(*) AS count FROM practices").get()).toEqual({ count: 1 });
   });
 
   it("non completa un file parziale", async () => {

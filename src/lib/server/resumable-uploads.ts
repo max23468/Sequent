@@ -20,6 +20,7 @@ export interface UploadSession {
   receivedSize: number;
   tempPath: string;
   status: "uploading" | "completing" | "completed" | "failed";
+  resultDocumentId: string | null;
   expiresAt: string;
 }
 
@@ -34,7 +35,37 @@ function mapSession(row: Record<string, unknown>): UploadSession {
     receivedSize: Number(row.received_size),
     tempPath: String(row.temp_path),
     status: String(row.status) as UploadSession["status"],
+    resultDocumentId: row.result_document_id === null ? null : String(row.result_document_id),
     expiresAt: String(row.expires_at),
+  };
+}
+
+function getCompletedDocument(
+  database: Database.Database,
+  session: UploadSession,
+): IngestedDocument {
+  if (!session.resultDocumentId) throw new Error("UPLOAD_RESULT_MISSING");
+  const row = database
+    .prepare(
+      `SELECT id, practice_id, sha256, byte_size, blob_path
+       FROM documents WHERE id = ?`,
+    )
+    .get(session.resultDocumentId) as
+    | {
+        id: string;
+        practice_id: string;
+        sha256: string;
+        byte_size: number;
+        blob_path: string;
+      }
+    | undefined;
+  if (!row) throw new Error("UPLOAD_RESULT_MISSING");
+  return {
+    id: row.id,
+    practiceId: row.practice_id,
+    sha256: row.sha256,
+    byteSize: row.byte_size,
+    blobPath: row.blob_path,
   };
 }
 
@@ -162,12 +193,20 @@ export async function completeUploadSession(
 ): Promise<IngestedDocument> {
   return await withUploadLock(id, async () => {
     const session = getUploadSession(database, id);
-    if (!session || !["uploading", "failed"].includes(session.status))
+    if (!session) throw new Error("UPLOAD_SESSION_INVALID");
+    if (session.status === "completed") {
+      const document = getCompletedDocument(database, session);
+      await rm(session.tempPath, { force: true });
+      return document;
+    }
+    if (!["uploading", "failed", "completing"].includes(session.status))
       throw new Error("UPLOAD_SESSION_INVALID");
     if (session.receivedSize !== session.totalSize) throw new Error("UPLOAD_INCOMPLETE");
-    database
-      .prepare("UPDATE upload_sessions SET status = 'completing', updated_at = ? WHERE id = ?")
-      .run(new Date().toISOString(), id);
+    if (session.status !== "completing") {
+      database
+        .prepare("UPDATE upload_sessions SET status = 'completing', updated_at = ? WHERE id = ?")
+        .run(new Date().toISOString(), id);
+    }
     try {
       const upload = await persistResumableUpload(
         session.tempPath,
@@ -176,14 +215,25 @@ export async function completeUploadSession(
         session.totalSize,
         dataDirectory,
       );
-      const document = ingestPersistedUpload(
-        database,
-        upload,
-        session.practiceId
-          ? { practiceId: session.practiceId }
-          : { newPracticeTitle: session.newPracticeTitle as string },
-      );
-      database.prepare("DELETE FROM upload_sessions WHERE id = ?").run(id);
+      const complete = database.transaction(() => {
+        const document = ingestPersistedUpload(
+          database,
+          upload,
+          session.practiceId
+            ? { practiceId: session.practiceId }
+            : { newPracticeTitle: session.newPracticeTitle as string },
+        );
+        const updated = database
+          .prepare(
+            `UPDATE upload_sessions
+             SET status = 'completed', result_document_id = ?, updated_at = ?
+             WHERE id = ? AND status = 'completing'`,
+          )
+          .run(document.id, new Date().toISOString(), id);
+        if (updated.changes !== 1) throw new Error("UPLOAD_SESSION_INVALID");
+        return document;
+      });
+      const document = complete.immediate();
       await rm(session.tempPath, { force: true });
       return document;
     } catch (error) {

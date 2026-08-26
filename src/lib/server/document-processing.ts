@@ -107,8 +107,9 @@ function detectFormat(originalName: string, mediaType: string, prefix: Buffer): 
 async function readTextLimited(path: string): Promise<string> {
   const handle = await open(path, "r");
   try {
-    const buffer = Buffer.alloc(MAX_TEXT_BYTES);
-    const { bytesRead } = await handle.read(buffer, 0, MAX_TEXT_BYTES, 0);
+    const buffer = Buffer.alloc(MAX_TEXT_BYTES + 1);
+    const { bytesRead } = await handle.read(buffer, 0, buffer.byteLength, 0);
+    if (bytesRead > MAX_TEXT_BYTES) throw new Error("EXTRACTED_TEXT_TOO_LARGE");
     return buffer.subarray(0, bytesRead).toString("utf8").replaceAll("\0", "");
   } finally {
     await handle.close();
@@ -778,4 +779,5 @@ export const documentProcessingInternals = {
   splitTextPages,
   decodeXmlText,
   needsPdfOcr,
+  readTextLimited,
 };

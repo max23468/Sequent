@@ -45,10 +45,14 @@ describe("migrazioni M3", () => {
     const runColumns = migrated.prepare("PRAGMA table_info(codex_runs)").all() as {
       name: string;
     }[];
+    const uploadColumns = migrated.prepare("PRAGMA table_info(upload_sessions)").all() as {
+      name: string;
+    }[];
 
     expect(tables.map(({ name }) => name)).toContain("upload_sessions");
     expect(documentColumns.map(({ name }) => name)).toContain("status");
     expect(reviewColumns.map(({ name }) => name)).toContain("source_refs_json");
     expect(runColumns.map(({ name }) => name)).toContain("output_json");
+    expect(uploadColumns.map(({ name }) => name)).toContain("result_document_id");
   });
 });

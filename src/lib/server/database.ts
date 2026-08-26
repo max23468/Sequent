@@ -165,6 +165,7 @@ CREATE TABLE IF NOT EXISTS upload_sessions (
   received_size INTEGER NOT NULL DEFAULT 0 CHECK (received_size >= 0 AND received_size <= total_size),
   temp_path TEXT NOT NULL UNIQUE,
   status TEXT NOT NULL DEFAULT 'uploading' CHECK (status IN ('uploading', 'completing', 'completed', 'failed')),
+  result_document_id TEXT REFERENCES documents(id) ON DELETE CASCADE,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
@@ -219,6 +220,12 @@ function applyM3Migration(database: Database.Database): void {
     database.exec(m3Migration);
     addColumnIfMissing(database, "review_items", "source_refs_json", "TEXT NOT NULL DEFAULT '[]'");
     addColumnIfMissing(database, "codex_runs", "output_json", "TEXT");
+    addColumnIfMissing(
+      database,
+      "upload_sessions",
+      "result_document_id",
+      "TEXT REFERENCES documents(id) ON DELETE CASCADE",
+    );
     database
       .prepare("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (2, ?)")
       .run(new Date().toISOString());

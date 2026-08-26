@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { documentProcessingInternals } from "../../src/lib/server/document-processing.ts";
 
 describe("pipeline documentale", () => {
@@ -53,6 +56,19 @@ describe("pipeline documentale", () => {
         "Questa prima pagina contiene testo nativo sufficiente.\fAnche la seconda pagina contiene testo nativo sufficiente.\f",
       ),
     ).toBe(false);
+  });
+
+  it("blocca esplicitamente il testo estratto oltre il limite", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "sequent-large-extracted-text-"));
+    const path = join(directory, "testo.txt");
+    try {
+      await writeFile(path, Buffer.alloc(20 * 1024 * 1024 + 1, "a"));
+      await expect(documentProcessingInternals.readTextLimited(path)).rejects.toThrow(
+        "EXTRACTED_TEXT_TOO_LARGE",
+      );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   it("blocca traversal e rapporti di compressione anomali negli archivi", async () => {
