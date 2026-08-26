@@ -269,11 +269,11 @@ export function createReviewItem(
   const authoritative = database
     .prepare(
       `SELECT id FROM review_items
-       WHERE practice_id = ? AND document_id IS ? AND subject_key = ?
+       WHERE practice_id = ? AND subject_key = ?
          AND status IN ('confirmed', 'edited')
        ORDER BY updated_at DESC LIMIT 1`,
     )
-    .get(item.practiceId, item.documentId ?? null, item.subjectKey) as { id: string } | undefined;
+    .get(item.practiceId, item.subjectKey) as { id: string } | undefined;
   if (authoritative) return authoritative.id;
   const id = randomUUID();
   const now = new Date().toISOString();
@@ -281,9 +281,9 @@ export function createReviewItem(
     database
       .prepare(
         `DELETE FROM review_items
-         WHERE practice_id = ? AND document_id IS ? AND subject_key = ? AND status = 'pending'`,
+         WHERE practice_id = ? AND subject_key = ? AND status = 'pending'`,
       )
-      .run(item.practiceId, item.documentId ?? null, item.subjectKey);
+      .run(item.practiceId, item.subjectKey);
     database
       .prepare(
         `INSERT INTO review_items(

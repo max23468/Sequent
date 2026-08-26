@@ -302,6 +302,11 @@ function normalizeEvidenceText(value: string): string {
   return value.normalize("NFC").replace(/\s+/g, " ").trim();
 }
 
+function containsLiteralValue(pageText: string, value: string): boolean {
+  const normalized = normalizeEvidenceText(value);
+  return normalized.length > 0 && pageText.includes(normalized);
+}
+
 function validateAnalysisEvidence(
   analysis: AnalysisOutput,
   documents: PracticeSnapshotDocument[],
@@ -324,6 +329,10 @@ function validateAnalysisEvidence(
     if (pageText === undefined) throw new Error("CODEX_UNKNOWN_PAGE");
     if (!pageText.includes(normalizeEvidenceText(proposal.excerpt)))
       throw new Error("CODEX_UNSUPPORTED_EXCERPT");
+    if (proposal.value !== null && !containsLiteralValue(pageText, proposal.value))
+      throw new Error("CODEX_UNSUPPORTED_VALUE");
+    if (proposal.alternatives.some((alternative) => !containsLiteralValue(pageText, alternative)))
+      throw new Error("CODEX_UNSUPPORTED_ALTERNATIVE");
   }
   for (const conflict of analysis.conflicts) {
     for (const source of conflict.sources) {
@@ -333,6 +342,8 @@ function validateAnalysisEvidence(
       if (pageText === undefined) throw new Error("CODEX_UNKNOWN_PAGE");
       if (!pageText.includes(normalizeEvidenceText(source.excerpt)))
         throw new Error("CODEX_UNSUPPORTED_EXCERPT");
+      if (!containsLiteralValue(pageText, source.value))
+        throw new Error("CODEX_UNSUPPORTED_CONFLICT_VALUE");
     }
   }
 }

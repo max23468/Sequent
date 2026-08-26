@@ -177,6 +177,16 @@ describe("analisi pratica con Codex", () => {
       expectedError: "CODEX_UNSUPPORTED_EXCERPT",
     },
     {
+      name: "valore non presente",
+      proposal: { value: "VALORE-INVENTATO" },
+      expectedError: "CODEX_UNSUPPORTED_VALUE",
+    },
+    {
+      name: "alternativa non presente",
+      proposal: { alternatives: ["ALTERNATIVA-INVENTATA"] },
+      expectedError: "CODEX_UNSUPPORTED_ALTERNATIVE",
+    },
+    {
       name: "pagina nulla",
       proposal: { pageNumber: null },
       expectedError: "Invalid input",
@@ -302,6 +312,62 @@ describe("analisi pratica con Codex", () => {
         adapter,
       }),
     ).rejects.toThrow("CODEX_UNKNOWN_DOCUMENT");
+    expect(listReviewItems(database, document.practiceId)).toEqual([]);
+  });
+
+  it("rifiuta un valore di conflitto non presente nella fonte citata", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-codex-conflict-value-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const document = await ingestDocument(
+      database,
+      new File(["Documento sintetico: riferimento pratica AB-12."], "nota.txt", {
+        type: "text/plain",
+      }),
+      { newPracticeTitle: "Pratica conflitto inventato" },
+      directory,
+    );
+    await processDocument(database, document.id, { dataDirectory: directory });
+    const adapter: CodexAnalysisAdapter = {
+      async run() {
+        return {
+          threadId: "thread-conflitto-inventato",
+          usage: null,
+          finalResponse: JSON.stringify({
+            summary: "Conflitto sintetico",
+            proposals: [],
+            conflicts: [
+              {
+                subjectId: "practice.reference",
+                label: "Riferimento pratica",
+                sources: [
+                  {
+                    documentId: document.id,
+                    pageNumber: 1,
+                    excerpt: "riferimento pratica AB-12",
+                    value: "VALORE-INVENTATO",
+                  },
+                  {
+                    documentId: document.id,
+                    pageNumber: 1,
+                    excerpt: "riferimento pratica AB-12",
+                    value: "AB-12",
+                  },
+                ],
+                explanation: "Valori discordanti",
+              },
+            ],
+          }),
+        };
+      },
+    };
+
+    await expect(
+      analyzePracticeWithCodex(database, document.practiceId, {
+        dataDirectory: directory,
+        adapter,
+      }),
+    ).rejects.toThrow("CODEX_UNSUPPORTED_CONFLICT_VALUE");
     expect(listReviewItems(database, document.practiceId)).toEqual([]);
   });
 
