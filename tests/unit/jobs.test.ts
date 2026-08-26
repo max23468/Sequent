@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import Database from "better-sqlite3";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
+import { runJobRunnerTick } from "../../src/lib/server/job-runner.ts";
 import {
   cancelQueuedJob,
   claimNextJob,
@@ -25,6 +27,35 @@ afterEach(() => {
 });
 
 describe("coda persistente", () => {
+  it("ritenta un job dopo una contesa SQLite senza terminare il runner", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-job-busy-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const job = enqueueJob(database, "foundation.test", { input: "busy" });
+    database.pragma("busy_timeout = 0");
+
+    const locker = new Database(join(directory, "sequent.sqlite"));
+    locker.pragma("journal_mode = WAL");
+    locker.exec("BEGIN IMMEDIATE");
+    try {
+      await expect(runJobRunnerTick(database)).resolves.toBeUndefined();
+      expect(database.prepare("SELECT status FROM jobs WHERE id = ?").get(job.id)).toEqual({
+        status: "queued",
+      });
+    } finally {
+      locker.exec("ROLLBACK");
+      locker.close();
+    }
+
+    await expect(runJobRunnerTick(database)).resolves.toBeUndefined();
+    expect(
+      database.prepare("SELECT status, error_code FROM jobs WHERE id = ?").get(job.id),
+    ).toEqual({
+      status: "failed",
+      error_code: "JOB_TYPE_UNSUPPORTED",
+    });
+  });
+
   it("annulla un job in coda e consente il retry manuale", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-job-cancel-"));
     directories.push(directory);

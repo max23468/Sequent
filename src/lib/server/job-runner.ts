@@ -15,6 +15,14 @@ let running = false;
 let timer: NodeJS.Timeout | undefined;
 const activeControllers = new Map<string, AbortController>();
 
+function isDatabaseBusy(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    (error as Error & { code?: string }).code === "SQLITE_BUSY"
+  );
+}
+
 async function execute(
   database: Database.Database,
   job: JobRecord,
@@ -52,11 +60,19 @@ async function execute(
   await verifyBlob(getDataDirectory(), document.blob_path, document.sha256);
 }
 
-async function tick(database: Database.Database): Promise<void> {
+export async function runJobRunnerTick(database: Database.Database): Promise<void> {
   if (running) return;
   running = true;
   try {
-    const job = claimNextJob(database);
+    let job: JobRecord | null;
+    try {
+      job = claimNextJob(database);
+    } catch (error) {
+      // Un writer concorrente può occupare SQLite oltre il busy_timeout. Il job
+      // resta queued e il tick successivo lo riprende senza terminare il runtime.
+      if (isDatabaseBusy(error)) return;
+      throw error;
+    }
     if (!job) return;
     const controller = new AbortController();
     activeControllers.set(job.id, controller);
@@ -103,7 +119,7 @@ export function cancelPracticeJob(
 
 export function startJobRunner(database: Database.Database): void {
   if (timer) return;
-  timer = setInterval(() => void tick(database), 500);
+  timer = setInterval(() => void runJobRunnerTick(database), 500);
   timer.unref();
-  void tick(database);
+  void runJobRunnerTick(database);
 }
