@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { getDataDirectory } from "./config.ts";
+import { enqueueJob } from "./jobs.ts";
 
 const connections = new Map<string, Database.Database>();
 
@@ -226,6 +227,26 @@ function applyM3Migration(database: Database.Database): void {
       "result_document_id",
       "TEXT REFERENCES documents(id) ON DELETE CASCADE",
     );
+    const documentsToProcess = database
+      .prepare(
+        `SELECT id, practice_id, sha256
+         FROM documents
+         WHERE status = 'received'
+           AND NOT EXISTS (
+             SELECT 1 FROM jobs
+             WHERE jobs.type = 'document.process'
+               AND jobs.document_id = documents.id
+           )`,
+      )
+      .all() as Array<{ id: string; practice_id: string; sha256: string }>;
+    for (const document of documentsToProcess) {
+      enqueueJob(
+        database,
+        "document.process",
+        { sha256: document.sha256, pipelineVersion: 1 },
+        { practiceId: document.practice_id, documentId: document.id },
+      );
+    }
     database
       .prepare("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (2, ?)")
       .run(new Date().toISOString());
