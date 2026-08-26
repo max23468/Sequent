@@ -13,6 +13,73 @@ interface UploadResult {
   location: string;
 }
 
+interface NewPracticeBatchState {
+  practiceId: string;
+  completedCount: number;
+  lastResult: UploadResult;
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function sha256(value: ArrayBuffer | Uint8Array): Promise<string> {
+  let input: ArrayBuffer;
+  if (value instanceof Uint8Array) {
+    const copy = new Uint8Array(value.byteLength);
+    copy.set(value);
+    input = copy.buffer;
+  } else input = value;
+  return bytesToHex(new Uint8Array(await globalThis.crypto.subtle.digest("SHA-256", input)));
+}
+
+async function fileFingerprint(file: File): Promise<string> {
+  const chunks: string[] = [];
+  for (let offset = 0; offset < file.size; offset += CHUNK_BYTES) {
+    const chunk = file.slice(offset, Math.min(file.size, offset + CHUNK_BYTES));
+    chunks.push(`${chunk.size}:${await sha256(await chunk.arrayBuffer())}`);
+  }
+  return await sha256(new TextEncoder().encode(chunks.join("|")));
+}
+
+async function batchStorageKey(
+  title: string,
+  files: File[],
+  fingerprints: string[],
+): Promise<string> {
+  const manifest = files.map((file, index) => ({
+    name: file.name,
+    size: file.size,
+    fingerprint: fingerprints[index],
+  }));
+  return `sequent-upload-batch:${await sha256(
+    new TextEncoder().encode(JSON.stringify({ title, files: manifest })),
+  )}`;
+}
+
+function loadBatchState(key: string, fileCount: number): NewPracticeBatchState | null {
+  try {
+    const serialized = window.localStorage.getItem(key);
+    if (!serialized) return null;
+    const state = JSON.parse(serialized) as Partial<NewPracticeBatchState>;
+    if (
+      typeof state.practiceId !== "string" ||
+      !Number.isInteger(state.completedCount) ||
+      (state.completedCount as number) < 0 ||
+      (state.completedCount as number) > fileCount ||
+      !state.lastResult ||
+      state.lastResult.practiceId !== state.practiceId
+    ) {
+      window.localStorage.removeItem(key);
+      return null;
+    }
+    return state as NewPracticeBatchState;
+  } catch {
+    window.localStorage.removeItem(key);
+    return null;
+  }
+}
+
 async function responseJson(response: Response): Promise<Record<string, unknown>> {
   if (!response.ok) throw new Error((await response.text()).slice(0, 500));
   return (await response.json()) as Record<string, unknown>;
@@ -30,12 +97,21 @@ export async function uploadFilesResumably(
   const totalBytes = files.reduce((total, file) => total + file.size, 0);
   if (totalBytes > MAX_BATCH_BYTES) throw new Error("Il caricamento complessivo supera 2 GB.");
 
-  let uploadedBytes = 0;
+  const fingerprints: string[] = [];
+  for (const file of files) fingerprints.push(await fileFingerprint(file));
+  const batchKey = destination.newPracticeTitle
+    ? await batchStorageKey(destination.newPracticeTitle, files, fingerprints)
+    : null;
+  const batchState = batchKey ? loadBatchState(batchKey, files.length) : null;
+  let completedCount = batchState?.completedCount ?? 0;
+  let uploadedBytes = files.slice(0, completedCount).reduce((total, file) => total + file.size, 0);
   let practiceId = destination.practiceId;
-  let lastResult: UploadResult | null = null;
-  for (const file of files) {
+  if (batchState) practiceId = batchState.practiceId;
+  let lastResult: UploadResult | null = batchState?.lastResult ?? null;
+  for (const [index, file] of files.entries()) {
+    if (index < completedCount) continue;
     const target = practiceId ? { practiceId } : { newPracticeTitle: destination.newPracticeTitle };
-    const key = `sequent-upload:${practiceId ?? destination.newPracticeTitle}:${file.name}:${file.size}:${file.lastModified}`;
+    const key = `sequent-upload:${practiceId ?? destination.newPracticeTitle}:${fingerprints[index]}`;
     let sessionId = window.localStorage.getItem(key);
     let offset = 0;
     if (sessionId) {
@@ -79,7 +155,6 @@ export async function uploadFilesResumably(
     const completed = await responseJson(
       await fetch(`/api/uploads/${sessionId}/complete`, { method: "POST" }),
     );
-    window.localStorage.removeItem(key);
     lastResult = {
       practiceId: String(completed.practiceId),
       documentId: String(completed.documentId),
@@ -87,6 +162,17 @@ export async function uploadFilesResumably(
     };
     practiceId = lastResult.practiceId;
     uploadedBytes += file.size;
+    completedCount = index + 1;
+    if (batchKey) {
+      window.localStorage.setItem(
+        batchKey,
+        JSON.stringify({ practiceId, completedCount, lastResult } satisfies NewPracticeBatchState),
+      );
+    }
+    window.localStorage.removeItem(key);
   }
+  if (batchKey) window.localStorage.removeItem(batchKey);
   return lastResult as UploadResult;
 }
+
+export const resumableUploadInternals = { fileFingerprint, batchStorageKey };
