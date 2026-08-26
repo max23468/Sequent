@@ -176,7 +176,7 @@ function parsePdfBbox(html: string, method: ExtractedPage["method"]): ExtractedP
 function parseTsvPages(
   tsv: string,
 ): Array<{ pageNumber: number; text: string; confidence: number | null; coordinates: unknown[] }> {
-  const lines = tsv.trim().split("\n");
+  const lines = tsv.split(/\r?\n/);
   const pages = new Map<
     number,
     { words: string[]; confidences: number[]; coordinates: unknown[] }
@@ -184,12 +184,12 @@ function parseTsvPages(
   for (const line of lines.slice(1)) {
     const columns = line.split("\t");
     if (columns.length < 12) continue;
-    const text = columns.slice(11).join("\t").trim();
-    const confidence = Number(columns[10]);
-    if (!text) continue;
     const pageNumber = Math.max(1, Number(columns[1]) || 1);
     const page = pages.get(pageNumber) ?? { words: [], confidences: [], coordinates: [] };
     pages.set(pageNumber, page);
+    const text = columns.slice(11).join("\t").trim();
+    const confidence = Number(columns[10]);
+    if (!text) continue;
     page.words.push(text);
     if (Number.isFinite(confidence) && confidence >= 0) page.confidences.push(confidence / 100);
     page.coordinates.push({
@@ -413,7 +413,7 @@ async function extractImage(
     status:
       parsed.text.length === 0
         ? "unreadable"
-        : (parsed.confidence ?? 0) < 0.85
+        : parsedPages.some((page) => page.text.length === 0) || (parsed.confidence ?? 0) < 0.85
           ? "to_review"
           : "processed",
   };

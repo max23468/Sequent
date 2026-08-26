@@ -56,6 +56,36 @@ describe("coda persistente", () => {
     });
   });
 
+  it("non elabora un documento quando la verifica del blob è fallita", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-job-invalid-blob-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica con blob non valido");
+    const document = await ingestDocument(
+      database,
+      new File(["originale sintetico"], "originale.txt", { type: "text/plain" }),
+      { practiceId: practice.id },
+      directory,
+    );
+    database
+      .prepare(
+        `UPDATE jobs SET status = 'failed', error_code = 'BLOB_HASH_MISMATCH'
+         WHERE type = 'foundation.verify_blob' AND document_id = ?`,
+      )
+      .run(document.id);
+
+    await runJobRunnerTick(database);
+
+    expect(
+      database
+        .prepare("SELECT status, error_code FROM jobs WHERE type = ? AND document_id = ?")
+        .get("document.process", document.id),
+    ).toEqual({ status: "failed", error_code: "BLOB_VERIFICATION_FAILED" });
+    expect(database.prepare("SELECT status FROM documents WHERE id = ?").get(document.id)).toEqual({
+      status: "received",
+    });
+  });
+
   it("annulla un job in coda e consente il retry manuale", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-job-cancel-"));
     directories.push(directory);

@@ -44,6 +44,20 @@ async function execute(
       | { document_id: string | null }
       | undefined;
     if (!reference?.document_id) throw new Error("DOCUMENT_NOT_FOUND");
+    const verification = database
+      .prepare(
+        `SELECT status FROM jobs
+         WHERE type = 'foundation.verify_blob' AND document_id = ?
+         ORDER BY created_at DESC, id DESC LIMIT 1`,
+      )
+      .get(reference.document_id) as { status: string } | undefined;
+    if (verification?.status !== "completed") {
+      throw new Error(
+        verification && ["failed", "cancelled", "interrupted"].includes(verification.status)
+          ? "BLOB_VERIFICATION_FAILED"
+          : "BLOB_VERIFICATION_REQUIRED",
+      );
+    }
     await processDocument(database, reference.document_id, {
       signal,
       onProgress: (progress) => updateJobProgress(database, job.id, progress),

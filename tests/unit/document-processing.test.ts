@@ -31,6 +31,45 @@ describe("pipeline documentale", () => {
     ]);
   });
 
+  it("conserva una pagina TIFF multipagina priva di parole e richiede revisione", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "sequent-empty-tiff-page-"));
+    const database = openDatabase(directory);
+    try {
+      const document = await ingestDocument(
+        database,
+        new File([Buffer.from("II*\0fixture")], "scansione.tiff", { type: "image/tiff" }),
+        { newPracticeTitle: "Pratica TIFF" },
+        directory,
+      );
+      await processDocument(database, document.id, {
+        dataDirectory: directory,
+        runner: async (command, arguments_) => {
+          if (command !== "tesseract") throw new Error(`UNEXPECTED_COMMAND:${command}`);
+          if (arguments_.includes("--version")) return { stdout: "tesseract 5.5.1", stderr: "" };
+          return {
+            stdout:
+              "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n" +
+              "5\t1\t1\t1\t1\t1\t10\t20\t30\t12\t95\tPagina uno\n" +
+              "1\t2\t0\t0\t0\t0\t0\t0\t100\t100\t-1\t\n",
+            stderr: "",
+          };
+        },
+      });
+
+      expect(getDocument(database, document.id)).toMatchObject({
+        status: "to_review",
+        pageCount: 2,
+      });
+      expect(getDocumentText(database, document.id)).toEqual([
+        expect.objectContaining({ pageNumber: 1, text: "Pagina uno" }),
+        expect.objectContaining({ pageNumber: 2, text: "", confidence: null }),
+      ]);
+    } finally {
+      closeDatabase(directory);
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it("conserva le coordinate native delle parole PDF", () => {
     const pages = documentProcessingInternals.parsePdfBbox(
       '<html><body><page width="600" height="800"><word xMin="10" yMin="20" xMax="50" yMax="32">Mario</word><word xMin="55" yMin="20" xMax="90" yMax="32">Rossi</word></page></body></html>',
