@@ -28,6 +28,14 @@ export function getDevelopmentPassword(): string {
 export const SESSION_COOKIE = "sequent_session";
 export const MAX_UPLOAD_BYTES = 250 * 1024 * 1024;
 
+export function getCodexModel(): string {
+  return process.env.SEQUENT_CODEX_MODEL ?? "gpt-5.6-terra";
+}
+
+export function getCodexHome(): string | undefined {
+  return process.env.SEQUENT_CODEX_HOME;
+}
+
 export function getQualifiedSuccessioniOnLineUrl(): string | null {
   const value = process.env.SEQUENT_SUCCESSIONI_ONLINE_URL;
   if (!value) return null;

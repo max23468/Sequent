@@ -34,8 +34,13 @@ describe("acquisizione documentale", () => {
       database.prepare("SELECT practice_id FROM documents WHERE id = ?").get(document.id),
     ).toMatchObject({ practice_id: document.practiceId });
     expect(
-      database.prepare("SELECT status FROM jobs WHERE document_id = ?").get(document.id),
-    ).toMatchObject({ status: "queued" });
+      database
+        .prepare("SELECT type, status FROM jobs WHERE document_id = ? ORDER BY type")
+        .all(document.id),
+    ).toEqual([
+      { type: "document.process", status: "queued" },
+      { type: "foundation.verify_blob", status: "queued" },
+    ]);
   });
 
   it("non lascia una pratica vuota quando la persistenza del file fallisce", async () => {

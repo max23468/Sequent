@@ -392,6 +392,9 @@
   .source-empty {
     min-height: 250px;
   }
+  .source-viewer {
+    max-height: 480px;
+  }
 }
 
 @media (max-width: 520px) {
@@ -465,6 +468,26 @@
   .review-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+  .analysis-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    padding-block: 15px;
+  }
+  .analysis-toolbar form,
+  .analysis-toolbar .button {
+    width: 100%;
+  }
+  .processing-errors > div {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .processing-errors form,
+  .processing-errors .button {
+    width: 100%;
+  }
+  .source-viewer iframe {
+    min-height: 430px;
   }
   .settings-row {
     align-items: flex-start;

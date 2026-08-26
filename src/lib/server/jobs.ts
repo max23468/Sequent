@@ -8,12 +8,16 @@ const RETRYABLE_JOB_TYPES = new Set(["foundation.verify_blob"]);
 export interface JobRecord {
   id: string;
   type: string;
+  practiceId: string | null;
+  documentId: string | null;
   inputHash: string;
   parameters: unknown;
   status: JobStatus;
   progress: number;
   attempts: number;
   errorCode: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface FailedBlobVerification {
@@ -31,13 +35,55 @@ function mapJob(row: Record<string, unknown>): JobRecord {
   return {
     id: String(row.id),
     type: String(row.type),
+    practiceId: row.practice_id === null ? null : String(row.practice_id),
+    documentId: row.document_id === null ? null : String(row.document_id),
     inputHash: String(row.input_hash),
     parameters: JSON.parse(String(row.parameters_json)),
     status: String(row.status) as JobStatus,
     progress: Number(row.progress),
     attempts: Number(row.attempts),
     errorCode: row.error_code === null ? null : String(row.error_code),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
   };
+}
+
+export function listPracticeJobs(database: Database.Database, practiceId: string): JobRecord[] {
+  const rows = database
+    .prepare(
+      `SELECT * FROM jobs
+       WHERE practice_id = ? AND type IN ('document.process', 'codex.analyze_practice')
+       ORDER BY created_at DESC LIMIT 40`,
+    )
+    .all(practiceId) as Array<Record<string, unknown>>;
+  return rows.map(mapJob);
+}
+
+export function enqueuePracticeAnalysis(
+  database: Database.Database,
+  practiceId: string,
+): JobRecord {
+  const active = database
+    .prepare(
+      `SELECT * FROM jobs
+       WHERE type = 'codex.analyze_practice' AND practice_id = ?
+         AND status IN ('queued', 'running')
+       ORDER BY created_at DESC LIMIT 1`,
+    )
+    .get(practiceId) as Record<string, unknown> | undefined;
+  if (active) return mapJob(active);
+  const previous = database
+    .prepare(
+      `SELECT count(*) AS count FROM jobs
+       WHERE type = 'codex.analyze_practice' AND practice_id = ?`,
+    )
+    .get(practiceId) as { count: number };
+  return enqueueJob(
+    database,
+    "codex.analyze_practice",
+    { sequence: previous.count + 1 },
+    { practiceId },
+  );
 }
 
 export function enqueueJob(
@@ -129,7 +175,11 @@ export function recoverInterruptedJobs(database: Database.Database): number {
 export function claimNextJob(database: Database.Database): JobRecord | null {
   const transaction = database.transaction(() => {
     const row = database
-      .prepare("SELECT * FROM jobs WHERE status = 'queued' ORDER BY created_at LIMIT 1")
+      .prepare(
+        `SELECT * FROM jobs WHERE status = 'queued'
+         ORDER BY CASE WHEN type = 'foundation.verify_blob' THEN 0 ELSE 1 END, created_at, id
+         LIMIT 1`,
+      )
       .get() as Record<string, unknown> | undefined;
     if (!row) return null;
     const now = new Date().toISOString();
@@ -157,6 +207,26 @@ export function finishJob(database: Database.Database, id: string, errorCode?: s
       new Date().toISOString(),
       id,
     );
+}
+
+export function updateJobProgress(database: Database.Database, id: string, progress: number): void {
+  database
+    .prepare(
+      `UPDATE jobs SET progress = ?, updated_at = ?
+       WHERE id = ? AND status = 'running'`,
+    )
+    .run(Math.max(0, Math.min(99, Math.round(progress))), new Date().toISOString(), id);
+}
+
+export function retryJob(database: Database.Database, id: string, practiceId: string): boolean {
+  const result = database
+    .prepare(
+      `UPDATE jobs
+       SET status = 'queued', progress = 0, error_code = NULL, updated_at = ?
+       WHERE id = ? AND practice_id = ? AND status = 'failed' AND attempts < ?`,
+    )
+    .run(new Date().toISOString(), id, practiceId, MAX_JOB_ATTEMPTS);
+  return result.changes === 1;
 }
 
 export function listFailedBlobVerifications(

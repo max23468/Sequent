@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream, type Stats } from "node:fs";
 import { link, mkdir, open, readdir, rename, rm, stat } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { getDataDirectory, MAX_UPLOAD_BYTES } from "./config.ts";
@@ -14,6 +14,12 @@ export interface PersistedUpload {
   blobPath: string;
   originalName: string;
   mediaType: string;
+}
+
+export interface PersistedArtifact {
+  sha256: string;
+  byteSize: number;
+  blobPath: string;
 }
 
 async function syncDirectory(directoryPath: string): Promise<void> {
@@ -31,6 +37,14 @@ async function verifyAbsoluteBlob(absolutePath: string, expectedHash: string): P
   const hash = createHash("sha256");
   for await (const chunk of createReadStream(absolutePath)) hash.update(chunk);
   if (hash.digest("hex") !== expectedHash) throw new Error("BLOB_HASH_MISMATCH");
+}
+
+async function hashLocalFile(path: string): Promise<{ sha256: string; byteSize: number }> {
+  const metadata = await stat(path);
+  if (!metadata.isFile()) throw new Error("ARTIFACT_NOT_FILE");
+  const hash = createHash("sha256");
+  for await (const chunk of createReadStream(path)) hash.update(chunk);
+  return { sha256: hash.digest("hex"), byteSize: metadata.size };
 }
 
 async function persistUploadedBlob(
@@ -154,4 +168,53 @@ export async function verifyBlob(
   expectedHash: string,
 ): Promise<void> {
   await verifyAbsoluteBlob(join(dataDirectory, blobPath), expectedHash);
+}
+
+export function resolveBlobPath(dataDirectory: string, blobPath: string): string {
+  const root = resolve(dataDirectory);
+  const absolutePath = resolve(root, blobPath);
+  const relation = relative(root, absolutePath);
+  if (relation.startsWith("..") || relation === "" || relation.includes("\0")) {
+    throw new Error("BLOB_PATH_INVALID");
+  }
+  return absolutePath;
+}
+
+export async function persistGeneratedArtifact(
+  sourcePath: string,
+  dataDirectory = getDataDirectory(),
+): Promise<PersistedArtifact> {
+  const { sha256, byteSize } = await hashLocalFile(sourcePath);
+  const blobPath = join("blobs", sha256.slice(0, 2), sha256.slice(2));
+  await persistUploadedBlob(sourcePath, join(dataDirectory, blobPath), sha256);
+  return { sha256, byteSize, blobPath };
+}
+
+export async function persistResumableUpload(
+  sourcePath: string,
+  originalName: string,
+  mediaType: string,
+  expectedSize: number,
+  dataDirectory = getDataDirectory(),
+): Promise<PersistedUpload> {
+  const { sha256, byteSize } = await hashLocalFile(sourcePath);
+  if (byteSize !== expectedSize) throw new Error("UPLOAD_SIZE_MISMATCH");
+  const temporaryDirectory = join(dataDirectory, "tmp");
+  await mkdir(temporaryDirectory, { recursive: true, mode: 0o700 });
+  const adoptionPath = join(temporaryDirectory, `${randomUUID()}.upload`);
+  await link(sourcePath, adoptionPath);
+  const blobPath = join("blobs", sha256.slice(0, 2), sha256.slice(2));
+  try {
+    await persistUploadedBlob(adoptionPath, join(dataDirectory, blobPath), sha256);
+  } catch (error) {
+    await rm(adoptionPath, { force: true });
+    throw error;
+  }
+  return {
+    sha256,
+    byteSize,
+    blobPath,
+    originalName: basename(originalName.replaceAll("\\", "/").split("/").at(-1) || "documento"),
+    mediaType: mediaType || "application/octet-stream",
+  };
 }

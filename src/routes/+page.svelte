@@ -1,6 +1,7 @@
 <script lang="ts">
   import { CalendarClock, ChevronRight, ExternalLink, FolderOpen, History, MoreVertical, Plus, Upload, X } from "@lucide/svelte";
   import { formatItalianDate } from "$lib/format";
+  import { uploadFilesResumably } from "$lib/client/resumable-upload";
 
   let { data, form } = $props();
   let createDialog: HTMLDialogElement | undefined = undefined;
@@ -8,6 +9,9 @@
   let launcherDialog: HTMLDialogElement | undefined = undefined;
   let quickActionsOpen = $state(false);
   let selectedLauncher = $state<(typeof data.launchers)[number] | null>(null);
+  let uploadProgress = $state<number | null>(null);
+  let uploadCurrentFile = $state("");
+  let resumableUploadError = $state("");
 
   $effect(() => {
     if (form?.createError) createDialog?.showModal();
@@ -58,6 +62,44 @@
     launcherDialog?.close();
   }
 
+  async function uploadFromDashboard(event: SubmitEvent) {
+    event.preventDefault();
+    const formElement = event.currentTarget as HTMLFormElement;
+    const formData = new FormData(formElement);
+    const files = formData
+      .getAll("file")
+      .filter((value): value is File => value instanceof File && value.size > 0);
+    const practiceId = String(formData.get("practiceId") ?? "");
+    const newPracticeTitle = String(formData.get("newTitle") ?? "").trim();
+    if (files.length === 0) {
+      resumableUploadError = "Scegli un documento da caricare.";
+      return;
+    }
+    if (!practiceId && !newPracticeTitle) {
+      resumableUploadError = "Scegli una pratica o assegna un nome a quella nuova.";
+      return;
+    }
+    resumableUploadError = "";
+    uploadProgress = 0;
+    try {
+      const result = await uploadFilesResumably(
+        files,
+        practiceId ? { practiceId } : { newPracticeTitle },
+        (progress, fileName) => {
+          uploadProgress = progress;
+          uploadCurrentFile = fileName;
+        },
+      );
+      window.location.assign(result.location);
+    } catch (error) {
+      resumableUploadError =
+        error instanceof Error && !error.message.startsWith("{")
+          ? error.message
+          : "Caricamento interrotto. Riseleziona gli stessi file per riprenderlo.";
+      uploadProgress = null;
+    }
+  }
+
 </script>
 
 <svelte:head><title>Dashboard · Sequent</title></svelte:head>
@@ -98,10 +140,18 @@
         <span class="mobile-panel-mark attention-mark" aria-hidden="true"></span>
         <h2 id="attention-title">Da verificare</h2>
       </div>
-      {#if data.failedVerifications.length === 0}
+      {#if data.failedVerifications.length === 0 && data.pendingReviews.length === 0}
         <div class="panel-empty"><p>Nessuna verifica da mostrare.</p><span>Le verifiche documentali compariranno qui quando saranno disponibili.</span></div>
       {:else}
         <ul class="verification-list">
+          {#each data.pendingReviews.slice(0, 8) as review (review.id)}
+            <li>
+              <a href={`/pratiche/${review.practiceId}?sezione=verifications&verifica=${review.id}`}>
+                <span><strong>{review.label}</strong><small>{review.documentName ?? "Senza documento"} · {review.practiceTitle} · {review.method === "codex" ? "Codex" : review.method === "ocr" ? "OCR" : review.method}</small></span>
+                <ChevronRight size={19} aria-hidden="true" />
+              </a>
+            </li>
+          {/each}
           {#each data.failedVerifications as verification (verification.jobId)}
             <li>
               <a href={`/pratiche/${verification.practiceId}?documento=${verification.documentId}`}>
@@ -152,15 +202,17 @@
 </dialog>
 
 <dialog class="app-dialog wide" bind:this={uploadDialog} aria-labelledby="upload-title">
-  <form method="POST" action="?/upload" enctype="multipart/form-data">
+  <form method="POST" action="?/upload" enctype="multipart/form-data" onsubmit={uploadFromDashboard}>
     <div class="dialog-heading"><div><p class="dialog-kicker">Carica documenti</p><h2 id="upload-title">Scegli la pratica di destinazione</h2></div><button class="icon-button" type="button" aria-label="Chiudi" onclick={closeUploadDialog}><X size={20} /></button></div>
     {#if data.practices.length > 0}
       <label for="upload-practice">Pratica esistente</label><select id="upload-practice" name="practiceId"><option value="">Crea una nuova pratica</option>{#each data.practices as practice (practice.id)}<option value={practice.id}>{practice.title}</option>{/each}</select>
     {/if}
     <label for="new-practice-title">Nome della nuova pratica</label><input id="new-practice-title" name="newTitle" maxlength="120" placeholder="Usato solo se non scegli una pratica esistente" />
-    <label for="document-file">Documento</label><input id="document-file" name="file" type="file" required />
+    <label for="document-file">Documento</label><input id="document-file" name="file" type="file" multiple required />
+    {#if uploadProgress !== null}<progress class="upload-progress" max="100" value={uploadProgress}></progress><p class="dialog-note">{uploadProgress}% · {uploadCurrentFile}</p>{/if}
+    {#if resumableUploadError}<p class="form-error" role="alert">{resumableUploadError}</p>{/if}
     {#if form?.uploadError}<p class="form-error" role="alert">{form.uploadError}</p>{/if}
-    <div class="dialog-actions"><button class="button text" type="button" onclick={closeUploadDialog}>Annulla</button><button class="button primary" type="submit"><Upload size={18} />Carica</button></div>
+    <div class="dialog-actions"><button class="button text" type="button" onclick={closeUploadDialog}>Annulla</button><button class="button primary" type="submit" disabled={uploadProgress !== null}><Upload size={18} />{uploadProgress === null ? "Carica" : "Caricamento…"}</button></div>
   </form>
 </dialog>
 

@@ -17,12 +17,14 @@ import {
 } from "$lib/server/config";
 import { recoverInterruptedJobs } from "$lib/server/jobs";
 import { startJobRunner } from "$lib/server/job-runner";
+import { cleanupExpiredUploadSessions } from "$lib/server/resumable-uploads";
 
 let initialization: Promise<void> | undefined;
 
 async function initialize() {
   const database = openDatabase();
   await cleanupStaleUploads(getDataDirectory());
+  await cleanupExpiredUploadSessions(database);
   recoverInterruptedJobs(database);
   startJobRunner(database);
 }

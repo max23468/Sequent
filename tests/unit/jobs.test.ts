@@ -67,6 +67,11 @@ describe("coda persistente", () => {
     const job = database.prepare("SELECT id FROM jobs WHERE document_id = ?").get(document.id) as {
       id: string;
     };
+    database
+      .prepare(
+        "UPDATE jobs SET status = 'cancelled' WHERE type = 'document.process' AND document_id = ?",
+      )
+      .run(document.id);
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       expect(claimNextJob(database)?.attempts).toBe(attempt);
       if (attempt < 3) {

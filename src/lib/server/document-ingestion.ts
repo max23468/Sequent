@@ -68,17 +68,14 @@ function attachUpload(
   };
 }
 
-export async function ingestDocument(
+export function ingestPersistedUpload(
   database: Database.Database,
-  file: File,
+  upload: PersistedUpload,
   destination: { practiceId: string } | { newPracticeTitle: string },
-  dataDirectory?: string,
-): Promise<IngestedDocument> {
+): IngestedDocument {
   if ("practiceId" in destination && !getPractice(database, destination.practiceId)) {
     throw new Error("PRACTICE_NOT_FOUND");
   }
-  const upload = await persistUpload(file, dataDirectory);
-
   const commit = database.transaction(() => {
     const practiceId =
       "practiceId" in destination
@@ -91,9 +88,29 @@ export async function ingestDocument(
       { sha256: document.sha256 },
       { practiceId, documentId: document.id },
     );
+    enqueueJob(
+      database,
+      "document.process",
+      { sha256: document.sha256, pipelineVersion: 1 },
+      { practiceId, documentId: document.id },
+    );
     return document;
   });
   return commit.immediate();
+}
+
+export async function ingestDocument(
+  database: Database.Database,
+  file: File,
+  destination: { practiceId: string } | { newPracticeTitle: string },
+  dataDirectory?: string,
+): Promise<IngestedDocument> {
+  if ("practiceId" in destination && !getPractice(database, destination.practiceId)) {
+    throw new Error("PRACTICE_NOT_FOUND");
+  }
+  const upload = await persistUpload(file, dataDirectory);
+
+  return ingestPersistedUpload(database, upload, destination);
 }
 
 export function describeDocumentIngestionFailure(error: unknown): DocumentIngestionFailure | null {

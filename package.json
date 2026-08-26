@@ -13,6 +13,7 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "admin:backup": "node scripts/admin/backup.ts",
+    "benchmark:m3": "node scripts/benchmark/m3.ts",
     "docs:check": "node scripts/check-documentation-consistency.mjs",
     "format:check": "oxfmt --check scripts tests src package.json tsconfig.json svelte.config.js vite.config.ts playwright.config.ts svelte-doctor.config.json",
     "lint": "oxlint scripts tests src",
@@ -29,6 +30,8 @@
   },
   "dependencies": {
     "@lucide/svelte": "1.34.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@openai/codex-sdk": "0.149.1",
     "@sveltejs/adapter-node": "5.5.7",
     "@sveltejs/kit": "2.70.3",
     "argon2": "0.45.1",

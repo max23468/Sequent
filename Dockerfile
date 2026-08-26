@@ -18,9 +18,19 @@ FROM node:${NODE_VERSION}-bookworm-slim@${NODE_IMAGE_DIGEST} AS runtime
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000 \
-    SEQUENT_DATA_DIR=/var/lib/sequent
+    HOME=/var/lib/sequent \
+    SEQUENT_DATA_DIR=/var/lib/sequent \
+    SEQUENT_CODEX_HOME=/var/lib/sequent/.codex
 WORKDIR /app
-RUN groupadd --system --gid 10001 sequent && useradd --system --uid 10001 --gid sequent --home-dir /nonexistent sequent
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+      file ghostscript imagemagick libreoffice-calc libreoffice-writer openssl \
+      ocrmypdf poppler-utils tesseract-ocr tesseract-ocr-ita unzip \
+    && if [ ! -e /usr/local/bin/magick ]; then ln -s /usr/bin/convert /usr/local/bin/magick; fi \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 10001 sequent \
+    && useradd --system --uid 10001 --gid sequent --home-dir /var/lib/sequent sequent
+RUN install -d -o sequent -g sequent -m 0700 /var/lib/sequent
 COPY --from=build --chown=sequent:sequent /app/build ./build
 COPY --from=build --chown=sequent:sequent /app/node_modules ./node_modules
 COPY --from=build --chown=sequent:sequent /app/package.json ./package.json
