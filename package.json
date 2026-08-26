@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
-    "check:tsgo": "svelte-kit sync && tsgo --noEmit -p tsconfig.json",
+    "check:tsgo": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --tsgo --fail-on-warnings",
     "doctor": "svelte-doctor check --fail-on warning .",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
@@ -17,7 +17,7 @@
     "format:check": "oxfmt --check scripts tests src package.json tsconfig.json svelte.config.js vite.config.ts playwright.config.ts svelte-doctor.config.json",
     "lint": "oxlint scripts tests src",
     "shell:check": "bash -n scripts/vps/*.sh",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "test": "node --test tests/diz/*.test.ts tests/official-sources/*.test.ts tests/vps/*.test.ts && npm run test:unit",
     "test:codex-review": "node --test scripts/codex-review-gate.test.mjs",
     "verify:boundary": "node scripts/check-public-boundary.mjs",
@@ -39,14 +39,14 @@
   "devDependencies": {
     "@playwright/test": "1.62.1",
     "@sveltejs/vite-plugin-svelte": "7.3.0",
-    "@types/better-sqlite3": "7.6.13",
-    "@types/node": "26.2.0",
-    "@typescript/native-preview": "7.0.0-dev.20260707.2",
-    "oxfmt": "0.64.0",
-    "oxlint": "1.79.0",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "26.3.0",
+    "@typescript/native": "npm:typescript@7.0.2",
+    "oxfmt": "0.65.0",
+    "oxlint": "1.80.0",
     "svelte-check": "4.7.6",
     "svelte-doctor": "0.3.6",
-    "typescript": "6.0.3",
+    "typescript": "~6.0.3",
     "vite": "8.2.2",
     "vitest": "4.1.11"
   },
@@ -55,7 +55,7 @@
   },
   "engines": {
     "node": "26.7.0",
-    "npm": "11.19.0"
+    "npm": "12.0.2"
   },
   "allowScripts": {
     "argon2@0.45.1": true,
