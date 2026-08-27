@@ -7,6 +7,7 @@ import {
   classifyCodexReview,
   findingPriority,
   isAutomaticFirstReview,
+  isCodexBotLogin,
   isHeadReset,
   latestCodexInvocation,
   pollingIntervals,
@@ -204,8 +205,18 @@ test("risolve soltanto thread P2/P3 automatici senza risposte umane", () => {
       isResolved: true,
       comments: { nodes: [{ databaseId: 10, author: bot }] },
     },
+    {
+      id: "T5",
+      isResolved: false,
+      comments: {
+        nodes: [{ databaseId: 10, author: { login: "chatgpt-codex-connector" } }],
+      },
+    },
   ];
-  assert.deepEqual(resolvableAdvisoryThreadIds(threads, exactComments), ["T1"]);
+  assert.deepEqual(resolvableAdvisoryThreadIds(threads, exactComments), ["T1", "T5"]);
+  assert.equal(isCodexBotLogin("chatgpt-codex-connector[bot]"), true);
+  assert.equal(isCodexBotLogin("chatgpt-codex-connector"), true);
+  assert.equal(isCodexBotLogin("max23468"), false);
 });
 
 test("gli errori operativi bloccano in assenza di una review conclusa più recente", () => {
