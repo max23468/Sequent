@@ -104,6 +104,43 @@ describe("benchmark M3", () => {
     expect(report.totals.correctly_pending).toBe(1);
   });
 
+  it("blocca una fonte inventata anche se il valore errato resta da verificare", () => {
+    const report = evaluateM3Benchmark({
+      corpusId: "sintetico",
+      corpusHash,
+      cases: [
+        {
+          id: "caso-pending-fonte-inventata",
+          category: "pdf_scanned",
+          knownDocumentIds: ["doc-1"],
+          expected: [
+            {
+              key: "saldo",
+              value: "100",
+              documentId: "doc-1",
+              pageNumber: 1,
+              sourceText: "Saldo 100",
+              critical: true,
+            },
+          ],
+          observed: [
+            {
+              key: "saldo",
+              value: "900",
+              documentId: "doc-1",
+              pageNumber: 1,
+              sourceExcerpt: "Saldo inventato 900",
+              reviewStatus: "pending",
+            },
+          ],
+        },
+      ],
+    });
+    expect(report.passedM3Safety).toBe(false);
+    expect(report.inventedSources).toBe(1);
+    expect(report.totals.correctly_pending).toBe(0);
+  });
+
   it("blocca fonte o pagina sbagliata anche quando il valore coincide", () => {
     const report = evaluateM3Benchmark({
       corpusId: "sintetico",

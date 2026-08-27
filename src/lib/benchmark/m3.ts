@@ -122,6 +122,16 @@ function normalizeEvidenceText(value: string): string {
   return value.normalize("NFC").replace(/\s+/g, " ").trim();
 }
 
+function evidenceExcerptMatches(sourceText: string, sourceExcerpt: string): boolean {
+  const expectedSource = normalizeEvidenceText(sourceText);
+  const observedExcerpt = normalizeEvidenceText(sourceExcerpt);
+  return (
+    expectedSource.length > 0 &&
+    observedExcerpt.length > 0 &&
+    expectedSource.includes(observedExcerpt)
+  );
+}
+
 function sameConflictSources(
   expected: z.infer<typeof expectedConflictSchema>["sources"],
   observed: z.infer<typeof observedConflictSchema>["sources"],
@@ -129,17 +139,13 @@ function sameConflictSources(
   if (expected.length !== observed.length) return false;
   const used = new Set<number>();
   return expected.every((expectedSource) => {
-    const expectedText = normalizeEvidenceText(expectedSource.sourceText);
     const index = observed.findIndex((observedSource, observedIndex) => {
       if (used.has(observedIndex)) return false;
-      const observedExcerpt = normalizeEvidenceText(observedSource.sourceExcerpt);
       return (
         observedSource.documentId === expectedSource.documentId &&
         observedSource.pageNumber === expectedSource.pageNumber &&
         observedSource.value === expectedSource.value &&
-        expectedText.length > 0 &&
-        observedExcerpt.length > 0 &&
-        expectedText.includes(observedExcerpt)
+        evidenceExcerptMatches(expectedSource.sourceText, observedSource.sourceExcerpt)
       );
     });
     if (index < 0) return false;
@@ -170,6 +176,13 @@ export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
       let outcome: BenchmarkOutcome;
       if (!observed) outcome = "not_found";
       else if (!fixture.knownDocumentIds.includes(observed.documentId)) outcome = "invented_source";
+      else if (
+        observed.documentId === expected.documentId &&
+        observed.pageNumber === expected.pageNumber &&
+        observed.sourceExcerpt !== null &&
+        !evidenceExcerptMatches(expected.sourceText, observed.sourceExcerpt)
+      )
+        outcome = "invented_source";
       else if (observed.value !== expected.value) {
         outcome = observed.reviewStatus === "pending" ? "correctly_pending" : "wrong";
       } else if (
@@ -180,14 +193,9 @@ export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
       } else if (!observed.sourceExcerpt || observed.pageNumber === null) {
         outcome = "correct_incomplete_source";
       } else {
-        const expectedSource = normalizeEvidenceText(expected.sourceText);
-        const observedExcerpt = normalizeEvidenceText(observed.sourceExcerpt);
-        outcome =
-          expectedSource.length > 0 &&
-          observedExcerpt.length > 0 &&
-          expectedSource.includes(observedExcerpt)
-            ? "correct_source"
-            : "invented_source";
+        outcome = evidenceExcerptMatches(expected.sourceText, observed.sourceExcerpt)
+          ? "correct_source"
+          : "invented_source";
       }
       if (expected.critical && outcome !== "correct_source" && outcome !== "correctly_pending")
         criticalSilentErrors += 1;
