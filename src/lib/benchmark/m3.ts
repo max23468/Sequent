@@ -135,13 +135,16 @@ export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
         outcome = observed.reviewStatus === "pending" ? "correctly_pending" : "wrong";
       } else if (!observed.sourceExcerpt || observed.pageNumber === null) {
         outcome = "correct_incomplete_source";
-      } else if (
-        !normalizeEvidenceText(expected.sourceText).includes(
-          normalizeEvidenceText(observed.sourceExcerpt),
-        )
-      ) {
-        outcome = "invented_source";
-      } else outcome = "correct_source";
+      } else {
+        const expectedSource = normalizeEvidenceText(expected.sourceText);
+        const observedExcerpt = normalizeEvidenceText(observed.sourceExcerpt);
+        outcome =
+          expectedSource.length > 0 &&
+          observedExcerpt.length > 0 &&
+          expectedSource.includes(observedExcerpt)
+            ? "correct_source"
+            : "invented_source";
+      }
       if (expected.critical && outcome !== "correct_source" && outcome !== "correctly_pending")
         criticalSilentErrors += 1;
       totals[outcome] += 1;

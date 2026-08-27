@@ -331,11 +331,11 @@ function validateAnalysisEvidence(
     if (!pages) throw new Error("CODEX_UNKNOWN_DOCUMENT");
     const pageText = pages.get(proposal.pageNumber);
     if (pageText === undefined) throw new Error("CODEX_UNKNOWN_PAGE");
-    if (!pageText.includes(normalizeEvidenceText(proposal.excerpt)))
-      throw new Error("CODEX_UNSUPPORTED_EXCERPT");
-    if (proposal.value !== null && !containsLiteralValue(pageText, proposal.value))
+    const excerpt = normalizeEvidenceText(proposal.excerpt);
+    if (!pageText.includes(excerpt)) throw new Error("CODEX_UNSUPPORTED_EXCERPT");
+    if (proposal.value !== null && !containsLiteralValue(excerpt, proposal.value))
       throw new Error("CODEX_UNSUPPORTED_VALUE");
-    if (proposal.alternatives.some((alternative) => !containsLiteralValue(pageText, alternative)))
+    if (proposal.alternatives.some((alternative) => !containsLiteralValue(excerpt, alternative)))
       throw new Error("CODEX_UNSUPPORTED_ALTERNATIVE");
   }
   for (const conflict of analysis.conflicts) {
@@ -344,9 +344,9 @@ function validateAnalysisEvidence(
       if (!pages) throw new Error("CODEX_UNKNOWN_DOCUMENT");
       const pageText = pages.get(source.pageNumber);
       if (pageText === undefined) throw new Error("CODEX_UNKNOWN_PAGE");
-      if (!pageText.includes(normalizeEvidenceText(source.excerpt)))
-        throw new Error("CODEX_UNSUPPORTED_EXCERPT");
-      if (!containsLiteralValue(pageText, source.value))
+      const excerpt = normalizeEvidenceText(source.excerpt);
+      if (!pageText.includes(excerpt)) throw new Error("CODEX_UNSUPPORTED_EXCERPT");
+      if (!containsLiteralValue(excerpt, source.value))
         throw new Error("CODEX_UNSUPPORTED_CONFLICT_VALUE");
     }
   }

@@ -294,6 +294,11 @@ describe("analisi pratica con Codex", () => {
       expectedError: "CODEX_UNSUPPORTED_VALUE",
     },
     {
+      name: "valore presente altrove nella pagina ma non nell’estratto",
+      proposal: { excerpt: "Documento sintetico", value: "AB-12" },
+      expectedError: "CODEX_UNSUPPORTED_VALUE",
+    },
+    {
       name: "alternativa non presente",
       proposal: { alternatives: ["ALTERNATIVA-INVENTATA"] },
       expectedError: "CODEX_UNSUPPORTED_ALTERNATIVE",
@@ -464,6 +469,62 @@ describe("analisi pratica con Codex", () => {
                     pageNumber: 1,
                     excerpt: "riferimento pratica AB-12",
                     value: "AB-12",
+                  },
+                ],
+                explanation: "Valori discordanti",
+              },
+            ],
+          }),
+        };
+      },
+    };
+
+    await expect(
+      analyzePracticeWithCodex(database, document.practiceId, {
+        dataDirectory: directory,
+        adapter,
+      }),
+    ).rejects.toThrow("CODEX_UNSUPPORTED_CONFLICT_VALUE");
+    expect(listReviewItems(database, document.practiceId)).toEqual([]);
+  });
+
+  it("rifiuta valori di conflitto scambiati tra soggetti della stessa pagina", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-codex-swapped-conflict-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const document = await ingestDocument(
+      database,
+      new File(["Mario ha codice AAA. Luigi ha codice BBB."], "soggetti.txt", {
+        type: "text/plain",
+      }),
+      { newPracticeTitle: "Pratica conflitto scambiato" },
+      directory,
+    );
+    await processDocument(database, document.id, { dataDirectory: directory });
+    const adapter: CodexAnalysisAdapter = {
+      async run() {
+        return {
+          threadId: "thread-conflitto-scambiato",
+          usage: null,
+          finalResponse: JSON.stringify({
+            summary: "Conflitto sintetico",
+            proposals: [],
+            conflicts: [
+              {
+                subjectId: "person.mario.tax-code",
+                label: "Codice",
+                sources: [
+                  {
+                    documentId: document.id,
+                    pageNumber: 1,
+                    excerpt: "Mario ha codice AAA",
+                    value: "BBB",
+                  },
+                  {
+                    documentId: document.id,
+                    pageNumber: 1,
+                    excerpt: "Luigi ha codice BBB",
+                    value: "AAA",
                   },
                 ],
                 explanation: "Valori discordanti",

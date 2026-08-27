@@ -150,6 +150,42 @@ describe("benchmark M3", () => {
     expect(report.criticalSilentErrors).toBe(1);
   });
 
+  it("blocca un estratto vuoto dopo la normalizzazione", () => {
+    const report = evaluateM3Benchmark({
+      corpusId: "sintetico",
+      corpusHash,
+      cases: [
+        {
+          id: "caso-estratto-vuoto",
+          category: "pdf_native",
+          knownDocumentIds: ["doc-1"],
+          expected: [
+            {
+              key: "codice",
+              value: "ABC",
+              documentId: "doc-1",
+              pageNumber: 1,
+              sourceText: "Codice ABC",
+              critical: true,
+            },
+          ],
+          observed: [
+            {
+              key: "codice",
+              value: "ABC",
+              documentId: "doc-1",
+              pageNumber: 1,
+              sourceExcerpt: "   ",
+              reviewStatus: "confirmed",
+            },
+          ],
+        },
+      ],
+    });
+    expect(report.passedM3Safety).toBe(false);
+    expect(report.inventedSources).toBe(1);
+  });
+
   it("blocca conflitti critici ignorati e risultati inventati", () => {
     const report = evaluateM3Benchmark({
       corpusId: "sintetico",
