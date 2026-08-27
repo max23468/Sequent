@@ -2,6 +2,34 @@ import { describe, expect, it } from "vitest";
 import { evaluateM3Benchmark } from "../../src/lib/benchmark/m3.ts";
 
 const corpusHash = "a".repeat(64);
+const expectedConflictSources = [
+  {
+    documentId: "doc-1",
+    pageNumber: 1,
+    value: "100",
+    sourceText: "Saldo certificato 100",
+  },
+  {
+    documentId: "doc-2",
+    pageNumber: 2,
+    value: "200",
+    sourceText: "Saldo dichiarato 200",
+  },
+];
+const observedConflictSources = [
+  {
+    documentId: "doc-1",
+    pageNumber: 1,
+    value: "100",
+    sourceExcerpt: "Saldo certificato 100",
+  },
+  {
+    documentId: "doc-2",
+    pageNumber: 2,
+    value: "200",
+    sourceExcerpt: "Saldo dichiarato 200",
+  },
+];
 
 describe("benchmark M3", () => {
   it("blocca una fonte inventata e un errore critico accettato", () => {
@@ -206,7 +234,7 @@ describe("benchmark M3", () => {
               reviewStatus: "pending",
             },
           ],
-          expectedConflicts: [{ key: "saldo", documentIds: ["doc-1", "doc-2"], critical: true }],
+          expectedConflicts: [{ key: "saldo", sources: expectedConflictSources, critical: true }],
           observedConflicts: [],
         },
       ],
@@ -256,14 +284,53 @@ describe("benchmark M3", () => {
           knownDocumentIds: ["doc-1", "doc-2"],
           expected: [],
           observed: [],
-          expectedConflicts: [{ key: "saldo", documentIds: ["doc-1", "doc-2"], critical: true }],
+          expectedConflicts: [{ key: "saldo", sources: expectedConflictSources, critical: true }],
           observedConflicts: [
-            { key: "saldo", documentIds: ["doc-1", "doc-1"], reviewStatus: "pending" },
+            {
+              key: "saldo",
+              sources: [observedConflictSources[0], observedConflictSources[0]],
+              reviewStatus: "pending",
+            },
           ],
         },
       ],
     });
     expect(report.passedM3Safety).toBe(false);
-    expect(report.totals.conflict_ignored).toBe(1);
+    expect(report.totals.invented_source).toBe(1);
+  });
+
+  it("blocca valori, pagine o estratti inventati nelle fonti di un conflitto", () => {
+    const report = evaluateM3Benchmark({
+      corpusId: "sintetico",
+      corpusHash,
+      cases: [
+        {
+          id: "caso-conflitto-fonti-inventate",
+          category: "bank_certificate",
+          knownDocumentIds: ["doc-1", "doc-2"],
+          expected: [],
+          observed: [],
+          expectedConflicts: [{ key: "saldo", sources: expectedConflictSources, critical: true }],
+          observedConflicts: [
+            {
+              key: "saldo",
+              sources: [
+                observedConflictSources[0],
+                {
+                  documentId: "doc-2",
+                  pageNumber: 7,
+                  value: "999",
+                  sourceExcerpt: "Estratto inventato",
+                },
+              ],
+              reviewStatus: "pending",
+            },
+          ],
+        },
+      ],
+    });
+    expect(report.passedM3Safety).toBe(false);
+    expect(report.inventedSources).toBe(1);
+    expect(report.criticalSilentErrors).toBe(1);
   });
 });

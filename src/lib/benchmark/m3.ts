@@ -34,13 +34,31 @@ const observedFieldSchema = z.object({
 
 const expectedConflictSchema = z.object({
   key: z.string().min(1),
-  documentIds: z.array(z.string().min(1)).min(2),
+  sources: z
+    .array(
+      z.object({
+        documentId: z.string().min(1),
+        pageNumber: z.number().int().positive(),
+        value: z.string(),
+        sourceText: z.string().min(1),
+      }),
+    )
+    .min(2),
   critical: z.boolean(),
 });
 
 const observedConflictSchema = z.object({
   key: z.string().min(1),
-  documentIds: z.array(z.string().min(1)).min(2),
+  sources: z
+    .array(
+      z.object({
+        documentId: z.string().min(1),
+        pageNumber: z.number().int().positive(),
+        value: z.string(),
+        sourceExcerpt: z.string().min(1),
+      }),
+    )
+    .min(2),
   reviewStatus: z.enum(["pending", "confirmed", "edited", "rejected", "ignored"]),
 });
 
@@ -102,6 +120,32 @@ const emptyTotals = (): Record<BenchmarkOutcome, number> => ({
 
 function normalizeEvidenceText(value: string): string {
   return value.normalize("NFC").replace(/\s+/g, " ").trim();
+}
+
+function sameConflictSources(
+  expected: z.infer<typeof expectedConflictSchema>["sources"],
+  observed: z.infer<typeof observedConflictSchema>["sources"],
+): boolean {
+  if (expected.length !== observed.length) return false;
+  const used = new Set<number>();
+  return expected.every((expectedSource) => {
+    const expectedText = normalizeEvidenceText(expectedSource.sourceText);
+    const index = observed.findIndex((observedSource, observedIndex) => {
+      if (used.has(observedIndex)) return false;
+      const observedExcerpt = normalizeEvidenceText(observedSource.sourceExcerpt);
+      return (
+        observedSource.documentId === expectedSource.documentId &&
+        observedSource.pageNumber === expectedSource.pageNumber &&
+        observedSource.value === expectedSource.value &&
+        expectedText.length > 0 &&
+        observedExcerpt.length > 0 &&
+        expectedText.includes(observedExcerpt)
+      );
+    });
+    if (index < 0) return false;
+    used.add(index);
+    return true;
+  });
 }
 
 export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
@@ -178,23 +222,20 @@ export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
     }
     for (const expected of fixture.expectedConflicts) {
       const observed = observedConflictsByKey.get(expected.key);
-      const knownSources = observed?.documentIds.every((id) =>
-        fixture.knownDocumentIds.includes(id),
+      const knownSources = observed?.sources.every((source) =>
+        fixture.knownDocumentIds.includes(source.documentId),
       );
-      const observedSources = new Set(observed?.documentIds ?? []);
-      const expectedSources = new Set(expected.documentIds);
       const sameSources =
-        observed !== undefined &&
-        observed.documentIds.length === expected.documentIds.length &&
-        observedSources.size === observed.documentIds.length &&
-        expectedSources.size === expected.documentIds.length &&
-        expected.documentIds.every((id) => observedSources.has(id));
+        observed !== undefined && sameConflictSources(expected.sources, observed.sources);
       let outcome: BenchmarkOutcome;
       if (observed && !knownSources) {
         outcome = "invented_source";
         if (expected.critical) criticalSilentErrors += 1;
-      } else if (!observed || !sameSources) {
+      } else if (!observed) {
         outcome = "conflict_ignored";
+        if (expected.critical) criticalSilentErrors += 1;
+      } else if (!sameSources) {
+        outcome = "invented_source";
         if (expected.critical) criticalSilentErrors += 1;
       } else {
         outcome = "conflict_detected";
@@ -210,7 +251,9 @@ export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
     }
     for (const observed of fixture.observedConflicts) {
       if (expectedConflictsByKey.has(observed.key)) continue;
-      const outcome = observed.documentIds.every((id) => fixture.knownDocumentIds.includes(id))
+      const outcome = observed.sources.every((source) =>
+        fixture.knownDocumentIds.includes(source.documentId),
+      )
         ? "invented"
         : "invented_source";
       totals[outcome] += 1;
