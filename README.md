@@ -33,7 +33,7 @@ npm ci
 npm run dev
 ```
 
-In `vite dev` Sequent crea, se necessario, un owner sintetico e apre automaticamente una sessione di sviluppo per le sole richieste provenienti dal loopback locale. Non serve quindi inserire la password durante il normale lavoro. Il fallback locale è `FondazioneM2Sicura2026` e può essere sostituito con `SEQUENT_DEV_PASSWORD`; l’auto-login è escluso dalle build preview e di produzione. Per collaudare manualmente setup e login durante lo sviluppo si può avviare con `SEQUENT_DEV_AUTO_LOGIN=false`.
+In `vite dev` Sequent crea, se necessario, un owner sintetico e apre automaticamente una sessione di sviluppo per le sole richieste provenienti dal loopback locale. Non serve quindi inserire la password durante il normale lavoro. Il fallback locale è `SequentSviluppoSicuro2026` e può essere sostituito con `SEQUENT_DEV_PASSWORD`; l’auto-login è escluso dalle build preview e di produzione. Per collaudare manualmente setup e login durante lo sviluppo si può avviare con `SEQUENT_DEV_AUTO_LOGIN=false`.
 
 `SEQUENT_DATA_DIR` seleziona una directory isolata. Non deve puntare ai dati operativi dal checkout. I gate applicativi sono inclusi in `npm run verify:public`; l’E2E browser è separato in `npm run test:e2e`.
 

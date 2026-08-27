@@ -27,7 +27,7 @@ describe("backup base", () => {
     const destination = join(root, "backups");
     const database = openDatabase(dataDirectory);
     const practice = createPractice(database, "Pratica nel backup");
-    const ownerId = await createOwner(database, "FondazioneM2Sicura2026");
+    const ownerId = await createOwner(database, "SequentSviluppoSicuro2026");
     issueSession(database, ownerId);
     database
       .prepare(

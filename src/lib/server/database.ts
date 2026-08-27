@@ -79,7 +79,7 @@ CREATE INDEX IF NOT EXISTS declarations_practice_sequence ON declarations(practi
 CREATE INDEX IF NOT EXISTS jobs_status_created_at ON jobs(status, created_at);
 `;
 
-const m3Migration = `
+const documentPipelineMigration = `
 CREATE TABLE IF NOT EXISTS document_artifacts (
   id TEXT PRIMARY KEY,
   document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
@@ -199,7 +199,7 @@ function addColumnIfMissing(
     database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${declaration}`);
 }
 
-function applyM3Migration(database: Database.Database): void {
+function applyDocumentPipelineMigration(database: Database.Database): void {
   database.transaction(() => {
     addColumnIfMissing(
       database,
@@ -218,7 +218,7 @@ function applyM3Migration(database: Database.Database): void {
     addColumnIfMissing(database, "documents", "language", "TEXT");
     addColumnIfMissing(database, "documents", "processing_error", "TEXT");
     addColumnIfMissing(database, "documents", "updated_at", "TEXT");
-    database.exec(m3Migration);
+    database.exec(documentPipelineMigration);
     addColumnIfMissing(database, "review_items", "source_refs_json", "TEXT NOT NULL DEFAULT '[]'");
     addColumnIfMissing(database, "codex_runs", "output_json", "TEXT");
     addColumnIfMissing(
@@ -268,8 +268,8 @@ function applyMigrations(database: Database.Database): void {
     .prepare("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (1, ?)")
     .run(new Date().toISOString());
   // Lo schema è la fonte di verità: riparare anche database provenienti da una
-  // migrazione documentale interrotta o da checkout concorrenti con numeri già occupati.
-  applyM3Migration(database);
+  // migrazione della pipeline documentale interrotta o da checkout concorrenti con numeri già occupati.
+  applyDocumentPipelineMigration(database);
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

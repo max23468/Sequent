@@ -67,7 +67,7 @@ jobs:
         run: docker build --platform linux/arm64 --tag sequent:${{ github.sha }} .
       - name: Esegue la release identificata in un container isolato
         run: |
-          docker run --platform linux/arm64 --detach --name sequent-m2-smoke \
+          docker run --platform linux/arm64 --detach --name sequent-arm64-smoke \
             --read-only --user 10001:10001 --cap-drop ALL \
             --security-opt no-new-privileges:true \
             --tmpfs /tmp:rw,size=64m,mode=1770,uid=10001,gid=10001 \
@@ -81,8 +81,8 @@ jobs:
             fi
             sleep 1
           done
-          docker logs sequent-m2-smoke
+          docker logs sequent-arm64-smoke
           exit 1
       - name: Rimuove il container di smoke
         if: always()
-        run: docker rm --force sequent-m2-smoke || true
+        run: docker rm --force sequent-arm64-smoke || true

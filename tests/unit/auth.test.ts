@@ -48,7 +48,7 @@ describe("difesa del login", () => {
     expect(useDevelopmentAutoLogin(true, "192.0.2.10")).toBe(false);
     process.env.SEQUENT_DEV_AUTO_LOGIN = "false";
     expect(useDevelopmentAutoLogin(true, "127.0.0.1")).toBe(false);
-    expect(getDevelopmentPassword()).toBe("FondazioneM2Sicura2026");
+    expect(getDevelopmentPassword()).toBe("SequentSviluppoSicuro2026");
     process.env.SEQUENT_DEV_PASSWORD = "OverrideDevSintetico2026";
     expect(getDevelopmentPassword()).toBe("OverrideDevSintetico2026");
   });
@@ -65,7 +65,7 @@ describe("difesa del login", () => {
       END;
     `);
 
-    await expect(createOwnerSession(database, "FondazioneM2Sicura2026")).rejects.toThrow(
+    await expect(createOwnerSession(database, "SequentSviluppoSicuro2026")).rejects.toThrow(
       "sessione sintetica rifiutata",
     );
     expect(database.prepare("SELECT count(*) AS count FROM owner").get()).toMatchObject({
@@ -77,7 +77,7 @@ describe("difesa del login", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-auth-concurrent-"));
     directories.push(directory);
     const database = openDatabase(directory);
-    await createOwner(database, "FondazioneM2Sicura2026");
+    await createOwner(database, "SequentSviluppoSicuro2026");
     const start = new Date("2026-08-24T10:00:00.000Z");
 
     await Promise.all(
@@ -99,17 +99,17 @@ describe("difesa del login", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-auth-"));
     directories.push(directory);
     const database = openDatabase(directory);
-    await createOwner(database, "FondazioneM2Sicura2026");
+    await createOwner(database, "SequentSviluppoSicuro2026");
     const start = new Date("2026-08-24T10:00:00.000Z");
     await authenticate(database, "errata", "client-sintetico", start);
     await authenticate(database, "errata", "client-sintetico", start);
     await authenticate(database, "errata", "client-sintetico", start);
     await expect(
-      authenticate(database, "FondazioneM2Sicura2026", "client-sintetico", start),
+      authenticate(database, "SequentSviluppoSicuro2026", "client-sintetico", start),
     ).resolves.toBeNull();
     const ownerId = await authenticate(
       database,
-      "FondazioneM2Sicura2026",
+      "SequentSviluppoSicuro2026",
       "client-sintetico",
       new Date(start.getTime() + 1_001),
     );
@@ -124,7 +124,7 @@ describe("difesa del login", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-auth-renewal-"));
     directories.push(directory);
     const database = openDatabase(directory);
-    const ownerId = await createOwner(database, "FondazioneM2Sicura2026");
+    const ownerId = await createOwner(database, "SequentSviluppoSicuro2026");
     const start = new Date("2026-08-24T10:00:00.000Z");
     const session = issueSession(database, ownerId, start);
 

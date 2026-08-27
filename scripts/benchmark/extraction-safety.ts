@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { evaluateDocumentIntelligenceBenchmark } from "../../src/lib/benchmark/document-intelligence.ts";
+import { evaluateExtractionSafetyBenchmark } from "../../src/lib/benchmark/extraction-safety.ts";
 
 function argument(name: string): string | null {
   const index = process.argv.indexOf(name);
@@ -13,7 +13,7 @@ if (!datasetPath) throw new Error("Usa --dataset <percorso-json>.");
 
 const dataset = JSON.parse(await readFile(resolve(datasetPath), "utf8"));
 const report = {
-  format: "sequent-document-intelligence-benchmark",
+  format: "sequent-extraction-safety-benchmark",
   version: 1,
   generatedAt: new Date().toISOString(),
   commit: process.env.GITHUB_SHA ?? process.env.SEQUENT_COMMIT ?? "working-tree",
@@ -22,7 +22,7 @@ const report = {
   promptVersion: "practice-analysis-v3",
   ocrVersion: process.env.SEQUENT_OCR_VERSION ?? "runtime",
   rulesVersion: "source-hierarchy-v1",
-  ...evaluateDocumentIntelligenceBenchmark(dataset),
+  ...evaluateExtractionSafetyBenchmark(dataset),
 };
 const serialized = `${JSON.stringify(report, null, 2)}\n`;
 if (outputPath) await writeFile(resolve(outputPath), serialized, { mode: 0o600 });

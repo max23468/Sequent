@@ -164,7 +164,7 @@ function sameConflictSources(
   });
 }
 
-export function evaluateDocumentIntelligenceBenchmark(input: unknown): BenchmarkReport {
+export function evaluateExtractionSafetyBenchmark(input: unknown): BenchmarkReport {
   const dataset = benchmarkDatasetSchema.parse(input);
   const totals = emptyTotals();
   const results: BenchmarkReport["results"] = [];

@@ -24,14 +24,14 @@
   let resumableUploadError = $state("");
 
   const sections = [
-    { id: "overview", label: "Panoramica", stage: "M4", icon: LayoutDashboard },
-    { id: "documents", label: "Documenti", stage: "M3", icon: FolderOpen },
-    { id: "verifications", label: "Da verificare", stage: "M3", icon: ListChecks },
-    { id: "declaration", label: "Defunto e dichiarazione", stage: "M4", icon: UserRound },
-    { id: "beneficiaries", label: "Beneficiari", stage: "M4", icon: UsersRound },
-    { id: "properties", label: "Immobili", stage: "M4", icon: Building2 },
-    { id: "checks", label: "Controlli", stage: "M4", icon: ShieldCheck },
-    { id: "history", label: "Cronologia", stage: "M6", icon: History },
+    { id: "overview", label: "Panoramica", available: false, icon: LayoutDashboard },
+    { id: "documents", label: "Documenti", available: true, icon: FolderOpen },
+    { id: "verifications", label: "Da verificare", available: true, icon: ListChecks },
+    { id: "declaration", label: "Defunto e dichiarazione", available: false, icon: UserRound },
+    { id: "beneficiaries", label: "Beneficiari", available: false, icon: UsersRound },
+    { id: "properties", label: "Immobili", available: false, icon: Building2 },
+    { id: "checks", label: "Controlli", available: false, icon: ShieldCheck },
+    { id: "history", label: "Cronologia", available: false, icon: History },
   ] as const;
   const statusLabels: Record<string, string> = {
     received: "Ricevuto", classifying: "Classificazione…", processing: "Elaborazione…",
@@ -125,7 +125,7 @@
       <span class="practice-revision">Revisione {data.practice.revision}</span>
       <details class="workspace-actions-menu">
         <summary class="button secondary">Azioni <ChevronDown size={17} /></summary>
-        <div class="workspace-actions-popover"><button type="button" onclick={chooseWorkspaceFile}><Upload size={17} />Carica documento</button><button type="button" disabled><FileText size={17} />Esporta riepilogo <small>M4</small></button></div>
+        <div class="workspace-actions-popover"><button type="button" onclick={chooseWorkspaceFile}><Upload size={17} />Carica documento</button><button type="button" disabled><FileText size={17} />Esporta riepilogo <small>In preparazione</small></button></div>
       </details>
       <a class="button secondary" href="/" data-sveltekit-prefetch><ArrowLeft size={18} />Dashboard</a>
     </div>
@@ -139,7 +139,7 @@
           {@const Icon = section.icon}
           <button type="button" class:active={selectedSection === section.id} data-section={section.id} aria-pressed={selectedSection === section.id} onclick={selectSection}>
             <Icon size={19} /><span>{section.label}</span>
-            {#if section.id === "verifications" && data.reviewItems.length > 0}<small>{data.reviewItems.length}</small>{:else if section.stage !== "M3"}<small>{section.stage}</small>{/if}
+            {#if section.id === "verifications" && data.reviewItems.length > 0}<small>{data.reviewItems.length}</small>{:else if !section.available}<small>In preparazione</small>{/if}
           </button>
         {/each}
       </nav>
@@ -207,8 +207,8 @@
           </div>
         {/if}
       {:else}
-        <div class="workspace-panel-heading"><h2>{sections.find((section) => section.id === selectedSection)?.label ?? "Sezione"}</h2><span>{sections.find((section) => section.id === selectedSection)?.stage}</span></div>
-        <div class="review-placeholder"><div class="placeholder-kicker"><MoreHorizontal size={18} /><span>Perimetro {sections.find((section) => section.id === selectedSection)?.stage}</span></div><section class="review-card"><div class="review-card-heading"><span>Dominio non ancora qualificato</span><small>Nessun dato disponibile</small></div><div class="review-values"><div><span>Valore attuale</span><strong>—</strong></div><div><span>Valore proposto</span><strong>—</strong></div></div><dl><div><dt>Metodo di verifica</dt><dd>Non disponibile prima di M4</dd></div><div><dt>Confidenza</dt><dd>Non calcolata</dd></div></dl><div class="review-actions"><button class="button primary" type="button" disabled><Check size={17} />Conferma</button><button class="button secondary" type="button" disabled><Pencil size={17} />Modifica</button><button class="button secondary" type="button" disabled><X size={17} />Rifiuta</button></div></section><div class="future-list-heading">Contenuto futuro</div><div class="future-empty">Questa sezione sarà collegata soltanto a dati e regole ufficiali qualificati in M4.</div></div>
+        <div class="workspace-panel-heading"><h2>{sections.find((section) => section.id === selectedSection)?.label ?? "Sezione"}</h2><span>In preparazione</span></div>
+        <div class="review-placeholder"><div class="placeholder-kicker"><MoreHorizontal size={18} /><span>Perimetro in preparazione</span></div><section class="review-card"><div class="review-card-heading"><span>Dominio non ancora qualificato</span><small>Nessun dato disponibile</small></div><div class="review-values"><div><span>Valore attuale</span><strong>—</strong></div><div><span>Valore proposto</span><strong>—</strong></div></div><dl><div><dt>Metodo di verifica</dt><dd>Funzionalità non ancora disponibile</dd></div><div><dt>Confidenza</dt><dd>Non calcolata</dd></div></dl><div class="review-actions"><button class="button primary" type="button" disabled><Check size={17} />Conferma</button><button class="button secondary" type="button" disabled><Pencil size={17} />Modifica</button><button class="button secondary" type="button" disabled><X size={17} />Rifiuta</button></div></section><div class="future-list-heading">Contenuto futuro</div><div class="future-empty">Questa sezione sarà collegata soltanto a dati e regole ufficiali qualificati.</div></div>
       {/if}
     </section>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateDocumentIntelligenceBenchmark } from "../../src/lib/benchmark/document-intelligence.ts";
+import { evaluateExtractionSafetyBenchmark } from "../../src/lib/benchmark/extraction-safety.ts";
 
 const corpusHash = "a".repeat(64);
 const expectedConflictSources = [
@@ -31,10 +31,10 @@ const observedConflictSources = [
   },
 ];
 
-describe("benchmark di intelligenza documentale", () => {
+describe("benchmark di sicurezza estrattiva", () => {
   it("rifiuta risultati osservati con la stessa chiave", () => {
     expect(() =>
-      evaluateDocumentIntelligenceBenchmark({
+      evaluateExtractionSafetyBenchmark({
         corpusId: "sintetico",
         corpusHash,
         cases: [
@@ -77,7 +77,7 @@ describe("benchmark di intelligenza documentale", () => {
   });
 
   it("blocca una fonte inventata e un errore critico accettato", () => {
-    const report = evaluateDocumentIntelligenceBenchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -113,7 +113,7 @@ describe("benchmark di intelligenza documentale", () => {
   });
 
   it("considera sicuro un valore errato lasciato da verificare", () => {
-    const report = evaluateDocumentIntelligenceBenchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -149,7 +149,7 @@ describe("benchmark di intelligenza documentale", () => {
   });
 
   it("blocca una fonte inventata anche se il valore errato resta da verificare", () => {
-    const report = evaluateDocumentIntelligenceBenchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -186,7 +186,7 @@ describe("benchmark di intelligenza documentale", () => {
   });
 
   it("blocca fonte o pagina sbagliata anche quando il valore coincide", () => {
-    const report = evaluateDocumentIntelligenceBenchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -223,7 +223,7 @@ describe("benchmark di intelligenza documentale", () => {
   });
 
   it("blocca un estratto inventato anche con valore, documento e pagina corretti", () => {
-    const report = evaluateDocumentIntelligenceBenchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -260,7 +260,7 @@ describe("benchmark di intelligenza documentale", () => {
   });
 
   it("blocca un estratto vuoto dopo la normalizzazione", () => {
-    const report = evaluateDocumentIntelligenceBenchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -296,7 +296,7 @@ describe("benchmark di intelligenza documentale", () => {
   });
 
   it("blocca conflitti critici ignorati e risultati inventati", () => {
-    const report = evaluateDocumentIntelligenceBenchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -327,7 +327,7 @@ describe("benchmark di intelligenza documentale", () => {
   });
 
   it("blocca un campo critico non trovato", () => {
-    const report = evaluateDocumentIntelligenceBenchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -355,7 +355,7 @@ describe("benchmark di intelligenza documentale", () => {
   });
 
   it("non accetta un conflitto con la stessa fonte duplicata", () => {
-    const report = evaluateDocumentIntelligenceBenchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -381,7 +381,7 @@ describe("benchmark di intelligenza documentale", () => {
   });
 
   it("blocca valori, pagine o estratti inventati nelle fonti di un conflitto", () => {
-    const report = evaluateDocumentIntelligenceBenchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [

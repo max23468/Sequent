@@ -17,16 +17,16 @@ afterEach(() => {
 });
 
 describe("migrazioni della pipeline documentale", () => {
-  it("verifica ed elabora una sola volta i documenti dello schema di fondazione", async () => {
+  it("verifica ed elabora una sola volta i documenti presenti prima della pipeline documentale", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-document-pipeline-migration-"));
     directories.push(directory);
     const path = join(directory, "sequent.sqlite");
-    const blob = Buffer.from("contenuto legacy sintetico");
+    const blob = Buffer.from("contenuto sintetico precedente alla migrazione");
     const sha256 = createHash("sha256").update(blob).digest("hex");
     mkdirSync(join(directory, "blobs"), { mode: 0o700 });
-    writeFileSync(join(directory, "blobs", "legacy"), blob, { mode: 0o600 });
-    const legacy = new Database(path);
-    legacy.exec(`
+    writeFileSync(join(directory, "blobs", "pre-migration"), blob, { mode: 0o600 });
+    const preMigration = new Database(path);
+    preMigration.exec(`
       PRAGMA foreign_keys = ON;
       CREATE TABLE schema_migrations (
         version INTEGER PRIMARY KEY,
@@ -68,19 +68,19 @@ describe("migrazioni della pipeline documentale", () => {
       INSERT INTO schema_migrations(version, applied_at)
       VALUES (1, '2026-08-25T00:00:00.000Z');
       INSERT INTO practices(id, title, status, created_at, updated_at)
-      VALUES ('practice-foundation', 'Pratica base', 'active', '2026-08-25T00:00:00.000Z', '2026-08-25T00:00:00.000Z');
+      VALUES ('practice-before-pipeline', 'Pratica precedente alla pipeline documentale', 'active', '2026-08-25T00:00:00.000Z', '2026-08-25T00:00:00.000Z');
     `);
-    legacy
+    preMigration
       .prepare(
         `INSERT INTO documents(
            id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at
          ) VALUES (
-           'document-foundation', 'practice-foundation', 'legacy.txt', 'text/plain', ?, ?,
-           'blobs/legacy', '2026-08-25T00:00:00.000Z'
+           'document-before-pipeline', 'practice-before-pipeline', 'pre-migration.txt', 'text/plain', ?, ?,
+           'blobs/pre-migration', '2026-08-25T00:00:00.000Z'
          )`,
       )
       .run(blob.byteLength, sha256);
-    legacy.close();
+    preMigration.close();
 
     const previousDataDirectory = process.env.SEQUENT_DATA_DIR;
     process.env.SEQUENT_DATA_DIR = directory;
@@ -89,7 +89,7 @@ describe("migrazioni della pipeline documentale", () => {
       expect(
         migrated
           .prepare("SELECT type, status FROM jobs WHERE document_id = ? ORDER BY type")
-          .all("document-foundation"),
+          .all("document-before-pipeline"),
       ).toEqual([
         { type: "document.process", status: "queued" },
         { type: "foundation.verify_blob", status: "queued" },
@@ -100,13 +100,15 @@ describe("migrazioni della pipeline documentale", () => {
       expect(
         migrated
           .prepare("SELECT type, status FROM jobs WHERE document_id = ? ORDER BY type")
-          .all("document-foundation"),
+          .all("document-before-pipeline"),
       ).toEqual([
         { type: "document.process", status: "completed" },
         { type: "foundation.verify_blob", status: "completed" },
       ]);
       expect(
-        migrated.prepare("SELECT status FROM documents WHERE id = ?").get("document-foundation"),
+        migrated
+          .prepare("SELECT status FROM documents WHERE id = ?")
+          .get("document-before-pipeline"),
       ).toEqual({ status: "processed" });
 
       closeDatabase(directory);
@@ -114,7 +116,7 @@ describe("migrazioni della pipeline documentale", () => {
       expect(
         migrated
           .prepare("SELECT type, count(*) AS count FROM jobs WHERE document_id = ? GROUP BY type")
-          .all("document-foundation"),
+          .all("document-before-pipeline"),
       ).toEqual([
         { type: "document.process", count: 1 },
         { type: "foundation.verify_blob", count: 1 },

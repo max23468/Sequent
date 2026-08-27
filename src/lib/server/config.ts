@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 
 const developmentDefault = resolve(".local-data");
-const developmentPasswordDefault = "FondazioneM2Sicura2026";
+const developmentPasswordDefault = "SequentSviluppoSicuro2026";
 
 export function getDataDirectory(): string {
   return resolve(process.env.SEQUENT_DATA_DIR ?? developmentDefault);
