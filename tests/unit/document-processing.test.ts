@@ -145,6 +145,54 @@ describe("pipeline documentale", () => {
     }
   });
 
+  it.each(["xls", "ods"])(
+    "converte %s in XLSX prima di leggerne strutturalmente tutte le celle",
+    async (extension) => {
+      const directory = await mkdtemp(join(tmpdir(), `sequent-${extension}-structured-`));
+      const inputPath = join(directory, `fogli.${extension}`);
+      const archive = zipSync({
+        "[Content_Types].xml": strToU8(
+          '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+        ),
+        "_rels/.rels": strToU8(
+          '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+        ),
+        "xl/workbook.xml": strToU8(
+          '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Completo" sheetId="1" r:id="rId1"/></sheets></workbook>',
+        ),
+        "xl/_rels/workbook.xml.rels": strToU8(
+          '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>',
+        ),
+        "xl/worksheets/sheet1.xml": strToU8(
+          '<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="9"><c r="F9" t="inlineStr"><is><t>Cella strutturale</t></is></c></row></sheetData></worksheet>',
+        ),
+      });
+      try {
+        await writeFile(inputPath, "fixture");
+        const pages = await documentProcessingInternals.extractSpreadsheetPages(
+          inputPath,
+          directory,
+          async (command, arguments_) => {
+            expect(command).toBe("soffice");
+            expect(arguments_).toContain("xlsx");
+            const outputIndex = arguments_.indexOf("--outdir") + 1;
+            await writeFile(join(arguments_[outputIndex] as string, "fogli.xlsx"), archive);
+            return { stdout: "convertito", stderr: "" };
+          },
+        );
+        expect(pages).toEqual([
+          expect.objectContaining({
+            pageNumber: 1,
+            method: "structured",
+            text: expect.stringContaining('F9 = "Cella strutturale"'),
+          }),
+        ]);
+      } finally {
+        await rm(directory, { recursive: true, force: true });
+      }
+    },
+  );
+
   it("blocca esplicitamente il testo estratto oltre il limite", async () => {
     const directory = await mkdtemp(join(tmpdir(), "sequent-large-extracted-text-"));
     const path = join(directory, "testo.txt");

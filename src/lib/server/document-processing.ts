@@ -168,6 +168,33 @@ async function extractXlsxPages(path: string): Promise<ExtractedPage[]> {
   });
 }
 
+async function extractSpreadsheetPages(
+  inputPath: string,
+  directory: string,
+  runner: CommandRunner,
+): Promise<ExtractedPage[] | null> {
+  const extension = extname(inputPath).toLowerCase();
+  if (extension === ".xlsx") return await extractXlsxPages(inputPath);
+  if (extension !== ".xls" && extension !== ".ods") return null;
+
+  const outputDirectory = join(directory, "spreadsheet-output");
+  await mkdir(outputDirectory, { mode: 0o700 });
+  await runner(
+    "soffice",
+    [
+      "--headless",
+      `-env:UserInstallation=file://${join(directory, "libreoffice-spreadsheet-profile")}`,
+      "--convert-to",
+      "xlsx",
+      "--outdir",
+      outputDirectory,
+      inputPath,
+    ],
+    { timeoutMs: 5 * 60_000, maxOutputBytes: 2 * 1024 * 1024 },
+  );
+  return await extractXlsxPages(join(outputDirectory, `${basename(inputPath, extension)}.xlsx`));
+}
+
 function needsPdfOcr(text: string): boolean {
   const pages = text.split("\f");
   if (pages.length > 1 && pages.at(-1)?.trim() === "") pages.pop();
@@ -584,7 +611,7 @@ async function extractOffice(
   dataDirectory: string,
   runner: CommandRunner,
 ): Promise<ProcessResult> {
-  const spreadsheetPages = inputPath.endsWith(".xlsx") ? await extractXlsxPages(inputPath) : null;
+  const spreadsheetPages = await extractSpreadsheetPages(inputPath, directory, runner);
   const outputDirectory = join(directory, "office-output");
   await mkdir(outputDirectory, { mode: 0o700 });
   await runner(
@@ -633,7 +660,7 @@ async function extractOffice(
     );
     return {
       pages: spreadsheetPages,
-      detectedFormat: "XLSX",
+      detectedFormat: extname(inputPath).slice(1).toUpperCase(),
       language: "it",
       status: spreadsheetPages.some((page) => page.text.trim()) ? "processed" : "unreadable",
     };
@@ -832,4 +859,5 @@ export const documentProcessingInternals = {
   needsPdfOcr,
   readTextLimited,
   extractXlsxPages,
+  extractSpreadsheetPages,
 };
