@@ -53,6 +53,7 @@ jobs:
       - run: npm ci
       - run: npm run verify:public
       - run: npm run doctor
+      - run: npm run benchmark:m3 -- --dataset tests/fixtures/m3-benchmark.synthetic.json
 
   browser-suite:
     name: Browser matrix automatica release

@@ -1,7 +1,16 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import test from "node:test";
-import { classifyChangedFiles, githubOutputs, LEVELS } from "./publication-policy.mjs";
+import {
+  changedFiles,
+  classifyChangedFiles,
+  DIFF_FILTER,
+  githubOutputs,
+  LEVELS,
+} from "./publication-policy.mjs";
 
 test("classifica come rapide soltanto modifiche documentali", () => {
   const result = classifyChangedFiles(["README.md", "docs/runbooks/github.md"]);
@@ -50,6 +59,46 @@ test("una diff vuota usa il fallback conservativo e la release forza la matrice 
   assert.equal(release.runBrowser, true);
 });
 
+test("include le eliminazioni nella classificazione della diff", async () => {
+  const repository = await mkdtemp(join(tmpdir(), "sequent-publication-policy-"));
+  const git = (...args) =>
+    execFileSync("git", args, {
+      cwd: repository,
+      env: {
+        ...process.env,
+        GIT_AUTHOR_EMAIL: "test@example.invalid",
+        GIT_AUTHOR_NAME: "Sequent test",
+        GIT_COMMITTER_EMAIL: "test@example.invalid",
+        GIT_COMMITTER_NAME: "Sequent test",
+      },
+      stdio: "ignore",
+    });
+
+  try {
+    git("init", "--quiet");
+    await writeFile(join(repository, "Dockerfile"), "FROM scratch\n");
+    git("add", "Dockerfile");
+    git("commit", "--quiet", "-m", "test: add Dockerfile");
+    await rm(join(repository, "Dockerfile"));
+    git("add", "--all");
+    git("commit", "--quiet", "-m", "test: remove Dockerfile");
+
+    const previousDirectory = process.cwd();
+    process.chdir(repository);
+    try {
+      const files = changedFiles("HEAD~1");
+      assert.deepEqual(files, ["Dockerfile"]);
+      assert.equal(classifyChangedFiles(files).runArm64, true);
+    } finally {
+      process.chdir(previousDirectory);
+    }
+  } finally {
+    await rm(repository, { recursive: true, force: true });
+  }
+
+  assert.match(DIFF_FILTER, /D/);
+});
+
 test("genera output GitHub scalari", () => {
   const output = githubOutputs(classifyChangedFiles(["Dockerfile"]));
   assert.deepEqual(output, {
@@ -88,5 +137,9 @@ test("la candidata rilegge lo stesso artefatto ARM64 senza deploy", async () => 
   assert.match(workflow, /actions\/upload-artifact@[0-9a-f]{40}/);
   assert.match(workflow, /actions\/download-artifact@[0-9a-f]{40}/);
   assert.match(workflow, /release-artifact\.mjs verify/);
+  assert.match(
+    workflow,
+    /npm run benchmark:m3 -- --dataset tests\/fixtures\/m3-benchmark\.synthetic\.json/,
+  );
   assert.doesNotMatch(workflow, /\bssh\b|deploy/i);
 });

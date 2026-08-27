@@ -5,6 +5,7 @@ import { appendFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const LEVELS = ["rapid", "ordinary", "sensitive", "release"];
+const DIFF_FILTER = "ACDMRTUXB";
 
 const matches = (file, patterns) => patterns.some((pattern) => pattern.test(file));
 
@@ -111,7 +112,7 @@ function matchesAny(files, patterns) {
 export function changedFiles(base, head = "HEAD") {
   return execFileSync(
     "git",
-    ["diff", "--name-only", "--diff-filter=ACMRTUXB", `${base}...${head}`],
+    ["diff", "--name-only", `--diff-filter=${DIFF_FILTER}`, `${base}...${head}`],
     {
       encoding: "utf8",
     },
@@ -158,4 +159,4 @@ function main() {
 const direct = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (direct) main();
 
-export { LEVELS };
+export { DIFF_FILTER, LEVELS };
