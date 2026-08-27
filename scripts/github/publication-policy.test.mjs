@@ -207,7 +207,7 @@ test("la candidata rilegge lo stesso artefatto ARM64 senza deploy", async () => 
   assert.match(workflow, /release-artifact\.mjs verify/);
   assert.match(
     workflow,
-    /npm run benchmark:m3 -- --dataset tests\/fixtures\/m3-benchmark\.synthetic\.json/,
+    /npm run benchmark:extraction-safety -- --dataset tests\/fixtures\/extraction-safety-benchmark\.synthetic\.json/,
   );
   assert.match(workflow, /release-review\.mjs --commit/);
   assert.match(workflow, /name: Scansione dipendenze release/);

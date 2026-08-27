@@ -61,7 +61,7 @@ jobs:
       - run: npm ci
       - run: npm run verify:public
       - run: npm run doctor
-      - run: npm run benchmark:m3 -- --dataset tests/fixtures/m3-benchmark.synthetic.json
+      - run: npm run benchmark:extraction-safety -- --dataset tests/fixtures/extraction-safety-benchmark.synthetic.json
 
   scan-dependencies:
     name: Scansione dipendenze release
