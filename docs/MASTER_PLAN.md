@@ -2713,6 +2713,8 @@ Il runtime attivo usa esclusivamente un'immagine o una build identificata da com
 
 Filesystem/block volume della VPS come archivio operativo. OCI Object Storage non è storage primario né backup automatico. Ogni dipendenza nativa deve funzionare su ARM64 senza emulazione x86 non approvata.
 
+Le build Docker temporanee verificano prima il margine disco, sono serializzate rispetto alle operazioni Docker di Hub Fatture tramite un lock host e rimuovono sempre tag, container e layer di prova. La manutenzione preserva immagine attiva, rollback, immagini in uso ed eventuali candidati VPS qualificati esplicitamente trattenuti; non usa pulizie globali non qualificate.
+
 ## 43.7 Bootstrap e trasferimento orchestrati da Codex
 
 L'handover iniziale avviene tramite un unico archivio ZIP consegnato a Codex sul Mac o sul PC Windows già abilitato all'accesso amministrativo. Codex deve occuparsi direttamente di:

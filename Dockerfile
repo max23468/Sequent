@@ -18,6 +18,9 @@ RUN cc -O2 -Wall -Wextra -Werror -fPIE -pie -Wl,-z,relro,-z,now \
     && npm prune --omit=dev
 
 FROM node:${NODE_VERSION}-bookworm-slim@${NODE_IMAGE_DIGEST} AS runtime
+ARG APP_COMMIT_SHA=unversioned
+LABEL org.opencontainers.image.source="https://github.com/max23468/Sequent" \
+  org.opencontainers.image.revision=$APP_COMMIT_SHA
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000 \

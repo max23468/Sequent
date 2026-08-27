@@ -1,0 +1,13 @@
+[Unit]
+Description=Pulizia selettiva immagini Docker Sequent
+ConditionPathExists=/opt/sequent/runtime/runtime.env
+
+[Service]
+Type=oneshot
+ExecStart=/opt/sequent/runtime/prune-docker-images.sh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/run/lock
+RestrictAddressFamilies=AF_UNIX

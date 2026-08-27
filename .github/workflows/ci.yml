@@ -129,7 +129,10 @@ jobs:
         with:
           persist-credentials: false
       - name: Costruisce l'immagine ARM64 senza pubblicarla
-        run: docker build --platform linux/arm64 --tag sequent:${{ github.sha }} .
+        run: |
+          docker build --platform linux/arm64 \
+            --build-arg APP_COMMIT_SHA=${{ github.sha }} \
+            --tag sequent:${{ github.sha }} .
       - name: Esegue l'immagine in un container isolato
         run: |
           docker run --platform linux/arm64 --detach --name sequent-pr-smoke \

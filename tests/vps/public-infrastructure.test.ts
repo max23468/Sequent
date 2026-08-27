@@ -47,6 +47,45 @@ test("il runbook non include utente, hostname o endpoint amministrativi reali", 
   assert.match(runbook, /preflight\.env/);
 });
 
+test("le build VPS sono confinate dal wrapper con lock, soglia disco e pulizia", () => {
+  const wrapper = read("scripts/vps/with-temporary-docker-image.sh");
+  const cleanup = read("scripts/vps/prune-docker-images.sh");
+  const runbook = read("docs/runbooks/vps.md");
+  const dockerfile = read("Dockerfile");
+  const ci = read(".github/workflows/ci.yml");
+  const release = read(".github/workflows/release-candidate.yml");
+  const service = read("deploy/systemd/sequent-docker-prune.service");
+  const timer = read("deploy/systemd/sequent-docker-prune.timer");
+
+  assert.match(wrapper, /hub-fatture-sequent-docker\.lock/);
+  assert.match(wrapper, /SEQUENT_BUILD_MAX_DISK_PERCENT:-79/);
+  assert.match(wrapper, /dangling_before/);
+  assert.match(wrapper, /docker image ls --no-trunc --filter dangling=true -q/);
+  assert.doesNotMatch(wrapper, /docker image prune/);
+  assert.match(wrapper, /SEQUENT_IMAGE_REVISION/);
+  assert.match(cleanup, /SEQUENT_IMAGE/);
+  assert.match(cleanup, /sequent-release:/);
+  assert.match(cleanup, /@sha256:/);
+  assert.match(cleanup, /image-id/);
+  assert.match(cleanup, /retained-image-ids/);
+  assert.match(cleanup, /\^sequent:/);
+  assert.match(cleanup, /is_sequent_image "\$image_id" \|\| continue/);
+  assert.match(cleanup, /is_protected/);
+  assert.match(runbook, /with-temporary-docker-image\.sh/);
+  assert.match(runbook, /finestra di sicurezza predefinita di 24 ore/);
+  assert.match(
+    dockerfile,
+    /org\.opencontainers\.image\.source="https:\/\/github\.com\/max23468\/Sequent"/,
+  );
+  assert.match(dockerfile, /org\.opencontainers\.image\.revision=\$APP_COMMIT_SHA/);
+  assert.match(ci, /--build-arg APP_COMMIT_SHA=\$\{\{ github\.sha \}\}/);
+  assert.match(release, /--build-arg APP_COMMIT_SHA=\$\{\{ inputs\.commit \}\}/);
+  assert.match(service, /ExecStart=\/opt\/sequent\/runtime\/prune-docker-images\.sh/);
+  assert.match(service, /ProtectSystem=strict/);
+  assert.match(timer, /OnCalendar=daily/);
+  assert.match(timer, /Persistent=true/);
+});
+
 test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", () => {
   const compose = read("deploy/compose.example.yml");
   const dockerfile = read("Dockerfile");

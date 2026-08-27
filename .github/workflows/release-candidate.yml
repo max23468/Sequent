@@ -117,7 +117,9 @@ jobs:
         env:
           IMAGE_TAG: sequent-release:${{ inputs.commit }}
         run: |
-          docker build --platform linux/arm64 --tag "$IMAGE_TAG" .
+          docker build --platform linux/arm64 \
+            --build-arg APP_COMMIT_SHA=${{ inputs.commit }} \
+            --tag "$IMAGE_TAG" .
           docker run --platform linux/arm64 --detach --name sequent-release-smoke \
             --read-only --user 10001:10001 --cap-drop ALL \
             --security-opt no-new-privileges:true \
