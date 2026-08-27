@@ -73,13 +73,17 @@ jobs:
         with:
           ref: ${{ inputs.commit }}
           persist-credentials: false
-      - name: Blocca vulnerabilità note nel lockfile
+      - name: Blocca vulnerabilità critiche o correggibili nel lockfile
         run: |
+          scan_status=0
           docker run --rm \
             --volume "$PWD:/src:ro" \
             --workdir /src \
             ghcr.io/google/osv-scanner@sha256:8108ae94eadea5a02c9bec6e646909d5b790b44bd62d7f5b7f0b1d6d0ffc7734 \
-            scan source --lockfile package-lock.json
+            scan source --format vertical --lockfile package-lock.json \
+            > dependency-vulnerability-report.txt || scan_status=$?
+          test "$scan_status" -eq 0 || test "$scan_status" -eq 1
+          node scripts/github/osv-vulnerability-gate.mjs dependency-vulnerability-report.txt
 
   browser-suite:
     name: Browser matrix automatica release
@@ -183,7 +187,7 @@ jobs:
             scan image --format vertical --archive /scan/sequent-release-arm64.tar \
             > image-vulnerability-report.txt || scan_status=$?
           test "$scan_status" -eq 0 || test "$scan_status" -eq 1
-          node scripts/github/image-vulnerability-gate.mjs image-vulnerability-report.txt
+          node scripts/github/osv-vulnerability-gate.mjs image-vulnerability-report.txt
 
   release-candidate-gate:
     name: Release candidate gate
