@@ -197,7 +197,7 @@ async function main() {
       run("gh", [
         "api",
         `repos/${repository}/issues/${pr.number}/comments`,
-        "--field",
+        "--raw-field",
         "body=@codex review",
       ]);
     }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   checkState,
@@ -63,4 +64,10 @@ test("attende che GitHub esponga il nuovo HEAD della PR", async () => {
 
   assert.equal(pr.headRefOid, "new");
   assert.deepEqual(pauses, [10]);
+});
+
+test("invia l'invocazione Codex esatta come campo raw", async () => {
+  const source = await readFile(new URL("./publish.mjs", import.meta.url), "utf8");
+  assert.match(source, /"--raw-field",\s*"body=@codex review"/);
+  assert.doesNotMatch(source, /"--field",\s*"body=@codex review"/);
 });
