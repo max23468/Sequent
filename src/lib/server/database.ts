@@ -268,7 +268,7 @@ function applyMigrations(database: Database.Database): void {
     .prepare("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (1, ?)")
     .run(new Date().toISOString());
   // Lo schema è la fonte di verità: riparare anche database provenienti da una
-  // migrazione M3 interrotta o da checkout concorrenti con numeri già occupati.
+  // migrazione documentale interrotta o da checkout concorrenti con numeri già occupati.
   applyM3Migration(database);
 }
 

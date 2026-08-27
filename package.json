@@ -13,7 +13,7 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "admin:backup": "node scripts/admin/backup.ts",
-    "benchmark:m3": "node scripts/benchmark/m3.ts",
+    "benchmark:document-intelligence": "node scripts/benchmark/document-intelligence.ts",
     "docs:check": "node scripts/check-documentation-consistency.mjs",
     "format:check": "oxfmt --check scripts tests src package.json tsconfig.json svelte.config.js vite.config.ts playwright.config.ts svelte-doctor.config.json",
     "lint": "oxlint scripts tests src",

@@ -247,7 +247,7 @@ test("mostra una verifica tecnica fallita nella Dashboard e nella pratica", asyn
 });
 
 test("mostra la fonte e registra una correzione manuale", async ({ page }) => {
-  const practiceTitle = unique("Pratica revisione M3");
+  const practiceTitle = unique("Pratica revisione fonti");
   const documentName = `revisione-${suffix}.txt`;
   await authenticate(page);
   await createPracticeFromDashboard(page, practiceTitle);

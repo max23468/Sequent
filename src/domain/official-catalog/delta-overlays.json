@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "bundleId": "SUC-OFFICIAL-2025-07-15-FULL",
-  "status": "m0-inventory",
+  "status": "inventory-only",
   "overlays": [
     {
       "sourceId": "SRC-09",

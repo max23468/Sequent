@@ -106,7 +106,7 @@ export interface BenchmarkReport {
   criticalSilentErrors: number;
   inventedSources: number;
   nonCriticalPrecision: number;
-  passedM3Safety: boolean;
+  passedSafetyGate: boolean;
   results: Array<{
     caseId: string;
     category: (typeof benchmarkCategories)[number];
@@ -164,7 +164,7 @@ function sameConflictSources(
   });
 }
 
-export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
+export function evaluateDocumentIntelligenceBenchmark(input: unknown): BenchmarkReport {
   const dataset = benchmarkDatasetSchema.parse(input);
   const totals = emptyTotals();
   const results: BenchmarkReport["results"] = [];
@@ -295,7 +295,7 @@ export function evaluateM3Benchmark(input: unknown): BenchmarkReport {
     criticalSilentErrors,
     inventedSources: totals.invented_source,
     nonCriticalPrecision,
-    passedM3Safety:
+    passedSafetyGate:
       criticalSilentErrors === 0 &&
       totals.invented === 0 &&
       totals.invented_source === 0 &&

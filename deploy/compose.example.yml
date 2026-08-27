@@ -28,6 +28,7 @@ services:
     pids_limit: 256
     security_opt:
       - no-new-privileges:true
+      - seccomp=unconfined
     cap_drop:
       - ALL
 

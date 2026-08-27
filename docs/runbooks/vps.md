@@ -30,6 +30,8 @@ Il runtime riceve richieste pubbliche esclusivamente da Caddy attraverso il bind
 
 Il `tmpfs` di `/tmp` usa gli stessi UID e GID numerici del processo applicativo. OCR, LibreOffice e gli altri processi figli possono così creare temporanei senza rendere scrivibile il filesystem dell'immagine o allargare la modalità `1770`.
 
+Il runtime mantiene `no-new-privileges`, utente non root, filesystem dell'immagine in sola lettura e tutte le capability Linux rimosse. La sola eccezione al profilo container predefinito è `seccomp=unconfined`: serve al sandbox `bwrap` interno della CLI Codex per creare namespace utente e mount non privilegiati. Senza questa opzione il login risulta valido, ma ogni analisi fallisce prima dell'avvio della run. L'isolamento applicativo Codex continua a consentire la lettura del solo workspace temporaneo e a negare la rete agli strumenti del modello.
+
 ## Toolchain
 
 Le versioni richieste di Node e npm sono definite dagli `engines` di `package.json` e dal lockfile. Sulla VPS provengono dall'archivio ARM64 ufficiale verificato con `SHASUMS256.txt`. Le installazioni immutabili vivono sotto `/opt/sequent/runtime/toolchains/versions/`; i puntatori `node-current` e `node-rollback` identificano rispettivamente la linea attiva e quella di ritorno. Nessuna delle due viene aggiunta al `PATH` globale, così la toolchain di Sequent non interferisce con Hub Fatture.

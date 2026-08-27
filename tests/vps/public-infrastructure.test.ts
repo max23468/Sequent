@@ -60,10 +60,14 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
     compose,
     /\/tmp:size=256m,mode=1770,uid=\$\{SEQUENT_RUNTIME_UID:\?[^}]+\},gid=\$\{SEQUENT_RUNTIME_GID:\?[^}]+\}/,
   );
+  assert.match(compose, /no-new-privileges:true/);
+  assert.match(compose, /seccomp=unconfined/);
+  assert.match(compose, /cap_drop:\s*\n\s*- ALL/);
   assert.match(dockerfile, /ca-certificates/);
   assert.match(dockerfile, /'X-Forwarded-For':'127\.0\.0\.1'/);
   assert.match(runbook, /SEQUENT_ORIGIN/);
   assert.match(runbook, /tmpfs.*stessi UID e GID/);
+  assert.match(runbook, /sandbox `bwrap` interno della CLI Codex/);
   assert.match(runbook, /sovrascrivere gli header inoltrati dal client/);
   assert.match(runbook, /unico hop davanti a Sequent/);
 });

@@ -16,9 +16,9 @@ afterEach(() => {
   }
 });
 
-describe("migrazioni M3", () => {
-  it("verifica ed elabora una sola volta i documenti provenienti da M2", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "sequent-m2-document-migration-"));
+describe("migrazioni della pipeline documentale", () => {
+  it("verifica ed elabora una sola volta i documenti dello schema di fondazione", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-document-pipeline-migration-"));
     directories.push(directory);
     const path = join(directory, "sequent.sqlite");
     const blob = Buffer.from("contenuto legacy sintetico");
@@ -68,14 +68,14 @@ describe("migrazioni M3", () => {
       INSERT INTO schema_migrations(version, applied_at)
       VALUES (1, '2026-08-25T00:00:00.000Z');
       INSERT INTO practices(id, title, status, created_at, updated_at)
-      VALUES ('practice-m2', 'Pratica M2', 'active', '2026-08-25T00:00:00.000Z', '2026-08-25T00:00:00.000Z');
+      VALUES ('practice-foundation', 'Pratica base', 'active', '2026-08-25T00:00:00.000Z', '2026-08-25T00:00:00.000Z');
     `);
     legacy
       .prepare(
         `INSERT INTO documents(
            id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at
          ) VALUES (
-           'document-m2', 'practice-m2', 'legacy.txt', 'text/plain', ?, ?,
+           'document-foundation', 'practice-foundation', 'legacy.txt', 'text/plain', ?, ?,
            'blobs/legacy', '2026-08-25T00:00:00.000Z'
          )`,
       )
@@ -89,7 +89,7 @@ describe("migrazioni M3", () => {
       expect(
         migrated
           .prepare("SELECT type, status FROM jobs WHERE document_id = ? ORDER BY type")
-          .all("document-m2"),
+          .all("document-foundation"),
       ).toEqual([
         { type: "document.process", status: "queued" },
         { type: "foundation.verify_blob", status: "queued" },
@@ -100,13 +100,13 @@ describe("migrazioni M3", () => {
       expect(
         migrated
           .prepare("SELECT type, status FROM jobs WHERE document_id = ? ORDER BY type")
-          .all("document-m2"),
+          .all("document-foundation"),
       ).toEqual([
         { type: "document.process", status: "completed" },
         { type: "foundation.verify_blob", status: "completed" },
       ]);
       expect(
-        migrated.prepare("SELECT status FROM documents WHERE id = ?").get("document-m2"),
+        migrated.prepare("SELECT status FROM documents WHERE id = ?").get("document-foundation"),
       ).toEqual({ status: "processed" });
 
       closeDatabase(directory);
@@ -114,7 +114,7 @@ describe("migrazioni M3", () => {
       expect(
         migrated
           .prepare("SELECT type, count(*) AS count FROM jobs WHERE document_id = ? GROUP BY type")
-          .all("document-m2"),
+          .all("document-foundation"),
       ).toEqual([
         { type: "document.process", count: 1 },
         { type: "foundation.verify_blob", count: 1 },
@@ -126,7 +126,7 @@ describe("migrazioni M3", () => {
   });
 
   it("ripara uno schema parziale anche se contiene versioni successive", () => {
-    const directory = mkdtempSync(join(tmpdir(), "sequent-m3-migration-"));
+    const directory = mkdtempSync(join(tmpdir(), "sequent-partial-schema-migration-"));
     directories.push(directory);
     const path = join(directory, "sequent.sqlite");
     const partial = new Database(path);

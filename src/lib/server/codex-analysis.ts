@@ -14,8 +14,9 @@ import { resolveBlobPath } from "./blob-store.ts";
 import { getCodexHome, getCodexModel, getDataDirectory } from "./config.ts";
 import { createReviewItem, getDocumentText } from "./documents.ts";
 
-const CODEX_PROMPT_VERSION = "m3-practice-analysis-v3";
+const CODEX_PROMPT_VERSION = "practice-analysis-v3";
 const CODEX_PERMISSION_PROFILE = "sequent_practice";
+const CODEX_RUN_TIMEOUT_MS = 15 * 60_000;
 
 const proposalSchema = z.object({
   subjectId: z.string().trim().min(1).max(200),
@@ -145,6 +146,16 @@ export interface CodexAnalysisAdapter {
   run(request: CodexRunRequest): Promise<CodexRunResponse>;
 }
 
+function createCodexRunSignal(
+  requestSignal: AbortSignal | undefined,
+  timeoutSignal = AbortSignal.timeout(CODEX_RUN_TIMEOUT_MS),
+): { signal: AbortSignal; timedOut: () => boolean } {
+  return {
+    signal: requestSignal ? AbortSignal.any([requestSignal, timeoutSignal]) : timeoutSignal,
+    timedOut: () => timeoutSignal.aborted && !requestSignal?.aborted,
+  };
+}
+
 function buildCodexRuntimeOptions(workingDirectory: string, codexHome: string): CodexOptions {
   const environmentEntries = [
     "HOME",
@@ -199,13 +210,7 @@ function buildCodexRuntimeOptions(workingDirectory: string, codexHome: string): 
 async function requireDedicatedCodexHome(): Promise<string> {
   const codexHome = getCodexHome();
   if (!codexHome) throw new Error("CODEX_HOME_REQUIRED");
-  const forbiddenEntries = new Set([
-    "config.toml",
-    "requirements.toml",
-    "plugins",
-    "skills",
-    "memories",
-  ]);
+  const forbiddenEntries = new Set(["config.toml", "requirements.toml", "plugins"]);
   const entries = await readdir(codexHome);
   if (entries.some((entry) => forbiddenEntries.has(entry)))
     throw new Error("CODEX_HOME_NOT_DEDICATED");
@@ -228,22 +233,29 @@ class SdkCodexAnalysisAdapter implements CodexAnalysisAdapter {
     const thread = request.threadId
       ? codex.resumeThread(request.threadId, options)
       : codex.startThread(options);
+    const runSignal = createCodexRunSignal(request.signal);
     const streamed = await thread.runStreamed(request.input, {
       outputSchema,
-      signal: request.signal,
+      signal: runSignal.signal,
     });
     let finalResponse = "";
     let usage: Usage | null = null;
     let observedThreadId = request.threadId;
-    for await (const event of streamed.events) {
-      request.onEvent?.(event);
-      if (event.type === "thread.started") observedThreadId = event.thread_id;
-      if (event.type === "item.completed" && event.item.type === "agent_message") {
-        finalResponse = event.item.text;
+    try {
+      for await (const event of streamed.events) {
+        request.onEvent?.(event);
+        if (event.type === "thread.started") observedThreadId = event.thread_id;
+        if (event.type === "item.completed" && event.item.type === "agent_message") {
+          finalResponse = event.item.text;
+        }
+        if (event.type === "turn.completed") usage = event.usage;
+        if (event.type === "turn.failed")
+          throw new Error(`CODEX_TURN_FAILED:${event.error.message}`);
+        if (event.type === "error") throw new Error(`CODEX_STREAM_FAILED:${event.message}`);
       }
-      if (event.type === "turn.completed") usage = event.usage;
-      if (event.type === "turn.failed") throw new Error(`CODEX_TURN_FAILED:${event.error.message}`);
-      if (event.type === "error") throw new Error(`CODEX_STREAM_FAILED:${event.message}`);
+    } catch (error) {
+      if (runSignal.timedOut()) throw new Error("CODEX_TIMEOUT");
+      throw error;
     }
     const threadId = observedThreadId ?? thread.id;
     if (!threadId) throw new Error("CODEX_THREAD_ID_MISSING");
@@ -637,6 +649,7 @@ export function resetCodexThread(database: Database.Database, practiceId: string
 
 export const codexAnalysisInternals = {
   buildCodexRuntimeOptions,
+  createCodexRunSignal,
   requireDedicatedCodexHome,
   validateAnalysisEvidence,
 };

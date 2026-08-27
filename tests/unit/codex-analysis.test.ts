@@ -68,4 +68,34 @@ describe("confine runtime Codex", () => {
       "CODEX_HOME_NOT_DEDICATED",
     );
   });
+
+  it("accetta i file di stato e le skill create automaticamente dalla CLI", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-codex-runtime-home-"));
+    directories.push(directory);
+    process.env.SEQUENT_CODEX_HOME = directory;
+    mkdirSync(join(directory, "skills"));
+    writeFileSync(join(directory, "state.sqlite"), "");
+
+    await expect(codexAnalysisInternals.requireDedicatedCodexHome()).resolves.toBe(directory);
+  });
+
+  it("distingue il timeout della run dalla cancellazione richiesta dall'utente", () => {
+    const timeout = new AbortController();
+    const request = new AbortController();
+    const timedRun = codexAnalysisInternals.createCodexRunSignal(request.signal, timeout.signal);
+
+    timeout.abort();
+    expect(timedRun.signal.aborted).toBe(true);
+    expect(timedRun.timedOut()).toBe(true);
+
+    const cancelledRequest = new AbortController();
+    const pendingTimeout = new AbortController();
+    const cancelledRun = codexAnalysisInternals.createCodexRunSignal(
+      cancelledRequest.signal,
+      pendingTimeout.signal,
+    );
+    cancelledRequest.abort();
+    expect(cancelledRun.signal.aborted).toBe(true);
+    expect(cancelledRun.timedOut()).toBe(false);
+  });
 });
