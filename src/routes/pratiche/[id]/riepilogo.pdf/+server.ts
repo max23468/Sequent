@@ -5,10 +5,10 @@ import { createDossierPdf } from "$lib/server/dossier-pdf";
 import { openDatabase } from "$lib/server/database";
 import {
   buildComplianceReport,
+  listDeclarationDossierSubjects,
   listCalculationRuns,
   listDevolutionScenarios,
   listSharedAssets,
-  listSharedSubjects,
 } from "$lib/server/domain";
 import { getDeclaration, getPractice } from "$lib/server/practices";
 
@@ -43,7 +43,7 @@ export const GET: RequestHandler = async ({ locals, params, url }) => {
   const declarationId = url.searchParams.get("dichiarazione") ?? practice.declarationId;
   const declaration = getDeclaration(database, declarationId, params.id);
   if (!declaration) error(404, "Dichiarazione non trovata");
-  const subjects = listSharedSubjects(database, params.id);
+  const subjects = listDeclarationDossierSubjects(database, params.id, declaration.id);
   const assets = listSharedAssets(database, params.id, declaration.id);
   const report = buildComplianceReport(database, params.id, declaration.id);
   const devolution = listDevolutionScenarios(database, params.id, declaration.id).find(

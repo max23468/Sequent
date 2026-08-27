@@ -361,12 +361,17 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     decedentTaxCode,
   );
   const civilStatus = page.getByRole("combobox", { name: "Stato civile" });
+  const deathDate = page.getByRole("textbox", {
+    name: "Data del decesso, assenza o morte presunta",
+  });
   await expect(
     page.locator(".official-fields").getByRole("button", { name: /^Salva/ }),
   ).toHaveCount(15);
   await civilStatus.selectOption("3");
+  await deathDate.fill("01012025");
   await page.getByRole("button", { name: "Salva dati del defunto" }).click();
   await expect(civilStatus).toHaveValue("3");
+  await expect(deathDate).toHaveValue("01012025");
   await page.getByRole("button", { name: /^Quadro EA:/ }).click();
   await expect(
     page.locator(".official-fields").getByRole("button", { name: /^Salva/ }),

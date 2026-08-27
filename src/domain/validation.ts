@@ -1,4 +1,8 @@
-import { getCatalogField, getTechnicalField } from "./official-catalog/catalog.ts";
+import {
+  getCatalogField,
+  getResolvedTechnicalFacets,
+  getTechnicalField,
+} from "./official-catalog/catalog.ts";
 import { getCanonicalField, type DeclarationSnapshot } from "./declaration.ts";
 
 export interface ValidationIssue {
@@ -33,7 +37,7 @@ export function validateFieldValue(fieldId: string, value: unknown): ValidationI
   }
   const text = typeof value === "string" ? value : String(value ?? "");
   const issues: ValidationIssue[] = [];
-  const facets = field.constraints.facets ?? {};
+  const facets = getResolvedTechnicalFacets(fieldId);
   for (const pattern of facets.pattern ?? []) {
     let valid = false;
     try {

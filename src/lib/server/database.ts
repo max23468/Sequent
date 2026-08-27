@@ -518,6 +518,36 @@ function applyDeclarationAssetEntriesMigration(database: Database.Database): voi
   })();
 }
 
+function applyDeclarationSubjectSnapshotsMigration(database: Database.Database): void {
+  database.transaction(() => {
+    addColumnIfMissing(database, "declaration_subject_entries", "role_snapshot", "TEXT");
+    addColumnIfMissing(database, "declaration_subject_entries", "display_name_snapshot", "TEXT");
+    addColumnIfMissing(database, "declaration_subject_entries", "tax_code_snapshot", "TEXT");
+    const alreadyApplied = database
+      .prepare("SELECT 1 FROM schema_migrations WHERE version = 6")
+      .get();
+    if (alreadyApplied) return;
+    database.exec(`
+      UPDATE declaration_subject_entries
+      SET role_snapshot = (
+            SELECT role FROM shared_subjects
+            WHERE shared_subjects.id = declaration_subject_entries.subject_id
+          ),
+          display_name_snapshot = (
+            SELECT display_name FROM shared_subjects
+            WHERE shared_subjects.id = declaration_subject_entries.subject_id
+          ),
+          tax_code_snapshot = (
+            SELECT tax_code FROM shared_subjects
+            WHERE shared_subjects.id = declaration_subject_entries.subject_id
+          );
+    `);
+    database
+      .prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (6, ?)")
+      .run(new Date().toISOString());
+  })();
+}
+
 function applyMigrations(database: Database.Database): void {
   database.exec(foundationMigration);
   database
@@ -529,6 +559,7 @@ function applyMigrations(database: Database.Database): void {
   applyDomainMigration(database);
   applyDeclarationSubjectEntriesMigration(database);
   applyDeclarationAssetEntriesMigration(database);
+  applyDeclarationSubjectSnapshotsMigration(database);
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

@@ -161,9 +161,11 @@ export function createSuccessiveDeclaration(
     database
       .prepare(
         `INSERT INTO declaration_subject_entries(
-           declaration_id, entry_id, subject_id, sequence, created_at
+           declaration_id, entry_id, subject_id, sequence, created_at,
+           role_snapshot, display_name_snapshot, tax_code_snapshot
          )
-         SELECT ?, entry_id, subject_id, sequence, ?
+         SELECT ?, entry_id, subject_id, sequence, ?,
+                role_snapshot, display_name_snapshot, tax_code_snapshot
          FROM declaration_subject_entries
          WHERE declaration_id = ?
          ORDER BY sequence`,

@@ -3,10 +3,10 @@ import type { PageServerLoad } from "./$types";
 import { openDatabase } from "$lib/server/database";
 import {
   buildComplianceReport,
+  listDeclarationDossierSubjects,
   listCalculationRuns,
   listDevolutionScenarios,
   listSharedAssets,
-  listSharedSubjects,
 } from "$lib/server/domain";
 import { getDeclaration, getPractice } from "$lib/server/practices";
 import { OFFICIAL_SOURCE_LABEL } from "../../../../domain/declaration.ts";
@@ -24,7 +24,7 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
   return {
     practice,
     declaration,
-    subjects: listSharedSubjects(database, params.id),
+    subjects: listDeclarationDossierSubjects(database, params.id, declaration.id),
     assets: listSharedAssets(database, params.id, declaration.id),
     report: buildComplianceReport(database, params.id, declaration.id),
     devolution:

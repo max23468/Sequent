@@ -3,10 +3,10 @@ import type { RequestHandler } from "./$types";
 import { openDatabase } from "$lib/server/database";
 import {
   buildComplianceReport,
+  listDeclarationDossierSubjects,
   listCalculationRuns,
   listDevolutionScenarios,
   listSharedAssets,
-  listSharedSubjects,
 } from "$lib/server/domain";
 import { getDeclaration, getPractice } from "$lib/server/practices";
 
@@ -29,7 +29,7 @@ export const GET: RequestHandler = ({ locals, params, url }) => {
     generatedAt: new Date().toISOString(),
     practice: { id: practice.id, title: practice.title },
     declaration,
-    subjects: listSharedSubjects(database, params.id),
+    subjects: listDeclarationDossierSubjects(database, params.id, declaration.id),
     assets: listSharedAssets(database, params.id, declaration.id),
     devolution: devolution ?? null,
     calculation: calculation ?? null,

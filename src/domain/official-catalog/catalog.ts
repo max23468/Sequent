@@ -321,6 +321,34 @@ export function listTechnicalEnumerationValues(fieldId: string): string[] {
   return [...values];
 }
 
+function mergeFacets(
+  inherited: Record<string, string[]>,
+  local: Record<string, string[]> | undefined,
+): Record<string, string[]> {
+  const merged = { ...inherited };
+  for (const [name, values] of Object.entries(local ?? {}))
+    merged[name] = name === "pattern" ? [...(merged[name] ?? []), ...values] : [...values];
+  return merged;
+}
+
+export function getResolvedTechnicalFacets(fieldId: string): Record<string, string[]> {
+  const field = getTechnicalField(fieldId);
+  if (!field) return {};
+  const typesByName = new Map(technicalTypes.map((type) => [type.name, type]));
+  const visited = new Set<string>();
+  const resolveType = (name: string | undefined): Record<string, string[]> => {
+    if (!name || visited.has(name)) return {};
+    visited.add(name);
+    const type = typesByName.get(name);
+    if (!type) return {};
+    return mergeFacets(resolveType(type.constraints?.base), type.constraints?.facets);
+  };
+  return mergeFacets(
+    mergeFacets(resolveType(field.type), resolveType(field.constraints.base)),
+    field.constraints.facets,
+  );
+}
+
 export function getCatalogStatus() {
   const fields = technicalElements.filter((element) => element.kind === "field");
   const mapped = fields.filter((element) => quadroFromPath(element.path) !== null).length;

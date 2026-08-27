@@ -185,6 +185,13 @@ export interface DeclarationSubjectEntry {
   taxCode: string | null;
 }
 
+export interface DeclarationDossierSubject {
+  id: string;
+  role: SubjectRole;
+  displayName: string;
+  taxCode: string | null;
+}
+
 export interface SharedAsset {
   id: string;
   practiceId: string;
@@ -431,10 +438,20 @@ export function createSharedSubject(
       database
         .prepare(
           `INSERT INTO declaration_subject_entries(
-             declaration_id, entry_id, subject_id, sequence, created_at
-           ) VALUES (?, ?, ?, ?, ?)`,
+             declaration_id, entry_id, subject_id, sequence, created_at,
+             role_snapshot, display_name_snapshot, tax_code_snapshot
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(declaration.id, id, id, sequence, now);
+        .run(
+          declaration.id,
+          id,
+          id,
+          sequence,
+          now,
+          input.role,
+          input.displayName,
+          input.taxCode || null,
+        );
     }
     database.prepare("UPDATE practices SET updated_at = ? WHERE id = ?").run(now, practiceId);
     if (input.declarationId)
@@ -464,9 +481,12 @@ export function listDeclarationSubjectEntries(
               declaration_subject_entries.subject_id,
               declaration_subject_entries.declaration_id,
               declaration_subject_entries.sequence,
-              shared_subjects.role,
-              shared_subjects.display_name,
-              shared_subjects.tax_code
+              coalesce(declaration_subject_entries.role_snapshot, shared_subjects.role) AS role,
+              coalesce(
+                declaration_subject_entries.display_name_snapshot,
+                shared_subjects.display_name
+              ) AS display_name,
+              declaration_subject_entries.tax_code_snapshot AS tax_code
        FROM declaration_subject_entries
        JOIN declarations ON declarations.id = declaration_subject_entries.declaration_id
        JOIN shared_subjects ON shared_subjects.id = declaration_subject_entries.subject_id
@@ -492,6 +512,39 @@ export function listDeclarationSubjectEntries(
       taxCode: row.tax_code === null ? null : String(row.tax_code),
     };
   });
+}
+
+export function listDeclarationDossierSubjects(
+  database: Database.Database,
+  practiceId: string,
+  declarationId: string,
+): DeclarationDossierSubject[] {
+  const decedent = listSharedSubjects(database, practiceId).find(
+    (subject) => subject.role === "decedent",
+  );
+  const entries = listDeclarationSubjectEntries(database, practiceId, declarationId);
+  const seen = new Set<string>();
+  const subjects: DeclarationDossierSubject[] = decedent
+    ? [
+        {
+          id: decedent.id,
+          role: decedent.role,
+          displayName: decedent.displayName,
+          taxCode: decedent.taxCode,
+        },
+      ]
+    : [];
+  for (const entry of entries) {
+    if (seen.has(entry.subjectId)) continue;
+    seen.add(entry.subjectId);
+    subjects.push({
+      id: entry.subjectId,
+      role: entry.role,
+      displayName: entry.displayName,
+      taxCode: entry.taxCode,
+    });
+  }
+  return subjects;
 }
 
 export function createDeclarationSubjectEntry(
@@ -542,10 +595,20 @@ export function createDeclarationSubjectEntry(
     database
       .prepare(
         `INSERT INTO declaration_subject_entries(
-           declaration_id, entry_id, subject_id, sequence, created_at
-         ) VALUES (?, ?, ?, ?, ?)`,
+           declaration_id, entry_id, subject_id, sequence, created_at,
+           role_snapshot, display_name_snapshot, tax_code_snapshot
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(input.declarationId, id, source.subjectId, sequence, now);
+      .run(
+        input.declarationId,
+        id,
+        source.subjectId,
+        sequence,
+        now,
+        source.role,
+        source.displayName,
+        source.taxCode,
+      );
     supersedeDerivedResults(database, input.practiceId, input.declarationId, now);
     const nextRevision = saveDeclaration(
       database,
@@ -1294,10 +1357,16 @@ export function runSuccessionCalculation(
   }
   const beneficiaryIds = [...new Set(scenario.shares.map((share) => share.beneficiaryId))];
   const issues: ValidationIssue[] = [];
-  if (
-    declaration.declaration.successionOpenedAt &&
-    declaration.declaration.successionOpenedAt < "2025-01-01"
-  )
+  if (!declaration.declaration.successionOpenedAt)
+    issues.push({
+      id: "CALCULATION_OPENING_DATE_MISSING",
+      level: "blocking",
+      fieldId: "frontespizio.defunto.data-decesso",
+      message: "Indica la data del decesso prima di confermare il calcolo.",
+      sourceId: "SRC-03",
+      sourcePointer: "Frontespizio — data del decesso",
+    });
+  else if (declaration.declaration.successionOpenedAt < "2025-01-01")
     issues.push({
       id: "CALCULATION_PERIOD_NOT_QUALIFIED",
       level: "blocking",
@@ -1721,6 +1790,13 @@ export function saveCanonicalFields(
            WHERE id = ? AND practice_id = ?`,
         )
         .run(eaTaxCode.value || null, new Date().toISOString(), entry.subjectId, input.practiceId);
+      database
+        .prepare(
+          `UPDATE declaration_subject_entries
+           SET tax_code_snapshot = ?
+           WHERE declaration_id = ? AND subject_id = ?`,
+        )
+        .run(eaTaxCode.value || null, input.declarationId, entry.subjectId);
     }
     if (decedent) {
       const data = { ...decedent.data };
