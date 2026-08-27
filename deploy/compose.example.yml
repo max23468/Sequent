@@ -6,7 +6,7 @@ services:
     read_only: true
     user: ${SEQUENT_RUNTIME_UID:?UID runtime obbligatorio}:${SEQUENT_RUNTIME_GID:?GID runtime obbligatorio}
     tmpfs:
-      - /tmp:size=256m,mode=1770
+      - /tmp:size=256m,mode=1777,uid=${SEQUENT_RUNTIME_UID:?UID runtime obbligatorio},gid=${SEQUENT_RUNTIME_GID:?GID runtime obbligatorio}
     environment:
       NODE_ENV: production
       BODY_SIZE_LIMIT: 260M
@@ -27,9 +27,17 @@ services:
     cpus: 2
     pids_limit: 256
     security_opt:
-      - no-new-privileges:true
+      - apparmor=unconfined
+      - seccomp=unconfined
     cap_drop:
       - ALL
+    cap_add:
+      - DAC_OVERRIDE
+      - NET_ADMIN
+      - SETFCAP
+      - SETGID
+      - SETUID
+      - SYS_ADMIN
 
 networks:
   sequent:

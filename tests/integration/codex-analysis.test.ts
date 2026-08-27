@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtempSync, rmSync, unlinkSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, statSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -40,6 +40,15 @@ describe("analisi pratica con Codex", () => {
     const adapter: CodexAnalysisAdapter = {
       async run(request) {
         expect(request.input[0]).toMatchObject({ type: "text" });
+        expect(statSync(request.workingDirectory).mode & 0o777).toBe(0o755);
+        expect(statSync(join(request.workingDirectory, "manifest.json")).mode & 0o777).toBe(0o644);
+        const documentDirectory = join(request.workingDirectory, "documents");
+        expect(statSync(documentDirectory).mode & 0o777).toBe(0o755);
+        expect(
+          readdirSync(documentDirectory).map(
+            (name) => statSync(join(documentDirectory, name)).mode & 0o777,
+          ),
+        ).toEqual([0o644, 0o644]);
         return {
           threadId: "thread-sintetico",
           usage: null,

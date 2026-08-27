@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 test.describe.configure({ mode: "serial" });
 
-const password = "FondazioneM2Sicura2026";
+const password = "SequentSviluppoSicuro2026";
 const suffix = `${process.pid}-${Date.now()}`;
 
 function unique(label: string) {
@@ -101,7 +101,7 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
     (await page.locator(".workspace-panel-heading").nth(1).locator(":scope > span").boundingBox())
       ?.width,
   ).toBeGreaterThanOrEqual(46);
-  await expect(page.getByText("Non disponibile prima di M4")).toBeVisible();
+  await expect(page.getByText("Funzionalità non ancora disponibile")).toBeVisible();
   await expect(page.getByRole("button", { name: "Conferma" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Modifica" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Rifiuta" })).toBeDisabled();
@@ -247,7 +247,7 @@ test("mostra una verifica tecnica fallita nella Dashboard e nella pratica", asyn
 });
 
 test("mostra la fonte e registra una correzione manuale", async ({ page }) => {
-  const practiceTitle = unique("Pratica revisione M3");
+  const practiceTitle = unique("Pratica revisione documentale");
   const documentName = `revisione-${suffix}.txt`;
   await authenticate(page);
   await createPracticeFromDashboard(page, practiceTitle);

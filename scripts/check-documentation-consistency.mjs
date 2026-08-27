@@ -12,7 +12,31 @@ const markdownFiles = execFileSync(
   .filter((file) => file && existsSync(file))
   .sort();
 
+const implementationFiles = execFileSync(
+  "git",
+  [
+    "ls-files",
+    "-z",
+    "--cached",
+    "--",
+    "*.js",
+    "*.json",
+    "*.mjs",
+    "*.sh",
+    "*.svelte",
+    "*.ts",
+    "*.txt",
+    "*.yaml",
+    "*.yml",
+  ],
+  { encoding: "utf8" },
+)
+  .split("\0")
+  .filter((file) => file && file !== "package-lock.json" && existsSync(file))
+  .sort();
+
 const satelliteExceptions = new Set(["CHANGELOG.md", "docs/MASTER_PLAN.md"]);
+const milestoneIdentifierPattern = /(?<!AR)M\d+|(?:^|[^a-z])m\d+/u;
 const sourceManifest = JSON.parse(
   readFileSync("src/domain/official-catalog/source-manifest.json", "utf8"),
 );
@@ -34,10 +58,14 @@ for (const file of markdownFiles) {
     violations.push(`${file}: replica una major tecnica definita nei manifest eseguibili`);
   }
 
+  if (file !== "docs/MASTER_PLAN.md" && milestoneIdentifierPattern.test(content)) {
+    violations.push(`${file}: usa un ID milestone fuori dal capitolo canonico`);
+  }
+
   if (satelliteExceptions.has(file)) continue;
 
   const checks = [
-    [/\bM\d+\b|\bmilestone\b/iu, "replica una milestone"],
+    [/\bmilestone\b/iu, "replica una milestone"],
     [/\b20\d{2}\b/u, "contiene una data invece di rimandare alla fonte canonica"],
     [/\bv?\d+\.\d+(?:\.\d+)?\b/iu, "replica una versione"],
     [/\bsezion(?:e|i)\s+\d/iu, "usa un riferimento numerico fragile a una sezione"],
@@ -45,6 +73,13 @@ for (const file of markdownFiles) {
 
   for (const [pattern, message] of checks) {
     if (pattern.test(content)) violations.push(`${file}: ${message}`);
+  }
+}
+
+for (const file of implementationFiles) {
+  const content = readFileSync(file, "utf8");
+  if (milestoneIdentifierPattern.test(file) || milestoneIdentifierPattern.test(content)) {
+    violations.push(`${file}: usa un ID milestone nel codice permanente`);
   }
 }
 
@@ -67,7 +102,7 @@ if (milestoneStart === -1 || milestoneEnd <= milestoneStart) {
   violations.push("docs/MASTER_PLAN.md: capitolo milestone non individuabile");
 } else {
   const outsideMilestones = masterPlan.slice(0, milestoneStart) + masterPlan.slice(milestoneEnd);
-  if (/\bM\d+\b/u.test(outsideMilestones)) {
+  if (milestoneIdentifierPattern.test(outsideMilestones)) {
     violations.push("docs/MASTER_PLAN.md: ID milestone duplicato fuori dal capitolo canonico");
   }
 }

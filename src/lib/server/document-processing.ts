@@ -822,7 +822,7 @@ export async function processDocument(
             value: "Controllare il testo estratto",
           },
         ],
-        ruleVersion: "m3-ocr-confidence-v1",
+        ruleVersion: "ocr-confidence-v1",
       });
     }
   } catch (error) {

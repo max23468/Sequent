@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateM3Benchmark } from "../../src/lib/benchmark/m3.ts";
+import { evaluateExtractionSafetyBenchmark } from "../../src/lib/benchmark/extraction-safety.ts";
 
 const corpusHash = "a".repeat(64);
 const expectedConflictSources = [
@@ -31,10 +31,10 @@ const observedConflictSources = [
   },
 ];
 
-describe("benchmark M3", () => {
+describe("benchmark di sicurezza estrattiva", () => {
   it("rifiuta risultati osservati con la stessa chiave", () => {
     expect(() =>
-      evaluateM3Benchmark({
+      evaluateExtractionSafetyBenchmark({
         corpusId: "sintetico",
         corpusHash,
         cases: [
@@ -77,7 +77,7 @@ describe("benchmark M3", () => {
   });
 
   it("blocca una fonte inventata e un errore critico accettato", () => {
-    const report = evaluateM3Benchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -108,12 +108,12 @@ describe("benchmark M3", () => {
         },
       ],
     });
-    expect(report.passedM3Safety).toBe(false);
+    expect(report.passedSafetyGate).toBe(false);
     expect(report.inventedSources).toBe(1);
   });
 
   it("considera sicuro un valore errato lasciato da verificare", () => {
-    const report = evaluateM3Benchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -144,12 +144,12 @@ describe("benchmark M3", () => {
         },
       ],
     });
-    expect(report.passedM3Safety).toBe(true);
+    expect(report.passedSafetyGate).toBe(true);
     expect(report.totals.correctly_pending).toBe(1);
   });
 
   it("blocca una fonte inventata anche se il valore errato resta da verificare", () => {
-    const report = evaluateM3Benchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -180,13 +180,13 @@ describe("benchmark M3", () => {
         },
       ],
     });
-    expect(report.passedM3Safety).toBe(false);
+    expect(report.passedSafetyGate).toBe(false);
     expect(report.inventedSources).toBe(1);
     expect(report.totals.correctly_pending).toBe(0);
   });
 
   it("blocca fonte o pagina sbagliata anche quando il valore coincide", () => {
-    const report = evaluateM3Benchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -217,13 +217,13 @@ describe("benchmark M3", () => {
         },
       ],
     });
-    expect(report.passedM3Safety).toBe(false);
+    expect(report.passedSafetyGate).toBe(false);
     expect(report.criticalSilentErrors).toBe(1);
     expect(report.totals.wrong).toBe(1);
   });
 
   it("blocca un estratto inventato anche con valore, documento e pagina corretti", () => {
-    const report = evaluateM3Benchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -254,13 +254,13 @@ describe("benchmark M3", () => {
         },
       ],
     });
-    expect(report.passedM3Safety).toBe(false);
+    expect(report.passedSafetyGate).toBe(false);
     expect(report.inventedSources).toBe(1);
     expect(report.criticalSilentErrors).toBe(1);
   });
 
   it("blocca un estratto vuoto dopo la normalizzazione", () => {
-    const report = evaluateM3Benchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -291,12 +291,12 @@ describe("benchmark M3", () => {
         },
       ],
     });
-    expect(report.passedM3Safety).toBe(false);
+    expect(report.passedSafetyGate).toBe(false);
     expect(report.inventedSources).toBe(1);
   });
 
   it("blocca conflitti critici ignorati e risultati inventati", () => {
-    const report = evaluateM3Benchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -320,14 +320,14 @@ describe("benchmark M3", () => {
         },
       ],
     });
-    expect(report.passedM3Safety).toBe(false);
+    expect(report.passedSafetyGate).toBe(false);
     expect(report.totals.invented).toBe(1);
     expect(report.totals.conflict_ignored).toBe(1);
     expect(report.criticalSilentErrors).toBe(1);
   });
 
   it("blocca un campo critico non trovato", () => {
-    const report = evaluateM3Benchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -349,13 +349,13 @@ describe("benchmark M3", () => {
         },
       ],
     });
-    expect(report.passedM3Safety).toBe(false);
+    expect(report.passedSafetyGate).toBe(false);
     expect(report.totals.not_found).toBe(1);
     expect(report.criticalSilentErrors).toBe(1);
   });
 
   it("non accetta un conflitto con la stessa fonte duplicata", () => {
-    const report = evaluateM3Benchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -376,12 +376,12 @@ describe("benchmark M3", () => {
         },
       ],
     });
-    expect(report.passedM3Safety).toBe(false);
+    expect(report.passedSafetyGate).toBe(false);
     expect(report.totals.invented_source).toBe(1);
   });
 
   it("blocca valori, pagine o estratti inventati nelle fonti di un conflitto", () => {
-    const report = evaluateM3Benchmark({
+    const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
       corpusHash,
       cases: [
@@ -410,7 +410,7 @@ describe("benchmark M3", () => {
         },
       ],
     });
-    expect(report.passedM3Safety).toBe(false);
+    expect(report.passedSafetyGate).toBe(false);
     expect(report.inventedSources).toBe(1);
     expect(report.criticalSilentErrors).toBe(1);
   });

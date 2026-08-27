@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
-import { copyFile, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
 import {
   Codex,
@@ -14,8 +15,9 @@ import { resolveBlobPath } from "./blob-store.ts";
 import { getCodexHome, getCodexModel, getDataDirectory } from "./config.ts";
 import { createReviewItem, getDocumentText } from "./documents.ts";
 
-const CODEX_PROMPT_VERSION = "m3-practice-analysis-v3";
+const CODEX_PROMPT_VERSION = "practice-analysis-v3";
 const CODEX_PERMISSION_PROFILE = "sequent_practice";
+const CODEX_RUN_TIMEOUT_MS = 15 * 60_000;
 
 const proposalSchema = z.object({
   subjectId: z.string().trim().min(1).max(200),
@@ -145,6 +147,16 @@ export interface CodexAnalysisAdapter {
   run(request: CodexRunRequest): Promise<CodexRunResponse>;
 }
 
+function createCodexRunSignal(
+  requestSignal: AbortSignal | undefined,
+  timeoutSignal = AbortSignal.timeout(CODEX_RUN_TIMEOUT_MS),
+): { signal: AbortSignal; timedOut: () => boolean } {
+  return {
+    signal: requestSignal ? AbortSignal.any([requestSignal, timeoutSignal]) : timeoutSignal,
+    timedOut: () => timeoutSignal.aborted && !requestSignal?.aborted,
+  };
+}
+
 function buildCodexRuntimeOptions(workingDirectory: string, codexHome: string): CodexOptions {
   const environmentEntries = [
     "HOME",
@@ -199,13 +211,7 @@ function buildCodexRuntimeOptions(workingDirectory: string, codexHome: string): 
 async function requireDedicatedCodexHome(): Promise<string> {
   const codexHome = getCodexHome();
   if (!codexHome) throw new Error("CODEX_HOME_REQUIRED");
-  const forbiddenEntries = new Set([
-    "config.toml",
-    "requirements.toml",
-    "plugins",
-    "skills",
-    "memories",
-  ]);
+  const forbiddenEntries = new Set(["config.toml", "requirements.toml", "plugins"]);
   const entries = await readdir(codexHome);
   if (entries.some((entry) => forbiddenEntries.has(entry)))
     throw new Error("CODEX_HOME_NOT_DEDICATED");
@@ -228,22 +234,29 @@ class SdkCodexAnalysisAdapter implements CodexAnalysisAdapter {
     const thread = request.threadId
       ? codex.resumeThread(request.threadId, options)
       : codex.startThread(options);
+    const runSignal = createCodexRunSignal(request.signal);
     const streamed = await thread.runStreamed(request.input, {
       outputSchema,
-      signal: request.signal,
+      signal: runSignal.signal,
     });
     let finalResponse = "";
     let usage: Usage | null = null;
     let observedThreadId = request.threadId;
-    for await (const event of streamed.events) {
-      request.onEvent?.(event);
-      if (event.type === "thread.started") observedThreadId = event.thread_id;
-      if (event.type === "item.completed" && event.item.type === "agent_message") {
-        finalResponse = event.item.text;
+    try {
+      for await (const event of streamed.events) {
+        request.onEvent?.(event);
+        if (event.type === "thread.started") observedThreadId = event.thread_id;
+        if (event.type === "item.completed" && event.item.type === "agent_message") {
+          finalResponse = event.item.text;
+        }
+        if (event.type === "turn.completed") usage = event.usage;
+        if (event.type === "turn.failed")
+          throw new Error(`CODEX_TURN_FAILED:${event.error.message}`);
+        if (event.type === "error") throw new Error(`CODEX_STREAM_FAILED:${event.message}`);
       }
-      if (event.type === "turn.completed") usage = event.usage;
-      if (event.type === "turn.failed") throw new Error(`CODEX_TURN_FAILED:${event.error.message}`);
-      if (event.type === "error") throw new Error(`CODEX_STREAM_FAILED:${event.message}`);
+    } catch (error) {
+      if (runSignal.timedOut()) throw new Error("CODEX_TIMEOUT");
+      throw error;
     }
     const threadId = observedThreadId ?? thread.id;
     if (!threadId) throw new Error("CODEX_THREAD_ID_MISSING");
@@ -356,11 +369,13 @@ async function prepareWorkspace(
   documents: PracticeSnapshotDocument[],
   dataDirectory: string,
 ): Promise<{ directory: string; input: Input }> {
-  const root = join(dataDirectory, "tmp", "codex");
-  await mkdir(root, { recursive: true, mode: 0o700 });
+  const root = join(tmpdir(), "sequent-codex");
+  await mkdir(root, { recursive: true, mode: 0o755 });
+  await chmod(root, 0o755);
   const directory = await mkdtemp(join(root, "practice-"));
   try {
-    await mkdir(join(directory, "documents"), { mode: 0o700 });
+    await chmod(directory, 0o755);
+    await mkdir(join(directory, "documents"), { mode: 0o755 });
     const manifest: unknown[] = [];
     const input: Input = [
       {
@@ -381,13 +396,14 @@ async function prepareWorkspace(
       const localName = `${document.id}${extension || ".bin"}`;
       const localPath = join(directory, "documents", localName);
       await copyFile(resolveBlobPath(dataDirectory, document.blobPath), localPath);
-      const textName = `${document.id}.txt`;
+      await chmod(localPath, 0o644);
+      const textName = `${document.id}.extracted.txt`;
       await writeFile(
         join(directory, "documents", textName),
         document.pages
           .map((page) => `--- Pagina ${page.pageNumber} ---\n${page.text}`)
           .join("\n\n"),
-        { encoding: "utf8", mode: 0o600 },
+        { encoding: "utf8", mode: 0o644 },
       );
       manifest.push({
         id: document.id,
@@ -407,7 +423,7 @@ async function prepareWorkspace(
     }
     await writeFile(join(directory, "manifest.json"), JSON.stringify(manifest, null, 2), {
       encoding: "utf8",
-      mode: 0o600,
+      mode: 0o644,
     });
     return { directory, input };
   } catch (error) {
@@ -637,6 +653,7 @@ export function resetCodexThread(database: Database.Database, practiceId: string
 
 export const codexAnalysisInternals = {
   buildCodexRuntimeOptions,
+  createCodexRunSignal,
   requireDedicatedCodexHome,
   validateAnalysisEvidence,
 };

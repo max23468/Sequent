@@ -56,8 +56,33 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
   assert.match(compose, /ADDRESS_HEADER: X-Forwarded-For/);
   assert.match(compose, /XFF_DEPTH: "1"/);
   assert.match(compose, /127\.0\.0\.1:3300:3000/);
+  assert.match(
+    compose,
+    /\/tmp:size=256m,mode=1777,uid=\$\{SEQUENT_RUNTIME_UID:\?[^}]+\},gid=\$\{SEQUENT_RUNTIME_GID:\?[^}]+\}/,
+  );
+  assert.doesNotMatch(compose, /no-new-privileges:true/);
+  assert.match(compose, /apparmor=unconfined/);
+  assert.match(compose, /seccomp=unconfined/);
+  assert.match(compose, /cap_drop:\s*\n\s*- ALL/);
+  for (const capability of [
+    "DAC_OVERRIDE",
+    "NET_ADMIN",
+    "SETFCAP",
+    "SETGID",
+    "SETUID",
+    "SYS_ADMIN",
+  ]) {
+    assert.match(compose, new RegExp(`\\s- ${capability}`));
+  }
+  assert.match(dockerfile, /ca-certificates/);
+  assert.match(dockerfile, /scripts\/codex-launcher\.c/);
+  assert.match(dockerfile, /find \/ -xdev -type f -perm \/6000 -exec chmod a-s/);
+  assert.match(dockerfile, /install -o root -g root -m 4755/);
   assert.match(dockerfile, /'X-Forwarded-For':'127\.0\.0\.1'/);
   assert.match(runbook, /SEQUENT_ORIGIN/);
+  assert.match(runbook, /tmpfs.*stessi UID e GID.*1777/);
+  assert.match(runbook, /launcher minimo della CLI Codex/);
+  assert.match(runbook, /`bwrap`/);
   assert.match(runbook, /sovrascrivere gli header inoltrati dal client/);
   assert.match(runbook, /unico hop davanti a Sequent/);
 });
