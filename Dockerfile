@@ -24,7 +24,7 @@ ENV NODE_ENV=production \
 WORKDIR /app
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
-      file ghostscript imagemagick libreoffice-calc libreoffice-writer openssl \
+      ca-certificates file ghostscript imagemagick libreoffice-calc libreoffice-writer openssl \
       ocrmypdf poppler-utils tesseract-ocr tesseract-ocr-ita unzip \
     && if [ ! -e /usr/local/bin/magick ]; then ln -s /usr/bin/convert /usr/local/bin/magick; fi \
     && rm -rf /var/lib/apt/lists/* \

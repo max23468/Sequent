@@ -28,6 +28,8 @@ La configurazione privata del runtime valorizza `SEQUENT_RUNTIME_UID` e `SEQUENT
 
 Il runtime riceve richieste pubbliche esclusivamente da Caddy attraverso il binding di loopback dichiarato in Compose. `ORIGIN` vincola la ricostruzione degli URL e la protezione CSRF all'origine HTTPS dichiarata. Per il rate limit del login, adapter-node legge `X-Forwarded-For` con `XFF_DEPTH=1`: la configurazione Caddy qualificata deve quindi sovrascrivere gli header inoltrati dal client e rappresentare l'unico hop davanti a Sequent. Aggiungere un altro proxy richiede una nuova qualifica esplicita della profondità; non aumentarla preventivamente.
 
+Il `tmpfs` di `/tmp` usa gli stessi UID e GID numerici del processo applicativo. OCR, LibreOffice e gli altri processi figli possono così creare temporanei senza rendere scrivibile il filesystem dell'immagine o allargare la modalità `1770`.
+
 ## Toolchain
 
 Le versioni richieste di Node e npm sono definite dagli `engines` di `package.json` e dal lockfile. Sulla VPS provengono dall'archivio ARM64 ufficiale verificato con `SHASUMS256.txt`. Le installazioni immutabili vivono sotto `/opt/sequent/runtime/toolchains/versions/`; i puntatori `node-current` e `node-rollback` identificano rispettivamente la linea attiva e quella di ritorno. Nessuna delle due viene aggiunta al `PATH` globale, così la toolchain di Sequent non interferisce con Hub Fatture.
