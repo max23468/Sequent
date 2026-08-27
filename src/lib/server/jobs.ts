@@ -147,6 +147,21 @@ export function enqueueJob(
   );
 }
 
+export function resetExhaustedBlobVerification(
+  database: Database.Database,
+  documentId: string,
+): boolean {
+  const result = database
+    .prepare(
+      `UPDATE jobs
+       SET status = 'queued', progress = 0, attempts = 0, error_code = NULL, updated_at = ?
+       WHERE type = 'foundation.verify_blob' AND document_id = ?
+         AND status = 'failed' AND attempts >= ?`,
+    )
+    .run(new Date().toISOString(), documentId, MAX_JOB_ATTEMPTS);
+  return result.changes > 0;
+}
+
 export function recoverInterruptedJobs(database: Database.Database): number {
   const now = new Date().toISOString();
   const transaction = database.transaction(() => {

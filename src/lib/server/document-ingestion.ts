@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 import { persistUpload, type PersistedUpload } from "./blob-store.ts";
-import { enqueueJob } from "./jobs.ts";
+import { enqueueJob, resetExhaustedBlobVerification } from "./jobs.ts";
 import { createPractice, getPractice } from "./practices.ts";
 
 export interface IngestedDocument {
@@ -21,7 +21,7 @@ function attachUpload(
   database: Database.Database,
   practiceId: string,
   upload: PersistedUpload,
-): IngestedDocument {
+): { document: IngestedDocument; reused: boolean } {
   const existing = database
     .prepare(
       `SELECT id, sha256, byte_size, blob_path
@@ -32,11 +32,14 @@ function attachUpload(
     | undefined;
   if (existing) {
     return {
-      id: existing.id,
-      practiceId,
-      sha256: existing.sha256,
-      byteSize: existing.byte_size,
-      blobPath: existing.blob_path,
+      document: {
+        id: existing.id,
+        practiceId,
+        sha256: existing.sha256,
+        byteSize: existing.byte_size,
+        blobPath: existing.blob_path,
+      },
+      reused: true,
     };
   }
 
@@ -60,11 +63,14 @@ function attachUpload(
     );
   database.prepare("UPDATE practices SET updated_at = ? WHERE id = ?").run(now, practiceId);
   return {
-    id,
-    practiceId,
-    sha256: upload.sha256,
-    byteSize: upload.byteSize,
-    blobPath: upload.blobPath,
+    document: {
+      id,
+      practiceId,
+      sha256: upload.sha256,
+      byteSize: upload.byteSize,
+      blobPath: upload.blobPath,
+    },
+    reused: false,
   };
 }
 
@@ -81,7 +87,9 @@ export function ingestPersistedUpload(
       "practiceId" in destination
         ? destination.practiceId
         : createPractice(database, destination.newPracticeTitle).id;
-    const document = attachUpload(database, practiceId, upload);
+    const attached = attachUpload(database, practiceId, upload);
+    const { document } = attached;
+    if (attached.reused) resetExhaustedBlobVerification(database, document.id);
     enqueueJob(
       database,
       "foundation.verify_blob",
