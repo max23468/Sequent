@@ -73,13 +73,17 @@ jobs:
         with:
           ref: ${{ inputs.commit }}
           persist-credentials: false
-      - name: Blocca vulnerabilità note nel lockfile
+      - name: Blocca vulnerabilità critiche o correggibili nel lockfile
         run: |
+          scan_status=0
           docker run --rm \
             --volume "$PWD:/src:ro" \
             --workdir /src \
             ghcr.io/google/osv-scanner@sha256:8108ae94eadea5a02c9bec6e646909d5b790b44bd62d7f5b7f0b1d6d0ffc7734 \
-            scan source --lockfile package-lock.json
+            scan source --format vertical --lockfile package-lock.json \
+            > dependency-vulnerability-report.txt || scan_status=$?
+          test "$scan_status" -eq 0 || test "$scan_status" -eq 1
+          node scripts/github/osv-vulnerability-gate.mjs dependency-vulnerability-report.txt
 
   browser-suite:
     name: Browser matrix automatica release
@@ -167,15 +171,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: sequent-release-${{ inputs.commit }}
-      - name: Blocca vulnerabilità note nell'archivio candidato
+      - name: Blocca vulnerabilità critiche o correggibili nell'archivio candidato
         run: |
+          scan_status=0
           docker run --rm \
             --volume "$PWD:/scan:ro" \
             ghcr.io/google/osv-scanner@sha256:8108ae94eadea5a02c9bec6e646909d5b790b44bd62d7f5b7f0b1d6d0ffc7734 \
-            scan image --archive /scan/sequent-release-arm64.tar
+            scan image --format vertical --archive /scan/sequent-release-arm64.tar \
+            > image-vulnerability-report.txt || scan_status=$?
+          test "$scan_status" -eq 0 || test "$scan_status" -eq 1
+          node scripts/github/osv-vulnerability-gate.mjs image-vulnerability-report.txt
 
   release-candidate-gate:
     name: Release candidate gate

@@ -211,9 +211,21 @@ test("la candidata rilegge lo stesso artefatto ARM64 senza deploy", async () => 
   );
   assert.match(workflow, /release-review\.mjs --commit/);
   assert.match(workflow, /name: Scansione dipendenze release/);
-  assert.match(workflow, /scan source --lockfile package-lock\.json/);
+  assert.match(workflow, /scan source --format vertical --lockfile package-lock\.json/);
+  assert.match(workflow, /osv-vulnerability-gate\.mjs dependency-vulnerability-report\.txt/);
   assert.match(workflow, /name: Scansione immagine ARM64 release/);
-  assert.match(workflow, /scan image --archive \/scan\/sequent-release-arm64\.tar/);
+  const imageScanJob = workflow.match(/  scan-image:\n(?<job>[\s\S]*?)\n  release-candidate-gate:/)
+    ?.groups?.job;
+  assert.ok(imageScanJob, "job scan-image assente");
+  assert.match(imageScanJob, /actions\/checkout@[0-9a-f]{40}/);
+  assert.match(imageScanJob, /ref: \$\{\{ inputs\.commit \}\}/);
+  assert.match(imageScanJob, /persist-credentials: false/);
+  assert.match(
+    workflow,
+    /scan image --format vertical --archive \/scan\/sequent-release-arm64\.tar/,
+  );
+  assert.match(workflow, /osv-vulnerability-gate\.mjs image-vulnerability-report\.txt/);
+  assert.equal(workflow.match(/osv-vulnerability-gate\.mjs/g)?.length, 2);
   assert.equal(workflow.match(/ghcr\.io\/google\/osv-scanner@sha256:[0-9a-f]{64}/g)?.length, 2);
   assert.match(workflow, /needs\.scan-dependencies\.result/);
   assert.match(workflow, /needs\.scan-image\.result/);
