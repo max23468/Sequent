@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:common="urn:sequent:test:common"
+  targetNamespace="urn:sequent:test:common"
+  elementFormDefault="qualified">
+  <xs:simpleType name="CodiceType">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="3" />
+      <xs:maxLength value="16" />
+      <xs:pattern value="[A-Z0-9]+" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="CodiceFieldType">
+    <xs:restriction base="common:CodiceType" />
+  </xs:simpleType>
+</xs:schema>

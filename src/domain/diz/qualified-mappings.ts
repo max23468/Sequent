@@ -30,6 +30,7 @@ function qualifiedCatalogField(fieldId: string): QualifiedCatalogField {
   if (
     !field ||
     field.status !== "qualified-for-diz" ||
+    typeof field.maxLength !== "number" ||
     !Number.isSafeInteger(field.maxLength) ||
     field.maxLength <= 0 ||
     !field.technicalPath.startsWith("/") ||
@@ -48,7 +49,7 @@ export const QUALIFIED_DIZ_FIELD_MAPPINGS = [
     dizCode: "EA001005",
     catalogFieldId: QUALIFIED_COGNOME.id,
     officialPath: QUALIFIED_COGNOME.technicalPath,
-    sourceIds: QUALIFIED_COGNOME.sourceIds,
+    sourceIds: ["SRC-08"],
     evidence: {
       method: "one-field-official-round-trip",
       platform: "macOS",

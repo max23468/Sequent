@@ -1,17 +1,176 @@
 {
-  "schemaVersion": 1,
-  "bundleId": "SUC-OFFICIAL-2025-07-15-FULL",
-  "status": "scaffold",
-  "rules": [],
+  "schemaVersion": 2,
+  "bundleId": "SUC-OFFICIAL-2026-08-27-COMPREHENSIVE",
+  "status": "partial-chain-only",
+  "rules": [
+    {
+      "id": "QE",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagine 1-2",
+      "formula": "somma quote devolute escluse A,D,C,G,N,E,H e cespiti DN",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "QDN",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagina 2",
+      "formula": "somma quote dei cespiti DN",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "QP",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagine 2-3",
+      "formula": "somma quote delle passività ED",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "AN",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagina 3",
+      "formula": "QE + QDN - QP",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "FR",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagine 3-4 e appendice",
+      "formula": "franchigia unica più favorevole per beneficiario",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "QN",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagina 4",
+      "formula": "AN - FR",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "PR",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagina 4",
+      "formula": "max(0, 10% × (QN - QDN) - QDN), esclusi legatari e presenza BI",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "QTI",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagine 4-5",
+      "formula": "max(0, QN) + PR",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "ISL",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagina 5 e appendice",
+      "formula": "QTI × aliquota per grado di parentela",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "RID-AGEV",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagine 5-6",
+      "formula": "riduzioni L, Q, R e F",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "RID-ART25",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagine 6-7",
+      "formula": "riduzione per precedenti successioni entro cinque anni",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "DET-ESTERO",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagine 7-8",
+      "formula": "min(imposta estera attribuita, quota d’imposta italiana del bene estero)",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "ISN",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagina 8",
+      "formula": "max(0, ISL - RID - DET.estero)",
+      "state": "implemented-and-tested"
+    }
+  ],
   "requiredGoldenSeries": [
-    "quota-ereditaria",
-    "presunzione-DN",
-    "franchigia-condivisa",
-    "riduzioni",
-    "imposta-estera",
-    "nuda-proprieta",
-    "debiti-sei-mesi",
-    "precedenti-successioni-donazioni",
-    "ratei-titoli"
-  ]
+    "QE",
+    "QDN",
+    "QP",
+    "AN",
+    "FR",
+    "QN",
+    "PR",
+    "QTI",
+    "ISL",
+    "RID-AGEV",
+    "RID-ART25",
+    "DET-ESTERO",
+    "ISN"
+  ],
+  "rulesetVersion": "2025.01.1",
+  "goldenExamples": [
+    {
+      "id": "SRC10-fratelli-esempio-completo",
+      "sourceIds": ["SRC-10"],
+      "sourcePointer": "pagine 1-8",
+      "inputEuro": {
+        "estate": 400000,
+        "money": 5000,
+        "liabilities": 1000,
+        "beneficiaries": 2
+      },
+      "expectedPerBeneficiaryEuro": {
+        "qe": 200000,
+        "qdn": 2500,
+        "qp": 500,
+        "an": 202000,
+        "fr": 100000,
+        "qn": 102000,
+        "pr": 7450,
+        "qti": 109450,
+        "isl": 6567,
+        "reliefL": 2052.19,
+        "foreignTaxCredit": 82.08,
+        "isn": 4432.73
+      },
+      "expectedTotalEuro": 8865.46
+    }
+  ],
+  "blockers": [
+    "Copertura di calcolo non ancora qualificata: Sezione V-bis del Quadro EF, credito, imposta da versare, acconto e rateazione.",
+    "Copertura di calcolo non ancora qualificata: imposte ipotecaria e catastale, servizi ipotecari e catastali, bollo e tributi speciali.",
+    "Copertura di calcolo non ancora qualificata: sanzioni, interessi e totale da versare.",
+    "Copertura di calcolo non ancora qualificata: valori catastali e diritti reali.",
+    "Copertura di calcolo non ancora qualificata: quadrature complete dei Quadri EE ed EF.",
+    "Copertura di calcolo non ancora qualificata: tutti gli esempi ufficiali ulteriori rispetto al caso completo già acquisito."
+  ],
+  "coverage": {
+    "implementedChain": [
+      "QE",
+      "QDN",
+      "QP",
+      "AN",
+      "FR",
+      "QN",
+      "PR",
+      "QTI",
+      "ISL",
+      "RID-AGEV",
+      "RID-ART25",
+      "DET-ESTERO",
+      "ISN"
+    ],
+    "goldenExamples": 1,
+    "missingAreas": [
+      "Sezione V-bis del Quadro EF, credito, imposta da versare, acconto e rateazione",
+      "imposte ipotecaria e catastale, servizi ipotecari e catastali, bollo e tributi speciali",
+      "sanzioni, interessi e totale da versare",
+      "valori catastali e diritti reali",
+      "quadrature complete dei Quadri EE ed EF",
+      "tutti gli esempi ufficiali ulteriori rispetto al caso completo già acquisito"
+    ]
+  }
 }

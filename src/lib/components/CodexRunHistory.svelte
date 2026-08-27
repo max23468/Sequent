@@ -20,7 +20,7 @@
 
 <div class="codex-history">
   <div class="codex-history-heading">
-    <span><History size={18} />Run precedenti</span>
+    <span><History size={18} />Analisi precedenti</span>
     {#if hasThread}
       <form method="POST" action="?/resetCodex">
         <button class="button text" type="submit">Reimposta contesto</button>
@@ -35,7 +35,7 @@
       </summary>
       {#if run.summary}<p>{run.summary}</p>{/if}
       {#if run.errorCode}<p class="form-error">{run.errorCode}</p>{/if}
-      <small>{run.model} · effort {run.effort}</small>
+      <small>Livello di approfondimento: {run.effort}</small>
     </details>
   {/each}
 </div>

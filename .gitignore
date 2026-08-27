@@ -22,7 +22,9 @@ test-results/
 *.pfx
 
 # Dati e volumi dell'istanza
-private/
+private/*
+!private/official-sources/
+!private/official-sources/**
 data/
 runtime/
 releases/

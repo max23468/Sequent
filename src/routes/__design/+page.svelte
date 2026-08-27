@@ -4,7 +4,7 @@
   const checks = [
     { id: "PR-2026-048", item: "Documento illeggibile", source: "Documento · p. 1", updated: "24 ago 2026", icon: UserRound },
     { id: "PR-2026-047", item: "Classificazione da confermare", source: "Documento · p. 2", updated: "23 ago 2026", icon: FileText },
-    { id: "PR-2026-046", item: "Differenza DIZ da riconciliare", source: "Importazione DIZ", updated: "22 ago 2026", icon: Home },
+    { id: "PR-2026-046", item: "Differenza nella pratica importata", source: "Importazione da SuccessioniOnLine", updated: "22 ago 2026", icon: Home },
     { id: "PR-2026-045", item: "Dato anagrafico incompleto", source: "Documento · p. 1", updated: "21 ago 2026", icon: UserRound },
     { id: "PR-2026-044", item: "Fonte da confrontare", source: "Due documenti", updated: "20 ago 2026", icon: FileText },
   ];
@@ -21,7 +21,7 @@
     ["PR-2026-048", "Rossi Mario", "Raccolta documenti", "Completa il fascicolo", "24 ago 2026"],
     ["PR-2026-047", "Bianchi Anna", "Da verificare", "Apri le verifiche pendenti", "23 ago 2026"],
     ["PR-2026-046", "Verdi Luigi", "Devoluzione da confermare", "Controlla il riepilogo", "22 ago 2026"],
-    ["PR-2026-045", "Esposito Sara", "Esportata in DIZ", "Apri in SuccessioniOnLine", "21 ago 2026"],
+    ["PR-2026-045", "Esposito Sara", "Pratica esportata", "Apri in SuccessioniOnLine", "21 ago 2026"],
     ["PR-2026-044", "Romano Paolo", "Reimportata", "Riconcilia le differenze", "20 ago 2026"],
     ["PR-2026-043", "Conti Laura", "Chiusa", "Consulta il fascicolo", "19 ago 2026"],
   ];

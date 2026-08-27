@@ -7,10 +7,11 @@ const tracked = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
 
 const forbiddenPrefixes = ["private/", "data/", "runtime/", "releases/", "snapshots/", "tmp/"];
 const forbiddenSuffixes = [".diz", ".suc", ".telematico", ".key", ".pem", ".p12", ".pfx"];
-const officialBinarySuffixes = [".pdf", ".zip"];
+const officialBinarySuffixes = [".jar", ".pdf", ".zip"];
 
 const violations = tracked.filter((file) => {
   const lower = file.toLowerCase();
+  if (lower.startsWith("private/official-sources/")) return false;
   return (
     forbiddenPrefixes.some((prefix) => lower.startsWith(prefix)) ||
     forbiddenSuffixes.some((suffix) => lower.endsWith(suffix)) ||

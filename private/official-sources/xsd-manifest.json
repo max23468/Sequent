@@ -1,0 +1,93 @@
+{
+  "sourceId": "SRC-08",
+  "mainSchema": "SUC/xsd/fornituraSUC13_v1.xsd",
+  "fileCount": 13,
+  "activeDependencyClosure": [
+    "SUC/xsd/fornituraSUC13_v1.xsd",
+    "common/xsd/fornitura_v2.xsd",
+    "common/xsd/typesDati_v2.xsd",
+    "common/xsd/typesProvincie_v2.xsd",
+    "common/xsd/datiFiscali_v3.xsd",
+    "common/xsd/typesFiscali_v3.xsd",
+    "common/xsd/typeEventi_v3.xsd",
+    "common/xsd/telematico_v1.xsd",
+    "registro/xsd/typesReg_v2.xsd"
+  ],
+  "packagedButNotInActiveClosure": [
+    "common/xsd/datiFiscali_v4.xsd",
+    "common/xsd/esitoFornitura_v3.xsd",
+    "common/xsd/typesDati_v3.xsd",
+    "common/xsd/typesFiscali_v4.xsd"
+  ],
+  "wellFormed": true,
+  "mainSchemaCompiled": true,
+  "networkAccessUsed": false,
+  "bootstrapValidation": "lxml.etree.XMLSchema",
+  "entries": [
+    {
+      "path": "SUC/xsd/fornituraSUC13_v1.xsd",
+      "bytes": 293774,
+      "sha256": "25fe2af4fb11143fe9464bed6fc536f5166c41fe20c70fca1a4ba38feb9659b6"
+    },
+    {
+      "path": "common/xsd/datiFiscali_v3.xsd",
+      "bytes": 9525,
+      "sha256": "78ee6420d5ff4c3442581bd5591df2fb6435e6d0f2543582927f8f95f156654f"
+    },
+    {
+      "path": "common/xsd/datiFiscali_v4.xsd",
+      "bytes": 9678,
+      "sha256": "b5ff239c0cfd79512223ee3e9593df82f4f1ba2b9c90196432f6dbef8959e4a7"
+    },
+    {
+      "path": "common/xsd/esitoFornitura_v3.xsd",
+      "bytes": 5002,
+      "sha256": "f14b756a70fbc62f277b13fd87637430ec45179f9abae94ed1df4a58dca5b805"
+    },
+    {
+      "path": "common/xsd/fornitura_v2.xsd",
+      "bytes": 2530,
+      "sha256": "5ecf4c4ab126c6a41d44803cc150697984bfc243cb59cc4dd7cb9d3b63e9840f"
+    },
+    {
+      "path": "common/xsd/telematico_v1.xsd",
+      "bytes": 1560,
+      "sha256": "26b308aae266a241eb0d8a986174c69025cb8d383585e2c3eac3550d94ea5547"
+    },
+    {
+      "path": "common/xsd/typeEventi_v3.xsd",
+      "bytes": 2566,
+      "sha256": "c5e51d4194760a9f68bd229ae8066bd25488898113219b8587dae274f6415d7e"
+    },
+    {
+      "path": "common/xsd/typesDati_v2.xsd",
+      "bytes": 8764,
+      "sha256": "e59d133c627ea710243b5cf3ee2bf7cd42bd3d9f07bae07b755ed77c4523da9c"
+    },
+    {
+      "path": "common/xsd/typesDati_v3.xsd",
+      "bytes": 7506,
+      "sha256": "a78387e21326e3f331f32d4ccd3b2b383ebd4675e5c42793bad2e00cc657b280"
+    },
+    {
+      "path": "common/xsd/typesFiscali_v3.xsd",
+      "bytes": 19740,
+      "sha256": "3d54babe6dc90414d1931f24d6c4aaefe28cfd8aa81ed38ea508fba593d01235"
+    },
+    {
+      "path": "common/xsd/typesFiscali_v4.xsd",
+      "bytes": 19794,
+      "sha256": "065911d00046240599a3bb5544c63f0ae1fa8ab3c5cee40336cbe013632819e9"
+    },
+    {
+      "path": "common/xsd/typesProvincie_v2.xsd",
+      "bytes": 8331,
+      "sha256": "f1c68c41cc070214c7a86fdcbe14fa1ecf26c50adf855d9ce332b7079a262eb4"
+    },
+    {
+      "path": "registro/xsd/typesReg_v2.xsd",
+      "bytes": 254962,
+      "sha256": "dd063ba70fa820af4fa8cac29a1f1e63eb7992f30721303eed7f306e692410fc"
+    }
+  ]
+}

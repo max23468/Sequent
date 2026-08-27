@@ -1,0 +1,485 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:cm="urn:www.agenziaentrate.gov.it:specificheTecniche:common:v2" xmlns="urn:www.agenziaentrate.gov.it:specificheTecniche:sco:common:v3" targetNamespace="urn:www.agenziaentrate.gov.it:specificheTecniche:sco:common:v3" elementFormDefault="qualified" attributeFormDefault="unqualified" version="3.0">
+	<xs:annotation>
+		<xs:documentation xml:lang="it"><![CDATA[
+		Versione 3.0 - 15/02/13
+		- modificato targetNamespace
+		- modificato il tipo semplice Natura_Giuridica_Type: aggiunto valore 45 all'elenco
+
+		Versione 2.0 - 15/02/12
+		- modificato namespace associato al prefisso cm e targetNamespace
+		- aggiunto il tipo complesso Codice_regione_Type
+		]]></xs:documentation>
+	</xs:annotation>
+	<xs:import namespace="urn:www.agenziaentrate.gov.it:specificheTecniche:common:v2" schemaLocation="typesDati_v2.xsd"/>
+	<xs:simpleType name="Codice_Carica_Type">
+		<xs:annotation>
+			<xs:documentation>Tabella generale dei codici carica</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="cm:DatoNP_Type">
+			<xs:enumeration value="1">
+				<xs:annotation>
+					<xs:documentation>Rappresentante legale, negoziale o di fatto, socio amministratore</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="2">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Rappresentante di minore, inabilitato o interdetto, amministratore di sostegno, ovvero curatore dell'eredità giacente, amministratore dell'eredità]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="3">
+				<xs:annotation>
+					<xs:documentation>Curatore fallimentare</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="4">
+				<xs:annotation>
+					<xs:documentation>Commissario liquidatore</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="5">
+				<xs:annotation>
+					<xs:documentation>Commissario giudiziale</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="6">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Rappresentante fiscale di soggetto non residente]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="7">
+				<xs:annotation>
+					<xs:documentation>Erede</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="8">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Liquidatore - liquidazione volontaria]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetto tenuto a presentare dichiarazione in caso di operazioni straordinarie]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="10">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Rappresentante fiscale di soggetto non residente con le limitazioni di cui all'art. 44, comma 3, del D.L. n.331/1993]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="11">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetto esercente l'attività tutoria del minore o interdetto in relazione alla funzione istituzionale rivestita]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="12">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Liquidatore - liquidazione volontaria di ditta individuale periodo ante messa in liquidazione]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="13">
+				<xs:annotation>
+					<xs:documentation>Amministratore di condominio</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="14">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetto che sottoscrive la dichiarazione per conto di una pubblica amministrazione]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="15">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Commissario liquidatore di una pubblica amministrazione]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Natura_Giuridica_Type">
+		<xs:annotation>
+			<xs:documentation>Tabella generale classificazione natura giuridica</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="cm:DatoNP_Type">
+			<xs:enumeration value="1">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società in accomandita per azioni]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="2">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società a responsabilità limitata]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="3">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società per azioni]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="4">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società cooperative e loro consorzi iscritti nei registri prefettizi e nello schedario della cooperazione]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="5">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Altre società cooperative]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="6">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Mutue assicuratrici]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="7">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Consorzi con personalità giuridica]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="8">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Associazioni riconosciute]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="9">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Fondazioni]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="10">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Altri enti ed istituti con personalità giuridica]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="11">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Consorsi senza personalità giuridica]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="12">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Associazioni non riconosciute e comitati
+]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="13">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Altre oganizzazioni di persone o beni senza personalità giuridica, escluse le comunioni]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="14">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Enti pubblici economici]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="15">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Enti pubblici non economici]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="16">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Casse mutue e fondi previdenza, assistenza, pensioni o simili con o senza personalità guiridica]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="17">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Opere pie e società di mutuo soccorso]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="18">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Enti ospedalieri]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="19">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Enti ed istituti di previdenza e di assistenza sociale]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="20">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Aziende autonome di cura, soggiorno e turismo]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="21">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Aziende regionali, provinciali, comunali e loro consorzi]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="22">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società, organizzazioni ed enti costituiti all'estero non altrimenti classificabili con sede dell’amministrazione od oggetto principale in Italia]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="23">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società semplici ed equiparate, art.5, comma 3 lett.b del Tuir]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="24">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società in nome collettivo ed equiparate ai sensi dell’art. 5, comma 3, lett. b, del TUIR]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="25">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società in accomandita semplice]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="26">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società di armamento]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="27">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Associazioni fra artisti e professionisti]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="28">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Aziende coniugali]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="29">
+				<xs:annotation>
+					<xs:documentation><![CDATA[GEIE (Gruppi europei di interesse economico)]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="30">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Società semplici, irregolari e di fatto]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="31">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Società in nome collettivo]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="32">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Società in accomandita semplice]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="33">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Società di armamento]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="34">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Associazioni fra professionisti]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="35">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Società in accomandita per azioni]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="36">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Società a responsabilità limitata]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="37">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Società per azioni]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="38">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Consorzi]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="39">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Altri enti ed istituti]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="40">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Associazioni riconosciute, non riconosciute e di fatto]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="41">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Fondazioni]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="42">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Opere pie e società di mutuo soccorso]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="43">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Altre organizzazioni di persone e di beni]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="44">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - Trust]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="45">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti non residenti - GEIE (Gruppi europei di interesse economico)]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="50">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società per azioni, aziende speciali e consorzi artt. 31, 113, 114, 115 e 116 del D.Lgs 18/8/2000 n.267]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="51">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Condomìni]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="52">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Depositi IVA]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="53">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società sportive dilettantistiche costituite in società di capitali senza fini di lucro]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="54">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Trust]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="55">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Amministrazioni pubbliche]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="56">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Fondazioni bancarie]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="57">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società europea]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="58">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Società cooperativa europea]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Situazione_Type">
+		<xs:restriction base="cm:DatoNP_Type">
+			<xs:enumeration value="1">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Periodo di imposta che inizia dalla data di messa in liquidazione per cessazione di attività, per fallimento o per liquidazione coatta amministrativa]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="2">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Periodi di imposta successivi a quello di dichiarazione di fallimento o di messa in liquidazione]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="3">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Periodo d'imposta in cui ha avuto termine la liquidazione per cessazione di attività, per fallimento o per liquidazione coatta amministrativa]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="4">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Periodo di imposta in cui si è verificata l'estinzione del soggetto per fusione o incorporazione]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="5">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Periodo d'imposta in cui è¨ avvenuta la trasformazione da società  soggetta ad IRES in società  non soggetta ad IRES o viceversa]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="6">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Periodo normale d'imposta e periodo compreso tra l'inizio del periodo d'imposta e la data di messa in liquidazione]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="7">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Periodo d'imposta in cui si è verificata l'estinzione del soggetto per scissione totale]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Stato_Type">
+		<xs:restriction base="cm:DatoNP_Type">
+			<xs:enumeration value="1">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetto in normale attività]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="2">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetto in liquidazione per cessazione di attività]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="3">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetto in fallimento o in liquidazione coatta amministrativa]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="4">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetto estinto]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Sesso_Type">
+		<xs:restriction base="cm:DatoAN_Type">
+			<xs:enumeration value="M">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Maschio]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="F">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Femmina]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Casella_Quadro_Type">
+		<xs:restriction base="cm:DatoAN_Type">
+			<xs:enumeration value="0"/>
+			<xs:enumeration value="1"/>
+			<xs:enumeration value="2"/>
+			<xs:enumeration value="3"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Codice_Regione_Type">
+		<xs:restriction base="cm:DatoAN_Type">
+			<xs:enumeration value="1"/>
+			<xs:enumeration value="2"/>
+			<xs:enumeration value="3"/>
+			<xs:enumeration value="4"/>
+			<xs:enumeration value="5"/>
+			<xs:enumeration value="6"/>
+			<xs:enumeration value="7"/>
+			<xs:enumeration value="8"/>
+			<xs:enumeration value="9"/>
+			<xs:enumeration value="10"/>
+			<xs:enumeration value="11"/>
+			<xs:enumeration value="12"/>
+			<xs:enumeration value="13"/>
+			<xs:enumeration value="14"/>
+			<xs:enumeration value="15"/>
+			<xs:enumeration value="16"/>
+			<xs:enumeration value="17"/>
+			<xs:enumeration value="18"/>
+			<xs:enumeration value="19"/>
+			<xs:enumeration value="20"/>
+			<xs:enumeration value="21"/>
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>

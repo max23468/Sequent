@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
+import {
+  createEmptyDeclaration,
+  parseDeclaration,
+  type DeclarationSnapshot,
+} from "../../domain/declaration.ts";
 
 export interface PracticeSummary {
   id: string;
@@ -8,6 +13,16 @@ export interface PracticeSummary {
   declarationId: string;
   revision: number;
   documentCount: number;
+  updatedAt: string;
+}
+
+export interface DeclarationRecord {
+  id: string;
+  practiceId: string;
+  sequence: number;
+  revision: number;
+  declaration: DeclarationSnapshot;
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -33,7 +48,7 @@ export function createPractice(database: Database.Database, title: string): Prac
   const id = randomUUID();
   const declarationId = randomUUID();
   const now = new Date().toISOString();
-  const declaration = { schemaVersion: 1, fields: {}, sources: {}, decisions: [] };
+  const declaration = createEmptyDeclaration();
   database.transaction(() => {
     database
       .prepare(
@@ -57,6 +72,121 @@ export function createPractice(database: Database.Database, title: string): Prac
     documentCount: 0,
     updatedAt: now,
   };
+}
+
+export function getDeclaration(
+  database: Database.Database,
+  declarationId: string,
+  practiceId?: string,
+): DeclarationRecord | null {
+  const row = database
+    .prepare(
+      `SELECT id, practice_id, sequence, revision, declaration_json, created_at, updated_at
+       FROM declarations
+       WHERE id = ? AND (? IS NULL OR practice_id = ?)`,
+    )
+    .get(declarationId, practiceId ?? null, practiceId ?? null) as
+    | {
+        id: string;
+        practice_id: string;
+        sequence: number;
+        revision: number;
+        declaration_json: string;
+        created_at: string;
+        updated_at: string;
+      }
+    | undefined;
+  if (!row) return null;
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(row.declaration_json);
+  } catch {
+    parsed = null;
+  }
+  return {
+    id: row.id,
+    practiceId: row.practice_id,
+    sequence: row.sequence,
+    revision: row.revision,
+    declaration: parseDeclaration(parsed),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function listDeclarations(
+  database: Database.Database,
+  practiceId: string,
+): DeclarationRecord[] {
+  const rows = database
+    .prepare(`SELECT id FROM declarations WHERE practice_id = ? ORDER BY sequence ASC`)
+    .all(practiceId) as Array<{ id: string }>;
+  return rows.flatMap(({ id }) => {
+    const declaration = getDeclaration(database, id, practiceId);
+    return declaration ? [declaration] : [];
+  });
+}
+
+export function createSuccessiveDeclaration(
+  database: Database.Database,
+  practiceId: string,
+  sourceDeclarationId: string,
+  kind: "substitute-1" | "substitute-2" | "substitute-3",
+): DeclarationRecord {
+  const source = getDeclaration(database, sourceDeclarationId, practiceId);
+  if (!source) throw new Error("DECLARATION_NOT_FOUND");
+  const id = randomUUID();
+  const now = new Date().toISOString();
+  const snapshot: DeclarationSnapshot = {
+    ...structuredClone(source.declaration),
+    declarationKind: kind,
+    confirmedDevolutionScenarioId: null,
+    latestCalculationRunId: null,
+    decisions: [],
+  };
+  const sequence = (
+    database
+      .prepare(
+        "SELECT coalesce(max(sequence), 0) + 1 AS sequence FROM declarations WHERE practice_id = ?",
+      )
+      .get(practiceId) as { sequence: number }
+  ).sequence;
+  database.transaction(() => {
+    database
+      .prepare(
+        `INSERT INTO declarations(id, practice_id, sequence, revision, declaration_json, created_at, updated_at)
+         VALUES (?, ?, ?, 1, ?, ?, ?)`,
+      )
+      .run(id, practiceId, sequence, JSON.stringify(snapshot), now, now);
+    database
+      .prepare(
+        `INSERT INTO declaration_subject_entries(
+           declaration_id, entry_id, subject_id, sequence, created_at
+         )
+         SELECT ?, entry_id, subject_id, sequence, ?
+         FROM declaration_subject_entries
+         WHERE declaration_id = ?
+         ORDER BY sequence`,
+      )
+      .run(id, now, sourceDeclarationId);
+    database
+      .prepare(
+        `INSERT INTO domain_audit_events(id, practice_id, declaration_id, event_type, summary, payload_json, created_at)
+         VALUES (?, ?, ?, 'declaration.snapshot_created', ?, ?, ?)`,
+      )
+      .run(
+        randomUUID(),
+        practiceId,
+        id,
+        "Creata dichiarazione successiva da snapshot esplicito.",
+        JSON.stringify({ sourceDeclarationId, kind }),
+        now,
+      );
+    database.prepare("UPDATE practices SET updated_at = ? WHERE id = ?").run(now, practiceId);
+  })();
+  const created = getDeclaration(database, id, practiceId);
+  if (!created) throw new Error("DECLARATION_CREATE_FAILED");
+  return created;
 }
 
 export function listPractices(database: Database.Database): PracticeSummary[] {

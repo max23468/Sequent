@@ -1,14 +1,15 @@
 {
-  "schemaVersion": 1,
-  "bundleId": "SUC-OFFICIAL-2025-07-15-FULL",
-  "status": "inventory",
+  "schemaVersion": 2,
+  "bundleId": "SUC-OFFICIAL-2026-08-27-COMPREHENSIVE",
+  "status": "incomplete",
   "overlays": [
     {
       "sourceId": "SRC-09",
       "page": 1,
       "items": ["a", "b"],
       "targets": ["Agevolazioni"],
-      "state": "observed-in-src08-annotations"
+      "state": "applied-and-tested",
+      "resolution": "Le modifiche sono presenti nelle annotazioni dell’XSD corrente SRC-08 e sono coperte dalla regressione puntuale di riconciliazione SRC-09."
     },
     {
       "sourceId": "SRC-09",
@@ -26,28 +27,128 @@
         "TipoSoggetto",
         "GradoParentela"
       ],
-      "state": "observed-in-src08-annotations"
+      "state": "applied-and-tested",
+      "resolution": "Le modifiche sono presenti nelle annotazioni dell’XSD corrente SRC-08 e sono coperte dalla regressione puntuale di riconciliazione SRC-09."
     },
     {
       "sourceId": "SRC-09",
       "page": 3,
       "items": ["m", "o", "p"],
       "targets": ["GradoParentela", "PortatoreHandicap"],
-      "state": "observed-in-src08-annotations"
+      "state": "applied-and-tested",
+      "resolution": "Le modifiche sono presenti nelle annotazioni dell’XSD corrente SRC-08 e sono coperte dalla regressione puntuale di riconciliazione SRC-09."
     },
     {
       "sourceId": "SRC-09",
       "page": 3,
       "items": ["n"],
       "targets": [],
-      "state": "document-anomaly-empty-item"
+      "state": "not-applicable",
+      "resolution": "La voce n è priva di testo nel documento ministeriale: l’anomalia è conservata senza attribuirle una regola inesistente."
     },
     {
       "sourceId": "SRC-09",
       "page": 3,
       "items": ["q"],
-      "targets": ["Provincia"],
-      "state": "unresolved-exact-xsd-path-and-type"
+      "targets": [
+        "/Fornitura/Dichiarazione/Frontespizio/F24/Provincia",
+        "/Fornitura/Dichiarazione/QuadroEB/Modulo/Terreni/Luogo/Provincia",
+        "/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/Luogo/Provincia",
+        "/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/Decesso/Provincia",
+        "/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobilePrincipale/Luogo/Provincia",
+        "/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobileContiguo/Luogo/Provincia",
+        "/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/Pertinenza/Luogo/Provincia",
+        "/Fornitura/Dichiarazione/QuadroEH/Modulo/SezioneII_AgevPrimaCasa/ImmobileContiguo/Luogo/Provincia",
+        "/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/SezioneII_DatiIntestatario/Immobile/Luogo/Provincia",
+        "/Fornitura/Dichiarazione/QuadroEI_new/Modulo/SezioneII_DatiIntestatario/Immobile/Luogo/Provincia",
+        "/Fornitura/Dichiarazione/QuadroEL/Modulo/TerreniTavolare/LuogoTavolare/Provincia",
+        "/Fornitura/Dichiarazione/QuadroEM/Modulo/FabbricatiTavolare/LuogoTavolare/Provincia"
+      ],
+      "state": "applied-and-tested",
+      "resolution": "Il bundle corrente è successivo all’overlay: tutti gli elementi Provincia usano il tipo dichiarato nell’XSD SRC-08, verificato dal catalogo strutturale e dalla regressione dedicata."
+    }
+  ],
+  "sourceUpdates": [
+    {
+      "sourceIds": ["SRC-11", "SRC-12", "SRC-13", "SRC-14"],
+      "area": "modello, chiarimenti e pagamenti dal 2025",
+      "state": "reconciliation-required",
+      "requiredWork": "riconciliare approvazione, chiarimenti e codici tributo con campi, controlli, calcoli, scadenze e pagamenti; aggiungere test per ogni differenza rilevante"
+    },
+    {
+      "sourceIds": ["SRC-15", "SRC-30"],
+      "area": "controllo ufficiale e archivi correnti",
+      "state": "live-check-required",
+      "requiredWork": "qualificare il controllo SUC13 2.3.1 e leggere dal servizio vivo l’elenco uffici, Comuni e Stati esteri prima di un invio ufficiale"
+    },
+    {
+      "sourceIds": ["SRC-16", "SRC-18", "SRC-19", "SRC-20", "SRC-21", "SRC-22"],
+      "area": "norme applicabili nel tempo",
+      "state": "reconciliation-required",
+      "requiredWork": "costruire la linea temporale articolo per articolo e collegarla alla data di apertura della successione, senza applicare automaticamente la disciplina più recente ai casi anteriori"
+    },
+    {
+      "sourceIds": ["SRC-23", "SRC-24", "SRC-25", "SRC-26"],
+      "area": "interessi e coefficienti annuali",
+      "state": "period-tests-required",
+      "requiredWork": "introdurre valori con periodo di efficacia e test separati per 2025 e 2026 su interessi, usufrutto, rendite e pensioni"
+    },
+    {
+      "sourceIds": ["SRC-27"],
+      "area": "rendite vitalizie nelle pratiche storiche",
+      "state": "historical-test-required",
+      "requiredWork": "aggiungere almeno un caso anteriore alla riforma che applichi correttamente la sentenza 89/2026"
+    },
+    {
+      "sourceIds": ["SRC-28", "SRC-29", "SRC-31"],
+      "area": "percorso operativo e pratiche ammesse su modello cartaceo",
+      "state": "workflow-reconciliation-required",
+      "requiredWork": "confrontare allegati, controlli, ricevute e casi residui del Modello 4 con il percorso della pratica e con la futura verifica ufficiale"
+    },
+    {
+      "sourceIds": [
+        "SRC-32",
+        "SRC-33",
+        "SRC-34",
+        "SRC-35",
+        "SRC-36",
+        "SRC-37",
+        "SRC-38",
+        "SRC-39",
+        "SRC-40"
+      ],
+      "area": "programmi e deposito ufficiale per il collaudo",
+      "state": "integrity-reconciled-live-qualification-required",
+      "requiredWork": "confrontare pagina, versione e deposito conservati con i canali ufficiali vivi e qualificare il modulo SUC13 su casi sintetici prima del flusso ufficiale"
+    }
+  ],
+  "blockers": [
+    "SRC-11, SRC-12, SRC-13, SRC-14: riconciliare approvazione, chiarimenti e codici tributo con campi, controlli, calcoli, scadenze e pagamenti; aggiungere test per ogni differenza rilevante",
+    "SRC-15, SRC-30: qualificare il controllo SUC13 2.3.1 e leggere dal servizio vivo l’elenco uffici, Comuni e Stati esteri prima di un invio ufficiale",
+    "SRC-16, SRC-18, SRC-19, SRC-20, SRC-21, SRC-22: costruire la linea temporale articolo per articolo e collegarla alla data di apertura della successione, senza applicare automaticamente la disciplina più recente ai casi anteriori",
+    "SRC-23, SRC-24, SRC-25, SRC-26: introdurre valori con periodo di efficacia e test separati per 2025 e 2026 su interessi, usufrutto, rendite e pensioni",
+    "SRC-27: aggiungere almeno un caso anteriore alla riforma che applichi correttamente la sentenza 89/2026",
+    "SRC-28, SRC-29, SRC-31: confrontare allegati, controlli, ricevute e casi residui del Modello 4 con il percorso della pratica e con la futura verifica ufficiale",
+    "SRC-32, SRC-33, SRC-34, SRC-35, SRC-36, SRC-37, SRC-38, SRC-39, SRC-40: confrontare pagina, versione e deposito conservati con i canali ufficiali vivi e qualificare il modulo SUC13 su casi sintetici prima del flusso ufficiale"
+  ],
+  "lineage": [
+    {
+      "sourceId": "SRC-02",
+      "state": "superseded-by-later-source",
+      "authoritativeSuccessors": ["SRC-07", "SRC-08", "SRC-09"],
+      "resolution": "Il delta di febbraio resta disponibile come regressione storica, ma non può prevalere sulle specifiche e sull’overlay correnti di luglio."
+    },
+    {
+      "sourceId": "SRC-06",
+      "state": "superseded-by-later-source",
+      "authoritativeSuccessors": ["SRC-07", "SRC-08", "SRC-09"],
+      "resolution": "La specifica del 3 febbraio resta disponibile per il confronto storico, ma non governa campi o controlli correnti."
+    },
+    {
+      "sourceId": "SRC-17",
+      "state": "superseded-by-later-source",
+      "authoritativeSuccessors": ["SRC-16", "SRC-18", "SRC-20", "SRC-22", "SRC-27"],
+      "resolution": "Il testo originario del 1990 resta disponibile per la ricostruzione storica; per una pratica concreta governa la versione applicabile alla data di apertura della successione, insieme alle successive modifiche e decisioni vincolanti."
     }
   ]
 }

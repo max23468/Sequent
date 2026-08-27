@@ -101,35 +101,42 @@
 
 Questo Master Plan definisce prodotto, architettura, sequenza e criteri di accettazione. Le regole di compilazione, calcolo e trasmissione derivano invece dal **pacchetto ufficiale vincolante** descritto nel capitolo omonimo e identificato dal manifest macchina.
 
-| Domanda | Fonte canonica |
-|---|---|
-| Cosa deve fare Sequent come prodotto | decisione più recente approvata dall'owner, quindi questo Master Plan |
-| Quali campi, quadri, etichette e ordine mostra il modello | `SRC-03`, modello ministeriale ufficiale |
-| Qual è il significato operativo e fiscale del frontespizio e dei quadri del Fascicolo 1 | `SRC-05`, con `SRC-01` come aggiornamento puntuale successivo |
-| Qual è il significato operativo e fiscale dei quadri EL, EM, EN, EO, EP ed EQ | `SRC-04` |
-| Qual è la struttura XML corrente, con tipi, ordine, cardinalità, enumerazioni e dipendenze | `SRC-08`, archivio XSD macchina-leggibile; `SRC-07` ne è la rappresentazione documentale e annotata |
-| Quali controlli tecnici successivi al 2 luglio 2025 prevalgono | `SRC-09`, per le sole modifiche espressamente indicate, da riconciliare con `SRC-08` e `SRC-07` |
-| Come si calcola l'imposta di successione in autoliquidazione per le successioni aperte dal 1° gennaio 2025 | `SRC-10`, insieme alle condizioni applicabili di `SRC-05`, `SRC-04`, `SRC-08` e `SRC-09` |
-| Quale struttura DIZ è accettata | corpus osservato e round-trip sulla versione qualificata di SuccessioniOnLine, senza mai rilassare i vincoli del pacchetto ufficiale |
-| Quale file è trasmissibile | XSD e controlli SUC13 correnti, quindi controllo obbligatorio con il software ufficiale Agenzia/Sogei |
-| Perché esiste una scelta difficile da invertire | ADR approvato |
-| Cosa fa oggi il software | codice, configurazione, migrazioni e test dell'HEAD esatto |
-| Come si esegue un'operazione | runbook corrente |
-| Cosa ha suggerito Codex | output della run; mai fonte canonica senza validazione |
+| Domanda                                                                                                    | Fonte canonica                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cosa deve fare Sequent come prodotto                                                                       | decisione più recente approvata dall'owner, quindi questo Master Plan                                                                      |
+| Quali campi, quadri, etichette e ordine mostra il modello                                                  | `SRC-03`, modello ministeriale ufficiale                                                                                                   |
+| Qual è il significato operativo e fiscale del frontespizio e dei quadri del Fascicolo 1                    | `SRC-05`, con `SRC-01` come aggiornamento puntuale successivo                                                                              |
+| Qual è il significato operativo e fiscale dei quadri EL, EM, EN, EO, EP ed EQ                              | `SRC-04`                                                                                                                                   |
+| Qual è la struttura XML corrente, con tipi, ordine, cardinalità, enumerazioni e dipendenze                 | `SRC-08`, archivio XSD macchina-leggibile; `SRC-07` ne è la rappresentazione documentale e annotata                                        |
+| Quali controlli tecnici successivi al 2 luglio 2025 prevalgono                                             | `SRC-09`, per le sole modifiche espressamente indicate, da riconciliare con `SRC-08` e `SRC-07`                                            |
+| Come si calcola l'imposta di successione in autoliquidazione per le successioni aperte dal 1° gennaio 2025 | `SRC-10`, insieme alle condizioni applicabili di `SRC-05`, `SRC-04`, `SRC-08` e `SRC-09`                                                   |
+| Quale disciplina si applica in base alla data di apertura della successione                                | `SRC-16`, letto con gli atti di modifica `SRC-18`–`SRC-22` e, per il tema deciso, con `SRC-27`                                             |
+| Quali chiarimenti e codici di pagamento accompagnano la riforma dal 2025                                   | `SRC-11`–`SRC-14`, senza far prevalere circolari o risoluzioni sulla legge                                                                 |
+| Quali interessi e coefficienti usare per usufrutto, rendite e pensioni                                     | la coppia annuale pertinente fra `SRC-23`–`SRC-26`, selezionata per periodo                                                                |
+| Quale versione del controllo ufficiale e quali archivi territoriali usare                                  | `SRC-15` e `SRC-32`–`SRC-40` per il software conservato, confrontati con i canali vivi; lettura corrente del servizio indicato da `SRC-30` |
+| Quale struttura DIZ è accettata                                                                            | corpus osservato e round-trip sulla versione qualificata di SuccessioniOnLine, senza mai rilassare i vincoli del pacchetto ufficiale       |
+| Quale file è trasmissibile                                                                                 | XSD e controlli SUC13 correnti, quindi controllo obbligatorio con il software ufficiale Agenzia/Sogei                                      |
+| Perché esiste una scelta difficile da invertire                                                            | ADR approvato                                                                                                                              |
+| Cosa fa oggi il software                                                                                   | codice, configurazione, migrazioni e test dell'HEAD esatto                                                                                 |
+| Come si esegue un'operazione                                                                               | runbook corrente                                                                                                                           |
+| Cosa ha suggerito Codex                                                                                    | output della run; mai fonte canonica senza validazione                                                                                     |
 
 Regole di prevalenza:
 
-1. `SRC-01` prevale su `SRC-05` soltanto per le parti delle istruzioni che dichiara di modificare.
-2. `SRC-09` prevale su `SRC-08` e `SRC-07` soltanto per gli elementi e i controlli tecnici che dichiara di modificare, inserire o eliminare.
-3. `SRC-08` è la fonte macchina-leggibile corrente per sintassi, namespace, tipi, sequenze, cardinalità, enumerazioni e import XSD; `SRC-07` è la relativa documentazione umana, comprensiva di diagrammi, annotazioni e controlli. Una divergenza fra i due blocca la regola interessata finché non viene risolta.
-4. `SRC-10` è la fonte specialistica per il procedimento di autoliquidazione dell'imposta di successione dal 1° gennaio 2025. Non sostituisce le condizioni di compilazione dei Fascicoli o degli XSD, ma prevale sulle descrizioni generiche quando disciplina espressamente un passaggio di calcolo.
-5. `SRC-05` e `SRC-04` governano semantica, documenti, termini e istruzioni; `SRC-03` governa denominazioni visibili, composizione e ordine del modello.
-6. `SRC-02` e `SRC-06` sono conservati come lineage ufficiale e materiale di regressione: risultano superati dalle specifiche correnti `SRC-07`–`SRC-09` e non possono prevalere su di esse.
-7. Il nome visibile `Quadro EI` resta quello del modello, mentre il mapping tecnico corrente usa `QuadroEI_new` quando previsto dagli XSD correnti.
-8. Un contrasto non risolto dalla gerarchia blocca la regola interessata: Sequent non sceglie autonomamente una lettura plausibile.
-9. Fonti secondarie, memoria del modello, articoli, software concorrenti e output Codex possono aiutare a individuare un problema, ma non sostituiscono né correggono silenziosamente il pacchetto ufficiale.
-10. Il comportamento osservato di SuccessioniOnLine può rivelare una divergenza, ma non modifica da solo il catalogo: la divergenza viene registrata, riprodotta e risolta contro una fonte ufficiale aggiornata.
-11. Una fonte ufficiale successiva richiede un nuovo bundle immutabile e una migrazione deliberata del catalogo; non viene applicata automaticamente a pratiche esistenti.
+1. Costituzione, leggi e decreti legislativi governano le regole giuridiche nel periodo in cui sono applicabili. `SRC-27` prevale per il tema e il periodo decisi dalla Corte costituzionale.
+2. `SRC-11` approva il pacchetto 2025; `SRC-12` e `SRC-13` lo chiariscono e `SRC-14` disciplina i codici di pagamento, ma nessuno di questi atti può modificare una norma primaria.
+3. `SRC-01` prevale su `SRC-05` soltanto per le parti delle istruzioni che dichiara di modificare.
+4. `SRC-09` prevale su `SRC-08` e `SRC-07` soltanto per gli elementi e i controlli tecnici che dichiara di modificare, inserire o eliminare.
+5. `SRC-08` è la fonte macchina-leggibile corrente per sintassi, namespace, tipi, sequenze, cardinalità, enumerazioni e import XSD; `SRC-07` è la relativa documentazione umana. Una divergenza fra i due blocca la regola interessata finché non viene risolta.
+6. `SRC-10` è la fonte specialistica per il procedimento di autoliquidazione dal 1° gennaio 2025, nei limiti delle norme, delle istruzioni e delle specifiche applicabili.
+7. Le coppie annuali `SRC-23`/`SRC-24` e `SRC-25`/`SRC-26` valgono soltanto per il periodo dichiarato; non si sostituisce un valore storico con quello più recente.
+8. `SRC-15` documenta il rilascio del controllo ufficiale; `SRC-32`–`SRC-40` ne conservano pagina di distribuzione, programmi, manuali e deposito SUC13; `SRC-28`–`SRC-31` aiutano il percorso operativo. Nessuna di queste fonti sostituisce modello, XSD o norme e la versione corrente va riletta dal canale vivo prima della qualificazione.
+9. `SRC-02`, `SRC-06` e `SRC-17` sono conservati come lineage e materiale di regressione; non governano una pratica quando esiste una fonte successiva applicabile.
+10. Il nome visibile `Quadro EI` resta quello del modello, mentre il mapping tecnico corrente usa `QuadroEI_new` quando previsto dagli XSD correnti.
+11. Un contrasto non risolto dalla gerarchia blocca la regola interessata: Sequent non sceglie autonomamente una lettura plausibile.
+12. Fonti secondarie, memoria del modello, articoli, software concorrenti e output Codex possono aiutare a individuare un problema, ma non sostituiscono né correggono silenziosamente il pacchetto ufficiale.
+13. Il comportamento osservato di SuccessioniOnLine può rivelare una divergenza, ma non modifica da solo il catalogo: la divergenza viene registrata, riprodotta e risolta contro una fonte ufficiale aggiornata.
+14. Una fonte ufficiale successiva richiede un nuovo bundle immutabile e una migrazione deliberata del catalogo; non viene applicata automaticamente a pratiche esistenti.
 
 ## 0.2 Stati delle decisioni
 
@@ -251,9 +258,10 @@ con gli alias canonici indicati dal manifest macchina. La stessa directory conti
 manifest.json
 xsd-manifest.json
 xsd/
+software/
 ```
 
-La directory è esclusa da Git perché il repository è pubblico. Il repository contiene invece:
+La directory contiene esclusivamente fonti ministeriali pubbliche ed è versionata insieme al repository. Dati reali, documenti cliente, DIZ operativi e segreti restano esclusi da Git. Il repository contiene inoltre:
 
 ```text
 scripts/official-sources/verify.ts
@@ -262,11 +270,13 @@ docs/contracts/official-compliance.md
 tests/fixtures/official/
 ```
 
-- `verify.ts` controlla presenza, dimensione, pagine e SHA-256 delle fonti, archivio e albero XSD, digest compositi e compilazione del main schema;
+- `verify.ts` controlla inventario esatto, presenza, dimensione, pagine e SHA-256 delle fonti, impronte ufficiali dichiarate, integrità degli archivi, albero XSD, digest compositi e compilazione del main schema;
 - il catalogo derivato, i validator e le fixture sintetiche sono versionati nel repository;
 - le fixture non contengono pratiche reali né riproduzioni estese dei PDF;
 - la rigenerazione del catalogo è bloccata se manca un artefatto, un hash non coincide, un percorso XSD cambia o lo schema non compila;
-- `SRC-06` e `SRC-02` restano disponibili per diff e regressione; il blocco corrente è composto da `SRC-07`, `SRC-08`, `SRC-09` e dalla guida specialistica `SRC-10`;
+- `SRC-02`, `SRC-06` e `SRC-17` restano disponibili per ricostruzione storica e regressione; le fonti correnti sono organizzate nel manifest per modello e tecnica, norme, chiarimenti, valori annuali, materiale operativo e programmi ufficiali;
+- l’acquisizione di `SRC-11`–`SRC-40` non equivale alla loro applicazione: `delta-overlays.json` registra i gruppi ancora da riconciliare e blocca le capacità interessate;
+- il programma di installazione più grande è versionato con Git LFS; il bundle non include applicazioni installate, configurazioni personali, credenziali o pratiche;
 - il runtime operativo può usare gli artefatti derivati già qualificati, ma non può dichiarare aggiornata una regola senza il bundle sorgente verificato;
 - ogni dichiarazione registra `officialSourceBundleId`, versione del catalogo e versione delle regole applicate.
 
@@ -399,10 +409,10 @@ Scartata. OCR, parsing, calcoli, mapping e controlli deterministici non richiedo
 
 ## 3.2 Dispositivi e browser
 
-| Piattaforma | Browser |
-|---|---|
-| macOS | Safari e Chrome |
-| Windows | Chrome ed Edge |
+| Piattaforma | Browser                  |
+| ----------- | ------------------------ |
+| macOS       | Safari e Chrome          |
+| Windows     | Chrome ed Edge           |
 | iPhone/iPad | Safari, senza app nativa |
 
 SuccessioniOnLine è installato e funzionante su macOS, che è la piattaforma canonica per le prove ufficiali di interoperabilità DIZ. Non è richiesta un'installazione Windows né una VM dedicata. Se a sviluppo concluso sarà disponibile un ambiente Windows, Codex potrà eseguire un collaudo facoltativo con il software ufficiale; la mancata disponibilità o esecuzione non blocca il progetto, mentre un difetto DIZ riproducibile eventualmente osservato segue i normali criteri di arresto. Il supporto della web app nei browser Windows resta invece parte della matrice obbligatoria.
@@ -447,6 +457,7 @@ Sequent è un assistente operativo per dichiarazioni di successione, non un sost
 15. **Conformità source-bound.** Campi, etichette, regole, codici, allegati e controlli sono derivati dal pacchetto ufficiale con provenienza fino a fonte, pagina, sezione e percorso XSD.
 16. **Official-source-first.** Il pacchetto ufficiale corrente prevale su memoria, prassi non documentata, output AI e comportamento preesistente dell’app.
 17. **Nessuna perdita silenziosa.** Un elemento ufficiale non supportato o non riconciliato resta preservato e blocca l’export interessato.
+18. **Linguaggio professionale, non informatico.** L’interfaccia parla come una pratica di studio: usa termini comprensibili a un avvocato e descrive l’azione o il risultato, non l’implementazione. Parole come `DIZ`, source bundle, ruleset, schema, pipeline, job, run, runtime, configurazione e identità tecnica restano nei dettagli diagnostici o nella documentazione di sviluppo. Nei percorsi ordinari diventano, secondo il contesto, “pratica modificabile”, “fonti ufficiali applicate”, “regole applicate”, “controlli”, “elaborazione”, “attività”, “preferenze” e “dati del titolare”. La regola vale per tutte le milestone e per ogni nuovo testo rivolto all’utente, senza sostituire le denominazioni legali ufficiali dei modelli e dei quadri.
 
 ---
 
@@ -585,27 +596,27 @@ Sequent non è pronto finché:
 
 # 7. Terminologia e modello concettuale
 
-| Termine | Significato |
-|---|---|
-| **Procedimento** | fascicolo complessivo relativo a un defunto |
-| **Dichiarazione** | singola dichiarazione iniziale o successiva dentro il procedimento |
-| **Pratica** | termine UI per il procedimento, salvo contesto specifico |
-| **Revisione** | snapshot immutabile dello stato di una dichiarazione |
-| **Documento originale** | file ricevuto, mai modificato |
-| **Documento derivato** | versione convertita, OCR, ritagliata, unita o preparata |
-| **Fonte** | documento, pagina e posizione da cui deriva un dato |
-| **Fatto** | valore estratto o inserito, con origine e stato |
-| **Decisione** | scelta umana autorevole, per esempio devoluzione o fonte prevalente |
-| **Source bundle** | insieme immutabile degli artefatti ufficiali e dell’albero XSD identificati da manifest e hash |
-| **Catalogo ufficiale** | rappresentazione macchina-leggibile di modello, istruzioni, XSD, controlli e delta con provenienza puntuale |
-| **Ruleset** | insieme eseguibile delle regole derivate da uno specifico source bundle |
-| **Controllo** | verifica deterministica con severità |
-| **DIZ** | file di lavoro apribile e modificabile in SuccessioniOnLine |
-| **Telematico** | file finale generato dal software ufficiale |
-| **Blocco sconosciuto** | parte DIZ non ancora interpretata ma preservata |
-| **Job** | elaborazione persistente server-side |
-| **Copia offline** | cache operativa del browser, mai considerata backup |
-| **Regola qualificata** | regola versionata con fonte, test e approvazione |
+| Termine                 | Significato                                                                                                 |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Procedimento**        | fascicolo complessivo relativo a un defunto                                                                 |
+| **Dichiarazione**       | singola dichiarazione iniziale o successiva dentro il procedimento                                          |
+| **Pratica**             | termine UI per il procedimento, salvo contesto specifico                                                    |
+| **Revisione**           | snapshot immutabile dello stato di una dichiarazione                                                        |
+| **Documento originale** | file ricevuto, mai modificato                                                                               |
+| **Documento derivato**  | versione convertita, OCR, ritagliata, unita o preparata                                                     |
+| **Fonte**               | documento, pagina e posizione da cui deriva un dato                                                         |
+| **Fatto**               | valore estratto o inserito, con origine e stato                                                             |
+| **Decisione**           | scelta umana autorevole, per esempio devoluzione o fonte prevalente                                         |
+| **Source bundle**       | insieme immutabile degli artefatti ufficiali e dell’albero XSD identificati da manifest e hash              |
+| **Catalogo ufficiale**  | rappresentazione macchina-leggibile di modello, istruzioni, XSD, controlli e delta con provenienza puntuale |
+| **Ruleset**             | insieme eseguibile delle regole derivate da uno specifico source bundle                                     |
+| **Controllo**           | verifica deterministica con severità                                                                        |
+| **DIZ**                 | file di lavoro apribile e modificabile in SuccessioniOnLine                                                 |
+| **Telematico**          | file finale generato dal software ufficiale                                                                 |
+| **Blocco sconosciuto**  | parte DIZ non ancora interpretata ma preservata                                                             |
+| **Job**                 | elaborazione persistente server-side                                                                        |
+| **Copia offline**       | cache operativa del browser, mai considerata backup                                                         |
+| **Regola qualificata**  | regola versionata con fonte, test e approvazione                                                            |
 
 ---
 
@@ -707,7 +718,6 @@ L'utente può trascinare file, cartelle supportate dal browser, ZIP e fotografie
 ## 10.4 Compilazione manuale
 
 Il percorso manuale resta completo e non dipende dall'AI. Gli stessi controlli, calcoli e DIZ devono essere disponibili.
-
 
 ---
 
@@ -1073,16 +1083,16 @@ Quando Codex non è disponibile, OCR, import, compilazione manuale, regole, calc
 
 ## 16.1 Livelli di acquisizione
 
-| Origine | Comportamento |
-|---|---|
-| dato strutturato ufficiale validato | può essere inserito come confermato |
-| dato strutturato non ufficiale ma deterministico | inserito con controlli e provenienza |
-| testo nativo con regola qualificata | compilazione automatica, visibilità della fonte |
-| OCR ad alta affidabilità | compilazione automatica ma evidenziata |
-| OCR medio/basso | proposta da verificare |
-| Codex | proposta da verificare, salvo trasformazioni già autorizzate e non interpretative |
-| dato dedotto giuridicamente/fiscalmente | sempre da confermare |
-| inserimento manuale | autorevole |
+| Origine                                          | Comportamento                                                                     |
+| ------------------------------------------------ | --------------------------------------------------------------------------------- |
+| dato strutturato ufficiale validato              | può essere inserito come confermato                                               |
+| dato strutturato non ufficiale ma deterministico | inserito con controlli e provenienza                                              |
+| testo nativo con regola qualificata              | compilazione automatica, visibilità della fonte                                   |
+| OCR ad alta affidabilità                         | compilazione automatica ma evidenziata                                            |
+| OCR medio/basso                                  | proposta da verificare                                                            |
+| Codex                                            | proposta da verificare, salvo trasformazioni già autorizzate e non interpretative |
+| dato dedotto giuridicamente/fiscalmente          | sempre da confermare                                                              |
+| inserimento manuale                              | autorevole                                                                        |
 
 ## 16.2 Stati del campo
 
@@ -1263,6 +1273,10 @@ Coefficienti, aliquote e formule:
 - sono testati con casi noti;
 - non cambiano pratiche storiche;
 - derivano in via specialistica da `SRC-10` per l'autoliquidazione dal 1° gennaio 2025, e sono riconciliati con `SRC-05`, `SRC-04`, `SRC-08`, `SRC-07`, `SRC-09` e `SRC-01`;
+- rispettano la disciplina applicabile alla data di apertura della successione, ricostruita da `SRC-16` e dagli atti `SRC-18`–`SRC-22`, senza usare automaticamente la versione più recente;
+- usano interessi e coefficienti annuali della coppia pertinente fra `SRC-23`–`SRC-26`;
+- applicano `SRC-27` ai casi storici che ricadono nel tema e nel periodo decisi dalla Corte costituzionale;
+- riconciliano i chiarimenti e i codici di pagamento di `SRC-11`–`SRC-14` senza trattarli come fonti superiori alla legge;
 - trasformano tutti gli esempi ufficiali di calcolo in golden test, senza sostituire le condizioni normative con il solo esempio.
 
 ## 19.3 Catena ufficiale di autoliquidazione e fixture
@@ -1356,7 +1370,10 @@ Sequent controlla periodicamente fonti ufficiali configurate per rilevare:
 - nuova versione di SuccessioniOnLine;
 - nuove specifiche o XSD;
 - nuovi modelli e istruzioni;
-- correzioni, elenchi di modifiche o provvedimenti dell'Agenzia.
+- correzioni, elenchi di modifiche, provvedimenti, circolari e risoluzioni dell'Agenzia;
+- modifiche normative, testi unici, sentenze costituzionali e decreti annuali su interessi e coefficienti;
+- aggiornamenti degli archivi ufficiali di uffici, Comuni e Stati esteri;
+- nuove versioni di Desktop Telematico e dei moduli di controllo distribuiti dai depositi ufficiali.
 
 Il controllo produce un avviso e una proposta di acquisizione. Nessuna regola viene modificata automaticamente.
 
@@ -1376,6 +1393,10 @@ Il catalogo copre:
 - modifiche introdotte da `SRC-01` e `SRC-09`, con `SRC-02` e `SRC-06` usati come lineage di regressione;
 - formule, passaggi ed esempi di autoliquidazione definiti da `SRC-10`;
 - struttura e vincoli XSD derivati direttamente da `SRC-08` e riconciliati con `SRC-07`.
+- linea temporale delle norme e dei correttivi `SRC-16`–`SRC-22`, con applicabilità legata alla pratica;
+- chiarimenti e pagamenti `SRC-11`–`SRC-14`, valori annuali `SRC-23`–`SRC-26` e decisioni vincolanti come `SRC-27`;
+- percorso operativo, controlli e archivi correnti documentati da `SRC-15` e `SRC-28`–`SRC-31`, distinguendo gli snapshot dai servizi da leggere dal vivo;
+- programmi, manuali e deposito SUC13 conservati in `SRC-32`–`SRC-40`, con controllo della versione sui canali vivi prima della qualificazione.
 
 Per ogni campo o regola registra almeno:
 
@@ -1418,6 +1439,16 @@ SRC-07 documentazione tecnica consolidata
 SRC-09 overlay tecnico 15 luglio 2025
         +
 SRC-02/SRC-06 lineage e non-regressione
+        +
+SRC-11/SRC-14 approvazione, chiarimenti e pagamenti
+        +
+SRC-16/SRC-22 norme e correttivi per periodo
+        +
+SRC-23/SRC-27 valori annuali e decisioni vincolanti
+        +
+SRC-15/SRC-28/SRC-31 riferimenti operativi correnti
+        +
+SRC-32/SRC-40 programmi, manuali e deposito ufficiale
         ↓
 official-catalog.json
         ↓
@@ -1455,9 +1486,21 @@ Il motore distingue almeno:
 
 Gli errori interni devono usare un identificativo stabile e riportare sempre la fonte ufficiale che giustifica il controllo.
 
-## 20.8 Baseline obbligatoria delle modifiche 2025
+## 20.8 Baseline obbligatoria delle modifiche 2025–2026
 
 Il catalogo deve rappresentare e testare integralmente `SRC-01` e `SRC-09`. `SRC-02` e `SRC-06` sono mantenuti per dimostrare la corretta evoluzione verso `SRC-07`/`SRC-08` e impedire la reintroduzione di elementi superati.
+
+Il bundle acquisito il 27 agosto 2026 aggiunge inoltre una linea normativa e operativa che deve essere riconciliata prima della chiusura del gate:
+
+- provvedimento, circolari e codici di pagamento `SRC-11`–`SRC-14`;
+- controllo SUC13 2.3.1 e archivi territoriali correnti `SRC-15` e `SRC-30`;
+- testo vigente, riforme, testi unici e correttivi `SRC-16`–`SRC-22`;
+- interessi e coefficienti annuali 2025 e 2026 `SRC-23`–`SRC-26`;
+- sentenza costituzionale `SRC-27` per le pratiche storiche interessate;
+- guida operativa, Modello 4 e servizio ricevute `SRC-28`, `SRC-29` e `SRC-31` per ricevute, allegati e casi residui ammessi.
+- pagina di distribuzione, programma macOS, utilità, manuali e deposito del controllo `SRC-32`–`SRC-40`, da confrontare con i canali vivi prima della prova ufficiale.
+
+Ogni gruppo resta `reconciliation-required` in `delta-overlays.json` finché non ha regole con periodo di efficacia, test e riferimenti puntuali. Il semplice possesso del PDF non abilita il calcolo o l’invio.
 
 Checklist minima di non regressione, che non sostituisce i testi completi:
 
@@ -1778,7 +1821,6 @@ Sequent importa e riconosce:
 
 Ogni invio è un evento distinto e non sovrascrive i precedenti.
 
-
 ---
 
 # 25. Ciclo di vita e stati della pratica
@@ -1819,11 +1861,11 @@ OCR, Codex, conversioni, import e DIZ hanno stati propri e non devono rendere am
 
 ## 25.4 Controlli per severità
 
-| Severità | Effetto |
-|---|---|
-| **Bloccante** | impedisce la prontezza e normalmente il DIZ |
-| **Avviso** | non blocca, ma compare nel riepilogo |
-| **Informazione** | suggerimento o controllo facoltativo |
+| Severità         | Effetto                                     |
+| ---------------- | ------------------------------------------- |
+| **Bloccante**    | impedisce la prontezza e normalmente il DIZ |
+| **Avviso**       | non blocca, ma compare nel riepilogo        |
+| **Informazione** | suggerimento o controllo facoltativo        |
 
 Esempi bloccanti:
 
@@ -2088,13 +2130,13 @@ Service worker e offline selettivo restano disponibili senza installazione.
 
 ## 33.2 Matrice supportata
 
-| Sistema | Browser | Livello |
-|---|---|---|
-| macOS | Safari | completo |
-| macOS | Chrome | completo |
-| Windows | Chrome | completo |
-| Windows | Edge | completo |
-| iPhone/iPad | Safari | operazioni mobili previste |
+| Sistema     | Browser | Livello                    |
+| ----------- | ------- | -------------------------- |
+| macOS       | Safari  | completo                   |
+| macOS       | Chrome  | completo                   |
+| Windows     | Chrome  | completo                   |
+| Windows     | Edge    | completo                   |
+| iPhone/iPad | Safari  | operazioni mobili previste |
 
 ## 33.3 Mobile
 
@@ -2480,15 +2522,15 @@ La UI mostra fase, avanzamento, errore, annullamento e retry. Chiudere il browse
 
 ## 41.2 Runtime applicativo
 
-| Componente | Decisione |
-|---|---|
-| Node | linea stabile qualificata e pin esatto nei manifest eseguibili |
-| TypeScript | compilatore principale qualificato dalla toolchain |
+| Componente       | Decisione                                                       |
+| ---------------- | --------------------------------------------------------------- |
+| Node             | linea stabile qualificata e pin esatto nei manifest eseguibili  |
+| TypeScript       | compilatore principale qualificato dalla toolchain              |
 | Compatibility TS | versione richiesta dal tooling Svelte; rimozione solo dopo gate |
-| Svelte | linea stabile corrente |
-| SvelteKit | linea stabile corrente |
-| Adapter | adapter-node |
-| Package manager | npm, versione esatta |
+| Svelte           | linea stabile corrente                                          |
+| SvelteKit        | linea stabile corrente                                          |
+| Adapter          | adapter-node                                                    |
+| Package manager  | npm, versione esatta                                            |
 
 Le versioni selezionate di Node e TypeScript richiedono il gate `TG-TOOLCHAIN`; l'approvazione non autorizza a ignorare incompatibilità osservate. Deve restare disponibile una toolchain di rollback qualificata finché la linea corrente non è stabilizzata. Il check Svelte compatibile con il tooling è autorevole; `--tsgo` resta una verifica aggiuntiva finché l'integrazione non è pienamente supportata.
 
@@ -2677,7 +2719,7 @@ La configurazione effettiva viene verificata durante il preflight. Hub Fatture r
 ├── repo/          # checkout Git su cui lavora Codex
 ├── runtime/       # Compose, configurazione e puntatore alla release attiva
 ├── data/          # SQLite e archivio documentale operativo
-├── private/       # fonti ufficiali e corpus reale, sempre fuori da Git
+├── private/       # corpus reale, dati operativi e segreti, sempre fuori da Git
 ├── releases/      # immagini/digest o build già approvati
 ├── snapshots/     # ultimi snapshot tecnici di rollback
 └── tmp/           # copie e volumi usa-e-getta per test rischiosi
@@ -2893,7 +2935,7 @@ Patch e minor possono auto-merge dopo gate, tranne componenti critici. Major e r
 - template PR;
 - Dependabot;
 - `docs/MASTER_PLAN.md`;
-- `/opt/sequent/private/official-sources/manifest.json`, esterno al repository;
+- `private/official-sources/manifest.json`, versionato nel repository;
 - `scripts/official-sources/verify.ts`;
 - catalogo ufficiale derivato e test di conformità.
 
@@ -3426,6 +3468,11 @@ Un Technical Gate esiste soltanto quando una prova può cambiare materialmente a
 - gli overlay correnti `SRC-01` e `SRC-09` sono applicati e testati integralmente;
 - `SRC-02` e `SRC-06` sono riconciliati come lineage e non possono reintrodurre regole superate;
 - la catena di autoliquidazione e tutti gli esempi di `SRC-10` hanno golden test con valori intermedi;
+- approvazione, chiarimenti e codici di pagamento `SRC-11`–`SRC-14` sono riconciliati con campi, calcoli, scadenze e pagamenti;
+- norme e correttivi `SRC-16`–`SRC-22` hanno una linea temporale articolo per articolo collegata alla data di apertura della successione;
+- interessi e coefficienti `SRC-23`–`SRC-26` hanno valori versionati e test per ciascun periodo, e `SRC-27` ha almeno un caso storico pertinente;
+- SUC13 2.3.1, guida operativa, ricevute, Modello 4 e archivi correnti `SRC-15`, `SRC-28`–`SRC-31` sono qualificati nei limiti del rispettivo ruolo;
+- pagina di distribuzione, programma, utilità, manuali e deposito SUC13 `SRC-32`–`SRC-40` coincidono con il bundle e sono stati confrontati con i canali ufficiali vivi;
 - XSD, validator, allegati, dichiarazioni sostitutive e regole temporali superano la suite di conformità alle fonti ufficiali;
 - non restano elementi `unresolved` che possano alterare DIZ, calcoli, allegati o telematico;
 - il report di conformità è comprensibile e riproducibile.
@@ -3468,9 +3515,9 @@ Ogni milestone contiene già i propri criteri di uscita; non esistono Definition
 
 ## M0 — Bootstrap VPS, repository, source bundle e DIZ Lab
 
-**Obiettivo:** partendo dall'unico ZIP consegnato all'agente, Codex verifica localmente il pacchetto, individua e valida la VPS, trasferisce autonomamente i file, predispone il layout `/opt/sequent/`, inizializza checkout e repository GitHub, colloca fuori Git gli artefatti ufficiali e l'albero XSD, verifica manifest/hash e prepara pipeline del catalogo, corpus DIZ privato e strumenti di analisi.
+**Obiettivo:** partendo dall'unico ZIP consegnato all'agente, Codex verifica localmente il pacchetto, individua e valida la VPS, trasferisce autonomamente i file, predispone il layout `/opt/sequent/`, inizializza checkout e repository GitHub, versiona gli artefatti ministeriali pubblici e l'albero XSD, verifica manifest/hash e prepara pipeline del catalogo, corpus DIZ privato e strumenti di analisi.
 
-**Uscita:** trasferimento e bootstrap eseguiti da Codex senza comandi manuali delegati all'owner; VPS preflight completato; checkout separato da runtime e dati; repository GitHub creato e privati esclusi; source bundle verificato localmente e sulla VPS; scheletro del catalogo derivato; ambiente riproducibile e piano eseguibile per `TG-COMPLIANCE` e `TG-DIZ`; nessun hostname pubblico o UI completa richiesti.
+**Uscita:** trasferimento e bootstrap eseguiti da Codex senza comandi manuali delegati all'owner; VPS preflight completato; checkout separato da runtime e dati; repository GitHub creato, fonti ministeriali pubbliche versionate e dati privati esclusi; source bundle verificato localmente e sulla VPS; scheletro del catalogo derivato; ambiente riproducibile e piano eseguibile per `TG-COMPLIANCE` e `TG-DIZ`; nessun hostname pubblico o UI completa richiesti.
 
 ## M1 — Interoperabilità DIZ
 
@@ -3520,57 +3567,72 @@ M2 comprende inoltre Brand Foundation, design token, shell responsive, Dashboard
 
 **Uscita:** `TG-GOLIVE` chiuso e approvazione owner.
 
+### Impatto del bundle ufficiale acquisito il 27 agosto 2026
+
+| Milestone | Impatto                                    | Conseguenza operativa                                                                                                                                                                                          |
+| --------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M0        | diretto, limitato al pacchetto delle fonti | il bundle ampliato, compresi i programmi ufficiali gestiti con Git LFS, deve essere verificato localmente, versionato e poi verificato anche sulla VPS nel ciclo di pubblicazione applicabile                  |
+| M1        | nessun cambio strutturale dimostrato       | l’avviso SUC13 2.3.1 aggiorna gli uffici ma non annuncia un nuovo XSD; parser e writer DIZ non cambiano finché un confronto ufficiale non mostra una divergenza                                                |
+| M2        | nessun impatto diretto                     | fondazioni, istanza unica e design system non dipendono dai nuovi contenuti fiscali                                                                                                                            |
+| M3        | nessun impatto diretto                     | acquisizione documenti, OCR e Codex restano invariati; le nuove fonti possono ampliare solo future estrazioni guidate                                                                                          |
+| M4        | diretto e bloccante per la chiusura        | calcoli, regole, scadenze, pagamenti e controlli devono essere riconciliati per periodo con `SRC-11`–`SRC-27`; `TG-COMPLIANCE` resta aperto finché i test non sono completi                                    |
+| M5        | nessun impatto diretto                     | l’offline selettivo conserva le versioni delle regole già previste e non richiede una nuova architettura                                                                                                       |
+| M6        | diretto                                    | installer e modulo SUC13 sono già disponibili nel bundle; controllo, uffici, Comuni/Stati esteri, allegati e ricevute devono comunque essere riletti dai servizi ufficiali correnti prima del flusso ufficiale |
+| M7        | diretto                                    | il corpus storico deve comprendere periodi 2025 e 2026 e almeno il caso anteriore alla riforma interessato dalla sentenza 89/2026                                                                              |
+
+Questa valutazione non anticipa l’esito della riconciliazione fiscale: identifica dove le nuove fonti cambiano i criteri di uscita e dove, invece, non giustificano lavoro aggiuntivo.
+
 Dopo il completamento dello sviluppo, se un ambiente Windows è già disponibile, può essere eseguito un collaudo finale di SuccessioniOnLine. L'assenza dell'ambiente, la mancata esecuzione o un problema esclusivamente ambientale non impediscono l'uscita da M7 né la release. Una divergenza DIZ riproducibile e confermata viene invece trattata come difetto del formato e blocca l'output interessato secondo i criteri ordinari.
 
 ---
 
 # 57. Risk register essenziale
 
-| Rischio | Mitigazione principale | Condizione di riapertura |
-|---|---|---|
-| Source bundle incompleto o estratto male | manifest/hash, `TG-COMPLIANCE`, coverage e review | campo/regola senza provenienza o delta non applicato |
-| Nuova fonte ufficiale modifica il modello | nuovo bundle, diff e ruleset esplicito | aggiornamento Agenzia rilevato |
-| DIZ non interoperabile | `TG-DIZ` e fallback locale/Java minimo | round-trip non affidabile |
-| Formato DIZ cambia | compatibilità versionata e regressioni | nuova versione SuccessioniOnLine |
-| Codex subscription non stabile sulla VPS | `TG-CODEX`, app pienamente operativa senza AI | login/policy SDK cambia |
-| OCR/Codex produce dato critico errato | provenienza, review e benchmark con zero errori critici silenziosi | regressione benchmark |
-| Regola fiscale obsoleta | fonti ufficiali, versionamento e confronto ufficiale | nuova istruzione/modello |
-| Backup manuale troppo vecchio o VPS persa | promemoria, backup verificato e restore CLI | ultimo backup oltre soglia/outage |
-| Offline perde modifiche | cache per pratiche selezionate ed export locale di recupero | eviction/migrazione fallita |
-| OCR/Codex impatta Hub Fatture | un job pesante, processi figli limitati e monitoraggio | degrado osservato |
-| Spazio disco esaurito | preflight, alert disco e cleanup diagnostica | soglia critica |
-| Divergenza con SuccessioniOnLine | riconciliazione obbligatoria e test di regressione | confronto differente |
-| Fattispecie fuori perimetro telematico esportata per errore | regole Modello precedente/Modello 4/ufficio e blocco fail-closed | nuova casistica o regola non mappata |
-| Allegati o fornitura non conformi | preflight PDF/A/TIFF, 5 MB/file, 40 MB complessivi e controllo ufficiale | modifica tecnica o scarto ufficiale |
-| Ricevuta classificata in modo errato | parser per tipologia, hash, legame alla trasmissione e fixture | nuovo formato ricevuta |
+| Rischio                                                     | Mitigazione principale                                                   | Condizione di riapertura                             |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Source bundle incompleto o estratto male                    | manifest/hash, `TG-COMPLIANCE`, coverage e review                        | campo/regola senza provenienza o delta non applicato |
+| Nuova fonte ufficiale modifica il modello                   | nuovo bundle, diff e ruleset esplicito                                   | aggiornamento Agenzia rilevato                       |
+| DIZ non interoperabile                                      | `TG-DIZ` e fallback locale/Java minimo                                   | round-trip non affidabile                            |
+| Formato DIZ cambia                                          | compatibilità versionata e regressioni                                   | nuova versione SuccessioniOnLine                     |
+| Codex subscription non stabile sulla VPS                    | `TG-CODEX`, app pienamente operativa senza AI                            | login/policy SDK cambia                              |
+| OCR/Codex produce dato critico errato                       | provenienza, review e benchmark con zero errori critici silenziosi       | regressione benchmark                                |
+| Regola fiscale obsoleta                                     | fonti ufficiali, versionamento e confronto ufficiale                     | nuova istruzione/modello                             |
+| Backup manuale troppo vecchio o VPS persa                   | promemoria, backup verificato e restore CLI                              | ultimo backup oltre soglia/outage                    |
+| Offline perde modifiche                                     | cache per pratiche selezionate ed export locale di recupero              | eviction/migrazione fallita                          |
+| OCR/Codex impatta Hub Fatture                               | un job pesante, processi figli limitati e monitoraggio                   | degrado osservato                                    |
+| Spazio disco esaurito                                       | preflight, alert disco e cleanup diagnostica                             | soglia critica                                       |
+| Divergenza con SuccessioniOnLine                            | riconciliazione obbligatoria e test di regressione                       | confronto differente                                 |
+| Fattispecie fuori perimetro telematico esportata per errore | regole Modello precedente/Modello 4/ufficio e blocco fail-closed         | nuova casistica o regola non mappata                 |
+| Allegati o fornitura non conformi                           | preflight PDF/A/TIFF, 5 MB/file, 40 MB complessivi e controllo ufficiale | modifica tecnica o scarto ufficiale                  |
+| Ricevuta classificata in modo errato                        | parser per tipologia, hash, legame alla trasmissione e fixture           | nuovo formato ricevuta                               |
 
 ---
 
 # 58. Modalità degradate essenziali
 
-| Evento | Comportamento richiesto |
-|---|---|
-| Source bundle mancante o hash errato | runtime usa solo artefatti già qualificati; rigenerazione e release bloccate |
-| Regola ufficiale non risolta | campo manuale solo se sicuro; export interessato bloccato |
-| Allegato non conforme | conversione/split; nessun pacchetto finale finché non conforme |
-| Codex non autenticato/quota esaurita | AI disabilitata o job in attesa; nessuna API fallback |
-| Internet assente | pratica offline selezionata utilizzabile; sync e job server attendono |
-| OCR o conversione fallisce | originale disponibile, retry o inserimento manuale |
-| Documento/formato non elaborabile | conservato e scaricabile, stato esplicito |
-| Spazio browser insufficiente | pratica non resa offline; nessuna modifica esistente eliminata |
-| Revisione server cambiata | versione locale salvabile come copia separata; nessun overwrite silenzioso |
-| VPS ripristinata da backup vecchio | export delle modifiche locali e reimport manuale |
-| Job interrotto da riavvio | marcato interrotto e ripreso/ritentato secondo idempotenza |
-| Spazio VPS critico | blocco nuovi job pesanti e avviso |
-| Versione DIZ sconosciuta | import conservativo; export disabilitato finché non qualificato |
-| DIZ/calcoli divergono da SuccessioniOnLine | pratica `Da verificare`, nessuna prevalenza automatica |
-| Aggiornamento fallisce | rollback immagine/snapshot precedente |
-| Pratica chiusa da modificare | riapertura motivata e nuova revisione |
-| Casistica non automatizzata ma ammessa dal modello | manual assisted; nessuna deduzione AI automatica |
-| Caso da modello precedente, Modello 4 o ufficio | export disabilitato e percorso alternativo spiegato |
-| Campo o controllo ufficiale `unresolved` | pratica consultabile/modificabile, export bloccato |
-| Controllo ufficiale non disponibile | telematico non dichiarato pronto per trasmissione |
-| Allegato non conforme | originale conservato, derivato rigenerabile, pacchetto bloccato |
+| Evento                                             | Comportamento richiesto                                                      |
+| -------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Source bundle mancante o hash errato               | runtime usa solo artefatti già qualificati; rigenerazione e release bloccate |
+| Regola ufficiale non risolta                       | campo manuale solo se sicuro; export interessato bloccato                    |
+| Allegato non conforme                              | conversione/split; nessun pacchetto finale finché non conforme               |
+| Codex non autenticato/quota esaurita               | AI disabilitata o job in attesa; nessuna API fallback                        |
+| Internet assente                                   | pratica offline selezionata utilizzabile; sync e job server attendono        |
+| OCR o conversione fallisce                         | originale disponibile, retry o inserimento manuale                           |
+| Documento/formato non elaborabile                  | conservato e scaricabile, stato esplicito                                    |
+| Spazio browser insufficiente                       | pratica non resa offline; nessuna modifica esistente eliminata               |
+| Revisione server cambiata                          | versione locale salvabile come copia separata; nessun overwrite silenzioso   |
+| VPS ripristinata da backup vecchio                 | export delle modifiche locali e reimport manuale                             |
+| Job interrotto da riavvio                          | marcato interrotto e ripreso/ritentato secondo idempotenza                   |
+| Spazio VPS critico                                 | blocco nuovi job pesanti e avviso                                            |
+| Versione DIZ sconosciuta                           | import conservativo; export disabilitato finché non qualificato              |
+| DIZ/calcoli divergono da SuccessioniOnLine         | pratica `Da verificare`, nessuna prevalenza automatica                       |
+| Aggiornamento fallisce                             | rollback immagine/snapshot precedente                                        |
+| Pratica chiusa da modificare                       | riapertura motivata e nuova revisione                                        |
+| Casistica non automatizzata ma ammessa dal modello | manual assisted; nessuna deduzione AI automatica                             |
+| Caso da modello precedente, Modello 4 o ufficio    | export disabilitato e percorso alternativo spiegato                          |
+| Campo o controllo ufficiale `unresolved`           | pratica consultabile/modificabile, export bloccato                           |
+| Controllo ufficiale non disponibile                | telematico non dichiarato pronto per trasmissione                            |
+| Allegato non conforme                              | originale conservato, derivato rigenerabile, pacchetto bloccato              |
 
 ---
 
@@ -3578,99 +3640,99 @@ Dopo il completamento dello sviluppo, se un ambiente Windows è già disponibile
 
 ## Conformità ufficiale
 
-| ID | Requisito |
-|---|---|
+| ID      | Requisito                                                                                                                                             |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | SEQ-C01 | Tutti gli artefatti del manifest macchina, inclusi archivio e albero XSD verificato, costituiscono il source bundle vincolante del perimetro iniziale |
-| SEQ-C02 | Ogni campo e regola applicativa conserva provenienza fino a fonte, pagina/sezione e percorso tecnico |
-| SEQ-C03 | `SRC-01` e `SRC-09` sono overlay correnti e integralmente testati; `SRC-02` e `SRC-06` restano lineage non autorevole |
-| SEQ-C04 | Modello, istruzioni, guida di calcolo, XSD e specifiche sono riconciliati in un catalogo macchina-leggibile completo |
-| SEQ-C05 | La vista per quadri usa etichette e struttura ufficiali con mapping uno-a-uno al modello canonico |
-| SEQ-C06 | Allegati finali rispettano PDF/A-1a/1b o TIFF conforme, 5 MB per file e 40 MB complessivi compressi |
-| SEQ-C07 | Ogni file finale supera validator interni e controllo ufficiale Agenzia/Sogei |
-| SEQ-C08 | Nessuna regola ufficiale viene aggiornata o migrata silenziosamente |
-| SEQ-C09 | Una lacuna o divergenza del catalogo blocca l'export interessato anziché essere colmata per inferenza |
-| SEQ-C10 | Ogni dichiarazione registra source bundle, catalogo e ruleset applicati |
-| SEQ-C11 | Le fattispecie da modello precedente, Modello 4 o ufficio sono riconosciute e non esportabili |
-| SEQ-C12 | Presentazione, ricevute e volture seguono il ciclo ufficiale; la seconda ricevuta positiva prova la registrazione |
+| SEQ-C02 | Ogni campo e regola applicativa conserva provenienza fino a fonte, pagina/sezione e percorso tecnico                                                  |
+| SEQ-C03 | `SRC-01` e `SRC-09` sono overlay correnti e integralmente testati; `SRC-02` e `SRC-06` restano lineage non autorevole                                 |
+| SEQ-C04 | Modello, istruzioni, guida di calcolo, XSD e specifiche sono riconciliati in un catalogo macchina-leggibile completo                                  |
+| SEQ-C05 | La vista per quadri usa etichette e struttura ufficiali con mapping uno-a-uno al modello canonico                                                     |
+| SEQ-C06 | Allegati finali rispettano PDF/A-1a/1b o TIFF conforme, 5 MB per file e 40 MB complessivi compressi                                                   |
+| SEQ-C07 | Ogni file finale supera validator interni e controllo ufficiale Agenzia/Sogei                                                                         |
+| SEQ-C08 | Nessuna regola ufficiale viene aggiornata o migrata silenziosamente                                                                                   |
+| SEQ-C09 | Una lacuna o divergenza del catalogo blocca l'export interessato anziché essere colmata per inferenza                                                 |
+| SEQ-C10 | Ogni dichiarazione registra source bundle, catalogo e ruleset applicati                                                                               |
+| SEQ-C11 | Le fattispecie da modello precedente, Modello 4 o ufficio sono riconosciute e non esportabili                                                         |
+| SEQ-C12 | Presentazione, ricevute e volture seguono il ciclo ufficiale; la seconda ricevuta positiva prova la registrazione                                     |
 
 ## Prodotto e flusso
 
-| ID | Requisito |
-|---|---|
-| SEQ-P01 | Web app privata, single-user, self-hosted e utilizzabile da Mac, Windows e browser mobile |
-| SEQ-P02 | Flusso principale: documenti → estrazione → revisione → DIZ → SuccessioniOnLine → fascicolo finale |
-| SEQ-P03 | SuccessioniOnLine resta controllo e generatore del telematico |
+| ID      | Requisito                                                                                                           |
+| ------- | ------------------------------------------------------------------------------------------------------------------- |
+| SEQ-P01 | Web app privata, single-user, self-hosted e utilizzabile da Mac, Windows e browser mobile                           |
+| SEQ-P02 | Flusso principale: documenti → estrazione → revisione → DIZ → SuccessioniOnLine → fascicolo finale                  |
+| SEQ-P03 | SuccessioniOnLine resta controllo e generatore del telematico                                                       |
 | SEQ-P04 | Tutte le tipologie telematiche vigenti previste dal perimetro, con manual assisted per casistiche non automatizzate |
-| SEQ-P05 | Nessun costo ricorrente obbligatorio oltre a subscription Codex e risorse già possedute |
+| SEQ-P05 | Nessun costo ricorrente obbligatorio oltre a subscription Codex e risorse già possedute                             |
 
 ## Documenti, OCR e AI
 
-| ID | Requisito |
-|---|---|
-| SEQ-D01 | Originali immutabili, hash e deduplicazione |
+| ID      | Requisito                                                                                                                    |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| SEQ-D01 | Originali immutabili, hash e deduplicazione                                                                                  |
 | SEQ-D02 | Supporto ai formati e agli output definiti in «Checklist documentale, allegati e output» e «Formati e limiti di caricamento» |
-| SEQ-D03 | OCR/conversioni server-side con un solo job pesante |
-| SEQ-D04 | Ogni dato mostra fonte, pagina, metodo e affidabilità |
-| SEQ-D05 | Correzioni manuali autorevoli e non sovrascritte |
-| SEQ-D06 | Codex su comando, tramite subscription, senza API fallback |
-| SEQ-D07 | Output Codex strutturato e validato; interpretazioni sempre revisionabili |
-| SEQ-D08 | Benchmark con zero errori critici accettati silenziosamente |
+| SEQ-D03 | OCR/conversioni server-side con un solo job pesante                                                                          |
+| SEQ-D04 | Ogni dato mostra fonte, pagina, metodo e affidabilità                                                                        |
+| SEQ-D05 | Correzioni manuali autorevoli e non sovrascritte                                                                             |
+| SEQ-D06 | Codex su comando, tramite subscription, senza API fallback                                                                   |
+| SEQ-D07 | Output Codex strutturato e validato; interpretazioni sempre revisionabili                                                    |
+| SEQ-D08 | Benchmark con zero errori critici accettati silenziosamente                                                                  |
 
 ## Dominio e DIZ
 
-| ID | Requisito |
-|---|---|
-| SEQ-F01 | Motore deterministico di devoluzione con conferma finale umana |
-| SEQ-F02 | Motore completo di calcolo e confronto con SuccessioniOnLine |
-| SEQ-F03 | Regole e catalogo ministeriale versionati per modello/data |
-| SEQ-F04 | Checklist dinamica, allegati e output operativi |
-| SEQ-F05 | Procedimento unico per defunto con dichiarazioni successive separate |
-| SEQ-Z01 | Import DIZ crea o riallinea la pratica |
+| ID      | Requisito                                                                                                                                                                                       |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SEQ-F01 | Motore deterministico di devoluzione con conferma finale umana                                                                                                                                  |
+| SEQ-F02 | Motore completo di calcolo e confronto con SuccessioniOnLine                                                                                                                                    |
+| SEQ-F03 | Regole e catalogo ministeriale versionati per modello/data                                                                                                                                      |
+| SEQ-F04 | Checklist dinamica, allegati e output operativi                                                                                                                                                 |
+| SEQ-F05 | Procedimento unico per defunto con dichiarazioni successive separate                                                                                                                            |
+| SEQ-Z01 | Import DIZ crea o riallinea la pratica                                                                                                                                                          |
 | SEQ-Z02 | Writer DIZ e round-trip qualificato con SuccessioniOnLine su macOS; portabilità del formato verificata deterministicamente; disponibilità ed esecuzione del collaudo Windows finale facoltative |
-| SEQ-Z03 | Preservazione di allegati e blocchi sconosciuti |
-| SEQ-Z04 | Confronto a tre vie soltanto nel round-trip DIZ |
-| SEQ-Z05 | Fascicolo conclusivo con telematico, stampa, ricevute ed esiti |
+| SEQ-Z03 | Preservazione di allegati e blocchi sconosciuti                                                                                                                                                 |
+| SEQ-Z04 | Confronto a tre vie soltanto nel round-trip DIZ                                                                                                                                                 |
+| SEQ-Z05 | Fascicolo conclusivo con telematico, stampa, ricevute ed esiti                                                                                                                                  |
 
 ## UX, offline e dati
 
-| ID | Requisito |
-|---|---|
+| ID      | Requisito                                                                |
+| ------- | ------------------------------------------------------------------------ |
 | SEQ-U01 | Dashboard operativa e creazione da documenti, DIZ o compilazione guidata |
-| SEQ-U02 | Doppia vista: oggetti reali e quadri ministeriali |
-| SEQ-U03 | Workspace affiancato campo/fonte e coda `Da verificare` |
-| SEQ-U04 | Autosave e snapshot soltanto nei momenti previsti |
-| SEQ-U05 | Ricerca globale FTS5 |
-| SEQ-U06 | Offline per pratiche selezionate con modifica e allegati in coda |
-| SEQ-U07 | Conflitto offline semplice senza merge universale |
-| SEQ-U08 | Anagrafiche e beni condivisi con snapshot storici |
+| SEQ-U02 | Doppia vista: oggetti reali e quadri ministeriali                        |
+| SEQ-U03 | Workspace affiancato campo/fonte e coda `Da verificare`                  |
+| SEQ-U04 | Autosave e snapshot soltanto nei momenti previsti                        |
+| SEQ-U05 | Ricerca globale FTS5                                                     |
+| SEQ-U06 | Offline per pratiche selezionate con modifica e allegati in coda         |
+| SEQ-U07 | Conflitto offline semplice senza merge universale                        |
+| SEQ-U08 | Anagrafiche e beni condivisi con snapshot storici                        |
 
 ## Sicurezza, operations e engineering
 
-| ID | Requisito |
-|---|---|
-| SEQ-S01 | Account proprietario con password e passkey facoltativa |
-| SEQ-S02 | HTTPS, cookie sicuri, rate limiting, CSRF e segreti fuori da Git |
-| SEQ-S03 | Separazione forte da Hub Fatture |
-| SEQ-S04 | Backup manuale, tre snapshot tecnici e restore CLI |
-| SEQ-S05 | Logging ordinario e diagnostica opt-in temporanea |
-| SEQ-E01 | SvelteKit/Node/TypeScript, processo unico, SQLite e filesystem |
-| SEQ-E02 | Oxfmt/Oxlint senza Prettier/ESLint diretti |
+| ID      | Requisito                                                                                                                            |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| SEQ-S01 | Account proprietario con password e passkey facoltativa                                                                              |
+| SEQ-S02 | HTTPS, cookie sicuri, rate limiting, CSRF e segreti fuori da Git                                                                     |
+| SEQ-S03 | Separazione forte da Hub Fatture                                                                                                     |
+| SEQ-S04 | Backup manuale, tre snapshot tecnici e restore CLI                                                                                   |
+| SEQ-S05 | Logging ordinario e diagnostica opt-in temporanea                                                                                    |
+| SEQ-E01 | SvelteKit/Node/TypeScript, processo unico, SQLite e filesystem                                                                       |
+| SEQ-E02 | Oxfmt/Oxlint senza Prettier/ESLint diretti                                                                                           |
 | SEQ-E03 | Unica istanza VPS; checkout separato dal runtime; CI, review Codex exact-HEAD, release approvata e deploy automatico in manutenzione |
-| SEQ-E04 | Dependabot settimanale secondo la policy confermata |
-| SEQ-E05 | Semantic Versioning, rollback e compatibilità SuccessioniOnLine versionata |
+| SEQ-E04 | Dependabot settimanale secondo la policy confermata                                                                                  |
+| SEQ-E05 | Semantic Versioning, rollback e compatibilità SuccessioniOnLine versionata                                                           |
 
 ---
 
 # 60. Decisioni condizionate dagli spike
 
-| Decisione | Quando si apre |
-|---|---|
-| DIZ puro TypeScript oppure componente locale/Java minimo | `TG-DIZ` non dimostra un writer affidabile |
-| Rimozione del compatibility layer TypeScript | tooling Svelte pienamente compatibile con il compilatore primario |
-| Integrazione Codex disabilitata stabilmente sull'istanza | login headless/subscription non risulta mantenibile |
-| Limitazione ulteriore dell'offline | `TG-OFFLINE` evidenzia limiti reali di Safari/Chromium |
-| Modulo/librerie finali per DOCX/XLSX/PDF | implementazione degli output definiti in «Checklist documentale, allegati e output» |
-| Stop legale sull'analisi DIZ | l'interoperabilità richiede attività oltre il perimetro strettamente necessario |
+| Decisione                                                | Quando si apre                                                                      |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| DIZ puro TypeScript oppure componente locale/Java minimo | `TG-DIZ` non dimostra un writer affidabile                                          |
+| Rimozione del compatibility layer TypeScript             | tooling Svelte pienamente compatibile con il compilatore primario                   |
+| Integrazione Codex disabilitata stabilmente sull'istanza | login headless/subscription non risulta mantenibile                                 |
+| Limitazione ulteriore dell'offline                       | `TG-OFFLINE` evidenzia limiti reali di Safari/Chromium                              |
+| Modulo/librerie finali per DOCX/XLSX/PDF                 | implementazione degli output definiti in «Checklist documentale, allegati e output» |
+| Stop legale sull'analisi DIZ                             | l'interoperabilità richiede attività oltre il perimetro strettamente necessario     |
 
 La chiusura richiede una prova e, se la scelta è difficile da invertire, un ADR.
 
@@ -3678,43 +3740,43 @@ La chiusura richiede una prova e, se la scelta è difficile da invertire, un ADR
 
 # 61. Decisioni esplicitamente sostituite
 
-| Decisione superata | Decisione corrente |
-|---|---|
-| app desktop Python/PySide o Tauri/Rust | web app pura SvelteKit |
-| architettura web + desktop ordinaria | una sola web app; componente locale solo fallback DIZ |
-| app nativa mobile o PWA installabile | browser normale |
-| OneDrive/Dropbox/iCloud come sincronizzazione | backend e sync propri |
-| React/Next/Fastify | SvelteKit unico framework |
-| PostgreSQL/Object Storage operativo | SQLite + filesystem VPS |
-| OPFS/Dexie | IndexedDB Blob tramite `idb` |
-| Redis/BullMQ/ORM | coda SQLite e SQL diretto |
-| Python/Go/Rust generalizzati | TypeScript principale; eccezione DIZ solo dopo prova |
-| due processi `web` + `worker` | un solo processo/container con processi figli |
-| API OpenAI o modello locale fallback | subscription Codex senza fallback |
-| Codex avviato su ogni upload | Codex su comando |
-| rete Codex sempre disponibile | analisi pratica senza rete; ricerca normativa esplicita online |
-| Prettier/ESLint | Oxfmt/Oxlint diretti |
-| magic link, TOTP, recovery code e Turnstile | password + passkey facoltativa + reset VPS |
-| cifratura applicativa dati/cache | hardening infrastrutturale e protezione OS/browser |
-| backup automatico/cifrato | backup manuale non cifrato |
-| restore completo dall'interfaccia | restore CLI da runbook |
-| replica offline dell'intero archivio | offline per pratiche selezionate |
-| merge universale campo-per-campo | scelta server o copia locale; three-way solo DIZ |
-| branch di disaster recovery nel browser | export locale e reimport manuale |
-| audit forense di ogni clic | audit essenziale del fascicolo + log tecnici |
-| diagnostica conservata indefinitamente | opt-in, 30 giorni salvo conservazione manuale |
-| agenda completa e reminder personalizzabili | sole scadenze essenziali e checklist |
-| ricerca semantica | FTS5 deterministica |
-| notifiche browser/e-mail operative | notifiche interne |
-| ambienti Development, Staging e Production separati | unica istanza VPS con checkout, runtime, dati e copie temporanee separati |
-| esecuzione diretta della working tree sui dati operativi | release approvata, modalità manutenzione e copie temporanee per le prove rischiose |
-| deploy a ogni merge | `Pubblica` su modifica runtime e release approvata, poi deploy automatico; governance esclusa e prima attivazione separata |
-| Successioni Web | non utilizzabile per assenza frequente di delega |
-| `.suc` come formato modificabile | `.diz` come file di lavoro; telematico separato |
-| DIZ solo export | round-trip completo |
-| collaudo DIZ obbligatorio su macOS e Windows | qualificazione DIZ su macOS con test deterministici di portabilità; disponibilità ed esecuzione del collaudo Windows finale facoltative, senza rendere advisory un difetto DIZ confermato |
-| app si ferma al DIZ | fascicolo completo fino agli esiti |
-| tutto AI | deterministic-first, AI-assisted |
+| Decisione superata                                       | Decisione corrente                                                                                                                                                                        |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| app desktop Python/PySide o Tauri/Rust                   | web app pura SvelteKit                                                                                                                                                                    |
+| architettura web + desktop ordinaria                     | una sola web app; componente locale solo fallback DIZ                                                                                                                                     |
+| app nativa mobile o PWA installabile                     | browser normale                                                                                                                                                                           |
+| OneDrive/Dropbox/iCloud come sincronizzazione            | backend e sync propri                                                                                                                                                                     |
+| React/Next/Fastify                                       | SvelteKit unico framework                                                                                                                                                                 |
+| PostgreSQL/Object Storage operativo                      | SQLite + filesystem VPS                                                                                                                                                                   |
+| OPFS/Dexie                                               | IndexedDB Blob tramite `idb`                                                                                                                                                              |
+| Redis/BullMQ/ORM                                         | coda SQLite e SQL diretto                                                                                                                                                                 |
+| Python/Go/Rust generalizzati                             | TypeScript principale; eccezione DIZ solo dopo prova                                                                                                                                      |
+| due processi `web` + `worker`                            | un solo processo/container con processi figli                                                                                                                                             |
+| API OpenAI o modello locale fallback                     | subscription Codex senza fallback                                                                                                                                                         |
+| Codex avviato su ogni upload                             | Codex su comando                                                                                                                                                                          |
+| rete Codex sempre disponibile                            | analisi pratica senza rete; ricerca normativa esplicita online                                                                                                                            |
+| Prettier/ESLint                                          | Oxfmt/Oxlint diretti                                                                                                                                                                      |
+| magic link, TOTP, recovery code e Turnstile              | password + passkey facoltativa + reset VPS                                                                                                                                                |
+| cifratura applicativa dati/cache                         | hardening infrastrutturale e protezione OS/browser                                                                                                                                        |
+| backup automatico/cifrato                                | backup manuale non cifrato                                                                                                                                                                |
+| restore completo dall'interfaccia                        | restore CLI da runbook                                                                                                                                                                    |
+| replica offline dell'intero archivio                     | offline per pratiche selezionate                                                                                                                                                          |
+| merge universale campo-per-campo                         | scelta server o copia locale; three-way solo DIZ                                                                                                                                          |
+| branch di disaster recovery nel browser                  | export locale e reimport manuale                                                                                                                                                          |
+| audit forense di ogni clic                               | audit essenziale del fascicolo + log tecnici                                                                                                                                              |
+| diagnostica conservata indefinitamente                   | opt-in, 30 giorni salvo conservazione manuale                                                                                                                                             |
+| agenda completa e reminder personalizzabili              | sole scadenze essenziali e checklist                                                                                                                                                      |
+| ricerca semantica                                        | FTS5 deterministica                                                                                                                                                                       |
+| notifiche browser/e-mail operative                       | notifiche interne                                                                                                                                                                         |
+| ambienti Development, Staging e Production separati      | unica istanza VPS con checkout, runtime, dati e copie temporanee separati                                                                                                                 |
+| esecuzione diretta della working tree sui dati operativi | release approvata, modalità manutenzione e copie temporanee per le prove rischiose                                                                                                        |
+| deploy a ogni merge                                      | `Pubblica` su modifica runtime e release approvata, poi deploy automatico; governance esclusa e prima attivazione separata                                                                |
+| Successioni Web                                          | non utilizzabile per assenza frequente di delega                                                                                                                                          |
+| `.suc` come formato modificabile                         | `.diz` come file di lavoro; telematico separato                                                                                                                                           |
+| DIZ solo export                                          | round-trip completo                                                                                                                                                                       |
+| collaudo DIZ obbligatorio su macOS e Windows             | qualificazione DIZ su macOS con test deterministici di portabilità; disponibilità ed esecuzione del collaudo Windows finale facoltative, senza rendere advisory un difetto DIZ confermato |
+| app si ferma al DIZ                                      | fascicolo completo fino agli esiti                                                                                                                                                        |
+| tutto AI                                                 | deterministic-first, AI-assisted                                                                                                                                                          |
 
 ---
 
@@ -3751,6 +3813,15 @@ Se a sviluppo concluso è disponibile un ambiente Windows, il round-trip con Suc
 
 Le fonti identificate dal manifest macchina sono incorporate nel progetto tramite catalogo e test. Titoli, date, file, stato e autorità di ogni `SRC-*` non vengono duplicati qui; si leggono da `src/domain/official-catalog/source-manifest.json`.
 
+Il catalogo distingue sei famiglie, senza metterle sullo stesso piano:
+
+1. modello, istruzioni, specifiche e XSD;
+2. norme, testi vigenti, correttivi e decisioni vincolanti;
+3. provvedimenti, circolari, risoluzioni e codici di pagamento;
+4. valori annuali come interesse legale e coefficienti;
+5. materiale operativo come controllo ufficiale, guida web, ricevute e archivi territoriali;
+6. programmi, moduli di controllo, depositi di distribuzione e manuali ufficiali.
+
 Vincoli espressamente recepiti:
 
 - una dichiarazione non conforme alle specifiche viene scartata;
@@ -3763,6 +3834,10 @@ Vincoli espressamente recepiti:
 - regole generali, documenti, termini, volture, ricevute, agevolazioni, riduzioni e devoluzione derivano dai Fascicoli e dagli overlay correnti;
 - la struttura tecnica è validata direttamente sugli XSD ufficiali e non ricostruita dal PDF;
 - il procedimento di autoliquidazione, le grandezze intermedie e le formule di calcolo derivano dalla guida ufficiale `SRC-10` e diventano golden test;
+- le regole giuridiche e i valori numerici dipendenti dal tempo sono selezionati dalle fonti normative e annuali del periodo, non dall’ultima fonte disponibile;
+- i chiarimenti dell’Agenzia guidano l’interpretazione operativa senza prevalere sulla legge;
+- la versione del controllo e gli archivi territoriali sono riletti dai servizi ufficiali correnti prima del flusso ufficiale;
+- i programmi ufficiali conservati nel bundle evitano download ripetuti, ma non sostituiscono il controllo della versione corrente sul canale vivo;
 - gli artefatti superati sono usati soltanto per dimostrare la corretta migrazione e non possono governare nuove dichiarazioni.
 
 I link pubblici dell'Agenzia servono a rilevare aggiornamenti e a riacquisire le fonti; non modificano il ruleset finché non viene creato e approvato un nuovo bundle.
@@ -3823,6 +3898,10 @@ I link pubblici dell'Agenzia servono a rilevare aggiornamenti e a riacquisire le
 
 - Agenzia delle Entrate — software di compilazione: <https://www.agenziaentrate.gov.it/portale/schede/dichiarazioni/dichiarazione-di-successione/sw-comp-dichiarazione-successioni-telematiche>
 - Agenzia delle Entrate — specifiche tecniche: <https://www.agenziaentrate.gov.it/portale/schede/dichiarazioni/dichiarazione-di-successione/specifiche-tecniche-dichiarazione-di-successione>
+- Agenzia delle Entrate — provvedimento del 13 febbraio 2025: <https://www.agenziaentrate.gov.it/portale/provvedimento-del-13-febbraio-2025>
+- Normattiva — D.Lgs. 346/1990 vigente: <https://www.normattiva.it/atto/caricaDettaglioAtto?atto.articolo.numero=0&atto.codiceRedazionale=090G0384&atto.dataPubblicazioneGazzetta=1990-11-27&tipoDettaglio=vigente>
+- Gazzetta Ufficiale — ricerca e pubblicazioni ufficiali: <https://www.gazzettaufficiale.it/>
+- Agenzia delle Entrate — Archivio Comuni e Stati esteri: <https://arcom.agenziaentrate.gov.it/CitizenArCom/>
 - OpenAI Codex SDK: <https://developers.openai.com/codex/codex-sdk>
 - OpenAI Codex authentication: <https://developers.openai.com/codex/auth>
 - SvelteKit: <https://svelte.dev/docs/kit>
@@ -3887,7 +3966,7 @@ Codex deve:
 
 ## 64.3 Primo messaggio operativo consigliato
 
-> Apri l'unico ZIP allegato, leggi `START_HERE.md` e `CODEX_START_PROMPT.md` e gestisci tu verifica, individuazione della VPS, preflight, trasferimento, bootstrap `/opt/sequent/`, inizializzazione Git e creazione del repository GitHub. Non delegare comandi manuali all'owner: chiedi soltanto autenticazioni, selezioni o autorizzazioni indispensabili. Lavora poi direttamente sulla VPS nella singola installazione Sequent, senza ambienti Development, Staging o Production separati. Colloca fuori Git tutti gli artefatti dichiarati e l'albero XSD, ripeti le verifiche sul server, compila il main schema e prepara catalog pipeline e DIZ Lab. Non pubblicare ancora il servizio e non eseguire la working tree sui dati operativi. Produci il piano eseguibile di `TG-COMPLIANCE` e `TG-DIZ`, con coverage, golden test di `SRC-10`, fixture sintetiche, copie temporanee per prove rischiose, criteri di arresto e nessuna regola completata per inferenza.
+> Apri l'unico ZIP allegato, leggi `START_HERE.md` e `CODEX_START_PROMPT.md` e gestisci tu verifica, individuazione della VPS, preflight, trasferimento, bootstrap `/opt/sequent/`, inizializzazione Git e creazione del repository GitHub. Non delegare comandi manuali all'owner: chiedi soltanto autenticazioni, selezioni o autorizzazioni indispensabili. Lavora poi direttamente sulla VPS nella singola installazione Sequent, senza ambienti Development, Staging o Production separati. Versiona nel repository gli artefatti ministeriali pubblici dichiarati e l'albero XSD, mantenendo fuori da Git dati reali, documenti cliente e segreti; ripeti le verifiche sul server, compila il main schema e prepara catalog pipeline e DIZ Lab. Non pubblicare ancora il servizio e non eseguire la working tree sui dati operativi. Produci il piano eseguibile di `TG-COMPLIANCE` e `TG-DIZ`, con coverage, golden test di `SRC-10`, fixture sintetiche, copie temporanee per prove rischiose, criteri di arresto e nessuna regola completata per inferenza.
 
 ## 64.4 Modifiche future
 

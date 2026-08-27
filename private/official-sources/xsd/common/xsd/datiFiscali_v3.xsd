@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:cm="urn:www.agenziaentrate.gov.it:specificheTecniche:common:v2" xmlns="urn:www.agenziaentrate.gov.it:specificheTecniche:sco:common:v3" targetNamespace="urn:www.agenziaentrate.gov.it:specificheTecniche:sco:common:v3" elementFormDefault="qualified" attributeFormDefault="unqualified" version="3.0">
+	<xs:annotation>
+		<xs:documentation xml:lang="it"><![CDATA[
+		Versione 3.0 - 15/02/13
+		- modificato targetNamespace
+
+		Versione 2.0 - 15/02/12
+		- modificato namespace associato al prefisso cm e targetNamespace
+		- introdotto complexType Firma_Type
+		- modificato complexType Tipo_Dichiarazione_Type introducendo element IntegrativaArt2Co8Ter
+		- modificato tipo dati associato agli elementi Telefono e Fax contenuti all'interno dei complexTypes SoggettoFiscale e DatiSottoscrittore
+		- modificato tipo dati associato all'elemento Cap contenuto all'interno dei complexTypes Domicilio_Ita_Type e Domicilio_EE_Type
+		]]></xs:documentation>
+	</xs:annotation>
+	<xs:import namespace="urn:www.agenziaentrate.gov.it:specificheTecniche:common:v2" schemaLocation="typesDati_v2.xsd"/>
+	<xs:import namespace="urn:www.agenziaentrate.gov.it:specificheTecniche:common:v2" schemaLocation="typesProvincie_v2.xsd"/>
+	<xs:include schemaLocation="typesFiscali_v3.xsd"/>
+	<xs:include schemaLocation="typeEventi_v3.xsd"/>
+	<xs:complexType name="Frontespizio_Type">
+		<xs:sequence>
+			<xs:element name="SoggettoFiscale" type="Soggetto_Fiscale_Type"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Soggetto_Fiscale_Type">
+		<xs:sequence>
+			<xs:element name="CodiceFiscale" type="cm:DatoCF_Type"/>
+			<xs:element name="Email" type="cm:DatoEM_Type" minOccurs="0"/>
+			<xs:element name="Telefono" type="cm:DatoTL_Type" minOccurs="0"/>
+			<xs:element name="Fax" type="cm:DatoTL_Type" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Soggetti_Diversi_Da_PF_Type">
+		<xs:sequence>
+			<xs:element name="Denominazione" type="cm:DatoAN_Type"/>
+			<xs:element name="SedeLegale" type="Domicilio_EE_Type"/>
+			<xs:element name="DomicilioFiscale" type="Domicilio_Fiscale_Type" minOccurs="0"/>
+			<xs:element name="DataApprovazioneBilancio" type="cm:DatoDT_Type" minOccurs="0"/>
+			<xs:element name="TermineApprovazioneBilancio" type="cm:DatoDT_Type" minOccurs="0"/>
+			<xs:element name="InizioPeriodoImposta" type="cm:DatoDT_Type"/>
+			<xs:element name="FinePeriodoImposta" type="cm:DatoDT_Type"/>
+			<xs:element name="Stato" type="Stato_Type"/>
+			<xs:element name="NaturaGiuridica" type="Natura_Giuridica_Type"/>
+			<xs:element name="Situazione" type="Situazione_Type"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Domicilio_Fiscale_Type">
+		<xs:complexContent>
+			<xs:extension base="Domicilio_Ita_Type">
+				<xs:sequence>
+					<xs:element name="DataVariazione" type="cm:DatoD6_Type" minOccurs="0"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Soggetti_Non_Residenti_Type">
+		<xs:sequence>
+			<xs:element name="StatoEsteroResidenza" type="cm:DatoAN_Type" minOccurs="0"/>
+			<xs:element name="CodiceStatoEstero" type="cm:DatoAN_Type" minOccurs="0"/>
+			<xs:element name="CodiceIdentificazioneEstero" type="cm:DatoAN_Type" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Persone_Fisiche_Type">
+		<xs:sequence>
+			<xs:element name="DatiAnagrafici" type="Dati_Anagrafici_Type"/>
+			<xs:element name="ResidenzaAnagrafica" type="Residenza_Anagrafica_Type"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Dati_Anagrafici_Type">
+		<xs:sequence>
+			<xs:element name="Cognome" type="cm:DatoAN_Type"/>
+			<xs:element name="Nome" type="cm:DatoAN_Type"/>
+			<xs:element name="Sesso" type="Sesso_Type"/>
+			<xs:element name="DataNascita" type="cm:DatoDT_Type"/>
+			<xs:element name="ComuneNascita" type="cm:DatoAN_Type"/>
+			<xs:element name="ProvinciaNascita" type="cm:PN_Type" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Residenza_Anagrafica_Type">
+		<xs:complexContent>
+			<xs:extension base="Domicilio_Ita_Type">
+				<xs:sequence>
+					<xs:element name="DataVariazione" type="cm:DatoDT_Type" minOccurs="0"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Domicilio_Ita_Type">
+		<xs:sequence>
+			<xs:element name="Comune" type="cm:DatoAN_Type"/>
+			<xs:element name="Provincia" type="cm:PR_Type"/>
+			<xs:element name="CodiceComune" type="cm:DatoAN_Type"/>
+			<xs:element name="Indirizzo" type="cm:DatoAN_Type"/>
+			<xs:element name="Cap" type="cm:DatoCP_Type"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Domicilio_EE_Type">
+		<xs:sequence>
+			<xs:element name="Comune" type="cm:DatoAN_Type"/>
+			<xs:element name="Provincia" type="cm:PE_Type" minOccurs="0"/>
+			<xs:element name="CodiceComune" type="cm:DatoAN_Type" minOccurs="0"/>
+			<xs:element name="Indirizzo" type="cm:DatoAN_Type" minOccurs="0"/>
+			<xs:element name="Cap" type="cm:DatoCP_Type" minOccurs="0"/>
+			<xs:element name="DataVariazione" type="cm:DatoD6_Type" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Dati_Sottoscrittore_Type">
+		<xs:sequence>
+			<xs:element name="CodiceFiscale" type="cm:DatoCF_Type"/>
+			<xs:element name="CodiceCarica" type="Codice_Carica_Type"/>
+			<xs:element name="CodiceFiscaleSocieta" type="cm:DatoCN_Type" minOccurs="0"/>
+			<xs:element name="DatiAnagrafici" type="Dati_Anagrafici_Type"/>
+			<xs:element name="ResidenzaEstera" type="Residenza_Estera_Type" minOccurs="0"/>
+			<xs:element name="Telefono" type="cm:DatoTL_Type" minOccurs="0"/>
+			<xs:element name="DataCarica" type="cm:DatoDT_Type" minOccurs="0"/>
+			<xs:element name="InizioProcedura" type="cm:DatoDT_Type" minOccurs="0"/>
+			<xs:element name="ProceduraNonTerminata" type="cm:DatoCB_Type" minOccurs="0"/>
+			<xs:element name="FineProcedura" type="cm:DatoDT_Type" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Impegno_A_Trasmettere_Type">
+		<xs:sequence>
+			<xs:element name="CFintermediario" type="cm:DatoCF_Type"/>
+			<xs:element name="NumeroIscrAlboCAF" minOccurs="0">
+				<xs:simpleType>
+					<xs:restriction base="cm:DatoNU_Type">
+						<xs:maxLength value="5"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="ImpegnoATrasmettere">
+				<xs:simpleType>
+					<xs:restriction base="cm:DatoNP_Type">
+						<xs:pattern value="1|2"/>
+						<xs:enumeration value="1"/>
+						<xs:enumeration value="2"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="RicezioneAvvisoTelem" type="cm:DatoCB_Type" minOccurs="0"/>
+			<xs:element name="DataImpegno" type="cm:DatoDT_Type"/>
+			<xs:element name="FirmaIntermediario" type="cm:DatoCB_Type"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Visto_Conformita_Type">
+		<xs:sequence>
+			<xs:choice>
+				<xs:element name="VistoCAF">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="CFResp" type="cm:DatoCF_Type"/>
+							<xs:element name="CF_CAF" type="cm:DatoCN_Type"/>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="CFprofessionista" type="cm:DatoCF_Type"/>
+			</xs:choice>
+			<xs:element name="Firma" type="cm:DatoCB_Type"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Firma_Revisore_Type">
+		<xs:sequence>
+			<xs:element name="Soggetto" minOccurs="0">
+				<xs:simpleType>
+					<xs:restriction base="cm:DatoNP_Type">
+						<xs:pattern value="[1-4]"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="CodiceFiscale" type="cm:DatoCF_Type" minOccurs="0"/>
+			<xs:element name="FirmaDichiarante" type="cm:DatoCB_Type" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Tipo_Dichiarazione_Type">
+		<xs:choice>
+			<xs:element name="Correttiva" type="cm:DatoCB_Type"/>
+			<xs:element name="IntegrativaAFavore" type="cm:DatoCB_Type"/>
+			<xs:element name="Integrativa" type="cm:DatoCB_Type"/>
+			<xs:element name="IntegrativaArt2Co8Ter" type="cm:DatoCB_Type"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="Residenza_Estera_Type">
+		<xs:sequence>
+			<xs:element name="CodiceStatoEstero">
+				<xs:simpleType>
+					<xs:restriction base="cm:DatoAN_Type">
+						<xs:maxLength value="3"/>
+						<xs:minLength value="3"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="StatoFederato" minOccurs="0">
+				<xs:simpleType>
+					<xs:restriction base="cm:DatoAN_Type">
+						<xs:maxLength value="24"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="LocalitaEstero" type="cm:DatoAN_Type" minOccurs="0"/>
+			<xs:element name="IndirizzoEstero" type="cm:DatoAN_Type"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Firma_Type">
+		<xs:sequence>
+			<xs:element name="Firma" type="cm:DatoCB_Type" minOccurs="0"/>
+			<xs:element name="CodiceFiscale" minOccurs="0">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="([0-9A-Z\-]|&quot;){0,1}([0-9A-Z&amp;]|'|\-|\.|,|\s|/|°|\^|\(|\)|À|È|É|Ì|Ò|Ù|Ü|&quot;|\\|\||\+)*"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>

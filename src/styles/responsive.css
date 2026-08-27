@@ -27,6 +27,13 @@
   .practice-workspace {
     grid-template-columns: 190px minmax(340px, 1fr) minmax(280px, 0.85fr);
   }
+  .practice-heading {
+    align-items: flex-start;
+  }
+  .practice-heading-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
 }
 
 @media (max-width: 820px) {
@@ -367,6 +374,26 @@
   .practice-heading-actions {
     width: 100%;
     flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .practice-view-switch {
+    order: -1;
+    width: 100%;
+  }
+  .practice-view-switch button {
+    flex: 1;
+  }
+  .domain-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+  .domain-summary > div + div {
+    border-left: 0;
+  }
+  .domain-summary > div:nth-child(even) {
+    border-left: 1px solid var(--line-soft);
+  }
+  .domain-summary > div:nth-child(n + 3) {
+    border-top: 1px solid var(--line-soft);
   }
   .practice-meta {
     width: 100%;
@@ -394,6 +421,27 @@
   }
   .source-viewer {
     max-height: 480px;
+  }
+  .checklist-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .checklist-row label,
+  .checklist-note {
+    grid-column: 2;
+  }
+  .devolution-beneficiary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .devolution-beneficiary > strong {
+    grid-column: 1 / -1;
+  }
+  .calculation-actions,
+  .decision-confirmation {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .export-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -461,6 +509,50 @@
   .inline-upload > div {
     align-items: stretch;
     flex-direction: column;
+  }
+  .official-field > div,
+  .official-fields-actions,
+  .qualification-notice {
+    flex-direction: column;
+  }
+  .official-fields {
+    padding-inline: 10px;
+  }
+  .official-fields-group {
+    padding-inline: 12px;
+  }
+  .official-fields-group-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .official-fields .button {
+    width: 100%;
+  }
+  .devolution-beneficiary,
+  .calculation-beneficiary dl {
+    grid-template-columns: 1fr;
+  }
+  .devolution-asset > header,
+  .calculation-result > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .duplicate-subject-entry {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .duplicate-subject-entry .button {
+    width: 100%;
+    padding-block: 10px;
+    white-space: normal;
+  }
+  .audit-list li {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
   }
   .review-values {
     grid-template-columns: 1fr;

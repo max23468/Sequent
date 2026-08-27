@@ -10,6 +10,8 @@ export function evaluatePrGate({
   browser,
   browserResult,
   classificationResult,
+  compliance,
+  complianceResult,
   doctorResult,
   level,
   publicResult,
@@ -25,6 +27,8 @@ export function evaluatePrGate({
   }
   if (browser === "true") requireSuccess(failures, "gate browser", browserResult);
   if (arm64 === "true") requireSuccess(failures, "immagine ARM64", arm64Result);
+  if (compliance === "true")
+    requireSuccess(failures, "fonti e catalogo ministeriale", complianceResult);
 
   return { ok: failures.length === 0, failures };
 }
@@ -40,6 +44,8 @@ function main() {
     browser: process.env.REQUIRE_BROWSER,
     browserResult: process.env.BROWSER_RESULT,
     classificationResult: process.env.CLASSIFICATION_RESULT,
+    compliance: process.env.REQUIRE_COMPLIANCE,
+    complianceResult: process.env.COMPLIANCE_RESULT,
     doctorResult: process.env.DOCTOR_RESULT,
     level: process.env.PUBLICATION_LEVEL,
     publicResult: process.env.PUBLIC_RESULT,

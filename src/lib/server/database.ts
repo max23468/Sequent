@@ -183,6 +183,174 @@ CREATE INDEX IF NOT EXISTS upload_sessions_expires ON upload_sessions(expires_at
 UPDATE documents SET updated_at = created_at WHERE updated_at IS NULL;
 `;
 
+const domainMigration = `
+CREATE TABLE IF NOT EXISTS shared_subjects (
+  id TEXT PRIMARY KEY,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('decedent', 'beneficiary', 'representative', 'other')),
+  display_name TEXT NOT NULL,
+  tax_code TEXT,
+  data_json TEXT NOT NULL DEFAULT '{}',
+  revision INTEGER NOT NULL DEFAULT 1 CHECK (revision >= 1),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS shared_assets (
+  id TEXT PRIMARY KEY,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  category TEXT NOT NULL CHECK (category IN ('property', 'financial', 'other_asset', 'liability', 'donation')),
+  display_name TEXT NOT NULL,
+  data_json TEXT NOT NULL DEFAULT '{}',
+  revision INTEGER NOT NULL DEFAULT 1 CHECK (revision >= 1),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS checklist_items (
+  id TEXT PRIMARY KEY,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  declaration_id TEXT NOT NULL REFERENCES declarations(id) ON DELETE CASCADE,
+  requirement_kind TEXT NOT NULL CHECK (requirement_kind IN ('attachment', 'source', 'retain', 'subsequent_proof')),
+  importance TEXT NOT NULL CHECK (importance IN ('blocking', 'conditional', 'recommended')),
+  label TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('missing', 'available', 'not_applicable', 'overridden')),
+  source_refs_json TEXT NOT NULL,
+  rule_version TEXT NOT NULL,
+  document_id TEXT REFERENCES documents(id) ON DELETE SET NULL,
+  decision_note TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS devolution_scenarios (
+  id TEXT PRIMARY KEY,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  declaration_id TEXT NOT NULL REFERENCES declarations(id) ON DELETE CASCADE,
+  ruleset_version TEXT NOT NULL,
+  input_json TEXT NOT NULL,
+  result_json TEXT NOT NULL,
+  issues_json TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('draft', 'blocked', 'confirmed', 'superseded')),
+  confirmed_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS calculation_runs (
+  id TEXT PRIMARY KEY,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  declaration_id TEXT NOT NULL REFERENCES declarations(id) ON DELETE CASCADE,
+  ruleset_version TEXT NOT NULL,
+  input_hash TEXT NOT NULL,
+  input_json TEXT NOT NULL,
+  result_json TEXT NOT NULL,
+  issues_json TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('draft', 'blocked', 'confirmed', 'superseded')),
+  confirmed_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE (declaration_id, ruleset_version, input_hash)
+);
+
+CREATE TABLE IF NOT EXISTS domain_audit_events (
+  id TEXT PRIMARY KEY,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  declaration_id TEXT REFERENCES declarations(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS workspace_search USING fts5(
+  kind UNINDEXED,
+  entity_id UNINDEXED,
+  practice_id UNINDEXED,
+  label,
+  context,
+  tokenize = 'unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER IF NOT EXISTS workspace_search_practice_insert AFTER INSERT ON practices BEGIN
+  INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+  SELECT 'practice', new.id, new.id, new.title, 'Pratica' WHERE new.status = 'active';
+END;
+DROP TRIGGER IF EXISTS workspace_search_practice_update;
+CREATE TRIGGER workspace_search_practice_update AFTER UPDATE ON practices BEGIN
+  DELETE FROM workspace_search WHERE kind = 'practice' AND entity_id = old.id;
+  DELETE FROM workspace_search WHERE kind = 'document' AND practice_id = old.id;
+  INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+  SELECT 'practice', new.id, new.id, new.title, 'Pratica' WHERE new.status = 'active';
+  INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+  SELECT 'document', documents.id, documents.practice_id, documents.original_name, new.title
+  FROM documents WHERE documents.practice_id = new.id AND new.status = 'active';
+END;
+CREATE TRIGGER IF NOT EXISTS workspace_search_practice_delete AFTER DELETE ON practices BEGIN
+  DELETE FROM workspace_search WHERE kind = 'practice' AND entity_id = old.id;
+END;
+CREATE TRIGGER IF NOT EXISTS workspace_search_document_insert AFTER INSERT ON documents BEGIN
+  INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+  SELECT 'document', new.id, new.practice_id, new.original_name, practices.title
+  FROM practices WHERE practices.id = new.practice_id AND practices.status = 'active';
+END;
+CREATE TRIGGER IF NOT EXISTS workspace_search_document_update AFTER UPDATE ON documents BEGIN
+  DELETE FROM workspace_search WHERE kind = 'document' AND entity_id = old.id;
+  INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+  SELECT 'document', new.id, new.practice_id, new.original_name, practices.title
+  FROM practices WHERE practices.id = new.practice_id AND practices.status = 'active';
+END;
+CREATE TRIGGER IF NOT EXISTS workspace_search_document_delete AFTER DELETE ON documents BEGIN
+  DELETE FROM workspace_search WHERE kind = 'document' AND entity_id = old.id;
+END;
+CREATE TRIGGER IF NOT EXISTS workspace_search_subject_insert AFTER INSERT ON shared_subjects BEGIN
+  INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+  VALUES ('subject', new.id, new.practice_id, new.display_name, coalesce(new.tax_code, ''));
+END;
+CREATE TRIGGER IF NOT EXISTS workspace_search_subject_update AFTER UPDATE ON shared_subjects BEGIN
+  DELETE FROM workspace_search WHERE kind = 'subject' AND entity_id = old.id;
+  INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+  VALUES ('subject', new.id, new.practice_id, new.display_name, coalesce(new.tax_code, ''));
+END;
+CREATE TRIGGER IF NOT EXISTS workspace_search_subject_delete AFTER DELETE ON shared_subjects BEGIN
+  DELETE FROM workspace_search WHERE kind = 'subject' AND entity_id = old.id;
+END;
+CREATE TRIGGER IF NOT EXISTS workspace_search_asset_insert AFTER INSERT ON shared_assets BEGIN
+  INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+  VALUES ('asset', new.id, new.practice_id, new.display_name, new.category);
+END;
+CREATE TRIGGER IF NOT EXISTS workspace_search_asset_update AFTER UPDATE ON shared_assets BEGIN
+  DELETE FROM workspace_search WHERE kind = 'asset' AND entity_id = old.id;
+  INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+  VALUES ('asset', new.id, new.practice_id, new.display_name, new.category);
+END;
+CREATE TRIGGER IF NOT EXISTS workspace_search_asset_delete AFTER DELETE ON shared_assets BEGIN
+  DELETE FROM workspace_search WHERE kind = 'asset' AND entity_id = old.id;
+END;
+
+CREATE INDEX IF NOT EXISTS shared_subjects_practice_role ON shared_subjects(practice_id, role, updated_at);
+CREATE INDEX IF NOT EXISTS shared_assets_practice_category ON shared_assets(practice_id, category, updated_at);
+CREATE INDEX IF NOT EXISTS checklist_practice_status ON checklist_items(practice_id, status, importance);
+CREATE INDEX IF NOT EXISTS devolution_practice_declaration ON devolution_scenarios(practice_id, declaration_id, updated_at);
+CREATE INDEX IF NOT EXISTS calculations_practice_declaration ON calculation_runs(practice_id, declaration_id, updated_at);
+CREATE INDEX IF NOT EXISTS domain_audit_practice_created ON domain_audit_events(practice_id, created_at);
+`;
+
+const declarationSubjectEntriesMigration = `
+CREATE TABLE IF NOT EXISTS declaration_subject_entries (
+  declaration_id TEXT NOT NULL REFERENCES declarations(id) ON DELETE CASCADE,
+  entry_id TEXT NOT NULL,
+  subject_id TEXT NOT NULL REFERENCES shared_subjects(id) ON DELETE CASCADE,
+  sequence INTEGER NOT NULL CHECK (sequence >= 1),
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (declaration_id, entry_id),
+  UNIQUE (declaration_id, sequence)
+);
+
+CREATE INDEX IF NOT EXISTS declaration_subject_entries_subject
+  ON declaration_subject_entries(subject_id, declaration_id);
+`;
+
 function hasColumn(database: Database.Database, table: string, column: string): boolean {
   return (database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some(
     (candidate) => candidate.name === column,
@@ -262,6 +430,63 @@ function applyDocumentPipelineMigration(database: Database.Database): void {
   })();
 }
 
+function applyDomainMigration(database: Database.Database): void {
+  database.transaction(() => {
+    database.exec(domainMigration);
+    database.exec("DELETE FROM workspace_search");
+    database.exec(`
+      INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+      SELECT 'practice', id, id, title, 'Pratica' FROM practices WHERE status = 'active';
+      INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+      SELECT 'document', documents.id, documents.practice_id, documents.original_name, practices.title
+      FROM documents JOIN practices ON practices.id = documents.practice_id
+      WHERE practices.status = 'active';
+      INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+      SELECT 'subject', shared_subjects.id, shared_subjects.practice_id, shared_subjects.display_name,
+             coalesce(shared_subjects.tax_code, '')
+      FROM shared_subjects JOIN practices ON practices.id = shared_subjects.practice_id
+      WHERE practices.status = 'active';
+      INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+      SELECT 'asset', shared_assets.id, shared_assets.practice_id, shared_assets.display_name,
+             shared_assets.category
+      FROM shared_assets JOIN practices ON practices.id = shared_assets.practice_id
+      WHERE practices.status = 'active';
+    `);
+    database
+      .prepare("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (3, ?)")
+      .run(new Date().toISOString());
+  })();
+}
+
+function applyDeclarationSubjectEntriesMigration(database: Database.Database): void {
+  database.transaction(() => {
+    database.exec(declarationSubjectEntriesMigration);
+    const alreadyApplied = database
+      .prepare("SELECT 1 FROM schema_migrations WHERE version = 4")
+      .get();
+    if (alreadyApplied) return;
+    database.exec(`
+      INSERT INTO declaration_subject_entries(
+        declaration_id, entry_id, subject_id, sequence, created_at
+      )
+      SELECT declarations.id,
+             shared_subjects.id,
+             shared_subjects.id,
+             row_number() OVER (
+               PARTITION BY declarations.id
+               ORDER BY shared_subjects.created_at, shared_subjects.id
+             ),
+             shared_subjects.created_at
+      FROM declarations
+      JOIN shared_subjects ON shared_subjects.practice_id = declarations.practice_id
+      WHERE shared_subjects.role <> 'decedent';
+    `);
+    database
+      .prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (4, ?)")
+      .run(new Date().toISOString());
+  })();
+}
+
 function applyMigrations(database: Database.Database): void {
   database.exec(foundationMigration);
   database
@@ -270,6 +495,8 @@ function applyMigrations(database: Database.Database): void {
   // Lo schema è la fonte di verità: riparare anche database provenienti da una
   // migrazione della pipeline documentale interrotta o da checkout concorrenti con numeri già occupati.
   applyDocumentPipelineMigration(database);
+  applyDomainMigration(database);
+  applyDeclarationSubjectEntriesMigration(database);
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

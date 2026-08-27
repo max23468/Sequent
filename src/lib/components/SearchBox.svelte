@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FileText, Folder, Search, X } from "@lucide/svelte";
+  import { Building2, FileText, Folder, Search, UsersRound, X } from "@lucide/svelte";
   import { searchSequent, type SearchResult } from "$lib/client/search";
 
   let query = $state("");
@@ -7,6 +7,12 @@
   let open = $state(false);
   let loading = $state(false);
   let requestId = 0;
+  const resultIcons = {
+    practice: Folder,
+    document: FileText,
+    subject: UsersRound,
+    asset: Building2,
+  } as const;
 
   async function search() {
     const current = query.trim();
@@ -100,9 +106,10 @@
       {:else}
         <ul>
           {#each results as result (result.kind + result.id)}
+            {@const ResultIcon = resultIcons[result.kind]}
             <li>
               <a href={result.href} onclick={clear}>
-                {#if result.kind === "practice"}<Folder size={18} aria-hidden="true" />{:else}<FileText size={18} aria-hidden="true" />{/if}
+                <ResultIcon size={18} aria-hidden="true" />
                 <span><strong>{result.label}</strong><small>{result.context}</small></span>
               </a>
             </li>

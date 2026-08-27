@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:main="urn:sequent:test:main"
+  xmlns:common="urn:sequent:test:common"
+  targetNamespace="urn:sequent:test:main"
+  elementFormDefault="qualified">
+  <xs:import namespace="urn:sequent:test:common" schemaLocation="common/types.xsd" />
+  <xs:element name="Fornitura" type="main:FornituraType" />
+  <xs:complexType name="FornituraType">
+    <xs:sequence>
+      <xs:element name="Dichiarazione" type="main:DichiarazioneType" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="DichiarazioneType">
+    <xs:sequence>
+      <xs:element name="Codice" type="common:CodiceFieldType">
+        <xs:annotation><xs:documentation>Codice sintetico</xs:documentation></xs:annotation>
+      </xs:element>
+      <xs:choice minOccurs="0">
+        <xs:element name="Prima" type="xs:string" />
+        <xs:element name="Sostitutiva" type="xs:string" />
+      </xs:choice>
+      <xs:element name="Modulo" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="Valore" type="xs:decimal" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 1,
-  "bundleId": "SUC-OFFICIAL-2025-07-15-FULL",
-  "status": "scaffold",
+  "schemaVersion": 2,
+  "bundleId": "SUC-OFFICIAL-2026-08-27-COMPREHENSIVE",
+  "status": "blocked",
   "generatedFrom": [
     "source-manifest.json",
     "xsd-manifest.json",
@@ -12,6 +12,38 @@
     "delta-overlays.json"
   ],
   "releaseEligible": false,
-  "qualifiedCapabilities": ["diz-prototype-round-trip"],
-  "blockers": ["TG-COMPLIANCE aperto"]
+  "qualifiedCapabilities": [
+    "structural-xsd-catalog",
+    "succession-tax-chain-prototype-2025",
+    "diz-prototype-round-trip"
+  ],
+  "blockers": [
+    "714 campi della dichiarazione usano ancora una presentazione derivata dal nome tecnico e non una corrispondenza verificata con modello, numerazione e istruzioni visibili.",
+    "277 prescrizioni ministeriali sono classificate come conferme professionali, ma non hanno ancora condizione di applicabilità, periodo, fixture e conferma esplicita collegata al valore interessato.",
+    "Copertura di calcolo non ancora qualificata: Sezione V-bis del Quadro EF, credito, imposta da versare, acconto e rateazione.",
+    "Copertura di calcolo non ancora qualificata: imposte ipotecaria e catastale, servizi ipotecari e catastali, bollo e tributi speciali.",
+    "Copertura di calcolo non ancora qualificata: sanzioni, interessi e totale da versare.",
+    "Copertura di calcolo non ancora qualificata: valori catastali e diritti reali.",
+    "Copertura di calcolo non ancora qualificata: quadrature complete dei Quadri EE ed EF.",
+    "Copertura di calcolo non ancora qualificata: tutti gli esempi ufficiali ulteriori rispetto al caso completo già acquisito.",
+    "SRC-11, SRC-12, SRC-13, SRC-14: riconciliare approvazione, chiarimenti e codici tributo con campi, controlli, calcoli, scadenze e pagamenti; aggiungere test per ogni differenza rilevante",
+    "SRC-15, SRC-30: qualificare il controllo SUC13 2.3.1 e leggere dal servizio vivo l’elenco uffici, Comuni e Stati esteri prima di un invio ufficiale",
+    "SRC-16, SRC-18, SRC-19, SRC-20, SRC-21, SRC-22: costruire la linea temporale articolo per articolo e collegarla alla data di apertura della successione, senza applicare automaticamente la disciplina più recente ai casi anteriori",
+    "SRC-23, SRC-24, SRC-25, SRC-26: introdurre valori con periodo di efficacia e test separati per 2025 e 2026 su interessi, usufrutto, rendite e pensioni",
+    "SRC-27: aggiungere almeno un caso anteriore alla riforma che applichi correttamente la sentenza 89/2026",
+    "SRC-28, SRC-29, SRC-31: confrontare allegati, controlli, ricevute e casi residui del Modello 4 con il percorso della pratica e con la futura verifica ufficiale",
+    "SRC-32, SRC-33, SRC-34, SRC-35, SRC-36, SRC-37, SRC-38, SRC-39, SRC-40: confrontare pagina, versione e deposito conservati con i canali ufficiali vivi e qualificare il modulo SUC13 su casi sintetici prima del flusso ufficiale",
+    "La checklist non copre ancora tutte le condizioni di allegati, dichiarazioni sostitutive, trust e agevolazione prima casa previste dalle fonti.",
+    "La preparazione e validazione effettiva degli allegati PDF/A o TIFF non è ancora integrata nel flusso interno della pratica."
+  ],
+  "coverage": {
+    "sourceArtifacts": 40,
+    "xsdFiles": 13,
+    "technicalPaths": 1056,
+    "technicalFields": 761,
+    "semanticRules": 1041,
+    "calculationRules": 13,
+    "unresolvedReferences": 0,
+    "unresolvedOverlays": 0
+  }
 }

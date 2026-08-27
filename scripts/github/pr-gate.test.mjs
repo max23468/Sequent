@@ -8,6 +8,8 @@ const base = {
   browser: "false",
   browserResult: "skipped",
   classificationResult: "success",
+  compliance: "false",
+  complianceResult: "skipped",
   doctorResult: "skipped",
   level: "rapid",
   publicResult: "skipped",
@@ -44,4 +46,19 @@ test("i gate browser e ARM64 sono obbligatori quando classificati", () => {
 test("un risultato cancellato o mancante non viene scambiato per successo", () => {
   assert.equal(evaluatePrGate({ ...base, rapidResult: "cancelled" }).ok, false);
   assert.equal(evaluatePrGate({ ...base, classificationResult: "" }).ok, false);
+});
+
+test("le modifiche alle fonti richiedono la verifica ministeriale", () => {
+  const compliance = {
+    ...base,
+    level: "sensitive",
+    publicResult: "success",
+    doctorResult: "success",
+    compliance: "true",
+    complianceResult: "success",
+  };
+  assert.equal(evaluatePrGate(compliance).ok, true);
+  const failed = evaluatePrGate({ ...compliance, complianceResult: "skipped" });
+  assert.equal(failed.ok, false);
+  assert.match(failed.failures.at(-1), /fonti e catalogo ministeriale/);
 });
