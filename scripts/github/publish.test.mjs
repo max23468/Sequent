@@ -133,6 +133,7 @@ test("invia l'invocazione Codex esatta come campo raw", async () => {
   const source = await readFile(new URL("./publish.mjs", import.meta.url), "utf8");
   assert.match(source, /"--raw-field",\s*"body=@codex review"/);
   assert.doesNotMatch(source, /"--field",\s*"body=@codex review"/);
+  assert.match(source, /scripts\/github\/resolve-advisories\.mjs/);
 });
 
 test("considera riuscita la cancellazione concorrente del branch remoto", () => {

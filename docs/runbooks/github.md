@@ -41,7 +41,7 @@ Il workflow `Codex review gate` esegue il primo giro su apertura o passaggio a r
 
 Il gate accetta soltanto segnali riferiti all'HEAD corrente. Un nuovo commit imposta subito lo stato pending e termina il job di reset; il commento autorizzato avvia un solo polling. Il polling usa intervalli brevi nella finestra ordinaria e poi rallenta.
 
-P0/P1 producono fallimento. P2/P3 vengono copiati in un commento stabile associato all'HEAD e restano advisory. Dopo la registrazione il workflow risolve soltanto i thread automatici P2/P3 senza risposte umane. Non risolve thread P0/P1, conversazioni miste o thread ai quali una persona ha risposto. La ruleset continua quindi a richiedere la risoluzione di tutte le conversazioni reali. Errori operativi del bot o della registrazione producono stato `error`.
+P0/P1 producono fallimento. P2/P3 vengono copiati in un commento stabile associato all'HEAD e restano advisory. Dopo la registrazione il workflow risolve soltanto i thread automatici P2/P3 senza risposte umane. Se il token GitHub Actions non può eseguire la mutazione GraphQL, il comando di pubblicazione completa la stessa operazione con l'identità locale autorizzata prima del merge. Non vengono risolti thread P0/P1, conversazioni miste o thread ai quali una persona ha risposto. La ruleset continua quindi a richiedere la risoluzione di tutte le conversazioni reali. Errori operativi del bot, della registrazione o del fallback locale producono stato `error`.
 
 ## Comando di pubblicazione
 

@@ -330,6 +330,15 @@ async function main() {
     }
   }
   await waitForCodex(pr.number);
+  run("node", [
+    "scripts/github/resolve-advisories.mjs",
+    "--repository",
+    repository,
+    "--pull-request",
+    String(pr.number),
+    "--head",
+    headSha,
+  ]);
   await waitForChecks(pr.number, [...PRE_REVIEW_CHECKS, "codex-review"]);
 
   run("gh", ["pr", "merge", String(pr.number), "--squash", "--match-head-commit", headSha]);

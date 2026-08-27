@@ -14,6 +14,9 @@ const ADVISORY_MARKER = "<!-- sequent-codex-advisories:";
 export const isCodexBotLogin = (login) =>
   login === CODEX_BOT || login === CODEX_BOT.replace(/\[bot\]$/, "");
 
+export const isAdvisoryResolutionPermissionError = (error) =>
+  /Resource not accessible by integration/i.test(error?.message ?? "");
+
 const timestamp = (value) => new Date(value ?? 0).getTime();
 const signalTimestamp = (signal) => timestamp(signal.submitted_at ?? signal.created_at);
 const matchesHead = (candidate, headSha) => Boolean(candidate && headSha.startsWith(candidate));
@@ -329,19 +332,26 @@ async function recordAndResolveAdvisories({
 
   const threads = await pullRequestThreads(repository, number);
   for (const threadId of resolvableAdvisoryThreadIds(threads, exactInline)) {
-    await graphql(
-      `
-        mutation ($threadId: ID!) {
-          resolveReviewThread(input: { threadId: $threadId }) {
-            thread {
-              id
-              isResolved
+    try {
+      await graphql(
+        `
+          mutation ($threadId: ID!) {
+            resolveReviewThread(input: { threadId: $threadId }) {
+              thread {
+                id
+                isResolved
+              }
             }
           }
-        }
-      `,
-      { threadId },
-    );
+        `,
+        { threadId },
+      );
+    } catch (error) {
+      if (!isAdvisoryResolutionPermissionError(error)) throw error;
+      console.warn(
+        `Risoluzione automatica non consentita per ${threadId}; completa l'orchestratore locale.`,
+      );
+    }
   }
 }
 
