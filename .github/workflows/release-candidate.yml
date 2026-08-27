@@ -62,6 +62,24 @@ jobs:
       - run: npm run doctor
       - run: npm run benchmark:m3 -- --dataset tests/fixtures/m3-benchmark.synthetic.json
 
+  scan-dependencies:
+    name: Scansione dipendenze release
+    needs: qualify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+      - name: Blocca vulnerabilità note nel lockfile
+        run: |
+          docker run --rm \
+            --volume "$PWD:/src:ro" \
+            --workdir /src \
+            ghcr.io/google/osv-scanner@sha256:8108ae94eadea5a02c9bec6e646909d5b790b44bd62d7f5b7f0b1d6d0ffc7734 \
+            scan source --lockfile package-lock.json
+
   browser-suite:
     name: Browser matrix automatica release
     needs: qualify
@@ -142,16 +160,43 @@ jobs:
             --archive sequent-release-arm64.tar \
             --manifest release-manifest.json
 
+  scan-image:
+    name: Scansione immagine ARM64 release
+    needs: [qualify, build-arm64]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sequent-release-${{ inputs.commit }}
+      - name: Blocca vulnerabilità note nell'archivio candidato
+        run: |
+          docker run --rm \
+            --volume "$PWD:/scan:ro" \
+            ghcr.io/google/osv-scanner@sha256:8108ae94eadea5a02c9bec6e646909d5b790b44bd62d7f5b7f0b1d6d0ffc7734 \
+            scan image --archive /scan/sequent-release-arm64.tar
+
   release-candidate-gate:
     name: Release candidate gate
     if: always()
-    needs: [qualify, public-suite, browser-suite, build-arm64, readback-artifact]
+    needs:
+      [
+        qualify,
+        public-suite,
+        scan-dependencies,
+        browser-suite,
+        build-arm64,
+        readback-artifact,
+        scan-image,
+      ]
     runs-on: ubuntu-latest
     steps:
       - name: Richiede l'intera matrice pubblica
         run: |
           test '${{ needs.qualify.result }}' = success
           test '${{ needs.public-suite.result }}' = success
+          test '${{ needs.scan-dependencies.result }}' = success
           test '${{ needs.browser-suite.result }}' = success
           test '${{ needs.build-arm64.result }}' = success
           test '${{ needs.readback-artifact.result }}' = success
+          test '${{ needs.scan-image.result }}' = success

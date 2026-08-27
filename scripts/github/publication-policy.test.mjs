@@ -184,5 +184,12 @@ test("la candidata rilegge lo stesso artefatto ARM64 senza deploy", async () => 
     /npm run benchmark:m3 -- --dataset tests\/fixtures\/m3-benchmark\.synthetic\.json/,
   );
   assert.match(workflow, /release-review\.mjs --commit/);
+  assert.match(workflow, /name: Scansione dipendenze release/);
+  assert.match(workflow, /scan source --lockfile package-lock\.json/);
+  assert.match(workflow, /name: Scansione immagine ARM64 release/);
+  assert.match(workflow, /scan image --archive \/scan\/sequent-release-arm64\.tar/);
+  assert.equal(workflow.match(/ghcr\.io\/google\/osv-scanner@sha256:[0-9a-f]{64}/g)?.length, 2);
+  assert.match(workflow, /needs\.scan-dependencies\.result/);
+  assert.match(workflow, /needs\.scan-image\.result/);
   assert.doesNotMatch(workflow, /\bssh\b|deploy/i);
 });
