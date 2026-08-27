@@ -2693,7 +2693,7 @@ I permessi devono impedire al processo di build/test ordinario di modificare acc
 - nessun pannello amministrativo pubblico;
 - virtual host Caddy separato da Hub Fatture.
 
-Prima dell'attivazione autorizzata il servizio può rimanere non pubblicato e raggiungibile soltanto tramite canale amministrativo. La stessa istanza viene poi resa operativa senza duplicazione dei dati o promozione fra ambienti.
+Prima dell'attivazione autorizzata il servizio può rimanere non pubblicato e raggiungibile soltanto tramite canale amministrativo. L'esposizione personale tramite hostname dedicato, Caddy e HTTPS viene attivata insieme alle procedure operative; la validazione finale e il go-live usano poi lo stesso endpoint già qualificato, senza duplicazione dei dati o promozione fra ambienti.
 
 ## 43.5 Runtime e deployment
 
@@ -3506,13 +3506,13 @@ M2 comprende inoltre Brand Foundation, design token, shell responsive, Dashboard
 
 ## M6 — Flusso ufficiale e operations
 
-**Risultato:** DIZ productizzato, import/export/reimport, confronto a tre vie DIZ, telematico/ricevute, backup manuale, restore CLI, health check, modalità manutenzione, update e rollback dell'unica istanza.
+**Risultato:** DIZ productizzato, import/export/reimport, confronto a tre vie DIZ, telematico/ricevute, backup manuale, restore CLI, health check, modalità manutenzione, update e rollback dell'unica istanza. Dopo autorizzazione dell'owner, la stessa istanza viene resa raggiungibile per l'uso personale tramite hostname Dynu dedicato, virtual host Caddy separato e HTTPS, senza pannelli amministrativi pubblici né nuovi ambienti.
 
-**Uscita:** round-trip ufficiale, pacchetto allegati conforme, controllo Agenzia/Sogei superato e procedure operative ripetibili.
+**Uscita:** round-trip ufficiale, pacchetto allegati conforme, controllo Agenzia/Sogei superato e procedure operative ripetibili; origine HTTPS canonica, health check attraverso Caddy e autenticazione/sessione verificati sull'endpoint personale.
 
 ## M7 — Validazione e go-live
 
-**Risultato:** ricostruzione delle pratiche storiche, benchmark, regressioni, prima pratica reale parallela e release stabile.
+**Risultato:** ricostruzione delle pratiche storiche, benchmark, regressioni, prima pratica reale parallela sull'endpoint HTTPS qualificato in M6 e release stabile.
 
 **Uscita:** `TG-GOLIVE` chiuso e approvazione owner.
 
