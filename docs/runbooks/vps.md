@@ -60,6 +60,28 @@ scripts/vps/preflight.sh
 
 Prerequisiti host: Git, rsync, unzip, `libxml2-utils`, `poppler-utils`, `python3-lxml` e `libatomic1`.
 
+## Build temporanee e manutenzione immagini
+
+La VPS condivide il solo motore Docker fisico con Hub Fatture. Deploy e manutenzioni HF e build Sequent usano quindi lo stesso lock host, senza leggere configurazioni o dati dell’altro prodotto. Una build temporanea parte soltanto sotto l’80% di utilizzo disco e usa un tag `sequent:tmp-*` gestito dal wrapper:
+
+```bash
+sudo scripts/vps/with-temporary-docker-image.sh sequent:tmp-verifica -- \
+  sh -c 'docker build --build-arg APP_COMMIT_SHA="$SEQUENT_IMAGE_REVISION" --tag "$SEQUENT_TEMP_IMAGE" . && docker run --rm "$SEQUENT_TEMP_IMAGE"'
+```
+
+Il wrapper serializza l’operazione, ricava l’HEAD esatto per il label OCI e, anche in caso di errore, elimina container, tag e soltanto i layer dangling comparsi durante il proprio comando. Non usarlo per l’immagine della release attiva.
+
+La manutenzione periodica è selettiva. Riconosce le immagini del prodotto dal label OCI canonico o dal namespace locale esatto `sequent:*`, così copre anche build precedenti all’introduzione del label senza coinvolgere immagini di HF o di altri repository:
+
+```bash
+sudo scripts/vps/prune-docker-images.sh --dry-run
+sudo scripts/vps/prune-docker-images.sh
+```
+
+La pulizia protegge sempre runtime corrente, precedente immagine attiva di rollback e qualunque immagine referenziata da un container. Il runtime può essere identificato dal digest Docker previsto dal Compose oppure dai tag locali exact-commit `sequent:*` e `sequent-release:*`. Un candidato VPS qualificato che deve sopravvivere oltre la finestra si registra con il suo image ID completo, una riga per immagine, in `/opt/sequent/runtime/retained-image-ids`; una riga invalida o un’immagine assente blocca la pulizia e un ID trattenuto non può occupare lo slot di rollback. Le immagini Sequent e i layer dangling attribuibili al prodotto hanno una finestra di sicurezza predefinita di 24 ore; ridurla richiede prima la verifica che non esistano build o task concorrenti.
+
+L’installazione operativa colloca lo script in `/opt/sequent/runtime/` e abilita `sequent-docker-prune.timer`. Il timer esegue la stessa manutenzione una volta al giorno con ritardo casuale, resta idempotente dopo un riavvio e non aggira il lock condiviso. Installazione e aggiornamento delle unità fanno parte della futura corsia di release o di una manutenzione VPS esplicitamente autorizzata.
+
 ## Confini operativi
 
 - non eseguire la working tree come servizio;
@@ -67,3 +89,4 @@ Prerequisiti host: Git, rsync, unzip, `libxml2-utils`, `poppler-utils`, `python3
 - eseguire restore, migrazioni e import DIZ rischiosi soltanto su copie in `/opt/sequent/tmp`;
 - non modificare Caddy, Dynu, firewall o l'installazione condivisa indicata dalla configurazione privata senza autorizzazione separata;
 - non eliminare il source bundle privato finché non esiste una copia di sicurezza indipendente verificata.
+- non eseguire `docker build` direttamente sulla VPS: usare il wrapper temporaneo o la corsia di release approvata;

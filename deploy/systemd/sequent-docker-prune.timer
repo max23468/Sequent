@@ -1,0 +1,11 @@
+[Unit]
+Description=Pulizia giornaliera immagini Docker Sequent
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=30m
+Unit=sequent-docker-prune.service
+
+[Install]
+WantedBy=timers.target

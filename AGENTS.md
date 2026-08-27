@@ -12,6 +12,7 @@ Regole inderogabili:
 - Il checkout `/opt/sequent/repo/`, il runtime, i dati e le copie temporanee restano separati.
 - Non eseguire la working tree sui dati operativi e non usare dati reali come fixture.
 - Non modificare Caddy, Dynu, firewall o Hub Fatture senza autorizzazione specifica.
+- Sulla VPS ogni build Docker temporanea usa `scripts/vps/with-temporary-docker-image.sh`; non lasciare tag, container o layer di prova fuori dal wrapper.
 - Il bootstrap e i gate preliminari non autorizzano pubblicazione o attivazione di servizi.
 - Ogni bug fiscale, DIZ, di persistenza o di separazione dei dati produce una regressione minima.
 
