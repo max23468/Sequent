@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import Database from "better-sqlite3";
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -95,12 +96,12 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
   expect(practiceTitleSize).toBeLessThan(dashboardTitleSize);
 
   await page.getByRole("button", { name: /Defunto e dichiarazione/ }).click();
-  await expect(page.getByRole("heading", { name: "Da verificare" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Defunto e dichiarazione" })).toBeVisible();
   expect(
     (await page.locator(".workspace-panel-heading").nth(1).locator(":scope > span").boundingBox())
       ?.width,
   ).toBeGreaterThanOrEqual(46);
-  await expect(page.getByText("Non disponibile in M2")).toBeVisible();
+  await expect(page.getByText("Non disponibile prima di M4")).toBeVisible();
   await expect(page.getByRole("button", { name: "Conferma" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Modifica" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Rifiuta" })).toBeDisabled();
@@ -228,7 +229,8 @@ test("mostra una verifica tecnica fallita nella Dashboard e nella pratica", asyn
       `UPDATE jobs
        SET status = 'failed', attempts = 3, progress = 0,
            error_code = 'BLOB_HASH_MISMATCH', updated_at = ?
-       WHERE document_id = (SELECT id FROM documents WHERE original_name = ?)`,
+       WHERE type = 'foundation.verify_blob'
+         AND document_id = (SELECT id FROM documents WHERE original_name = ?)`,
     )
     .run(failedAt, documentName);
   expect(result.changes).toBe(1);
@@ -242,6 +244,51 @@ test("mostra una verifica tecnica fallita nella Dashboard e nella pratica", asyn
   await issue.click();
   await expect(page.getByRole("alert")).toContainText("Verifica tecnica non riuscita");
   await expect(page.getByRole("alert").getByRole("link", { name: documentName })).toBeVisible();
+});
+
+test("mostra la fonte e registra una correzione manuale", async ({ page }) => {
+  const practiceTitle = unique("Pratica revisione M3");
+  const documentName = `revisione-${suffix}.txt`;
+  await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  await uploadFromWorkspace(page, documentName, "Data proposta: 31/12/2026");
+
+  const dataDirectory = process.env.SEQUENT_E2E_DATA_DIR ?? ".test-data/e2e";
+  const database = new Database(join(dataDirectory, "sequent.sqlite"));
+  const document = database
+    .prepare("SELECT id, practice_id AS practiceId FROM documents WHERE original_name = ?")
+    .get(documentName) as { id: string; practiceId: string };
+  const now = new Date().toISOString();
+  database
+    .prepare(
+      `INSERT INTO review_items (
+        id, practice_id, document_id, page_number, subject_key, label,
+        proposed_value_json, alternatives_json, method, confidence, source_excerpt,
+        source_refs_json, prompt_version, critical, status, created_at, updated_at
+      ) VALUES (?, ?, ?, 1, ?, ?, ?, '[]', 'ocr', 0.72, ?, ?, NULL, 0, 'pending', ?, ?)`,
+    )
+    .run(
+      randomUUID(),
+      document.practiceId,
+      document.id,
+      "document.date",
+      "Data del documento",
+      JSON.stringify("31/12/2026"),
+      "Data proposta: 31/12/2026",
+      JSON.stringify([{ documentId: document.id, pageNumber: 1, value: "31/12/2026" }]),
+      now,
+      now,
+    );
+  database.close();
+
+  await page.reload();
+  await page.getByRole("button", { name: /Da verificare/ }).click();
+  await expect(page.getByText("Data del documento", { exact: true })).toBeVisible();
+  await expect(page.getByText("Data proposta: 31/12/2026", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: documentName })).toBeVisible();
+  await page.getByLabel("Correggi prima di confermare").fill("30/12/2026");
+  await page.getByRole("button", { name: "Conferma correzione" }).click();
+  await expect(page.getByText("Nessuna verifica in sospeso.")).toBeVisible();
 });
 
 test("persiste i temi chiaro e scuro e ripristina il tema di sistema", async ({ page }) => {

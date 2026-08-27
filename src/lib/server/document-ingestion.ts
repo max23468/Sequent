@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 import { persistUpload, type PersistedUpload } from "./blob-store.ts";
-import { enqueueJob } from "./jobs.ts";
+import { enqueueJob, resetJobsAfterBlobRepair } from "./jobs.ts";
 import { createPractice, getPractice } from "./practices.ts";
 
 export interface IngestedDocument {
@@ -21,7 +21,7 @@ function attachUpload(
   database: Database.Database,
   practiceId: string,
   upload: PersistedUpload,
-): IngestedDocument {
+): { document: IngestedDocument; reused: boolean } {
   const existing = database
     .prepare(
       `SELECT id, sha256, byte_size, blob_path
@@ -32,11 +32,14 @@ function attachUpload(
     | undefined;
   if (existing) {
     return {
-      id: existing.id,
-      practiceId,
-      sha256: existing.sha256,
-      byteSize: existing.byte_size,
-      blobPath: existing.blob_path,
+      document: {
+        id: existing.id,
+        practiceId,
+        sha256: existing.sha256,
+        byteSize: existing.byte_size,
+        blobPath: existing.blob_path,
+      },
+      reused: true,
     };
   }
 
@@ -60,12 +63,48 @@ function attachUpload(
     );
   database.prepare("UPDATE practices SET updated_at = ? WHERE id = ?").run(now, practiceId);
   return {
-    id,
-    practiceId,
-    sha256: upload.sha256,
-    byteSize: upload.byteSize,
-    blobPath: upload.blobPath,
+    document: {
+      id,
+      practiceId,
+      sha256: upload.sha256,
+      byteSize: upload.byteSize,
+      blobPath: upload.blobPath,
+    },
+    reused: false,
   };
+}
+
+export function ingestPersistedUpload(
+  database: Database.Database,
+  upload: PersistedUpload,
+  destination: { practiceId: string } | { newPracticeTitle: string },
+): IngestedDocument {
+  if ("practiceId" in destination && !getPractice(database, destination.practiceId)) {
+    throw new Error("PRACTICE_NOT_FOUND");
+  }
+  const commit = database.transaction(() => {
+    const practiceId =
+      "practiceId" in destination
+        ? destination.practiceId
+        : createPractice(database, destination.newPracticeTitle).id;
+    const attached = attachUpload(database, practiceId, upload);
+    const { document } = attached;
+    if (attached.reused) resetJobsAfterBlobRepair(database, document.id);
+    enqueueJob(
+      database,
+      "foundation.verify_blob",
+      { sha256: document.sha256 },
+      { practiceId, documentId: document.id },
+    );
+    enqueueJob(
+      database,
+      "document.process",
+      { sha256: document.sha256, pipelineVersion: 1 },
+      { practiceId, documentId: document.id },
+    );
+    return document;
+  });
+  return commit.immediate();
 }
 
 export async function ingestDocument(
@@ -79,21 +118,7 @@ export async function ingestDocument(
   }
   const upload = await persistUpload(file, dataDirectory);
 
-  const commit = database.transaction(() => {
-    const practiceId =
-      "practiceId" in destination
-        ? destination.practiceId
-        : createPractice(database, destination.newPracticeTitle).id;
-    const document = attachUpload(database, practiceId, upload);
-    enqueueJob(
-      database,
-      "foundation.verify_blob",
-      { sha256: document.sha256 },
-      { practiceId, documentId: document.id },
-    );
-    return document;
-  });
-  return commit.immediate();
+  return ingestPersistedUpload(database, upload, destination);
 }
 
 export function describeDocumentIngestionFailure(error: unknown): DocumentIngestionFailure | null {

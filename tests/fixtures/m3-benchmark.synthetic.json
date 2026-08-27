@@ -1,0 +1,31 @@
+{
+  "corpusId": "synthetic-m3-smoke-v1",
+  "corpusHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "cases": [
+    {
+      "id": "native-text-source",
+      "category": "pdf_native",
+      "knownDocumentIds": ["synthetic-document-1"],
+      "expected": [
+        {
+          "key": "document.reference",
+          "value": "RIF-001",
+          "documentId": "synthetic-document-1",
+          "pageNumber": 1,
+          "sourceText": "Documento sintetico. Riferimento RIF-001.",
+          "critical": false
+        }
+      ],
+      "observed": [
+        {
+          "key": "document.reference",
+          "value": "RIF-001",
+          "documentId": "synthetic-document-1",
+          "pageNumber": 1,
+          "sourceExcerpt": "Riferimento RIF-001",
+          "reviewStatus": "pending"
+        }
+      ]
+    }
+  ]
+}

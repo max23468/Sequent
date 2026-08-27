@@ -4,6 +4,7 @@ import type { Actions, PageServerLoad } from "./$types";
 import { hasOwner } from "$lib/server/auth";
 import { openDatabase } from "$lib/server/database";
 import { describeDocumentIngestionFailure, ingestDocument } from "$lib/server/document-ingestion";
+import { listPendingReviewSummaries } from "$lib/server/documents";
 import { listFailedBlobVerifications } from "$lib/server/jobs";
 import { getLauncherCapabilities } from "$lib/server/launchers";
 import { createPractice, listPractices } from "$lib/server/practices";
@@ -21,6 +22,7 @@ export const load: PageServerLoad = ({ locals }) => {
   const practices = listPractices(database);
   return {
     practices,
+    pendingReviews: listPendingReviewSummaries(database),
     failedVerifications: listFailedBlobVerifications(database),
     launchers: getLauncherCapabilities(),
     lastPractice: practices.at(0) ?? null,

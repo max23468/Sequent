@@ -2,13 +2,17 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import Database from "better-sqlite3";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
+import { runJobRunnerTick } from "../../src/lib/server/job-runner.ts";
 import {
+  cancelQueuedJob,
   claimNextJob,
   enqueueJob,
   finishJob,
   listFailedBlobVerifications,
   recoverInterruptedJobs,
+  retryJob,
 } from "../../src/lib/server/jobs.ts";
 import { createPractice } from "../../src/lib/server/practices.ts";
 import { ingestDocument } from "../../src/lib/server/document-ingestion.ts";
@@ -23,6 +27,83 @@ afterEach(() => {
 });
 
 describe("coda persistente", () => {
+  it("ritenta un job dopo una contesa SQLite senza terminare il runner", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-job-busy-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const job = enqueueJob(database, "foundation.test", { input: "busy" });
+    database.pragma("busy_timeout = 0");
+
+    const locker = new Database(join(directory, "sequent.sqlite"));
+    locker.pragma("journal_mode = WAL");
+    locker.exec("BEGIN IMMEDIATE");
+    try {
+      await expect(runJobRunnerTick(database)).resolves.toBeUndefined();
+      expect(database.prepare("SELECT status FROM jobs WHERE id = ?").get(job.id)).toEqual({
+        status: "queued",
+      });
+    } finally {
+      locker.exec("ROLLBACK");
+      locker.close();
+    }
+
+    await expect(runJobRunnerTick(database)).resolves.toBeUndefined();
+    expect(
+      database.prepare("SELECT status, error_code FROM jobs WHERE id = ?").get(job.id),
+    ).toEqual({
+      status: "failed",
+      error_code: "JOB_TYPE_UNSUPPORTED",
+    });
+  });
+
+  it("non elabora un documento quando la verifica del blob è fallita", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-job-invalid-blob-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica con blob non valido");
+    const document = await ingestDocument(
+      database,
+      new File(["originale sintetico"], "originale.txt", { type: "text/plain" }),
+      { practiceId: practice.id },
+      directory,
+    );
+    database
+      .prepare(
+        `UPDATE jobs SET status = 'failed', error_code = 'BLOB_HASH_MISMATCH'
+         WHERE type = 'foundation.verify_blob' AND document_id = ?`,
+      )
+      .run(document.id);
+
+    await runJobRunnerTick(database);
+
+    expect(
+      database
+        .prepare("SELECT status, error_code FROM jobs WHERE type = ? AND document_id = ?")
+        .get("document.process", document.id),
+    ).toEqual({ status: "failed", error_code: "BLOB_VERIFICATION_FAILED" });
+    expect(database.prepare("SELECT status FROM documents WHERE id = ?").get(document.id)).toEqual({
+      status: "received",
+    });
+  });
+
+  it("annulla un job in coda e consente il retry manuale", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-job-cancel-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica annullamento");
+    const job = enqueueJob(
+      database,
+      "document.process",
+      { input: "cancel" },
+      { practiceId: practice.id },
+    );
+
+    expect(cancelQueuedJob(database, job.id, practice.id)).toBe(true);
+    expect(claimNextJob(database)).toBeNull();
+    expect(retryJob(database, job.id, practice.id)).toBe(true);
+    expect(claimNextJob(database)).toMatchObject({ id: job.id, status: "running" });
+  });
+
   it("riaccoda un job di verifica fallito soltanto entro il limite dei tentativi", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-job-retry-"));
     directories.push(directory);
@@ -53,6 +134,29 @@ describe("coda persistente", () => {
     expect(claimNextJob(database)?.attempts).toBe(2);
   });
 
+  it("chiude come fallita una run Codex rimasta attiva al riavvio", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-codex-run-restart-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica Codex interrotta");
+    const now = new Date().toISOString();
+    database
+      .prepare(
+        `INSERT INTO codex_runs(
+           id, practice_id, snapshot_hash, prompt_version, model, effort,
+           status, created_at, updated_at
+         ) VALUES ('run-interrotta', ?, 'hash', 'prompt', 'model', 'high', 'running', ?, ?)`,
+      )
+      .run(practice.id, now, now);
+
+    recoverInterruptedJobs(database);
+
+    expect(database.prepare("SELECT status, error_code FROM codex_runs").get()).toEqual({
+      status: "failed",
+      error_code: "PROCESS_RESTART",
+    });
+  });
+
   it("rende visibile come fallito un job interrotto dopo l'ultimo tentativo", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-job-exhausted-restart-"));
     directories.push(directory);
@@ -67,6 +171,11 @@ describe("coda persistente", () => {
     const job = database.prepare("SELECT id FROM jobs WHERE document_id = ?").get(document.id) as {
       id: string;
     };
+    database
+      .prepare(
+        "UPDATE jobs SET status = 'cancelled' WHERE type = 'document.process' AND document_id = ?",
+      )
+      .run(document.id);
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       expect(claimNextJob(database)?.attempts).toBe(attempt);
       if (attempt < 3) {

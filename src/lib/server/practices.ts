@@ -17,6 +17,11 @@ export interface DocumentSummary {
   originalName: string;
   mediaType: string;
   byteSize: number;
+  status: string;
+  detectedFormat: string | null;
+  pageCount: number | null;
+  language: string | null;
+  processingError: string | null;
   createdAt: string;
 }
 
@@ -140,7 +145,8 @@ export function listPracticeDocuments(
 ): DocumentSummary[] {
   const rows = database
     .prepare(
-      `SELECT id, practice_id, original_name, media_type, byte_size, created_at
+      `SELECT id, practice_id, original_name, media_type, byte_size, status,
+              detected_format, page_count, language, processing_error, created_at
        FROM documents WHERE practice_id = ? ORDER BY created_at DESC`,
     )
     .all(practiceId) as Array<{
@@ -149,6 +155,11 @@ export function listPracticeDocuments(
     original_name: string;
     media_type: string;
     byte_size: number;
+    status: string;
+    detected_format: string | null;
+    page_count: number | null;
+    language: string | null;
+    processing_error: string | null;
     created_at: string;
   }>;
   return rows.map((row) => ({
@@ -157,6 +168,11 @@ export function listPracticeDocuments(
     originalName: row.original_name,
     mediaType: row.media_type,
     byteSize: row.byte_size,
+    status: row.status,
+    detectedFormat: row.detected_format,
+    pageCount: row.page_count,
+    language: row.language,
+    processingError: row.processing_error,
     createdAt: row.created_at,
   }));
 }
@@ -165,7 +181,9 @@ export function listDocuments(database: Database.Database): DocumentIndexItem[] 
   const rows = database
     .prepare(
       `SELECT documents.id, documents.practice_id, documents.original_name, documents.media_type,
-              documents.byte_size, documents.created_at, practices.title AS practice_title
+              documents.byte_size, documents.status, documents.detected_format,
+              documents.page_count, documents.language, documents.processing_error,
+              documents.created_at, practices.title AS practice_title
        FROM documents
        JOIN practices ON practices.id = documents.practice_id
        WHERE practices.status = 'active'
@@ -177,6 +195,11 @@ export function listDocuments(database: Database.Database): DocumentIndexItem[] 
     original_name: string;
     media_type: string;
     byte_size: number;
+    status: string;
+    detected_format: string | null;
+    page_count: number | null;
+    language: string | null;
+    processing_error: string | null;
     created_at: string;
     practice_title: string;
   }>;
@@ -186,6 +209,11 @@ export function listDocuments(database: Database.Database): DocumentIndexItem[] 
     originalName: row.original_name,
     mediaType: row.media_type,
     byteSize: row.byte_size,
+    status: row.status,
+    detectedFormat: row.detected_format,
+    pageCount: row.page_count,
+    language: row.language,
+    processingError: row.processing_error,
     createdAt: row.created_at,
     practiceTitle: row.practice_title,
   }));
