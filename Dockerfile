@@ -12,7 +12,10 @@ RUN npm ci
 
 FROM dependencies AS build
 COPY . .
-RUN npm run build && npm prune --omit=dev
+RUN cc -O2 -Wall -Wextra -Werror -fPIE -pie -Wl,-z,relro,-z,now \
+      -o /tmp/codex-launcher scripts/codex-launcher.c \
+    && npm run build \
+    && npm prune --omit=dev
 
 FROM node:${NODE_VERSION}-bookworm-slim@${NODE_IMAGE_DIGEST} AS runtime
 ENV NODE_ENV=production \
@@ -34,6 +37,15 @@ RUN install -d -o sequent -g sequent -m 0700 /var/lib/sequent
 COPY --from=build --chown=sequent:sequent /app/build ./build
 COPY --from=build --chown=sequent:sequent /app/node_modules ./node_modules
 COPY --from=build --chown=sequent:sequent /app/package.json ./package.json
+COPY --from=build /tmp/codex-launcher /tmp/codex-launcher
+RUN find / -xdev -type f -perm /6000 -exec chmod a-s {} + \
+    && codex_path="$(find /app/node_modules/@openai -type f -path '*/bin/codex' -print -quit)" \
+    && test -n "$codex_path" \
+    && mv "$codex_path" "$codex_path.real" \
+    && chown root:root "$codex_path.real" \
+    && chmod 0755 "$codex_path.real" \
+    && install -o root -g root -m 4755 /tmp/codex-launcher "$codex_path" \
+    && test "$(find / -xdev -type f -perm /6000 | wc -l)" -eq 1
 USER 10001:10001
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:3000/api/health',{headers:{'X-Forwarded-For':'127.0.0.1'}}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]

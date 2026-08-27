@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
-import { copyFile, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
 import {
   Codex,
@@ -368,11 +369,13 @@ async function prepareWorkspace(
   documents: PracticeSnapshotDocument[],
   dataDirectory: string,
 ): Promise<{ directory: string; input: Input }> {
-  const root = join(dataDirectory, "tmp", "codex");
-  await mkdir(root, { recursive: true, mode: 0o700 });
+  const root = join(tmpdir(), "sequent-codex");
+  await mkdir(root, { recursive: true, mode: 0o755 });
+  await chmod(root, 0o755);
   const directory = await mkdtemp(join(root, "practice-"));
   try {
-    await mkdir(join(directory, "documents"), { mode: 0o700 });
+    await chmod(directory, 0o755);
+    await mkdir(join(directory, "documents"), { mode: 0o755 });
     const manifest: unknown[] = [];
     const input: Input = [
       {
@@ -393,13 +396,14 @@ async function prepareWorkspace(
       const localName = `${document.id}${extension || ".bin"}`;
       const localPath = join(directory, "documents", localName);
       await copyFile(resolveBlobPath(dataDirectory, document.blobPath), localPath);
-      const textName = `${document.id}.txt`;
+      await chmod(localPath, 0o644);
+      const textName = `${document.id}.extracted.txt`;
       await writeFile(
         join(directory, "documents", textName),
         document.pages
           .map((page) => `--- Pagina ${page.pageNumber} ---\n${page.text}`)
           .join("\n\n"),
-        { encoding: "utf8", mode: 0o600 },
+        { encoding: "utf8", mode: 0o644 },
       );
       manifest.push({
         id: document.id,
@@ -419,7 +423,7 @@ async function prepareWorkspace(
     }
     await writeFile(join(directory, "manifest.json"), JSON.stringify(manifest, null, 2), {
       encoding: "utf8",
-      mode: 0o600,
+      mode: 0o644,
     });
     return { directory, input };
   } catch (error) {
