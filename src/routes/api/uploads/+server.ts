@@ -30,6 +30,7 @@ export const POST: RequestHandler = async ({ locals, request, url }) => {
     const code = uploadError instanceof Error ? uploadError.message : "UPLOAD_FAILED";
     if (code === "FILE_TOO_LARGE") error(413, "Il documento supera 250 MB");
     if (code === "PRACTICE_NOT_FOUND") error(404, "Pratica non trovata");
+    if (code === "UPLOAD_STORAGE_INSUFFICIENT") error(507, "Spazio insufficiente sul server");
     error(400, "Impossibile iniziare il caricamento");
   }
 };

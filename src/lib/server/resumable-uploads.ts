@@ -1,14 +1,20 @@
 import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
-import { mkdir, open, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, open, rm, statfs } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { persistResumableUpload } from "./blob-store.ts";
 import { MAX_UPLOAD_BYTES } from "./config.ts";
 import { ingestPersistedUpload, type IngestedDocument } from "./document-ingestion.ts";
 
 const UPLOAD_TTL_MS = 24 * 60 * 60 * 1_000;
 const MAX_CHUNK_BYTES = 8 * 1024 * 1024;
+const MIN_FREE_SPACE_BYTES = 512n * 1024n * 1024n;
 const locks = new Map<string, Promise<unknown>>();
+let capacityLock: Promise<unknown> = Promise.resolve();
+
+interface CapacityOptions {
+  availableBytes?: (dataDirectory: string) => Promise<bigint>;
+}
 
 export interface UploadSession {
   id: string;
@@ -86,6 +92,42 @@ async function withUploadLock<T>(id: string, operation: () => Promise<T>): Promi
   }
 }
 
+async function withCapacityLock<T>(operation: () => Promise<T>): Promise<T> {
+  const previous = capacityLock;
+  let release: () => void = () => {};
+  capacityLock = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await previous;
+  try {
+    return await operation();
+  } finally {
+    release();
+  }
+}
+
+async function availableBytes(dataDirectory: string): Promise<bigint> {
+  const statistics = await statfs(dataDirectory, { bigint: true });
+  return statistics.bavail * statistics.bsize;
+}
+
+async function assertUploadCapacity(
+  database: Database.Database,
+  dataDirectory: string,
+  additionalBytes: number,
+  options: CapacityOptions,
+): Promise<void> {
+  const row = database
+    .prepare(
+      `SELECT coalesce(sum(total_size - received_size), 0) AS reserved
+       FROM upload_sessions WHERE status IN ('uploading', 'completing')`,
+    )
+    .get() as { reserved: number };
+  const free = await (options.availableBytes ?? availableBytes)(dataDirectory);
+  const required = BigInt(row.reserved) + BigInt(additionalBytes) + MIN_FREE_SPACE_BYTES;
+  if (free < required) throw new Error("UPLOAD_STORAGE_INSUFFICIENT");
+}
+
 export async function createUploadSession(
   database: Database.Database,
   dataDirectory: string,
@@ -96,6 +138,7 @@ export async function createUploadSession(
     mediaType: string;
     totalSize: number;
   },
+  options: CapacityOptions = {},
 ): Promise<UploadSession> {
   if (!Number.isSafeInteger(input.totalSize) || input.totalSize <= 0) throw new Error("EMPTY_FILE");
   if (input.totalSize > MAX_UPLOAD_BYTES) throw new Error("FILE_TOO_LARGE");
@@ -110,29 +153,37 @@ export async function createUploadSession(
   const id = randomUUID();
   const directory = join(dataDirectory, "tmp", "resumable");
   await mkdir(directory, { recursive: true, mode: 0o700 });
-  const tempPath = join(directory, `${id}.part`);
-  const handle = await open(tempPath, "wx", 0o600);
-  await handle.close();
-  const now = new Date();
-  database
-    .prepare(
-      `INSERT INTO upload_sessions(
-         id, practice_id, new_practice_title, original_name, media_type, total_size,
-         received_size, temp_path, status, created_at, updated_at, expires_at
-       ) VALUES (?, ?, ?, ?, ?, ?, 0, ?, 'uploading', ?, ?, ?)`,
-    )
-    .run(
-      id,
-      input.practiceId ?? null,
-      input.newPracticeTitle ?? null,
-      input.originalName,
-      input.mediaType || "application/octet-stream",
-      input.totalSize,
-      tempPath,
-      now.toISOString(),
-      now.toISOString(),
-      new Date(now.getTime() + UPLOAD_TTL_MS).toISOString(),
-    );
+  await withCapacityLock(async () => {
+    await assertUploadCapacity(database, dataDirectory, input.totalSize, options);
+    const tempPath = join(directory, `${id}.part`);
+    const handle = await open(tempPath, "wx", 0o600);
+    await handle.close();
+    const now = new Date();
+    try {
+      database
+        .prepare(
+          `INSERT INTO upload_sessions(
+             id, practice_id, new_practice_title, original_name, media_type, total_size,
+             received_size, temp_path, status, created_at, updated_at, expires_at
+           ) VALUES (?, ?, ?, ?, ?, ?, 0, ?, 'uploading', ?, ?, ?)`,
+        )
+        .run(
+          id,
+          input.practiceId ?? null,
+          input.newPracticeTitle ?? null,
+          input.originalName,
+          input.mediaType || "application/octet-stream",
+          input.totalSize,
+          tempPath,
+          now.toISOString(),
+          now.toISOString(),
+          new Date(now.getTime() + UPLOAD_TTL_MS).toISOString(),
+        );
+    } catch (error) {
+      await rm(tempPath, { force: true });
+      throw error;
+    }
+  });
   return getUploadSession(database, id) as UploadSession;
 }
 
@@ -148,6 +199,8 @@ export async function appendUploadChunk(
   id: string,
   expectedOffset: number,
   chunk: Uint8Array,
+  dataDirectory?: string,
+  options: CapacityOptions = {},
 ): Promise<number> {
   if (chunk.byteLength === 0 || chunk.byteLength > MAX_CHUNK_BYTES)
     throw new Error("UPLOAD_CHUNK_INVALID");
@@ -157,32 +210,40 @@ export async function appendUploadChunk(
     if (session.receivedSize !== expectedOffset) throw new Error("UPLOAD_OFFSET_MISMATCH");
     if (expectedOffset + chunk.byteLength > session.totalSize)
       throw new Error("UPLOAD_SIZE_MISMATCH");
-    const handle = await open(session.tempPath, "r+");
-    try {
-      let written = 0;
-      while (written < chunk.byteLength) {
-        const result = await handle.write(
-          chunk,
-          written,
-          chunk.byteLength - written,
-          expectedOffset + written,
-        );
-        if (result.bytesWritten === 0) throw new Error("UPLOAD_WRITE_INCOMPLETE");
-        written += result.bytesWritten;
+    return await withCapacityLock(async () => {
+      await assertUploadCapacity(
+        database,
+        dataDirectory ?? dirname(dirname(dirname(session.tempPath))),
+        0,
+        options,
+      );
+      const handle = await open(session.tempPath, "r+");
+      try {
+        let written = 0;
+        while (written < chunk.byteLength) {
+          const result = await handle.write(
+            chunk,
+            written,
+            chunk.byteLength - written,
+            expectedOffset + written,
+          );
+          if (result.bytesWritten === 0) throw new Error("UPLOAD_WRITE_INCOMPLETE");
+          written += result.bytesWritten;
+        }
+        await handle.sync();
+      } finally {
+        await handle.close();
       }
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
-    const nextOffset = expectedOffset + chunk.byteLength;
-    const result = database
-      .prepare(
-        `UPDATE upload_sessions SET received_size = ?, updated_at = ?
-         WHERE id = ? AND status = 'uploading' AND received_size = ?`,
-      )
-      .run(nextOffset, new Date().toISOString(), id, expectedOffset);
-    if (result.changes !== 1) throw new Error("UPLOAD_OFFSET_MISMATCH");
-    return nextOffset;
+      const nextOffset = expectedOffset + chunk.byteLength;
+      const result = database
+        .prepare(
+          `UPDATE upload_sessions SET received_size = ?, updated_at = ?
+           WHERE id = ? AND status = 'uploading' AND received_size = ?`,
+        )
+        .run(nextOffset, new Date().toISOString(), id, expectedOffset);
+      if (result.changes !== 1) throw new Error("UPLOAD_OFFSET_MISMATCH");
+      return nextOffset;
+    });
   });
 }
 

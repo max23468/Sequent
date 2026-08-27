@@ -32,6 +32,50 @@ const observedConflictSources = [
 ];
 
 describe("benchmark M3", () => {
+  it("rifiuta risultati osservati con la stessa chiave", () => {
+    expect(() =>
+      evaluateM3Benchmark({
+        corpusId: "sintetico",
+        corpusHash,
+        cases: [
+          {
+            id: "caso-duplicato",
+            category: "pdf_native",
+            knownDocumentIds: ["doc-1"],
+            expected: [
+              {
+                key: "codice",
+                value: "ABC",
+                documentId: "doc-1",
+                pageNumber: 1,
+                sourceText: "Codice ABC",
+                critical: true,
+              },
+            ],
+            observed: [
+              {
+                key: "codice",
+                value: "inventato",
+                documentId: "doc-1",
+                pageNumber: 1,
+                sourceExcerpt: "inventato",
+                reviewStatus: "pending",
+              },
+              {
+                key: "codice",
+                value: "ABC",
+                documentId: "doc-1",
+                pageNumber: 1,
+                sourceExcerpt: "Codice ABC",
+                reviewStatus: "pending",
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow("OBSERVED_KEYS_DUPLICATED");
+  });
+
   it("blocca una fonte inventata e un errore critico accettato", () => {
     const report = evaluateM3Benchmark({
       corpusId: "sintetico",

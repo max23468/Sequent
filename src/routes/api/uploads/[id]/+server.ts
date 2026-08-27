@@ -1,5 +1,6 @@
 import { error, json, redirect } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
+import { getDataDirectory } from "$lib/server/config";
 import { openDatabase } from "$lib/server/database";
 import { appendUploadChunk, getUploadSession } from "$lib/server/resumable-uploads";
 
@@ -29,12 +30,14 @@ export const PATCH: RequestHandler = async ({ locals, params, request, url }) =>
       params.id,
       offset,
       new Uint8Array(await request.arrayBuffer()),
+      getDataDirectory(),
     );
     return json({ offset: nextOffset });
   } catch (uploadError) {
     const code = uploadError instanceof Error ? uploadError.message : "UPLOAD_FAILED";
     if (code === "UPLOAD_SESSION_INVALID") error(404, "Caricamento non trovato");
     if (code === "UPLOAD_OFFSET_MISMATCH") error(409, "Offset non allineato");
+    if (code === "UPLOAD_STORAGE_INSUFFICIENT") error(507, "Spazio insufficiente sul server");
     error(400, "Chunk non valido");
   }
 };

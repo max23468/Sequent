@@ -101,4 +101,43 @@ describe("caricamento riprendibile", () => {
     );
     expect(database.prepare("SELECT count(*) AS count FROM documents").get()).toEqual({ count: 0 });
   });
+
+  it("riserva lo spazio tra sessioni e lo ricontrolla prima dei chunk", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-resumable-capacity-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const reserve = 512n * 1024n * 1024n;
+    const availableBytes = async () => reserve + 10n;
+    const session = await createUploadSession(
+      database,
+      directory,
+      {
+        newPracticeTitle: "Pratica con capacità",
+        originalName: "primo.txt",
+        mediaType: "text/plain",
+        totalSize: 8,
+      },
+      { availableBytes },
+    );
+
+    await expect(
+      createUploadSession(
+        database,
+        directory,
+        {
+          newPracticeTitle: "Seconda pratica",
+          originalName: "secondo.txt",
+          mediaType: "text/plain",
+          totalSize: 8,
+        },
+        { availableBytes },
+      ),
+    ).rejects.toThrow("UPLOAD_STORAGE_INSUFFICIENT");
+    await expect(
+      appendUploadChunk(database, session.id, 0, Buffer.from("1234"), directory, {
+        availableBytes: async () => reserve + 7n,
+      }),
+    ).rejects.toThrow("UPLOAD_STORAGE_INSUFFICIENT");
+    expect(getUploadSession(database, session.id)?.receivedSize).toBe(0);
+  });
 });

@@ -62,14 +62,24 @@ const observedConflictSchema = z.object({
   reviewStatus: z.enum(["pending", "confirmed", "edited", "rejected", "ignored"]),
 });
 
+function hasUniqueKeys(items: Array<{ key: string }>): boolean {
+  return new Set(items.map((item) => item.key)).size === items.length;
+}
+
 const caseSchema = z.object({
   id: z.string().min(1),
   category: z.enum(benchmarkCategories),
   knownDocumentIds: z.array(z.string().min(1)).min(1),
-  expected: z.array(expectedFieldSchema),
-  observed: z.array(observedFieldSchema),
-  expectedConflicts: z.array(expectedConflictSchema).default([]),
-  observedConflicts: z.array(observedConflictSchema).default([]),
+  expected: z.array(expectedFieldSchema).refine(hasUniqueKeys, "EXPECTED_KEYS_DUPLICATED"),
+  observed: z.array(observedFieldSchema).refine(hasUniqueKeys, "OBSERVED_KEYS_DUPLICATED"),
+  expectedConflicts: z
+    .array(expectedConflictSchema)
+    .refine(hasUniqueKeys, "EXPECTED_CONFLICT_KEYS_DUPLICATED")
+    .default([]),
+  observedConflicts: z
+    .array(observedConflictSchema)
+    .refine(hasUniqueKeys, "OBSERVED_CONFLICT_KEYS_DUPLICATED")
+    .default([]),
 });
 
 const benchmarkDatasetSchema = z.object({
