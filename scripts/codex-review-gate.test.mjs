@@ -3,11 +3,16 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   CODEX_REVIEW_POLLING,
+  advisoryRecord,
   classifyCodexReview,
   findingPriority,
   isAutomaticFirstReview,
+  isCodexBotLogin,
+  isHeadReset,
   latestCodexInvocation,
+  pollingIntervals,
   pullRequestNumber,
+  resolvableAdvisoryThreadIds,
 } from "./codex-review-gate.mjs";
 
 const headSha = "0123456789abcdef0123456789abcdef01234567";
@@ -148,6 +153,72 @@ test("il primo giro è automatico solo su apertura o ready", () => {
   assert.equal(isAutomaticFirstReview("workflow_dispatch", undefined), false);
 });
 
+test("un synchronize azzera il gate senza aprire un secondo polling", () => {
+  assert.equal(isHeadReset("pull_request_target", "synchronize"), true);
+  assert.equal(isHeadReset("issue_comment", "created"), false);
+});
+
+test("registra gli advisory dell'HEAD in una tabella stabile", () => {
+  const body = advisoryRecord(headSha, [
+    {
+      body: "**P2** Mantieni visibile questo rischio",
+      html_url: "https://example.test/review/1",
+      path: "src/example.ts",
+      line: 42,
+    },
+    { body: "**P1** Questo resta bloccante", path: "src/blocker.ts" },
+  ]);
+  assert.match(body, new RegExp(`sequent-codex-advisories:${headSha}`));
+  assert.match(body, /P2.*src\/example\.ts:42.*Mantieni visibile/s);
+  assert.doesNotMatch(body, /Questo resta bloccante/);
+});
+
+test("risolve soltanto thread P2/P3 automatici senza risposte umane", () => {
+  const exactComments = [
+    { id: 10, body: "**P2** Advisory" },
+    { id: 20, body: "**P3** Advisory discusso" },
+    { id: 30, body: "**P1** Blocker" },
+  ];
+  const threads = [
+    {
+      id: "T1",
+      isResolved: false,
+      comments: { nodes: [{ databaseId: 10, author: bot }] },
+    },
+    {
+      id: "T2",
+      isResolved: false,
+      comments: {
+        nodes: [
+          { databaseId: 20, author: bot },
+          { databaseId: 21, author: { login: "max23468" } },
+        ],
+      },
+    },
+    {
+      id: "T3",
+      isResolved: false,
+      comments: { nodes: [{ databaseId: 30, author: bot }] },
+    },
+    {
+      id: "T4",
+      isResolved: true,
+      comments: { nodes: [{ databaseId: 10, author: bot }] },
+    },
+    {
+      id: "T5",
+      isResolved: false,
+      comments: {
+        nodes: [{ databaseId: 10, author: { login: "chatgpt-codex-connector" } }],
+      },
+    },
+  ];
+  assert.deepEqual(resolvableAdvisoryThreadIds(threads, exactComments), ["T1", "T5"]);
+  assert.equal(isCodexBotLogin("chatgpt-codex-connector[bot]"), true);
+  assert.equal(isCodexBotLogin("chatgpt-codex-connector"), true);
+  assert.equal(isCodexBotLogin("max23468"), false);
+});
+
 test("gli errori operativi bloccano in assenza di una review conclusa più recente", () => {
   assert.equal(
     classify({
@@ -166,7 +237,10 @@ test("gli errori operativi bloccano in assenza di una review conclusa più recen
 test("valida il numero PR e mantiene il polling entro cinque ore", () => {
   assert.equal(pullRequestNumber({ issue: { number: 42 } }), "42");
   assert.throws(() => pullRequestNumber({}, "x"), /Numero PR non valido/);
-  assert.equal(CODEX_REVIEW_POLLING.attempts * CODEX_REVIEW_POLLING.intervalMs, 18_000_000);
+  const intervals = pollingIntervals();
+  assert.equal(intervals[0], 30_000);
+  assert.equal(intervals[CODEX_REVIEW_POLLING.fastAttempts], 180_000);
+  assert.ok(intervals.reduce((total, interval) => total + interval, 0) <= 18_000_000);
 });
 
 test("il workflow usa codice trusted e non richiede commenti al primo giro", async () => {
@@ -180,7 +254,8 @@ test("il workflow usa codice trusted e non richiede commenti al primo giro", asy
   assert.match(workflow, /github\.event\.comment\.author_association == 'OWNER'/);
   assert.doesNotMatch(workflow, /contains\(github\.event\.comment\.body/);
   assert.match(workflow, /statuses: write/);
-  assert.doesNotMatch(workflow, /issues: write/);
+  assert.match(workflow, /issues: write/);
+  assert.match(workflow, /pull-requests: write/);
   assert.match(workflow, /node --test scripts\/codex-review-gate\.test\.mjs/);
   assert.match(workflow, /ref:\s*\$\{\{ github\.event\.repository\.default_branch \}\}/);
   assert.doesNotMatch(workflow, /github\.ref_name/);

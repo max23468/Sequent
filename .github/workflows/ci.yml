@@ -13,7 +13,34 @@ permissions:
   contents: read
 
 jobs:
-  public-gates:
+  classify:
+    name: Classifica pubblicazione
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      level: ${{ steps.policy.outputs.level }}
+      arm64: ${{ steps.policy.outputs.arm64 }}
+      browser: ${{ steps.policy.outputs.browser }}
+      compliance: ${{ steps.policy.outputs.compliance }}
+      diz: ${{ steps.policy.outputs.diz }}
+      documents: ${{ steps.policy.outputs.documents }}
+      persistence: ${{ steps.policy.outputs.persistence }}
+      security: ${{ steps.policy.outputs.security }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: policy
+        name: Classifica la diff con fallback conservativo
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/github/publication-policy.mjs --base "$BASE_SHA" --head "$HEAD_SHA"
+
+  rapid-gates:
+    name: Gate rapidi
+    needs: classify
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -25,9 +52,30 @@ jobs:
           node-version: 26.7.0
           cache: npm
       - run: npm ci
-      - run: npm run verify:public
+      - run: npm run verify:rapid
+
+  public-gates:
+    # Mantiene il contesto storico durante la PR che migra la ruleset a PR gate.
+    name: public-gates
+    if: needs.classify.outputs.level != 'rapid'
+    needs: classify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26.7.0
+          cache: npm
+      - run: npm ci
+      - run: npm run verify:application
 
   svelte-doctor:
+    name: Svelte Doctor
+    if: needs.classify.outputs.level != 'rapid'
+    needs: classify
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -42,6 +90,9 @@ jobs:
       - run: npm run doctor
 
   browser-gates:
+    name: Gate browser
+    if: needs.classify.outputs.browser == 'true'
+    needs: classify
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -53,10 +104,23 @@ jobs:
           node-version: 26.7.0
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium webkit
+      - name: Ripristina i browser Playwright
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Installa dipendenze di sistema Playwright
+        run: npx playwright install-deps chromium webkit
+      - name: Installa i browser Playwright se assenti dalla cache
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium webkit
       - run: npm run test:e2e
 
   arm64-image:
+    name: Immagine ARM64
+    if: needs.classify.outputs.arm64 == 'true'
+    needs: classify
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     steps:
@@ -65,9 +129,9 @@ jobs:
           persist-credentials: false
       - name: Costruisce l'immagine ARM64 senza pubblicarla
         run: docker build --platform linux/arm64 --tag sequent:${{ github.sha }} .
-      - name: Esegue la release identificata in un container isolato
+      - name: Esegue l'immagine in un container isolato
         run: |
-          docker run --platform linux/arm64 --detach --name sequent-arm64-smoke \
+          docker run --platform linux/arm64 --detach --name sequent-pr-smoke \
             --read-only --user 10001:10001 --cap-drop ALL \
             --security-opt no-new-privileges:true \
             --tmpfs /tmp:rw,size=64m,mode=1770,uid=10001,gid=10001 \
@@ -81,8 +145,31 @@ jobs:
             fi
             sleep 1
           done
-          docker logs sequent-arm64-smoke
+          docker logs sequent-pr-smoke
           exit 1
       - name: Rimuove il container di smoke
         if: always()
-        run: docker rm --force sequent-arm64-smoke || true
+        run: docker rm --force sequent-pr-smoke || true
+
+  pr-gate:
+    name: PR gate
+    if: always()
+    needs: [classify, rapid-gates, public-gates, svelte-doctor, browser-gates, arm64-image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verifica che tutti i gate pertinenti siano verdi
+        env:
+          PUBLICATION_LEVEL: ${{ needs.classify.outputs.level }}
+          REQUIRE_ARM64: ${{ needs.classify.outputs.arm64 }}
+          REQUIRE_BROWSER: ${{ needs.classify.outputs.browser }}
+          CLASSIFICATION_RESULT: ${{ needs.classify.result }}
+          RAPID_RESULT: ${{ needs.rapid-gates.result }}
+          PUBLIC_RESULT: ${{ needs.public-gates.result }}
+          DOCTOR_RESULT: ${{ needs.svelte-doctor.result }}
+          BROWSER_RESULT: ${{ needs.browser-gates.result }}
+          ARM64_RESULT: ${{ needs.arm64-image.result }}
+        run: node scripts/github/pr-gate.mjs

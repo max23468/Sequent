@@ -2844,11 +2844,22 @@ Il checkout operativo canonico è `/opt/sequent/repo/`; i clone locali sono norm
 
 ## 46.3 CI
 
-Ogni PR esegue gate proporzionati. Prima della release, suite completa.
+Ogni PR esegue gate proporzionati, determinati dalla diff con fallback conservativo:
+
+- **rapido** per sole modifiche documentali e metadati pubblici innocui;
+- **ordinario** per codice applicativo che non tocca confini sensibili;
+- **sensibile** per browser, runtime, dipendenze, persistenza, autenticazione, documenti, DIZ, fonti ufficiali o governance dei gate;
+- **release** per la matrice completa della candidata approvata.
+
+Un check aggregatore sempre presente verifica che tutti e soltanto i job richiesti dalla classificazione siano verdi. Un file non classificato, una diff vuota inattesa, un job cancellato o un output mancante falliscono chiusi. La classificazione decide quali suite aggiungere, non può trasformare un finding o un errore reale in advisory.
+
+Svelte Doctor gira una sola volta nelle PR ordinarie e sensibili. Browser e immagine ARM64 sono obbligatori quando la diff tocca i relativi confini; la release esegue sempre entrambi. Prima della release resta obbligatoria la suite completa.
 
 ## 46.4 Review Codex exact-HEAD
 
-La review deve riferirsi all'HEAD esatto approvato. Una modifica successiva invalida il gate.
+La review deve riferirsi all'HEAD esatto approvato. Una modifica successiva invalida il gate e imposta subito lo stato pending senza avviare un polling duplicato; il polling riparte soltanto con il primo giro automatico o con un'invocazione esatta autorizzata. La frequenza è breve durante la normale finestra di risposta e rallenta in seguito.
+
+P0 e P1 bloccano. I P2 e P3 vengono registrati in un commento stabile legato all'HEAD e restano advisory. Soltanto i thread automatici P2/P3 privi di una risposta umana vengono risolti dopo la registrazione; un thread con P0/P1 o con intervento umano resta aperto. La protezione generale che richiede la risoluzione delle conversazioni rimane attiva per non nascondere discussioni reali.
 
 ## 46.5 Release e attivazione
 
@@ -3026,7 +3037,9 @@ Golden file, modifiche one-field, round-trip semantico, unknown blocks, allegati
 
 Ogni PR e ogni release mantengono il livello di controllo definito in «Repository e workflow Git» e «Versioning, release e aggiornamenti», inclusi Oxfmt, Oxlint, Svelte check, test, build, E2E pertinenti, browser matrix di release, benchmark e review Codex exact-HEAD. Non esiste un gate separato di tracciabilità documentale.
 
-Dallo scaffolding SvelteKit, Svelte Doctor gira in CI sulle PR pertinenti e come scansione completa pianificata. `svelte-doctor` diventa required check dopo un'attivazione iniziale a zero finding non soppressi. Qualunque finding, errore operativo o output non interpretabile rende rosso il check; soltanto una soppressione stretta e motivata di un falso positivo può ripristinarlo. Il job non applica fix e non carica sorgenti, prompt o risultati verso servizi AI esterni.
+Dallo scaffolding SvelteKit, Svelte Doctor gira in CI sulle PR ordinarie e sensibili e nella matrice completa di release. Il suo risultato confluisce nel check aggregatore required. Qualunque finding, errore operativo o output non interpretabile rende rosso il check; soltanto una soppressione stretta e motivata di un falso positivo può ripristinarlo. Il job non applica fix e non carica sorgenti, prompt o risultati verso servizi AI esterni.
+
+I controlli rapidi non duplicano la suite applicativa. I controlli pubblici ordinari non duplicano Svelte Doctor. La cache dei browser può riutilizzare i binari Playwright identificati dal lockfile, ma le dipendenze di sistema vengono verificate sul runner corrente.
 
 ## 48.10 Suite di conformità alle fonti ufficiali
 
@@ -3210,6 +3223,8 @@ Le release seguono `MAJOR.MINOR.PATCH`: major per cambiamenti incompatibili deli
 
 Il checkout `/opt/sequent/repo/` può contenere branch e modifiche in corso senza influire sul servizio. Una candidata nasce dopo merge su `main`, supera i gate e diventa la release attiva soltanto dopo approvazione dell'owner.
 
+La pubblicazione GitHub ordinaria può essere orchestrata da un comando unico che verifica branch, working tree, classificazione, preflight locale, PR, required checks, review exact-HEAD, squash merge, identità dell'albero Git, eliminazione del branch e rilettura finale. Il comando resta in dry-run senza l'opzione esplicita di esecuzione e non autorizza release o deploy.
+
 È vietato:
 
 - avviare il servizio operativo dalla working tree;
@@ -3236,6 +3251,8 @@ Restano confermati i gate rigorosi già scelti:
 - pacchetto sintetico accettato dal controllo ufficiale.
 
 L'accessibilità viene verificata sui requisiti pratici definiti in «Brand, UI, accessibilità e localizzazione», senza audit WCAG formale separato.
+
+La candidata pubblica costruisce l'immagine ARM64 una sola volta. Un manifest lega commit, albero Git, piattaforma, image ID, nome dell'archivio e SHA-256; un job separato scarica lo stesso archivio, ne verifica manifest e digest e carica l'immagine senza ricostruirla. L'artefatto verificato può essere selezionato dal successivo deploy approvato finché resta disponibile. Una divergenza qualunque obbliga a ricostruire e ricertificare la candidata.
 
 ## 52.4 Preflight sulle modifiche rischiose
 
