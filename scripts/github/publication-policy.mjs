@@ -109,16 +109,39 @@ function matchesAny(files, patterns) {
   return files.some((file) => matches(file, patterns));
 }
 
+export function parseChangedPaths(nameStatus) {
+  const fields = nameStatus.split("\0");
+  const files = [];
+  for (let index = 0; index < fields.length && fields[index];) {
+    const status = fields[index++];
+    const source = fields[index++];
+    if (!source) throw new Error(`Diff Git non interpretabile per lo stato ${status}`);
+    files.push(source);
+    if (/^[CR]/.test(status)) {
+      const destination = fields[index++];
+      if (!destination) throw new Error(`Diff Git senza destinazione per lo stato ${status}`);
+      files.push(destination);
+    }
+  }
+  return [...new Set(files)];
+}
+
 export function changedFiles(base, head = "HEAD") {
-  return execFileSync(
+  const nameStatus = execFileSync(
     "git",
-    ["diff", "--name-only", `--diff-filter=${DIFF_FILTER}`, `${base}...${head}`],
+    [
+      "diff",
+      "--name-status",
+      "--find-renames",
+      "-z",
+      `--diff-filter=${DIFF_FILTER}`,
+      `${base}...${head}`,
+    ],
     {
       encoding: "utf8",
     },
-  )
-    .split("\n")
-    .filter(Boolean);
+  );
+  return parseChangedPaths(nameStatus);
 }
 
 export function githubOutputs(classification) {

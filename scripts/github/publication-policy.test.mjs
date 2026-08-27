@@ -10,6 +10,7 @@ import {
   DIFF_FILTER,
   githubOutputs,
   LEVELS,
+  parseChangedPaths,
 } from "./publication-policy.mjs";
 
 test("classifica come rapide soltanto modifiche documentali", () => {
@@ -99,6 +100,47 @@ test("include le eliminazioni nella classificazione della diff", async () => {
   assert.match(DIFF_FILTER, /D/);
 });
 
+test("classifica entrambi i percorsi di una rinomina", async () => {
+  const repository = await mkdtemp(join(tmpdir(), "sequent-publication-rename-"));
+  const git = (...args) =>
+    execFileSync("git", args, {
+      cwd: repository,
+      env: {
+        ...process.env,
+        GIT_AUTHOR_EMAIL: "test@example.invalid",
+        GIT_AUTHOR_NAME: "Sequent test",
+        GIT_COMMITTER_EMAIL: "test@example.invalid",
+        GIT_COMMITTER_NAME: "Sequent test",
+      },
+      stdio: "ignore",
+    });
+
+  try {
+    git("init", "--quiet");
+    await writeFile(join(repository, "Dockerfile"), "FROM scratch\n");
+    git("add", "Dockerfile");
+    git("commit", "--quiet", "-m", "test: add Dockerfile");
+    git("mv", "Dockerfile", "notes.txt");
+    git("commit", "--quiet", "-m", "test: rename Dockerfile");
+
+    const previousDirectory = process.cwd();
+    process.chdir(repository);
+    try {
+      const files = changedFiles("HEAD~1");
+      assert.deepEqual(files, ["Dockerfile", "notes.txt"]);
+      assert.equal(classifyChangedFiles(files).runArm64, true);
+    } finally {
+      process.chdir(previousDirectory);
+    }
+  } finally {
+    await rm(repository, { recursive: true, force: true });
+  }
+});
+
+test("fallisce chiuso su una rinomina Git malformata", () => {
+  assert.throws(() => parseChangedPaths("R100\0Dockerfile\0"), /senza destinazione/);
+});
+
 test("genera output GitHub scalari", () => {
   const output = githubOutputs(classifyChangedFiles(["Dockerfile"]));
   assert.deepEqual(output, {
@@ -141,5 +183,6 @@ test("la candidata rilegge lo stesso artefatto ARM64 senza deploy", async () => 
     workflow,
     /npm run benchmark:m3 -- --dataset tests\/fixtures\/m3-benchmark\.synthetic\.json/,
   );
+  assert.match(workflow, /release-review\.mjs --commit/);
   assert.doesNotMatch(workflow, /\bssh\b|deploy/i);
 });

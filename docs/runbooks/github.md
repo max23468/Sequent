@@ -61,7 +61,7 @@ La riconciliazione della ruleset è idempotente, preserva le altre protezioni e 
 
 ## Candidata di release
 
-Il workflow manuale `Release candidate` accetta soltanto il commit corrente di `main`, esegue la matrice pubblica completa e costruisce una sola immagine ARM64. L'archivio e il manifest vengono caricati come artefatto temporaneo; un job separato li scarica, verifica commit, albero Git, image ID e SHA-256 e ricarica l'immagine senza ricostruirla. I gate privati su fonti ufficiali, corpus reale, software ufficiale, backup e VPS restano separati e obbligatori quando pertinenti.
+Il workflow manuale `Release candidate` accetta soltanto il commit corrente di `main`, identifica l'unica pull request squash che lo ha prodotto e verifica che l'albero del commit coincida con quello dell'HEAD coperto da review Codex e gate `codex-review` verde. Esegue quindi la matrice pubblica completa e costruisce una sola immagine ARM64. L'archivio e il manifest vengono caricati come artefatto temporaneo; un job separato li scarica, verifica commit, albero Git, image ID e SHA-256 e ricarica l'immagine senza ricostruirla. I gate privati su fonti ufficiali, corpus reale, software ufficiale, backup e VPS restano separati e obbligatori quando pertinenti.
 
 ## Aggiornamenti dipendenze
 
