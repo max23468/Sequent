@@ -85,6 +85,14 @@ describe("acquisizione documentale", () => {
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       expect(claimNextJob(database)).toMatchObject({ id: verification.id, attempts: attempt });
       finishJob(database, verification.id, "BLOB_HASH_MISMATCH");
+      if (attempt === 1) {
+        await runJobRunnerTick(database);
+        expect(
+          database
+            .prepare("SELECT status, error_code FROM jobs WHERE type = ? AND document_id = ?")
+            .get("document.process", document.id),
+        ).toEqual({ status: "failed", error_code: "BLOB_VERIFICATION_FAILED" });
+      }
       if (attempt < 3) {
         enqueueJob(
           database,
@@ -103,8 +111,13 @@ describe("acquisizione documentale", () => {
     );
     expect(reloaded.id).toBe(document.id);
     expect(
-      database.prepare("SELECT status, attempts FROM jobs WHERE id = ?").get(verification.id),
-    ).toEqual({ status: "queued", attempts: 0 });
+      database
+        .prepare("SELECT type, status, attempts FROM jobs WHERE document_id = ? ORDER BY type")
+        .all(document.id),
+    ).toEqual([
+      { type: "document.process", status: "queued", attempts: 0 },
+      { type: "foundation.verify_blob", status: "queued", attempts: 0 },
+    ]);
 
     const previousDataDirectory = process.env.SEQUENT_DATA_DIR;
     process.env.SEQUENT_DATA_DIR = directory;

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 import { persistUpload, type PersistedUpload } from "./blob-store.ts";
-import { enqueueJob, resetExhaustedBlobVerification } from "./jobs.ts";
+import { enqueueJob, resetJobsAfterBlobRepair } from "./jobs.ts";
 import { createPractice, getPractice } from "./practices.ts";
 
 export interface IngestedDocument {
@@ -89,7 +89,7 @@ export function ingestPersistedUpload(
         : createPractice(database, destination.newPracticeTitle).id;
     const attached = attachUpload(database, practiceId, upload);
     const { document } = attached;
-    if (attached.reused) resetExhaustedBlobVerification(database, document.id);
+    if (attached.reused) resetJobsAfterBlobRepair(database, document.id);
     enqueueJob(
       database,
       "foundation.verify_blob",

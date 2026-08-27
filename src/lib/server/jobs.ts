@@ -147,19 +147,25 @@ export function enqueueJob(
   );
 }
 
-export function resetExhaustedBlobVerification(
-  database: Database.Database,
-  documentId: string,
-): boolean {
-  const result = database
+export function resetJobsAfterBlobRepair(database: Database.Database, documentId: string): number {
+  const now = new Date().toISOString();
+  const verification = database
     .prepare(
       `UPDATE jobs
        SET status = 'queued', progress = 0, attempts = 0, error_code = NULL, updated_at = ?
        WHERE type = 'foundation.verify_blob' AND document_id = ?
          AND status = 'failed' AND attempts >= ?`,
     )
-    .run(new Date().toISOString(), documentId, MAX_JOB_ATTEMPTS);
-  return result.changes > 0;
+    .run(now, documentId, MAX_JOB_ATTEMPTS).changes;
+  const processing = database
+    .prepare(
+      `UPDATE jobs
+       SET status = 'queued', progress = 0, attempts = 0, error_code = NULL, updated_at = ?
+       WHERE type = 'document.process' AND document_id = ? AND status = 'failed'
+         AND error_code IN ('BLOB_VERIFICATION_REQUIRED', 'BLOB_VERIFICATION_FAILED')`,
+    )
+    .run(now, documentId).changes;
+  return verification + processing;
 }
 
 export function recoverInterruptedJobs(database: Database.Database): number {
