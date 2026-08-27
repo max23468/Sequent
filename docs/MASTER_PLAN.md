@@ -3244,7 +3244,7 @@ Restano confermati i gate rigorosi già scelti:
 - test unitari, integrazione, migrazioni ed E2E;
 - DIZ regression;
 - benchmark OCR/Codex;
-- build ARM64 e scansione dipendenze/immagine;
+- build ARM64 e scansione dipendenze/immagine; errori dello scanner, vulnerabilità critiche e vulnerabilità con fix disponibile bloccano la candidata, mentre le vulnerabilità non critiche senza fix restano advisory visibili fino all'aggiornamento della base o dei converter;
 - browser matrix;
 - review Codex exact-HEAD;
 - nessun blocker aperto;
