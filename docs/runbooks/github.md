@@ -51,13 +51,13 @@ Il comando seguente classifica la diff ed esegue il preflight locale senza mutaz
 npm run publication:github
 ```
 
-Soltanto dopo un'autorizzazione esplicita a pubblicare, l'opzione `--execute` esegue push, creazione o rilettura della PR, attesa dei gate preliminari, singola invocazione Codex, attesa exact-HEAD, squash merge, eliminazione del branch e rilettura di `main`, PR, albero Git e working tree:
+Soltanto dopo una richiesta affermativa `Pubblica`, l'opzione `--execute` esegue l'intero ciclo tecnico applicabile: push, creazione o rilettura della PR, attesa dei gate preliminari, singola invocazione Codex, attesa exact-HEAD, squash merge, eliminazione del branch e rilettura di `main`, PR, albero Git e working tree:
 
 ```bash
 npm run publication:github -- --execute
 ```
 
-La riconciliazione della ruleset è idempotente, preserva le altre protezioni e viene riletta dopo l'applicazione. Il comando non crea release e non esegue deploy.
+La riconciliazione della ruleset è idempotente, preserva le altre protezioni e viene riletta dopo l'applicazione. Per sole modifiche documentali, di test o di governance il comando termina qui. Per una modifica runtime avvia e attende la candidata di release exact-SHA; se rileva una Production già distribuita con successo e il workflow Production qualificato, avvia e attende anche deploy e readback. In assenza di una release attiva si ferma alla candidata perché la prima attivazione richiede un'autorizzazione separata.
 
 ## Candidata di release
 
@@ -69,4 +69,4 @@ Dependabot apre settimanalmente pull request raggruppate per npm e GitHub Action
 
 ## Chiusura di una pubblicazione
 
-Prima del merge verificare required checks, review exact-HEAD, conversazioni e confine pubblico. Dopo il merge rileggere `main`, identità dell'albero approvato, stato della pull request, branch remoti, ruleset e working tree. La pubblicazione GitHub non autorizza deploy, release o attivazioni sulla VPS.
+Prima del merge verificare required checks, review exact-HEAD, conversazioni e confine pubblico. Dopo il merge rileggere `main`, identità dell'albero approvato, stato della pull request, branch remoti, ruleset e working tree. Per una modifica runtime rileggere anche candidata, artefatto e, se già applicabile, deployment, release e stato live. `Pubblica` autorizza questi passaggi tecnici sull'istanza già attiva, ma non la prima attivazione né modifiche a Caddy, Dynu o firewall.

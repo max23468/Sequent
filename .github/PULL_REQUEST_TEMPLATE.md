@@ -13,7 +13,8 @@
 
 ## Impatto operativo
 
-- Deploy o release richiesti: no
+- Impatto runtime previsto: sì / no
+- Candidata, release o deploy applicabili: classificazione automatica; motivare soltanto eventuali eccezioni
 - Migrazioni, dati privati o rollback speciale: no
 
 ## Rischi e rollback
