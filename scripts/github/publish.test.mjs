@@ -5,6 +5,7 @@ import {
   checkState,
   localGateCommands,
   PRE_REVIEW_CHECKS,
+  remoteDeletionFailed,
   shouldRequestCodex,
   waitForPrHead,
 } from "./publish.mjs";
@@ -70,4 +71,10 @@ test("invia l'invocazione Codex esatta come campo raw", async () => {
   const source = await readFile(new URL("./publish.mjs", import.meta.url), "utf8");
   assert.match(source, /"--raw-field",\s*"body=@codex review"/);
   assert.doesNotMatch(source, /"--field",\s*"body=@codex review"/);
+});
+
+test("considera riuscita la cancellazione concorrente del branch remoto", () => {
+  assert.equal(remoteDeletionFailed({ deletionStatus: 1, existsAfter: false }), false);
+  assert.equal(remoteDeletionFailed({ deletionStatus: 1, existsAfter: true }), true);
+  assert.equal(remoteDeletionFailed({ deletionStatus: 0, existsAfter: false }), false);
 });

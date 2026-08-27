@@ -11,6 +11,9 @@ export const CODEX_REVIEW_POLLING = {
 };
 const ADVISORY_MARKER = "<!-- sequent-codex-advisories:";
 
+export const isCodexBotLogin = (login) =>
+  login === CODEX_BOT || login === CODEX_BOT.replace(/\[bot\]$/, "");
+
 const timestamp = (value) => new Date(value ?? 0).getTime();
 const signalTimestamp = (signal) => timestamp(signal.submitted_at ?? signal.created_at);
 const matchesHead = (candidate, headSha) => Boolean(candidate && headSha.startsWith(candidate));
@@ -31,7 +34,7 @@ export const latestCodexInvocation = (comments, headAvailableAt) =>
   comments
     .filter(
       (comment) =>
-        comment.user?.login !== CODEX_BOT &&
+        !isCodexBotLogin(comment.user?.login) &&
         TRUSTED_ASSOCIATIONS.has(comment.author_association) &&
         /^\s*@codex\s+review\s*$/i.test(comment.body) &&
         timestamp(comment.created_at) >= timestamp(headAvailableAt),
@@ -51,15 +54,15 @@ export function classifyCodexReview({
 }) {
   const afterRequest = (signal) => signalTimestamp(signal) >= timestamp(requestedAt);
   const exactInline = reviewComments.filter(
-    (comment) => comment.user?.login === CODEX_BOT && comment.original_commit_id === headSha,
+    (comment) => isCodexBotLogin(comment.user?.login) && comment.original_commit_id === headSha,
   );
   const exactTopLevel = comments.filter(
     (comment) =>
-      comment.user?.login === CODEX_BOT && matchesHead(reviewedCommit(comment.body), headSha),
+      isCodexBotLogin(comment.user?.login) && matchesHead(reviewedCommit(comment.body), headSha),
   );
   const exactReviews = reviews.filter(
     (review) =>
-      review.user?.login === CODEX_BOT &&
+      isCodexBotLogin(review.user?.login) &&
       (review.commit_id === headSha || matchesHead(reviewedCommit(review.body), headSha)) &&
       afterRequest(review),
   );
@@ -89,7 +92,7 @@ export function classifyCodexReview({
   const reactions = automatic ? prReactions : invocationReactions;
   for (const reaction of reactions) {
     if (
-      reaction.user?.login === CODEX_BOT &&
+      isCodexBotLogin(reaction.user?.login) &&
       reaction.content === "+1" &&
       timestamp(reaction.created_at) >= timestamp(requestedAt)
     ) {
@@ -100,7 +103,7 @@ export function classifyCodexReview({
   const operationalErrorAt = comments
     .filter(
       (comment) =>
-        comment.user?.login === CODEX_BOT &&
+        isCodexBotLogin(comment.user?.login) &&
         afterRequest(comment) &&
         /reached your Codex usage limits|could not complete|unable to review|something went wrong|unknown error/i.test(
           comment.body,
@@ -173,7 +176,7 @@ export function resolvableAdvisoryThreadIds(threads, exactReviewComments) {
       if (thread.isResolved) return false;
       const comments = thread.comments?.nodes ?? [];
       if (thread.comments?.totalCount > comments.length) return false;
-      if (comments.some((comment) => comment.author?.login !== CODEX_BOT)) return false;
+      if (comments.some((comment) => !isCodexBotLogin(comment.author?.login))) return false;
       if (comments.some((comment) => blockingIds.has(comment.databaseId))) return false;
       const advisoryIndex = comments.findIndex((comment) => advisoryIds.has(comment.databaseId));
       if (advisoryIndex < 0) return false;
@@ -293,15 +296,15 @@ async function recordAndResolveAdvisories({
   reviews,
 }) {
   const exactInline = reviewComments.filter(
-    (comment) => comment.user?.login === CODEX_BOT && comment.original_commit_id === headSha,
+    (comment) => isCodexBotLogin(comment.user?.login) && comment.original_commit_id === headSha,
   );
   const exactTopLevel = comments.filter(
     (comment) =>
-      comment.user?.login === CODEX_BOT && matchesHead(reviewedCommit(comment.body), headSha),
+      isCodexBotLogin(comment.user?.login) && matchesHead(reviewedCommit(comment.body), headSha),
   );
   const exactReviews = reviews.filter(
     (review) =>
-      review.user?.login === CODEX_BOT &&
+      isCodexBotLogin(review.user?.login) &&
       (review.commit_id === headSha || matchesHead(reviewedCommit(review.body), headSha)),
   );
   const exactFindings = [...exactInline, ...exactTopLevel, ...exactReviews];

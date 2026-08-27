@@ -26,6 +26,29 @@ function json(command, args) {
   return JSON.parse(output(command, args));
 }
 
+export const remoteDeletionFailed = ({ deletionStatus, existsAfter }) =>
+  deletionStatus !== 0 && existsAfter;
+
+function remoteBranchExists(branch) {
+  return spawnSync("git", ["ls-remote", "--exit-code", "--heads", "origin", branch]).status === 0;
+}
+
+function deleteRemoteBranch(branch) {
+  if (!remoteBranchExists(branch)) return;
+  const deletion = spawnSync("git", ["push", "origin", "--delete", branch], {
+    encoding: "utf8",
+    stdio: "inherit",
+  });
+  if (
+    remoteDeletionFailed({
+      deletionStatus: deletion.status,
+      existsAfter: remoteBranchExists(branch),
+    })
+  ) {
+    throw new Error(`Eliminazione del branch remoto ${branch} non riuscita`);
+  }
+}
+
 export function localGateCommands(classification) {
   if (classification.level === "rapid") return [["npm", ["run", "verify:rapid"]]];
   const commands = [
@@ -206,14 +229,7 @@ async function main() {
   await waitForChecks(pr.number, [...PRE_REVIEW_CHECKS, "codex-review"]);
 
   run("gh", ["pr", "merge", String(pr.number), "--squash", "--match-head-commit", headSha]);
-  const branchStillRemote = spawnSync("git", [
-    "ls-remote",
-    "--exit-code",
-    "--heads",
-    "origin",
-    branch,
-  ]);
-  if (branchStillRemote.status === 0) run("git", ["push", "origin", "--delete", branch]);
+  deleteRemoteBranch(branch);
   run("git", ["fetch", "origin", "--prune"]);
   const mainTree = output("git", ["rev-parse", "origin/main^{tree}"]);
   if (mainTree !== headTree) throw new Error("L'albero di origin/main diverge dall'HEAD approvato");
@@ -225,8 +241,7 @@ async function main() {
     "state,mergedAt,mergeCommit",
   ]);
   if (merged.state !== "MERGED") throw new Error("La PR non risulta merged alla rilettura finale");
-  const remoteBranch = spawnSync("git", ["ls-remote", "--exit-code", "--heads", "origin", branch]);
-  if (remoteBranch.status === 0)
+  if (remoteBranchExists(branch))
     throw new Error("Il branch remoto temporaneo non è stato eliminato");
   if (output("git", ["status", "--porcelain"]))
     throw new Error("Working tree non pulita dopo il merge");
