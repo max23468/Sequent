@@ -41,7 +41,7 @@ Il workflow `Codex review gate` esegue il primo giro su apertura o passaggio a r
 
 Il gate accetta soltanto segnali riferiti all'HEAD corrente. Un nuovo commit imposta subito lo stato pending e termina il job di reset; il commento autorizzato avvia un solo polling. Il polling usa intervalli brevi nella finestra ordinaria e poi rallenta.
 
-P0/P1 producono fallimento. P2/P3 vengono copiati in un commento stabile associato all'HEAD e restano advisory. Dopo la registrazione il workflow risolve soltanto i thread automatici P2/P3 senza risposte umane. Non risolve thread P0/P1, conversazioni miste o thread ai quali una persona ha risposto. La ruleset continua quindi a richiedere la risoluzione di tutte le conversazioni reali. Errori operativi del bot o della registrazione producono stato `error`.
+P0/P1 producono fallimento. P2/P3 vengono copiati in un commento stabile associato all'HEAD e restano advisory. Dopo la registrazione il workflow risolve soltanto i thread automatici P2/P3 senza risposte umane. Se il token GitHub Actions non può eseguire la mutazione GraphQL, il comando di pubblicazione completa la stessa operazione con l'identità locale autorizzata prima del merge. Non vengono risolti thread P0/P1, conversazioni miste o thread ai quali una persona ha risposto. La ruleset continua quindi a richiedere la risoluzione di tutte le conversazioni reali. Errori operativi del bot, della registrazione o del fallback locale producono stato `error`.
 
 ## Comando di pubblicazione
 
@@ -51,13 +51,13 @@ Il comando seguente classifica la diff ed esegue il preflight locale senza mutaz
 npm run publication:github
 ```
 
-Soltanto dopo un'autorizzazione esplicita a pubblicare, l'opzione `--execute` esegue push, creazione o rilettura della PR, attesa dei gate preliminari, singola invocazione Codex, attesa exact-HEAD, squash merge, eliminazione del branch e rilettura di `main`, PR, albero Git e working tree:
+Soltanto dopo una richiesta affermativa `Pubblica`, l'opzione `--execute` esegue l'intero ciclo tecnico applicabile: push, creazione o rilettura della PR, attesa dei gate preliminari, singola invocazione Codex, attesa exact-HEAD, squash merge, eliminazione del branch e rilettura di `main`, PR, albero Git e working tree:
 
 ```bash
 npm run publication:github -- --execute
 ```
 
-La riconciliazione della ruleset è idempotente, preserva le altre protezioni e viene riletta dopo l'applicazione. Il comando non crea release e non esegue deploy.
+La riconciliazione della ruleset è idempotente, preserva le altre protezioni e viene riletta dopo l'applicazione. Per sole modifiche documentali, di test o di governance il comando termina qui. Per una modifica runtime avvia e attende la candidata di release exact-SHA; se rileva una Production già distribuita con successo e il workflow Production qualificato, avvia e attende anche deploy e readback. In assenza di una release attiva si ferma alla candidata perché la prima attivazione richiede un'autorizzazione separata.
 
 ## Candidata di release
 
@@ -69,4 +69,4 @@ Dependabot apre settimanalmente pull request raggruppate per npm e GitHub Action
 
 ## Chiusura di una pubblicazione
 
-Prima del merge verificare required checks, review exact-HEAD, conversazioni e confine pubblico. Dopo il merge rileggere `main`, identità dell'albero approvato, stato della pull request, branch remoti, ruleset e working tree. La pubblicazione GitHub non autorizza deploy, release o attivazioni sulla VPS.
+Prima del merge verificare required checks, review exact-HEAD, conversazioni e confine pubblico. Dopo il merge rileggere `main`, identità dell'albero approvato, stato della pull request, branch remoti, ruleset e working tree. Per una modifica runtime rileggere anche candidata, artefatto e, se già applicabile, deployment, release e stato live. `Pubblica` autorizza questi passaggi tecnici sull'istanza già attiva, ma non la prima attivazione né modifiche a Caddy, Dynu o firewall.

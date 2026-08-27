@@ -2863,7 +2863,9 @@ P0 e P1 bloccano. I P2 e P3 vengono registrati in un commento stabile legato all
 
 ## 46.5 Release e attivazione
 
-Il merge su `main` non modifica il servizio attivo. L'owner approva la release stabile; da quel momento GitHub Actions costruisce o seleziona l'artefatto identificato per digest e aggiorna l'unica istanza sulla VPS in modalità manutenzione.
+Il merge su `main` da solo non modifica il servizio attivo. Una richiesta affermativa `Pubblica` approva però l'intero ciclo tecnico applicabile: per sole modifiche documentali, di test o di governance termina dopo merge e pulizia; per una modifica runtime include candidata completa e, quando esiste già una release attiva e il workflow Production è qualificato, deploy, readback live e GitHub Release senza una seconda conferma.
+
+La prima attivazione stabile resta una decisione distinta: richiede autorizzazione esplicita perché introduce servizio e hostname operativi e può coinvolgere Caddy, Dynu o firewall. Prima di tale autorizzazione `Pubblica` può qualificare l'artefatto ma non attiva il servizio.
 
 ## 46.6 Dependabot
 
@@ -3221,9 +3223,11 @@ Le release seguono `MAJOR.MINOR.PATCH`: major per cambiamenti incompatibili deli
 
 ## 52.2 Working tree e release attiva
 
-Il checkout `/opt/sequent/repo/` può contenere branch e modifiche in corso senza influire sul servizio. Una candidata nasce dopo merge su `main`, supera i gate e diventa la release attiva soltanto dopo approvazione dell'owner.
+Il checkout `/opt/sequent/repo/` può contenere branch e modifiche in corso senza influire sul servizio. Una candidata nasce dopo merge su `main`, supera i gate e diventa la release attiva soltanto dentro un ciclo tecnico approvato dall'owner. La richiesta affermativa `Pubblica` costituisce tale approvazione per gli aggiornamenti di un runtime già attivo; la prima attivazione richiede invece un'autorizzazione esplicita separata.
 
-La pubblicazione GitHub ordinaria può essere orchestrata da un comando unico che verifica branch, working tree, classificazione, preflight locale, PR, required checks, review exact-HEAD, squash merge, identità dell'albero Git, eliminazione del branch e rilettura finale. Il comando resta in dry-run senza l'opzione esplicita di esecuzione e non autorizza release o deploy.
+La pubblicazione può essere orchestrata da un comando unico che verifica branch, working tree, classificazione, preflight locale, PR, required checks, review exact-HEAD, squash merge, identità dell'albero Git, eliminazione del branch e rilettura finale. Il comando resta in dry-run senza l'opzione esplicita di esecuzione. Con `--execute`, usato soltanto dopo `Pubblica`, completa anche la candidata per le modifiche runtime e il deploy/readback quando rileva una Production già attiva e il relativo workflow qualificato. Modifiche esclusivamente documentali, di test o di governance non producono immagini, release o deploy.
+
+L'impatto runtime viene valutato in modo conservativo. Un percorso sconosciuto presume impatto runtime; il diff operativo della distribuzione parte dall'ultima release attiva verificata, così più merge runtime correlati vengono distribuiti insieme una sola volta. Versione e changelog, quando richiesti, sono completati nella stessa pull request della modifica runtime.
 
 È vietato:
 
@@ -3283,7 +3287,7 @@ Non è richiesto zero downtime. Non viene creato un evidence pack formale per og
 
 ## 52.6 Aggiornamenti automatici
 
-Una release stabile approvata viene distribuita senza SSH manuale. Non esiste auto-pubblicazione a ogni merge e non esiste promozione Development → Production: si sostituisce soltanto la release attiva dell'unica istanza.
+Una release stabile approvata viene distribuita senza SSH manuale. `Pubblica` autorizza la distribuzione tecnica applicabile di una modifica runtime su un'istanza già attiva, ma non esiste auto-pubblicazione a ogni merge e una PR documentale, di test o di governance non avvia il deploy. Non esiste promozione Development → Production: si sostituisce soltanto la release attiva dell'unica istanza. La prima attivazione resta separata.
 
 ## 52.7 Dipendenze
 
@@ -3700,7 +3704,7 @@ La chiusura richiede una prova e, se la scelta è difficile da invertire, un ADR
 | notifiche browser/e-mail operative | notifiche interne |
 | ambienti Development, Staging e Production separati | unica istanza VPS con checkout, runtime, dati e copie temporanee separati |
 | esecuzione diretta della working tree sui dati operativi | release approvata, modalità manutenzione e copie temporanee per le prove rischiose |
-| deploy a ogni merge | release approvata, poi deploy automatico |
+| deploy a ogni merge | `Pubblica` su modifica runtime e release approvata, poi deploy automatico; governance esclusa e prima attivazione separata |
 | Successioni Web | non utilizzabile per assenza frequente di delega |
 | `.suc` come formato modificabile | `.diz` come file di lavoro; telematico separato |
 | DIZ solo export | round-trip completo |

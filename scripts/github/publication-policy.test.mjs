@@ -16,6 +16,7 @@ import {
 test("classifica come rapide soltanto modifiche documentali", () => {
   const result = classifyChangedFiles(["README.md", "docs/runbooks/github.md"]);
   assert.equal(result.level, "rapid");
+  assert.equal(result.runtime, false);
   assert.equal(result.runBrowser, false);
   assert.equal(result.runArm64, false);
 });
@@ -44,7 +45,10 @@ test("UI, persistenza e autenticazione attivano i gate pertinenti", () => {
 });
 
 test("runtime, DIZ e fonti ufficiali non possono degradare a gate rapidi", () => {
-  assert.equal(classifyChangedFiles(["Dockerfile"]).runArm64, true);
+  const image = classifyChangedFiles(["Dockerfile"]);
+  assert.equal(image.runArm64, true);
+  assert.equal(image.runtime, true);
+  assert.equal(classifyChangedFiles(["src/lib/format.ts"]).runtime, true);
   assert.equal(classifyChangedFiles(["src/domain/diz/archive.ts"]).diz, true);
   assert.equal(
     classifyChangedFiles(["src/domain/official-catalog/semantic-rules.json"]).compliance,
@@ -52,8 +56,29 @@ test("runtime, DIZ e fonti ufficiali non possono degradare a gate rapidi", () =>
   );
 });
 
+test("governance e test non richiedono una release runtime", () => {
+  const governance = classifyChangedFiles([
+    "AGENTS.md",
+    ".github/workflows/release-candidate.yml",
+    "scripts/github/publish.mjs",
+    "scripts/github/publish.test.mjs",
+  ]);
+  assert.equal(governance.level, "sensitive");
+  assert.equal(governance.runtime, false);
+  assert.deepEqual(governance.unknown, []);
+});
+
+test("un percorso sconosciuto fallisce chiuso anche sull'impatto runtime", () => {
+  const result = classifyChangedFiles(["nuova-superficie.bin"]);
+  assert.equal(result.level, "sensitive");
+  assert.equal(result.runtime, true);
+  assert.deepEqual(result.unknown, ["nuova-superficie.bin"]);
+});
+
 test("una diff vuota usa il fallback conservativo e la release forza la matrice completa", () => {
-  assert.equal(classifyChangedFiles([]).level, "sensitive");
+  const empty = classifyChangedFiles([]);
+  assert.equal(empty.level, "sensitive");
+  assert.equal(empty.runtime, true);
   const release = classifyChangedFiles(["docs/MASTER_PLAN.md"], { release: true });
   assert.equal(release.level, "release");
   assert.equal(release.runArm64, true);
@@ -145,6 +170,7 @@ test("genera output GitHub scalari", () => {
   const output = githubOutputs(classifyChangedFiles(["Dockerfile"]));
   assert.deepEqual(output, {
     level: "sensitive",
+    runtime: "true",
     arm64: "true",
     browser: "false",
     compliance: "false",

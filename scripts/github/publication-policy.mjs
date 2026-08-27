@@ -70,6 +70,28 @@ const GOVERNANCE = [
   /^package(?:-lock)?\.json$/,
 ];
 
+const TEST_ONLY = [/^tests\//, /(?:^|\.)test\.[cm]?[jt]sx?$/, /^playwright\.config\.ts$/];
+
+const RUNTIME = [
+  /^Dockerfile$/,
+  /^deploy\//,
+  /^package(?:-lock)?\.json$/,
+  /^src\//,
+  /^static\//,
+  /^scripts\/vps\//,
+  /^(?:svelte\.config\.js|tsconfig\.json|vite\.config\.ts)$/,
+];
+
+const KNOWN_NON_RUNTIME = [
+  ...RAPID_ONLY,
+  ...GOVERNANCE,
+  ...TEST_ONLY,
+  /^\.github\//,
+  /^scripts\/(?!vps\/)/,
+  /^tests\//,
+  /^(?:CONTRIBUTING\.md|\.dockerignore|\.gitignore|svelte-doctor\.config\.json)$/,
+];
+
 export function classifyChangedFiles(files, { release = false } = {}) {
   const normalized = [
     ...new Set(files.filter(Boolean).map((file) => file.replace(/^\.\//, ""))),
@@ -83,16 +105,23 @@ export function classifyChangedFiles(files, { release = false } = {}) {
     persistence: matchesAny(normalized, PERSISTENCE),
     security: matchesAny(normalized, SECURITY),
   };
+  const unknown = normalized.filter(
+    (file) => !matches(file, RUNTIME) && !matches(file, KNOWN_NON_RUNTIME),
+  );
   const rapid = normalized.length > 0 && normalized.every((file) => matches(file, RAPID_ONLY));
   const sensitive =
     matchesAny(normalized, GOVERNANCE) ||
     Object.values(capabilities).some(Boolean) ||
-    normalized.length === 0;
+    normalized.length === 0 ||
+    unknown.length > 0;
+  const runtime = normalized.length === 0 || matchesAny(normalized, RUNTIME) || unknown.length > 0;
   const level = release ? "release" : rapid ? "rapid" : sensitive ? "sensitive" : "ordinary";
 
   return {
     level,
     files: normalized,
+    unknown,
+    runtime,
     ...capabilities,
     runArm64: release || capabilities.arm64 || capabilities.documents,
     runBrowser:
@@ -147,6 +176,7 @@ export function changedFiles(base, head = "HEAD") {
 export function githubOutputs(classification) {
   return {
     level: classification.level,
+    runtime: String(classification.runtime),
     arm64: String(classification.runArm64),
     browser: String(classification.runBrowser),
     compliance: String(classification.compliance),
