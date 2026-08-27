@@ -231,21 +231,30 @@ function applyM3Migration(database: Database.Database): void {
       .prepare(
         `SELECT id, practice_id, sha256
          FROM documents
-         WHERE status = 'received'
-           AND NOT EXISTS (
-             SELECT 1 FROM jobs
-             WHERE jobs.type = 'document.process'
-               AND jobs.document_id = documents.id
-           )`,
+         WHERE status = 'received'`,
       )
       .all() as Array<{ id: string; practice_id: string; sha256: string }>;
     for (const document of documentsToProcess) {
+      enqueueJob(
+        database,
+        "foundation.verify_blob",
+        { sha256: document.sha256 },
+        { practiceId: document.practice_id, documentId: document.id },
+      );
       enqueueJob(
         database,
         "document.process",
         { sha256: document.sha256, pipelineVersion: 1 },
         { practiceId: document.practice_id, documentId: document.id },
       );
+      database
+        .prepare(
+          `UPDATE jobs
+           SET status = 'queued', progress = 0, error_code = NULL, updated_at = ?
+           WHERE type = 'document.process' AND document_id = ?
+             AND status = 'failed' AND error_code = 'BLOB_VERIFICATION_REQUIRED'`,
+        )
+        .run(new Date().toISOString(), document.id);
     }
     database
       .prepare("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (2, ?)")

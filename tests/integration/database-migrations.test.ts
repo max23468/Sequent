@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import Database from "better-sqlite3";
-import { mkdtempSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
+import { runJobRunnerTick } from "../../src/lib/server/job-runner.ts";
 
 const directories: string[] = [];
 
@@ -15,10 +17,14 @@ afterEach(() => {
 });
 
 describe("migrazioni M3", () => {
-  it("accoda una sola volta l’elaborazione dei documenti provenienti da M2", () => {
+  it("verifica ed elabora una sola volta i documenti provenienti da M2", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-m2-document-migration-"));
     directories.push(directory);
     const path = join(directory, "sequent.sqlite");
+    const blob = Buffer.from("contenuto legacy sintetico");
+    const sha256 = createHash("sha256").update(blob).digest("hex");
+    mkdirSync(join(directory, "blobs"), { mode: 0o700 });
+    writeFileSync(join(directory, "blobs", "legacy"), blob, { mode: 0o600 });
     const legacy = new Database(path);
     legacy.exec(`
       PRAGMA foreign_keys = ON;
@@ -63,27 +69,60 @@ describe("migrazioni M3", () => {
       VALUES (1, '2026-08-25T00:00:00.000Z');
       INSERT INTO practices(id, title, status, created_at, updated_at)
       VALUES ('practice-m2', 'Pratica M2', 'active', '2026-08-25T00:00:00.000Z', '2026-08-25T00:00:00.000Z');
-      INSERT INTO documents(
-        id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at
-      ) VALUES (
-        'document-m2', 'practice-m2', 'legacy.pdf', 'application/pdf', 10,
-        'legacy-sha256', 'blobs/legacy', '2026-08-25T00:00:00.000Z'
-      );
     `);
+    legacy
+      .prepare(
+        `INSERT INTO documents(
+           id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at
+         ) VALUES (
+           'document-m2', 'practice-m2', 'legacy.txt', 'text/plain', ?, ?,
+           'blobs/legacy', '2026-08-25T00:00:00.000Z'
+         )`,
+      )
+      .run(blob.byteLength, sha256);
     legacy.close();
 
-    let migrated = openDatabase(directory);
-    expect(
-      migrated.prepare("SELECT type, status FROM jobs WHERE document_id = ?").all("document-m2"),
-    ).toEqual([{ type: "document.process", status: "queued" }]);
+    const previousDataDirectory = process.env.SEQUENT_DATA_DIR;
+    process.env.SEQUENT_DATA_DIR = directory;
+    try {
+      let migrated = openDatabase(directory);
+      expect(
+        migrated
+          .prepare("SELECT type, status FROM jobs WHERE document_id = ? ORDER BY type")
+          .all("document-m2"),
+      ).toEqual([
+        { type: "document.process", status: "queued" },
+        { type: "foundation.verify_blob", status: "queued" },
+      ]);
 
-    closeDatabase(directory);
-    migrated = openDatabase(directory);
-    expect(
-      migrated
-        .prepare("SELECT count(*) AS count FROM jobs WHERE document_id = ? AND type = ?")
-        .get("document-m2", "document.process"),
-    ).toEqual({ count: 1 });
+      await runJobRunnerTick(migrated);
+      await runJobRunnerTick(migrated);
+      expect(
+        migrated
+          .prepare("SELECT type, status FROM jobs WHERE document_id = ? ORDER BY type")
+          .all("document-m2"),
+      ).toEqual([
+        { type: "document.process", status: "completed" },
+        { type: "foundation.verify_blob", status: "completed" },
+      ]);
+      expect(
+        migrated.prepare("SELECT status FROM documents WHERE id = ?").get("document-m2"),
+      ).toEqual({ status: "processed" });
+
+      closeDatabase(directory);
+      migrated = openDatabase(directory);
+      expect(
+        migrated
+          .prepare("SELECT type, count(*) AS count FROM jobs WHERE document_id = ? GROUP BY type")
+          .all("document-m2"),
+      ).toEqual([
+        { type: "document.process", count: 1 },
+        { type: "foundation.verify_blob", count: 1 },
+      ]);
+    } finally {
+      if (previousDataDirectory === undefined) delete process.env.SEQUENT_DATA_DIR;
+      else process.env.SEQUENT_DATA_DIR = previousDataDirectory;
+    }
   });
 
   it("ripara uno schema parziale anche se contiene versioni successive", () => {
