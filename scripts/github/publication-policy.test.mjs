@@ -213,6 +213,12 @@ test("la candidata rilegge lo stesso artefatto ARM64 senza deploy", async () => 
   assert.match(workflow, /name: Scansione dipendenze release/);
   assert.match(workflow, /scan source --lockfile package-lock\.json/);
   assert.match(workflow, /name: Scansione immagine ARM64 release/);
+  const imageScanJob = workflow.match(/  scan-image:\n(?<job>[\s\S]*?)\n  release-candidate-gate:/)
+    ?.groups?.job;
+  assert.ok(imageScanJob, "job scan-image assente");
+  assert.match(imageScanJob, /actions\/checkout@[0-9a-f]{40}/);
+  assert.match(imageScanJob, /ref: \$\{\{ inputs\.commit \}\}/);
+  assert.match(imageScanJob, /persist-credentials: false/);
   assert.match(
     workflow,
     /scan image --format vertical --archive \/scan\/sequent-release-arm64\.tar/,
