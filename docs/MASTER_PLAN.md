@@ -2768,7 +2768,7 @@ Il Mac resta:
 - banco di prova canonico per SuccessioniOnLine e Java;
 - sede della copia privata della configurazione amministrativa strettamente necessaria a raggiungere e verificare la VPS, sempre esclusa da Git.
 
-Le build Docker ARM64 locali passano da un solo wrapper con soglia preventiva sul disco. Il wrapper riusa il tag canonico, conserva al massimo la revisione locale corrente e rimuove soltanto immagini precedenti non referenziate da container; non interviene su volumi, database o immagini di altri prodotti.
+Le build Docker ARM64 locali passano da un solo wrapper con soglia preventiva sul disco. Il wrapper riusa il tag canonico, conserva al massimo la revisione locale corrente e rimuove soltanto immagini precedenti non referenziate da container; non interviene su volumi, database o immagini di altri prodotti. Il daemon Colima applica inoltre il garbage collector nativo di BuildKit con un budget di cache esplicito, separato dalla retention delle immagini.
 
 Windows resta una piattaforma browser supportata per Chrome ed Edge, ma non è un ambiente di sviluppo richiesto. Un eventuale banco di prova Windows per SuccessioniOnLine viene usato soltanto a sviluppo concluso, se già disponibile; la sua predisposizione e l'esecuzione del collaudo non sono requisiti di accettazione.
 

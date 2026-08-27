@@ -47,6 +47,18 @@ npm run image:local
 
 Il wrapper interrompe la build se il disco supera l'85% di utilizzo, aggiorna il tag canonico, conserva un solo tag legato alla revisione corrente e rimuove i precedenti tag locali non referenziati da container. Quando il contesto attivo è Colima esegue anche il TRIM del disco virtuale.
 
+Per limitare anche la cache BuildKit indipendente dalle immagini, la sezione `docker` di `~/.colima/default/colima.yaml` usa questa policy:
+
+```yaml
+docker:
+  builder:
+    gc:
+      enabled: true
+      defaultKeepStorage: 8GB
+```
+
+Dopo una modifica alla configurazione, applicarla con `colima stop && colima start` quando non sono in corso build. Il valore è un obiettivo di retention del garbage collector, non un limite rigido alla dimensione del disco virtuale.
+
 ## Confini
 
 - checkout: `/opt/sequent/repo/`;
