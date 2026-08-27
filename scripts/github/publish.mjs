@@ -60,6 +60,19 @@ export function shouldRequestCodex({ comments, resetAt, statusState }) {
   );
 }
 
+export async function waitForPrHead(
+  readPr,
+  headSha,
+  { attempts = 12, intervalMs = 5_000, pause = sleep } = {},
+) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const pr = readPr();
+    if (pr.headRefOid === headSha) return pr;
+    if (attempt < attempts) await pause(intervalMs);
+  }
+  throw new Error("La PR non punta all'HEAD locale verificato");
+}
+
 async function waitForChecks(prNumber, required, timeoutMinutes = 30) {
   const deadline = Date.now() + timeoutMinutes * 60_000;
   while (Date.now() < deadline) {
@@ -158,7 +171,10 @@ async function main() {
     pr = json("gh", ["pr", "view", branch, "--json", "number,headRefOid"]);
     createdPr = true;
   }
-  if (pr.headRefOid !== headSha) throw new Error("La PR non punta all'HEAD locale verificato");
+  pr = await waitForPrHead(
+    () => json("gh", ["pr", "view", branch, "--json", "number,headRefOid"]),
+    headSha,
+  );
 
   await waitForChecks(pr.number, PRE_REVIEW_CHECKS);
   if (!createdPr) {

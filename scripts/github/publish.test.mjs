@@ -5,6 +5,7 @@ import {
   localGateCommands,
   PRE_REVIEW_CHECKS,
   shouldRequestCodex,
+  waitForPrHead,
 } from "./publish.mjs";
 
 test("il preflight rapido non esegue suite applicative complete", () => {
@@ -46,4 +47,20 @@ test("non duplica l'invocazione Codex per lo stesso reset dell'HEAD", () => {
   );
   assert.equal(shouldRequestCodex({ resetAt, statusState: "success", comments: [] }), false);
   assert.equal(shouldRequestCodex({ resetAt, statusState: "pending", comments: [] }), true);
+});
+
+test("attende che GitHub esponga il nuovo HEAD della PR", async () => {
+  const snapshots = [
+    { number: 17, headRefOid: "old" },
+    { number: 17, headRefOid: "new" },
+  ];
+  const pauses = [];
+  const pr = await waitForPrHead(() => snapshots.shift(), "new", {
+    attempts: 2,
+    intervalMs: 10,
+    pause: (milliseconds) => pauses.push(milliseconds),
+  });
+
+  assert.equal(pr.headRefOid, "new");
+  assert.deepEqual(pauses, [10]);
 });
