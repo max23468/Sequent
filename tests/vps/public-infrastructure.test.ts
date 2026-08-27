@@ -49,12 +49,14 @@ test("il runbook non include utente, hostname o endpoint amministrativi reali", 
 
 test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", () => {
   const compose = read("deploy/compose.example.yml");
+  const dockerfile = read("Dockerfile");
   const runbook = read("docs/runbooks/vps.md");
 
   assert.match(compose, /ORIGIN: \$\{SEQUENT_ORIGIN:\?[^}]+\}/);
   assert.match(compose, /ADDRESS_HEADER: X-Forwarded-For/);
   assert.match(compose, /XFF_DEPTH: "1"/);
   assert.match(compose, /127\.0\.0\.1:3300:3000/);
+  assert.match(dockerfile, /'X-Forwarded-For':'127\.0\.0\.1'/);
   assert.match(runbook, /SEQUENT_ORIGIN/);
   assert.match(runbook, /sovrascrivere gli header inoltrati dal client/);
   assert.match(runbook, /unico hop davanti a Sequent/);
