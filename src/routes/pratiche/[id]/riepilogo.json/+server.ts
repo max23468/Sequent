@@ -30,7 +30,7 @@ export const GET: RequestHandler = ({ locals, params, url }) => {
     practice: { id: practice.id, title: practice.title },
     declaration,
     subjects: listSharedSubjects(database, params.id),
-    assets: listSharedAssets(database, params.id),
+    assets: listSharedAssets(database, params.id, declaration.id),
     devolution: devolution ?? null,
     calculation: calculation ?? null,
     report,

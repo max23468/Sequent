@@ -17,7 +17,7 @@
     data.assets.some((asset: { kind: string }) => asset.kind !== "donation"),
   );
   const hasBeneficiaries = $derived(
-    data.subjects.some((subject: { role: string }) => subject.role !== "decedent"),
+    data.subjects.some((subject: { role: string }) => subject.role === "beneficiary"),
   );
 </script>
 

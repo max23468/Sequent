@@ -21,6 +21,7 @@ export interface TechnicalElement {
     base?: string;
     facets?: Record<string, string[]>;
     recursive?: boolean;
+    unionMemberTypes?: string[];
   };
   sourceId: string;
   sourcePointer: string;
@@ -47,6 +48,14 @@ export interface CatalogField {
 }
 
 const technicalElements = (technicalSchema.elements ?? []) as TechnicalElement[];
+const technicalTypes = (technicalSchema.types ?? []) as Array<{
+  name: string;
+  constraints?: {
+    base?: string;
+    facets?: Record<string, string[]>;
+    unionMemberTypes?: string[];
+  };
+}>;
 const fieldsByPath = new Map(
   ((formFields.fields ?? []) as CatalogField[]).map((field) => [field.technicalPath, field]),
 );
@@ -288,6 +297,28 @@ export function getTechnicalField(fieldId: string): TechnicalElement | null {
         (element.id === fieldId || (technicalPath !== undefined && element.path === technicalPath)),
     ) ?? null
   );
+}
+
+export function listTechnicalEnumerationValues(fieldId: string): string[] {
+  const field = getTechnicalField(fieldId);
+  if (!field) return [];
+  const typesByName = new Map(technicalTypes.map((type) => [type.name, type]));
+  const values = new Set<string>();
+  const visited = new Set<string>();
+  const visit = (name: string | undefined) => {
+    if (!name || visited.has(name)) return;
+    visited.add(name);
+    const type = typesByName.get(name);
+    if (!type) return;
+    for (const value of type.constraints?.facets?.enumeration ?? []) values.add(value);
+    visit(type.constraints?.base);
+    for (const member of type.constraints?.unionMemberTypes ?? []) visit(member);
+  };
+  for (const value of field.constraints.facets?.enumeration ?? []) values.add(value);
+  visit(field.type);
+  visit(field.constraints.base);
+  for (const member of field.constraints.unionMemberTypes ?? []) visit(member);
+  return [...values];
 }
 
 export function getCatalogStatus() {

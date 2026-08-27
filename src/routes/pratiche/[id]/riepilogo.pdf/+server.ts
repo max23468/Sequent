@@ -44,7 +44,7 @@ export const GET: RequestHandler = async ({ locals, params, url }) => {
   const declaration = getDeclaration(database, declarationId, params.id);
   if (!declaration) error(404, "Dichiarazione non trovata");
   const subjects = listSharedSubjects(database, params.id);
-  const assets = listSharedAssets(database, params.id);
+  const assets = listSharedAssets(database, params.id, declaration.id);
   const report = buildComplianceReport(database, params.id, declaration.id);
   const devolution = listDevolutionScenarios(database, params.id, declaration.id).find(
     (scenario) => scenario.id === declaration.declaration.confirmedDevolutionScenarioId,

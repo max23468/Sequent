@@ -22,6 +22,7 @@ import {
   getCatalogField,
   getCatalogStatus,
   listQuadroFields,
+  listTechnicalEnumerationValues,
   type QuadroId,
 } from "../../domain/official-catalog/catalog.ts";
 import {
@@ -67,6 +68,100 @@ const ASSET_KIND_DETAILS: Record<
   liability: { category: "liability", quadro: "ED", treatment: "liability" },
   donation: { category: "donation", quadro: null, treatment: "estate" },
 };
+
+function assetCatalogField(asset: SharedAsset, name: string) {
+  return asset.quadro
+    ? (listQuadroFields(asset.quadro).find((field) => field.name === name) ?? null)
+    : null;
+}
+
+function officialAssetValueField(asset: SharedAsset) {
+  return asset.quadro
+    ? (listQuadroFields(asset.quadro).find(
+        (field) =>
+          field.name === "Valore" &&
+          !field.path.includes("/Devoluzione") &&
+          !field.path.includes("/Ripartizione"),
+      ) ?? null)
+    : null;
+}
+
+function wholeEurosToCents(value: string): bigint | null {
+  return /^\d+$/u.test(value) ? BigInt(value) * 100n : value === "" ? 0n : null;
+}
+
+function hasAmbiguousTaxPositions(
+  declaration: DeclarationSnapshot,
+  entries: DeclarationSubjectEntry[],
+): boolean {
+  if (entries.length < 2) return false;
+  const relevantFields = [
+    "quadro-ea.soggetto.tipo",
+    "quadro-ea.soggetto.grado-parentela",
+    "quadro-ea.soggetto.disabilita",
+  ];
+  const signatures = new Set(
+    entries.map((entry) =>
+      relevantFields
+        .map((fieldId) => String(getCanonicalField(declaration, fieldId, entry.id)?.value ?? ""))
+        .join("\u0000"),
+    ),
+  );
+  return signatures.size > 1;
+}
+
+function greatestCommonDivisor(left: bigint, right: bigint): bigint {
+  let a = left < 0n ? -left : left;
+  let b = right < 0n ? -right : right;
+  while (b !== 0n) [a, b] = [b, a % b];
+  return a;
+}
+
+function allocateConservedCents(
+  total: bigint,
+  shares: Array<{ numerator: bigint; denominator: bigint; index: number }>,
+): Map<number, bigint> | null {
+  if (
+    total < 0n ||
+    shares.length === 0 ||
+    shares.some(
+      (share) =>
+        share.numerator <= 0n || share.denominator <= 0n || share.numerator > share.denominator,
+    )
+  )
+    return null;
+  let commonDenominator = 1n;
+  for (const share of shares)
+    commonDenominator =
+      (commonDenominator * share.denominator) /
+      greatestCommonDivisor(commonDenominator, share.denominator);
+  const numeratorTotal = shares.reduce(
+    (sum, share) => sum + share.numerator * (commonDenominator / share.denominator),
+    0n,
+  );
+  if (numeratorTotal !== commonDenominator) return null;
+  const allocations = shares.map((share) => ({
+    ...share,
+    value: (total * share.numerator) / share.denominator,
+    remainder: (total * share.numerator) % share.denominator,
+  }));
+  let centsToAssign = total - allocations.reduce((sum, share) => sum + share.value, 0n);
+  allocations.sort((left, right) => {
+    const leftScaled = left.remainder * right.denominator;
+    const rightScaled = right.remainder * left.denominator;
+    return leftScaled === rightScaled
+      ? left.index - right.index
+      : leftScaled > rightScaled
+        ? -1
+        : 1;
+  });
+  for (const allocation of allocations) {
+    if (centsToAssign <= 0n) break;
+    allocation.value += 1n;
+    centsToAssign -= 1n;
+  }
+  return new Map(allocations.map((allocation) => [allocation.index, allocation.value]));
+}
 
 export interface SharedSubject {
   id: string;
@@ -475,14 +570,33 @@ export function createDeclarationSubjectEntry(
   return { entry, revision };
 }
 
-export function listSharedAssets(database: Database.Database, practiceId: string): SharedAsset[] {
+export function listSharedAssets(
+  database: Database.Database,
+  practiceId: string,
+  declarationId?: string,
+): SharedAsset[] {
+  const declaration = declarationId
+    ? getDeclaration(database, declarationId, practiceId)?.declaration
+    : null;
   const rows = database
     .prepare(
-      `SELECT id, practice_id, category, display_name, data_json, revision, updated_at
-       FROM shared_assets WHERE practice_id = ?
-       ORDER BY category, display_name COLLATE NOCASE`,
+      `SELECT shared_assets.id, shared_assets.practice_id, shared_assets.category,
+              shared_assets.display_name, shared_assets.data_json, shared_assets.revision,
+              shared_assets.updated_at
+       FROM shared_assets
+       WHERE shared_assets.practice_id = ?
+         AND (
+           ? IS NULL OR EXISTS (
+             SELECT 1 FROM declaration_asset_entries
+             WHERE declaration_asset_entries.declaration_id = ?
+               AND declaration_asset_entries.asset_id = shared_assets.id
+           )
+         )
+       ORDER BY shared_assets.category, shared_assets.display_name COLLATE NOCASE`,
     )
-    .all(practiceId) as Array<Record<string, unknown>>;
+    .all(practiceId, declarationId ?? null, declarationId ?? null) as Array<
+    Record<string, unknown>
+  >;
   return rows.map((row) => {
     const data = parseRecord(String(row.data_json));
     const category = String(row.category) as AssetCategory;
@@ -501,7 +615,7 @@ export function listSharedAssets(database: Database.Database, practiceId: string
         ? (data.kind as AssetKind)
         : fallbackKind;
     const details = ASSET_KIND_DETAILS[kind];
-    return {
+    const asset: SharedAsset = {
       id: String(row.id),
       practiceId: String(row.practice_id),
       category,
@@ -514,6 +628,17 @@ export function listSharedAssets(database: Database.Database, practiceId: string
       revision: Number(row.revision),
       updatedAt: String(row.updated_at),
     };
+    const valueField = declaration ? officialAssetValueField(asset) : null;
+    const canonicalValue = valueField
+      ? getCanonicalField(declaration!, valueField.canonicalId, asset.id)?.value
+      : null;
+    const officialValueCents =
+      canonicalValue === null || canonicalValue === undefined
+        ? null
+        : wholeEurosToCents(String(canonicalValue));
+    return officialValueCents === null
+      ? asset
+      : { ...asset, valueCents: String(officialValueCents) };
   });
 }
 
@@ -543,6 +668,16 @@ export function createSharedAsset(
   const kind = input.kind ?? fallbackKind;
   const details = ASSET_KIND_DETAILS[kind];
   const data = { kind, valueCents: String(input.valueCents ?? 0n) };
+  const declaration = database
+    .prepare(
+      `SELECT id FROM declarations
+       WHERE practice_id = ? AND (? IS NULL OR id = ?)
+       ORDER BY sequence DESC LIMIT 1`,
+    )
+    .get(practiceId, input.declarationId ?? null, input.declarationId ?? null) as
+    | { id: string }
+    | undefined;
+  if (!declaration) throw new Error("DECLARATION_NOT_FOUND");
   database.transaction(() => {
     database
       .prepare(
@@ -551,9 +686,14 @@ export function createSharedAsset(
          ) VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
       )
       .run(id, practiceId, details.category, input.displayName, JSON.stringify(data), now, now);
+    database
+      .prepare(
+        `INSERT INTO declaration_asset_entries(declaration_id, asset_id, created_at)
+         VALUES (?, ?, ?)`,
+      )
+      .run(declaration.id, id, now);
     database.prepare("UPDATE practices SET updated_at = ? WHERE id = ?").run(now, practiceId);
-    if (input.declarationId)
-      invalidateDerivedResultsIfPresent(database, practiceId, input.declarationId);
+    invalidateDerivedResultsIfPresent(database, practiceId, declaration.id);
     recordAuditEvent(
       database,
       practiceId,
@@ -563,7 +703,9 @@ export function createSharedAsset(
       { assetId: id, category: details.category, kind },
     );
   })();
-  const asset = listSharedAssets(database, practiceId).find((candidate) => candidate.id === id);
+  const asset = listSharedAssets(database, practiceId, declaration.id).find(
+    (candidate) => candidate.id === id,
+  );
   if (!asset) throw new Error("ASSET_CREATE_FAILED");
   return asset;
 }
@@ -610,7 +752,7 @@ export function synchronizeChecklist(
   const record = getDeclaration(database, declarationId, practiceId);
   if (!record) return [];
   const fields = Object.values(record.declaration.fields);
-  const assets = listSharedAssets(database, practiceId);
+  const assets = listSharedAssets(database, practiceId, declarationId);
   const hasValue = (fragment: string, accepted: string[] = ["1"]) =>
     fields.some(
       (field) => field.fieldId.includes(fragment) && accepted.includes(String(field.value ?? "")),
@@ -870,17 +1012,25 @@ export function saveDevolutionScenario(
   if (!declaration) throw new Error("DECLARATION_NOT_FOUND");
   if (declaration.revision !== input.expectedRevision) throw new Error("REVISION_CONFLICT");
   const assets = new Map(
-    listSharedAssets(database, input.practiceId).map((asset) => [asset.id, asset]),
+    listSharedAssets(database, input.practiceId, input.declarationId).map((asset) => [
+      asset.id,
+      asset,
+    ]),
   );
+  const entries = listDeclarationSubjectEntries(database, input.practiceId, input.declarationId);
   const beneficiaries = new Set(
-    listSharedSubjects(database, input.practiceId)
-      .filter((subject) => subject.role !== "decedent")
-      .map((subject) => subject.id),
+    entries.filter((entry) => entry.role === "beneficiary").map((entry) => entry.subjectId),
   );
   const issues: DevolutionIssue[] = [];
+  const addIssue = (issue: DevolutionIssue) => {
+    if (
+      !issues.some((candidate) => candidate.id === issue.id && candidate.message === issue.message)
+    )
+      issues.push(issue);
+  };
   for (const share of input.shares) {
     if (!assets.has(share.assetId))
-      issues.push({
+      addIssue({
         id: "DEVOLUTION_ASSET_MISSING",
         message: "Un bene della devoluzione non appartiene più alla pratica.",
         blocking: true,
@@ -889,31 +1039,74 @@ export function saveDevolutionScenario(
   for (const asset of assets.values()) {
     if (asset.kind === "donation") continue;
     if (!input.shares.some((share) => share.assetId === asset.id))
-      issues.push({
+      addIssue({
         id: "DEVOLUTION_ASSET_UNASSIGNED",
         message: `Manca la ripartizione di “${asset.displayName}”.`,
         blocking: true,
       });
   }
-  const shares = input.shares
+  const normalizedShares = input.shares
     .filter((share) => assets.has(share.assetId))
     .map((share) => {
       const asset = assets.get(share.assetId)!;
-      const total = BigInt(asset.valueCents);
-      const valueCents =
-        share.denominator > 0n
-          ? (total * share.numerator + share.denominator / 2n) / share.denominator
-          : 0n;
+      const rightField = assetCatalogField(asset, "CodiceDiritto_Rip");
+      const reliefField = assetCatalogField(asset, "Agevolazioni");
+      const rightCode = rightField ? share.rightCode.trim().toUpperCase() : "";
+      const reliefCode = share.reliefCode?.trim().toUpperCase() ?? "";
+      if (rightField && !listTechnicalEnumerationValues(rightField.canonicalId).includes(rightCode))
+        addIssue({
+          id: "DEVOLUTION_RIGHT_CODE_INVALID",
+          message: `Il codice del diritto indicato per “${asset.displayName}” non è ammesso dalla fonte ufficiale.`,
+          blocking: true,
+        });
+      if (
+        reliefCode &&
+        (!reliefField ||
+          !listTechnicalEnumerationValues(reliefField.canonicalId).includes(reliefCode))
+      )
+        addIssue({
+          id: "DEVOLUTION_RELIEF_CODE_INVALID",
+          message: `L’agevolazione indicata per “${asset.displayName}” non è ammessa dalla fonte ufficiale.`,
+          blocking: true,
+        });
+      const reductionYears = share.reductionYears ?? 0;
+      const previousSuccessionValueCents = share.previousSuccessionValueCents ?? 0n;
+      if (reductionYears > 0 !== previousSuccessionValueCents > 0n)
+        addIssue({
+          id: "DEVOLUTION_REDUCTION_INCOMPLETE",
+          message:
+            "Per applicare la riduzione entro cinque anni servono sia il periodo sia il valore della successione precedente.",
+          blocking: true,
+        });
       return {
         ...share,
-        valueCents,
-        reliefCode: share.reliefCode?.toUpperCase() ?? "",
-        reductionYears: share.reductionYears ?? 0,
-        previousSuccessionValueCents: share.previousSuccessionValueCents ?? 0n,
+        rightCode,
+        valueCents: 0n,
+        reliefCode,
+        reductionYears,
+        previousSuccessionValueCents,
         foreignTaxCents: share.foreignTaxCents ?? 0n,
       };
     });
-  issues.push(...validateDevolutionScenario(beneficiaries, shares));
+  for (const beneficiaryId of beneficiaries) {
+    const beneficiaryEntries = entries.filter((entry) => entry.subjectId === beneficiaryId);
+    if (hasAmbiguousTaxPositions(declaration.declaration, beneficiaryEntries))
+      addIssue({
+        id: "DEVOLUTION_BENEFICIARY_POSITION_AMBIGUOUS",
+        message:
+          "Il beneficiario compare in più posizioni del Quadro EA: scegli prima quale posizione deve governare il calcolo.",
+        blocking: true,
+      });
+  }
+  for (const issue of validateDevolutionScenario(beneficiaries, normalizedShares)) addIssue(issue);
+  const shares = normalizedShares.map((share, index, all) => {
+    const asset = assets.get(share.assetId)!;
+    const grouped = all
+      .map((candidate, candidateIndex) => ({ ...candidate, index: candidateIndex }))
+      .filter((candidate) => candidate.assetId === share.assetId);
+    const allocations = allocateConservedCents(BigInt(asset.valueCents), grouped);
+    return { ...share, valueCents: allocations?.get(index) ?? 0n };
+  });
   const id = randomUUID();
   const now = new Date().toISOString();
   database.transaction(() => {
@@ -1087,14 +1280,48 @@ export function runSuccessionCalculation(
   );
   if (!scenario || scenario.status !== "confirmed") throw new Error("DEVOLUTION_REQUIRED");
   const assets = new Map(
-    listSharedAssets(database, input.practiceId).map((asset) => [asset.id, asset]),
+    listSharedAssets(database, input.practiceId, input.declarationId).map((asset) => [
+      asset.id,
+      asset,
+    ]),
   );
   const entries = listDeclarationSubjectEntries(database, input.practiceId, input.declarationId);
-  const entryBySubject = new Map(entries.map((entry) => [entry.subjectId, entry]));
+  const entriesBySubject = new Map<string, DeclarationSubjectEntry[]>();
+  for (const entry of entries) {
+    const group = entriesBySubject.get(entry.subjectId) ?? [];
+    group.push(entry);
+    entriesBySubject.set(entry.subjectId, group);
+  }
   const beneficiaryIds = [...new Set(scenario.shares.map((share) => share.beneficiaryId))];
   const issues: ValidationIssue[] = [];
+  if (
+    declaration.declaration.successionOpenedAt &&
+    declaration.declaration.successionOpenedAt < "2025-01-01"
+  )
+    issues.push({
+      id: "CALCULATION_PERIOD_NOT_QUALIFIED",
+      level: "blocking",
+      fieldId: "frontespizio.defunto.data-decesso",
+      message:
+        "Il calcolo per successioni aperte prima del 2025 richiede ancora la regola fiscale del periodo corretto.",
+      sourceId: "SRC-10",
+      sourcePointer: "Regole fiscali applicabili dalla versione 2025",
+    });
   const beneficiaries = beneficiaryIds.map((beneficiaryId) => {
-    const entry = entryBySubject.get(beneficiaryId);
+    const beneficiaryEntries = entriesBySubject.get(beneficiaryId) ?? [];
+    const ambiguous = hasAmbiguousTaxPositions(declaration.declaration, beneficiaryEntries);
+    const entry = ambiguous ? undefined : beneficiaryEntries[0];
+    if (ambiguous)
+      issues.push({
+        id: "CALCULATION_BENEFICIARY_POSITION_AMBIGUOUS",
+        level: "blocking",
+        fieldId: "quadro-ea.soggetto.tipo",
+        entityId: beneficiaryId,
+        message:
+          "Il beneficiario compare in più posizioni del Quadro EA e il calcolo non può scegliere automaticamente quale usare.",
+        sourceId: "SRC-09",
+        sourcePointer: "Quadro EA — posizioni ripetute",
+      });
     const relationshipCode = entry
       ? String(
           getCanonicalField(declaration.declaration, "quadro-ea.soggetto.grado-parentela", entry.id)
@@ -1383,7 +1610,9 @@ export function saveCanonicalFields(
       : null;
   const asset =
     entityId && requiresAsset
-      ? listSharedAssets(database, input.practiceId).find((candidate) => candidate.id === entityId)
+      ? listSharedAssets(database, input.practiceId, input.declarationId).find(
+          (candidate) => candidate.id === entityId,
+        )
       : null;
   if (
     (requiresEaSubject && !entry) ||
@@ -1419,6 +1648,20 @@ export function saveCanonicalFields(
   const issues = fields.flatMap((field) =>
     field.value === "" ? [] : validateFieldValue(field.fieldId, field.value),
   );
+  const valueField = asset ? officialAssetValueField(asset) : null;
+  const officialValue = valueField
+    ? fields.find((field) => field.fieldId === valueField.canonicalId)
+    : null;
+  if (officialValue && wholeEurosToCents(officialValue.value) === null)
+    issues.push({
+      id: "ASSET_VALUE_FORMAT_INVALID",
+      level: "blocking",
+      fieldId: officialValue.fieldId,
+      entityId: asset?.id ?? null,
+      message: "Il valore del bene deve essere indicato in euro interi, usando soltanto cifre.",
+      sourceId: valueField?.sourceId ?? "SRC-08",
+      sourcePointer: valueField?.sourcePointer ?? "Valore del bene",
+    });
   if (issues.some((issue) => issue.level === "blocking"))
     return { revision: record.revision, issues };
   const changedFields = fields.filter(
@@ -1507,6 +1750,11 @@ export function saveCanonicalFields(
     if (asset) {
       const data = { ...asset.data };
       for (const field of changedFields) data[field.fieldId] = field.value;
+      const changedOfficialValue = valueField
+        ? changedFields.find((field) => field.fieldId === valueField.canonicalId)
+        : null;
+      if (changedOfficialValue)
+        data.valueCents = String(wholeEurosToCents(changedOfficialValue.value) ?? 0n);
       database
         .prepare(
           `UPDATE shared_assets
@@ -1624,7 +1872,7 @@ function requiredFieldIssues(
   const decedent = listSharedSubjects(database, practiceId).find(
     (subject) => subject.role === "decedent",
   );
-  const assets = listSharedAssets(database, practiceId);
+  const assets = listSharedAssets(database, practiceId, declarationId);
   const entityNames = new Map<string, string>([
     ...subjects.map((subject) => [subject.id, subject.displayName] as const),
     ...(decedent ? [[decedent.id, decedent.displayName] as const] : []),
@@ -1684,7 +1932,7 @@ export function buildComplianceReport(
   const record = getDeclaration(database, declarationId, practiceId);
   const declaration = record?.declaration ?? createEmptyDeclaration();
   const entries = listDeclarationSubjectEntries(database, practiceId, declarationId);
-  const assets = listSharedAssets(database, practiceId).filter(
+  const assets = listSharedAssets(database, practiceId, declarationId).filter(
     (asset) => asset.kind !== "donation",
   );
   const entityNames = new Map<string, string>([

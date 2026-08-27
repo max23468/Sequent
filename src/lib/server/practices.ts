@@ -171,6 +171,14 @@ export function createSuccessiveDeclaration(
       .run(id, now, sourceDeclarationId);
     database
       .prepare(
+        `INSERT INTO declaration_asset_entries(declaration_id, asset_id, created_at)
+         SELECT ?, asset_id, ?
+         FROM declaration_asset_entries
+         WHERE declaration_id = ?`,
+      )
+      .run(id, now, sourceDeclarationId);
+    database
+      .prepare(
         `INSERT INTO domain_audit_events(id, practice_id, declaration_id, event_type, summary, payload_json, created_at)
          VALUES (?, ?, ?, 'declaration.snapshot_created', ?, ?, ?)`,
       )

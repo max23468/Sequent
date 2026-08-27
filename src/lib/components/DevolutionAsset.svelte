@@ -49,7 +49,7 @@
 
 <section class="devolution-asset">
   <header><div><strong>{asset.displayName}</strong><span>{kindLabel} · {money(asset.valueCents)}</span></div><small>Le quote devono sommare a 1</small></header>
-  {#each data.subjects.filter((subject: { role: string }) => subject.role !== "decedent") as beneficiary (beneficiary.id)}
+  {#each data.subjects.filter((subject: { role: string }) => subject.role === "beneficiary") as beneficiary (beneficiary.id)}
     {@const prefix = `share:${asset.id}:${beneficiary.id}`}
     <div class="devolution-beneficiary">
       <strong>{beneficiary.displayName}</strong>

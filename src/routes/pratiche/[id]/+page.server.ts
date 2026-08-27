@@ -118,7 +118,7 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     quadroSubjects.find((subject) => subject.id === url.searchParams.get("soggetto")) ??
     quadroSubjects.at(0) ??
     null;
-  const assets = listSharedAssets(database, params.id);
+  const assets = listSharedAssets(database, params.id, declaration.id);
   const quadroAssets = assets.filter((asset) => asset.quadro === selectedQuadro);
   const selectedAsset =
     quadroAssets.find((asset) => asset.id === url.searchParams.get("bene")) ??
@@ -436,14 +436,14 @@ export const actions = {
     const formData = await request.formData();
     const declarationId = String(formData.get("declarationId") ?? "");
     const expectedRevision = Number(formData.get("expectedRevision"));
-    const assets = listSharedAssets(database, params.id).filter(
+    if (!declarationId || !Number.isSafeInteger(expectedRevision))
+      return fail(400, { devolutionError: "Dichiarazione non identificata." });
+    const assets = listSharedAssets(database, params.id, declarationId).filter(
       (asset) => asset.kind !== "donation",
     );
     const beneficiaries = listSharedSubjects(database, params.id).filter(
-      (subject) => subject.role !== "decedent",
+      (subject) => subject.role === "beneficiary",
     );
-    if (!declarationId || !Number.isSafeInteger(expectedRevision))
-      return fail(400, { devolutionError: "Dichiarazione non identificata." });
     const shares = [];
     for (const asset of assets) {
       for (const beneficiary of beneficiaries) {

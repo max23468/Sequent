@@ -351,6 +351,18 @@ CREATE INDEX IF NOT EXISTS declaration_subject_entries_subject
   ON declaration_subject_entries(subject_id, declaration_id);
 `;
 
+const declarationAssetEntriesMigration = `
+CREATE TABLE IF NOT EXISTS declaration_asset_entries (
+  declaration_id TEXT NOT NULL REFERENCES declarations(id) ON DELETE CASCADE,
+  asset_id TEXT NOT NULL REFERENCES shared_assets(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (declaration_id, asset_id)
+);
+
+CREATE INDEX IF NOT EXISTS declaration_asset_entries_asset
+  ON declaration_asset_entries(asset_id, declaration_id);
+`;
+
 function hasColumn(database: Database.Database, table: string, column: string): boolean {
   return (database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some(
     (candidate) => candidate.name === column,
@@ -487,6 +499,25 @@ function applyDeclarationSubjectEntriesMigration(database: Database.Database): v
   })();
 }
 
+function applyDeclarationAssetEntriesMigration(database: Database.Database): void {
+  database.transaction(() => {
+    database.exec(declarationAssetEntriesMigration);
+    const alreadyApplied = database
+      .prepare("SELECT 1 FROM schema_migrations WHERE version = 5")
+      .get();
+    if (alreadyApplied) return;
+    database.exec(`
+      INSERT INTO declaration_asset_entries(declaration_id, asset_id, created_at)
+      SELECT declarations.id, shared_assets.id, shared_assets.created_at
+      FROM declarations
+      JOIN shared_assets ON shared_assets.practice_id = declarations.practice_id;
+    `);
+    database
+      .prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (5, ?)")
+      .run(new Date().toISOString());
+  })();
+}
+
 function applyMigrations(database: Database.Database): void {
   database.exec(foundationMigration);
   database
@@ -497,6 +528,7 @@ function applyMigrations(database: Database.Database): void {
   applyDocumentPipelineMigration(database);
   applyDomainMigration(database);
   applyDeclarationSubjectEntriesMigration(database);
+  applyDeclarationAssetEntriesMigration(database);
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

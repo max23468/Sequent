@@ -25,7 +25,7 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     practice,
     declaration,
     subjects: listSharedSubjects(database, params.id),
-    assets: listSharedAssets(database, params.id),
+    assets: listSharedAssets(database, params.id, declaration.id),
     report: buildComplianceReport(database, params.id, declaration.id),
     devolution:
       scenarios.find(

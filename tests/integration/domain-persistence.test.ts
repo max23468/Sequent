@@ -51,7 +51,7 @@ describe("persistenza del procedimento", () => {
       displayName: "Beneficiario Sintetico",
       taxCode: "RSSMRA80A01H501U",
     });
-    createSharedAsset(database, practice.id, {
+    const originalAsset = createSharedAsset(database, practice.id, {
       category: "property",
       displayName: "Immobile sintetico",
     });
@@ -64,6 +64,21 @@ describe("persistenza del procedimento", () => {
 
     expect(listSharedSubjects(database, practice.id)).toHaveLength(1);
     expect(listSharedAssets(database, practice.id)).toHaveLength(1);
+    expect(listSharedAssets(database, practice.id, practice.declarationId)).toHaveLength(1);
+    expect(listSharedAssets(database, practice.id, next.id)).toHaveLength(1);
+    const laterAsset = createSharedAsset(database, practice.id, {
+      kind: "money",
+      displayName: "Rapporto della sostitutiva",
+      declarationId: next.id,
+    });
+    expect(
+      listSharedAssets(database, practice.id, practice.declarationId).map(({ id }) => id),
+    ).toEqual([originalAsset.id]);
+    expect(
+      listSharedAssets(database, practice.id, next.id)
+        .map(({ id }) => id)
+        .sort(),
+    ).toEqual([originalAsset.id, laterAsset.id].sort());
     expect(listDeclarations(database, practice.id)).toHaveLength(2);
     expect(
       listDeclarationSubjectEntries(database, practice.id, practice.declarationId),
@@ -582,6 +597,252 @@ describe("persistenza del procedimento", () => {
       getCanonicalField(declaration, "quadro-ea.soggetto.codice-fiscale", subject.id)?.value,
     ).toBe("RSSMRA80A01H501U");
     expect(listSharedSubjects(database, practice.id)[0]?.taxCode).toBe("RSSMRA80A01H501U");
+  });
+
+  it("usa il valore ufficiale del bene e conserva tutti i centesimi nella ripartizione", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-values-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento sintetico");
+    const beneficiaries = ["Primo", "Secondo", "Terzo"].map((displayName) =>
+      createSharedSubject(database, practice.id, { role: "beneficiary", displayName }),
+    );
+    const building = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Fabbricato",
+      valueCents: 1n,
+    });
+    const oneCent = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Bene da un centesimo",
+      valueCents: 1n,
+    });
+    const officialValueField = "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/Valore";
+    expect(
+      saveCanonicalField(database, {
+        practiceId: practice.id,
+        declarationId: practice.declarationId,
+        expectedRevision: 1,
+        fieldId: officialValueField,
+        value: "10000",
+        entityId: building.id,
+      }),
+    ).toMatchObject({ revision: 2, issues: [] });
+    expect(
+      listSharedAssets(database, practice.id, practice.declarationId).find(
+        ({ id }) => id === building.id,
+      )?.valueCents,
+    ).toBe("1000000");
+
+    const scenario = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 2,
+      shares: [
+        ...beneficiaries.map((beneficiary) => ({
+          assetId: building.id,
+          beneficiaryId: beneficiary.id,
+          numerator: 1n,
+          denominator: 3n,
+          rightCode: "1",
+        })),
+        ...beneficiaries.slice(0, 2).map((beneficiary) => ({
+          assetId: oneCent.id,
+          beneficiaryId: beneficiary.id,
+          numerator: 1n,
+          denominator: 2n,
+          rightCode: "1",
+        })),
+      ],
+    });
+    expect(scenario.issues).toEqual([]);
+    const buildingShares = scenario.shares.filter((share) => share.assetId === building.id);
+    const centShares = scenario.shares.filter((share) => share.assetId === oneCent.id);
+    expect(buildingShares.map(({ valueCents }) => valueCents)).toEqual([
+      333_334n,
+      333_333n,
+      333_333n,
+    ]);
+    expect(buildingShares.reduce((sum, share) => sum + share.valueCents, 0n)).toBe(1_000_000n);
+    expect(centShares.map(({ valueCents }) => valueCents)).toEqual([1n, 0n]);
+  });
+
+  it("blocca soggetti non beneficiari e codici di devoluzione non ufficiali", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-codes-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento sintetico");
+    const representative = createSharedSubject(database, practice.id, {
+      role: "representative",
+      displayName: "Rappresentante",
+    });
+    const beneficiary = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Beneficiario",
+    });
+    const asset = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Fabbricato",
+      valueCents: 10_000n,
+    });
+    const invalid = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      shares: [
+        {
+          assetId: asset.id,
+          beneficiaryId: representative.id,
+          numerator: 1n,
+          denominator: 2n,
+          rightCode: "inventato",
+          reliefCode: "?",
+        },
+        {
+          assetId: asset.id,
+          beneficiaryId: beneficiary.id,
+          numerator: 1n,
+          denominator: 2n,
+          rightCode: "1",
+          reductionYears: 2,
+        },
+      ],
+    });
+    expect(invalid.status).toBe("blocked");
+    expect(invalid.issues.map(({ id }) => id)).toEqual(
+      expect.arrayContaining([
+        "DEVOLUTION_BENEFICIARY_MISSING",
+        "DEVOLUTION_RIGHT_CODE_INVALID",
+        "DEVOLUTION_RELIEF_CODE_INVALID",
+        "DEVOLUTION_REDUCTION_INCOMPLETE",
+      ]),
+    );
+  });
+
+  it("non sceglie automaticamente fra più posizioni dello stesso beneficiario", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-ambiguous-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento sintetico");
+    const beneficiary = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Beneficiario ripetuto",
+    });
+    const duplicate = createDeclarationSubjectEntry(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      sourceEntryId: beneficiary.id,
+      expectedRevision: 1,
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: duplicate.revision,
+      fieldId: "quadro-ea.soggetto.tipo",
+      value: "1",
+      entityId: duplicate.entry.id,
+    });
+    const asset = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Fabbricato",
+      valueCents: 10_000n,
+    });
+    const scenario = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: duplicate.revision + 1,
+      shares: [
+        {
+          assetId: asset.id,
+          beneficiaryId: beneficiary.id,
+          numerator: 1n,
+          denominator: 1n,
+          rightCode: "1",
+        },
+      ],
+    });
+    expect(scenario.status).toBe("blocked");
+    expect(scenario.issues.map(({ id }) => id)).toContain(
+      "DEVOLUTION_BENEFICIARY_POSITION_AMBIGUOUS",
+    );
+  });
+
+  it("non rende confermabile il calcolo con regole fiscali di un periodo non qualificato", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-period-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento sintetico");
+    const decedent = createSharedSubject(database, practice.id, {
+      role: "decedent",
+      displayName: "Defunto",
+    });
+    const beneficiary = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Beneficiario",
+    });
+    const asset = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Fabbricato",
+      valueCents: 20_000_000n,
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      fieldId: "quadro-ea.soggetto.tipo",
+      value: "1",
+      entityId: beneficiary.id,
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 2,
+      fieldId: "quadro-ea.soggetto.grado-parentela",
+      value: "10",
+      entityId: beneficiary.id,
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 3,
+      fieldId: "frontespizio.defunto.data-decesso",
+      value: "31122024",
+      entityId: decedent.id,
+    });
+    const scenario = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 4,
+      shares: [
+        {
+          assetId: asset.id,
+          beneficiaryId: beneficiary.id,
+          numerator: 1n,
+          denominator: 1n,
+          rightCode: "1",
+        },
+      ],
+    });
+    confirmDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      scenarioId: scenario.id,
+      expectedRevision: 4,
+    });
+    const calculation = runSuccessionCalculation(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+    });
+    expect(calculation.status).toBe("blocked");
+    expect(calculation.issues.map(({ id }) => id)).toContain("CALCULATION_PERIOD_NOT_QUALIFIED");
+    expect(() =>
+      confirmCalculationRun(database, {
+        practiceId: practice.id,
+        declarationId: practice.declarationId,
+        calculationId: calculation.id,
+        expectedRevision: 5,
+      }),
+    ).toThrow("CALCULATION_NOT_CONFIRMABLE");
   });
 
   it("trova anche soggetti e beni tramite l’indice di ricerca", () => {
