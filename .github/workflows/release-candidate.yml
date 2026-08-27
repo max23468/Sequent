@@ -1,4 +1,5 @@
 name: Release candidate
+run-name: Release candidate ${{ inputs.commit }}
 
 on:
   workflow_dispatch:

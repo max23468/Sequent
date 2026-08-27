@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       level: ${{ steps.policy.outputs.level }}
+      runtime: ${{ steps.policy.outputs.runtime }}
       arm64: ${{ steps.policy.outputs.arm64 }}
       browser: ${{ steps.policy.outputs.browser }}
       compliance: ${{ steps.policy.outputs.compliance }}

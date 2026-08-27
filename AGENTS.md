@@ -15,13 +15,19 @@ Regole inderogabili:
 - Il bootstrap e i gate preliminari non autorizzano pubblicazione o attivazione di servizi.
 - Ogni bug fiscale, DIZ, di persistenza o di separazione dei dati produce una regressione minima.
 
-## Pubblicazione GitHub
+## Significato di `Pubblica`
 
-- `main` è permanente e protetto; lavora su un branch breve, usa Conventional Commits e integra soltanto con squash merge.
-- Una pubblicazione comprende gate locali, push, pull request, controlli GitHub, review Codex exact-HEAD, merge e rilettura finale di repository, branch e working tree.
-- Pubblicare su GitHub non autorizza deploy, release, attivazioni sulla VPS, modifiche DNS o altri cambiamenti di produzione.
-- Non aggiungere fonti ufficiali, dati reali, documenti cliente, segreti o artefatti privati al repository pubblico. L'assenza di licenza è intenzionale.
-- Gli aggiornamenti automatici restano limitati alla proposta di pull request: runtime, toolchain, Codex, SQLite, OCR, Oxfmt, Oxlint, DIZ e versioni major richiedono valutazione deliberata.
+Quando il proprietario, riferendosi alla repository o alla modifica corrente, dice `Pubblica` o chiede in modo affermativo e inequivocabile di pubblicare, autorizza l'intero ciclo tecnico applicabile. Domande, ipotesi, pianificazioni e negazioni non costituiscono autorizzazione. L'agente non si ferma a stati intermedi e completa preparazione e verifiche, branch e commit, versione e changelog quando richiesti, push, pull request, gate bloccanti, review Codex exact-HEAD, squash merge, candidata di release, tag e GitHub Release quando previsti, deploy tecnico e verifica live quando applicabili, pulizia e rilettura finale.
+
+`main` resta permanente e protetto. Prima della pull request l'HEAD deve essere coerente e avere superato i gate locali proporzionati. L'impatto operativo si valuta sul diff cumulativo fra l'ultima release distribuita con successo e il candidato finale, non sulla sola ultima pull request. Modifiche esclusivamente documentali, di test o di governance non richiedono immagine, release o deploy; più modifiche runtime già assorbite in `main` vengono qualificate e distribuite una sola volta sul candidato finale.
+
+Per una modifica runtime, il ciclo `Pubblica` include la candidata completa. Se esiste già una release attiva e il workflow Production è qualificato, include anche deploy, readback live e GitHub Release senza una seconda conferma. Prima della prima attivazione stabile si ferma invece alla candidata qualificata: attivazione iniziale, hostname pubblico, Caddy, Dynu e firewall richiedono una richiesta esplicita separata. Il bootstrap o la mera presenza di un artefatto non rendono il runtime attivo.
+
+Quando richiesti dalla policy di versione, bump e voce di changelog appartengono alla stessa pull request della modifica runtime. Non fondere consapevolmente una modifica runtime incompleta per aprire poi una pull request solo di release, salvo deroga esplicita del proprietario.
+
+Non aggiungere fonti ufficiali, dati reali, documenti cliente, segreti o artefatti privati al repository pubblico. `Pubblica` non autorizza invii telematici, uso di pratiche reali, modifiche fiscali non qualificate, attivazione iniziale del servizio o cambiamenti a Caddy, Dynu, firewall e Hub Fatture. Gli aggiornamenti automatici restano limitati alla proposta di pull request: runtime, toolchain, Codex, SQLite, OCR, Oxfmt, Oxlint, DIZ e versioni major richiedono valutazione deliberata.
+
+La pulizia finale rimuove soltanto branch e worktree temporanei creati nel ciclo corrente e già assorbiti. Se un passaggio non è applicabile, dichiaralo e prosegui con gli altri. Non dichiarare `pubblicato` finché tutti i passaggi applicabili e la rilettura finale di PR, check, candidata, eventuale deploy/release e stato Git non sono completi.
 
 ## Gate dei commenti Codex
 
@@ -33,4 +39,4 @@ Regole inderogabili:
 - Limiti d'uso, `could not complete`, `unknown error` e altri errori operativi non sono approvazioni né finding sul codice. Quando il servizio torna disponibile, ripeti il commento esatto sullo stesso HEAD.
 - Non eseguire il merge finché tutti i required checks non sono verdi e tutte le conversazioni non sono risolte. Dopo il merge rileggi `main`, elimina il branch temporaneo e verifica che checkout e VPS canonica siano puliti, quando la VPS rientra nello scope.
 
-Decidi autonomamente naming, formattazione e default tecnici reversibili. Fermati soltanto per azioni distruttive, deploy, release o letture materialmente diverse della richiesta.
+Decidi autonomamente naming, formattazione e default tecnici reversibili. Fermati soltanto per azioni distruttive, prima attivazione, deploy o release non già autorizzati da `Pubblica`, o letture materialmente diverse della richiesta.

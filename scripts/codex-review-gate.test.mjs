@@ -7,6 +7,7 @@ import {
   classifyCodexReview,
   findingPriority,
   isAutomaticFirstReview,
+  isAdvisoryResolutionPermissionError,
   isCodexBotLogin,
   isHeadReset,
   latestCodexInvocation,
@@ -217,6 +218,14 @@ test("risolve soltanto thread P2/P3 automatici senza risposte umane", () => {
   assert.equal(isCodexBotLogin("chatgpt-codex-connector[bot]"), true);
   assert.equal(isCodexBotLogin("chatgpt-codex-connector"), true);
   assert.equal(isCodexBotLogin("max23468"), false);
+});
+
+test("delega al client locale soltanto il limite di permesso della GitHub App", () => {
+  assert.equal(
+    isAdvisoryResolutionPermissionError(new Error("Resource not accessible by integration")),
+    true,
+  );
+  assert.equal(isAdvisoryResolutionPermissionError(new Error("Unknown error")), false);
 });
 
 test("gli errori operativi bloccano in assenza di una review conclusa più recente", () => {
