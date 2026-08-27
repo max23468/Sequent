@@ -6,7 +6,7 @@ import path from "node:path";
 import test from "node:test";
 
 const revision = "a".repeat(40);
-const currentTag = `sequent:m3-${revision.slice(0, 12)}`;
+const currentTag = `sequent:local-${revision.slice(0, 12)}`;
 const imageId = (character: string) => `sha256:${character.repeat(64)}`;
 
 test("la build locale conserva solo tag correnti e protegge immagini in uso", () => {
@@ -52,15 +52,15 @@ if [[ "$1 $2" == 'ps -aq' ]]; then printf '%s\n' running-container; exit 0; fi
 if [[ "$1" == inspect && "$2" == --format ]]; then printf '%s\n' "$running_id"; exit 0; fi
 if [[ "$1 $2" == 'image inspect' && "$3" == --format ]]; then
   case "$5" in
-    sequent:m3-old) printf '%s\n' "$old_id" ;;
-    sequent:m3-running) printf '%s\n' "$running_id" ;;
+    sequent:local-old) printf '%s\n' "$old_id" ;;
+    sequent:local-running) printf '%s\n' "$running_id" ;;
     *) printf '%s\n' "$current_id" ;;
   esac
   exit 0
 fi
 if [[ "$1 $2" == 'image ls' ]]; then
   if [[ " $* " == *' dangling=true '* ]]; then printf '%s\n' "$dangling_id"; exit 0; fi
-  printf '%s\n' sequent:m3-local '${currentTag}' sequent:m3-old sequent:m3-running
+  printf '%s\n' sequent:local '${currentTag}' sequent:local-old sequent:local-running
   exit 0
 fi
 if [[ "$1 $2" == 'image rm' ]]; then printf 'remove:%s\n' "$3" >> "$events"; exit 0; fi
@@ -89,11 +89,11 @@ printf 'trim:%s\n' "$*" >> '${events}'
     });
     const output = readFileSync(events, "utf8");
     assert.match(output, /--platform linux\/arm64/);
-    assert.match(output, /--tag sequent:m3-local/);
+    assert.match(output, /--tag sequent:local/);
     assert.match(output, new RegExp(`--tag ${currentTag}`));
-    assert.match(output, /remove:sequent:m3-old/);
+    assert.match(output, /remove:sequent:local-old/);
     assert.match(output, new RegExp(`remove:${danglingId}`));
-    assert.doesNotMatch(output, /remove:sequent:m3-running/);
+    assert.doesNotMatch(output, /remove:sequent:local-running/);
     assert.match(output, /trim:ssh -- sudo fstrim -av/);
   } finally {
     rmSync(root, { recursive: true, force: true });

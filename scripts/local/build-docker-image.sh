@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-canonical_image=sequent:m3-local
+canonical_image=sequent:local
 retention_label=io.sequent.local.retention
 maximum_disk_percent="${SEQUENT_LOCAL_BUILD_MAX_DISK_PERCENT:-85}"
 
@@ -30,7 +30,7 @@ git -C "$repository_root" diff --quiet || dirty=true
 git -C "$repository_root" diff --cached --quiet || dirty=true
 [[ -z "$(git -C "$repository_root" ls-files --others --exclude-standard)" ]] || dirty=true
 
-versioned_image="sequent:m3-${revision:0:12}"
+versioned_image="sequent:local-${revision:0:12}"
 [[ "$dirty" == false ]] || versioned_image="${versioned_image}-dirty"
 
 docker info >/dev/null
@@ -65,10 +65,8 @@ while IFS= read -r image; do
   docker image rm "$image" >/dev/null
   removed=$((removed + 1))
 done < <(
-  {
-    docker image ls --format '{{.Repository}}:{{.Tag}}' --filter "label=$retention_label=managed"
-    docker image ls --format '{{.Repository}}:{{.Tag}}' --filter 'reference=sequent:m3-*'
-  } | sort -u
+  docker image ls --format '{{.Repository}}:{{.Tag}}' \
+    --filter "label=$retention_label=managed" | sort -u
 )
 
 current_id="$(docker image inspect --format '{{.Id}}' "$canonical_image")"
