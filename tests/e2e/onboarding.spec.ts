@@ -33,12 +33,11 @@ async function authenticate(page: import("@playwright/test").Page) {
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByLabel("Ripeti la password").fill(password);
     await page.getByRole("button", { name: "Crea account" }).click();
-    return;
-  }
-  if (page.url().endsWith("/login")) {
+  } else if (page.url().endsWith("/login")) {
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Accedi" }).click();
   }
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 }
 
 async function openAccountMenu(page: import("@playwright/test").Page) {
