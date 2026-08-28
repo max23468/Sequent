@@ -8,6 +8,15 @@ repository="$root/repo"
 commit=
 arguments=("$@")
 
+git_as_checkout_owner() {
+  /usr/sbin/runuser --user ubuntu -- /usr/bin/env -i \
+    HOME=/home/ubuntu \
+    PATH=/usr/bin:/bin \
+    GIT_CONFIG_NOSYSTEM=1 \
+    GIT_CONFIG_GLOBAL=/dev/null \
+    /usr/bin/git -C "$repository" "$@"
+}
+
 while (($#)); do
   if [[ "$1" == --commit ]]; then
     shift
@@ -23,12 +32,12 @@ done
   echo "ERRORE: checkout Sequent assente" >&2
   exit 1
 }
-[[ "$(/usr/bin/git -C "$repository" rev-parse HEAD)" == "$commit" ]] || {
+[[ "$(git_as_checkout_owner rev-parse HEAD)" == "$commit" ]] || {
   echo "ERRORE: checkout non exact-commit" >&2
   exit 1
 }
-/usr/bin/git -C "$repository" diff --quiet
-/usr/bin/git -C "$repository" diff --cached --quiet
+git_as_checkout_owner diff --quiet
+git_as_checkout_owner diff --cached --quiet
 
 trusted_source="$(mktemp -d /run/sequent-deploy-source.XXXXXX)"
 cleanup() {
@@ -38,7 +47,7 @@ cleanup() {
 }
 trap cleanup EXIT HUP INT TERM
 
-/usr/bin/git -C "$repository" archive --format=tar "$commit" |
+git_as_checkout_owner archive --format=tar "$commit" |
   /usr/bin/tar --extract --directory "$trusted_source" --no-same-owner --no-same-permissions
 /bin/chown -R root:root "$trusted_source"
 /bin/chmod -R go-w "$trusted_source"

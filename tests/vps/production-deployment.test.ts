@@ -80,9 +80,13 @@ test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {
   const launcher = read("scripts/vps/run-trusted-deploy.sh");
 
   assert.match(launcher, /export PATH=\/usr\/sbin:\/usr\/bin:\/sbin:\/bin/);
-  assert.match(launcher, /git -C "\$repository" rev-parse HEAD/);
-  assert.match(launcher, /git -C "\$repository" diff --quiet/);
-  assert.match(launcher, /git -C "\$repository" archive --format=tar "\$commit"/);
+  assert.match(launcher, /\/usr\/sbin\/runuser --user ubuntu -- \/usr\/bin\/env -i/);
+  assert.match(launcher, /GIT_CONFIG_NOSYSTEM=1/);
+  assert.match(launcher, /GIT_CONFIG_GLOBAL=\/dev\/null/);
+  assert.match(launcher, /git_as_checkout_owner rev-parse HEAD/);
+  assert.match(launcher, /git_as_checkout_owner diff --quiet/);
+  assert.match(launcher, /git_as_checkout_owner archive --format=tar "\$commit"/);
+  assert.equal(launcher.match(/\/usr\/bin\/git -C/g)?.length, 1);
   assert.match(launcher, /mktemp -d \/run\/sequent-deploy-source\./);
   assert.match(launcher, /chown -R root:root "\$trusted_source"/);
   assert.match(launcher, /SEQUENT_TRUSTED_REPOSITORY="\$trusted_source"/);
