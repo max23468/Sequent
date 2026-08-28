@@ -91,6 +91,7 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
   const compose = read("deploy/compose.example.yml");
   const dockerfile = read("Dockerfile");
   const runbook = read("docs/runbooks/vps.md");
+  const release = read(".github/workflows/release-candidate.yml");
 
   assert.match(compose, /ORIGIN: \$\{SEQUENT_ORIGIN:\?[^}]+\}/);
   assert.match(compose, /ADDRESS_HEADER: X-Forwarded-For/);
@@ -115,14 +116,16 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
     assert.match(compose, new RegExp(`\\s- ${capability}`));
   }
   assert.match(dockerfile, /ca-certificates/);
-  assert.match(dockerfile, /node:\$\{NODE_VERSION\}-\$\{NODE_IMAGE_VARIANT\}/);
+  assert.match(dockerfile, /^FROM node:26\.7\.0-trixie-slim@sha256:[0-9a-f]{64} AS node-base$/m);
   assert.match(dockerfile, /COPY requirements-ocr\.txt/);
   assert.match(dockerfile, /COPY --from=ocr --chown=root:root \/opt\/ocr \/opt\/ocr/);
-  assert.match(dockerfile, /rm -rf \/usr\/lib\/python3\.12\/ensurepip/);
+  assert.match(dockerfile, /python3 -m venv \/opt\/ocr/);
+  assert.match(dockerfile, /COPY --from=build --chown=root:root \/app\/node_modules/);
   assert.match(dockerfile, /scripts\/codex-launcher\.c/);
   assert.match(dockerfile, /find \/ -xdev -type f -perm \/6000 -exec chmod a-s/);
   assert.match(dockerfile, /install -o root -g root -m 4755/);
   assert.match(dockerfile, /'X-Forwarded-For':'127\.0\.0\.1'/);
+  assert.match(release, /scripts\/local\/verify-docker-runtime\.sh/);
   assert.match(runbook, /SEQUENT_ORIGIN/);
   assert.match(runbook, /tmpfs.*stessi UID e GID.*1777/);
   assert.match(runbook, /launcher minimo della CLI Codex/);

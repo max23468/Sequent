@@ -3290,7 +3290,7 @@ Restano confermati i gate rigorosi già scelti:
 - test unitari, integrazione, migrazioni ed E2E;
 - DIZ regression;
 - benchmark OCR/Codex;
-- build ARM64 e scansione dipendenze/immagine; errori dello scanner, vulnerabilità critiche e vulnerabilità con fix disponibile bloccano la candidata. Le vulnerabilità High, Medium, Low o prive di classificazione che non hanno un fix distribuibile restano advisory: il riepilogo per severità deve rimanere visibile fino all'aggiornamento della base o dei converter;
+- build ARM64 e scansione dipendenze/immagine; errori dello scanner e vulnerabilità con fix disponibile bloccano la candidata, indipendentemente dalla severità. Le vulnerabilità senza fix distribuibile, incluse quelle Critical, restano advisory accettate e tracciate: conteggi, severità e identificativi devono rimanere visibili fino all'aggiornamento della base o dei converter;
 - browser matrix;
 - review Codex exact-HEAD;
 - nessun blocker aperto;

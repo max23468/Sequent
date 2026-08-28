@@ -1,18 +1,29 @@
 # syntax=docker/dockerfile:1.12
-ARG NODE_VERSION=26.7.0
-ARG NODE_IMAGE_VARIANT=alpine3.23
-ARG NODE_IMAGE_DIGEST=sha256:ce3cc39fe3b8b2602d3b1c4d63d301e46b48c550ecb627869853ddcdda418b63
-FROM node:${NODE_VERSION}-${NODE_IMAGE_VARIANT}@${NODE_IMAGE_DIGEST} AS dependencies
+FROM node:26.7.0-trixie-slim@sha256:5758d367d7b4f48b73a9bb3530e687e47efb289f3b43f9c0450a25225ae0db5d AS node-base
+ARG DEBIAN_SNAPSHOT=20260827T000000Z
+RUN sed -i \
+      -e "s|http://deb.debian.org/debian-security|http://snapshot.debian.org/archive/debian-security/${DEBIAN_SNAPSHOT}|" \
+      -e "s|http://deb.debian.org/debian|http://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT}|" \
+      /etc/apt/sources.list.d/debian.sources \
+    && printf '%s\n' 'Acquire::Check-Valid-Until "false";' \
+      > /etc/apt/apt.conf.d/99sequent-snapshot \
+    && npm install --global npm@12.0.2 \
+    && test "$(npm --version)" = 12.0.2
+
+FROM node-base AS dependencies
 WORKDIR /app
-RUN apk upgrade --no-cache \
-    && apk add --no-cache build-base python3 \
-    && npm install --global npm@12.0.2
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
+      build-essential python3 \
+    && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM node:${NODE_VERSION}-${NODE_IMAGE_VARIANT}@${NODE_IMAGE_DIGEST} AS ocr
-RUN apk upgrade --no-cache \
-    && apk add --no-cache python3
+FROM node-base AS ocr
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
+      python3 python3-venv \
+    && rm -rf /var/lib/apt/lists/*
 COPY requirements-ocr.txt /tmp/requirements-ocr.txt
 RUN python3 -m venv /opt/ocr \
     && /opt/ocr/bin/python -m pip install --no-cache-dir --upgrade pip==26.2.1 \
@@ -26,7 +37,7 @@ RUN cc -O2 -Wall -Wextra -Werror -fPIE -pie -Wl,-z,relro,-z,now \
     && npm run build \
     && npm prune --omit=dev
 
-FROM node:${NODE_VERSION}-${NODE_IMAGE_VARIANT}@${NODE_IMAGE_DIGEST} AS runtime
+FROM node-base AS runtime
 ARG APP_COMMIT_SHA=unversioned
 LABEL org.opencontainers.image.source="https://github.com/max23468/Sequent" \
   org.opencontainers.image.revision=$APP_COMMIT_SHA
@@ -38,27 +49,35 @@ ENV NODE_ENV=production \
     SEQUENT_DATA_DIR=/var/lib/sequent \
     SEQUENT_CODEX_HOME=/var/lib/sequent/.codex
 WORKDIR /app
-RUN apk upgrade --no-cache \
-    && apk add --no-cache \
-      ca-certificates file ghostscript gcompat imagemagick jbig2enc libstdc++ \
-      libreoffice-calc libreoffice-common libreoffice-writer openssl pngquant \
-      poppler-utils python3 qpdf tesseract-ocr tesseract-ocr-data-ita unpaper unzip \
-    && rm -rf /usr/lib/python3.12/ensurepip \
-    && addgroup -S -g 10001 sequent \
-    && adduser -S -D -H -u 10001 -G sequent -h /var/lib/sequent sequent
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
+      ca-certificates file fonts-dejavu-core ghostscript icc-profiles-free imagemagick jbig2 \
+      libreoffice-calc-nogui libreoffice-core-nogui libreoffice-writer-nogui openssl pngquant \
+      poppler-utils python3 qpdf tesseract-ocr tesseract-ocr-ita unpaper unzip \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 sequent \
+    && useradd --uid 10001 --gid 10001 --home-dir /var/lib/sequent \
+      --no-create-home --shell /usr/sbin/nologin sequent
 RUN install -d -o sequent -g sequent -m 0700 /var/lib/sequent
 COPY --from=ocr --chown=root:root /opt/ocr /opt/ocr
-COPY --from=build --chown=sequent:sequent /app/build ./build
-COPY --from=build --chown=sequent:sequent /app/node_modules ./node_modules
-COPY --from=build --chown=sequent:sequent /app/package.json ./package.json
+COPY --from=build --chown=root:root /app/build ./build
+COPY --from=build --chown=root:root /app/node_modules ./node_modules
+COPY --from=build --chown=root:root /app/package.json ./package.json
 COPY --from=build /tmp/codex-launcher /tmp/codex-launcher
 RUN find / -xdev -type f -perm /6000 -exec chmod a-s {} + \
+    && getcap -r / 2>/dev/null \
+      | while IFS= read -r capability_line; do \
+          capability_path="${capability_line%% *}"; \
+          test -z "$capability_path" || setcap -r "$capability_path"; \
+        done \
+    && test -z "$(getcap -r / 2>/dev/null)" \
     && codex_path="$(find /app/node_modules/@openai -type f -path '*/bin/codex' -print -quit)" \
     && test -n "$codex_path" \
     && mv "$codex_path" "$codex_path.real" \
     && chown root:root "$codex_path.real" \
     && chmod 0755 "$codex_path.real" \
     && install -o root -g root -m 4755 /tmp/codex-launcher "$codex_path" \
+    && rm -f /tmp/codex-launcher \
     && test "$(find / -xdev -type f -perm /6000 | wc -l)" -eq 1
 USER 10001:10001
 EXPOSE 3000
