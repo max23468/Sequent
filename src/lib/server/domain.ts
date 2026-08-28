@@ -25,6 +25,7 @@ import {
   listQuadroFields,
   listQuadroTechnicalElements,
   listTechnicalEnumerationValues,
+  QUADRI,
   type TechnicalElement,
   type QuadroId,
 } from "../../domain/official-catalog/catalog.ts";
@@ -2154,31 +2155,144 @@ function requiredFieldIssues(
     ...(decedent ? [[decedent.id, decedent.displayName] as const] : []),
     ...assets.map((asset) => [asset.id, asset.displayName] as const),
   ]);
-  const active: Array<{ quadro: QuadroId; entityIds: Array<string | null> }> = [
-    { quadro: "Frontespizio", entityIds: [null] },
-    { quadro: "EA", entityIds: subjects.map((subject) => subject.id) },
-    ...([...new Set(assets.map((asset) => asset.quadro).filter(Boolean))] as QuadroId[]).map(
-      (quadro) => ({
-        quadro,
-        entityIds: assets.filter((asset) => asset.quadro === quadro).map((asset) => asset.id),
-      }),
-    ),
+  type ActiveContext = {
+    quadro: QuadroId;
+    entityId: string | null;
+    occurrenceId: string | null;
+    occurrenceGroup: string | null;
+    scope: "standard" | "declaration" | "occurrence";
+  };
+  const active: ActiveContext[] = [
+    {
+      quadro: "Frontespizio",
+      entityId: null,
+      occurrenceId: null,
+      occurrenceGroup: null,
+      scope: "standard",
+    },
+    ...subjects.map((subject): ActiveContext => ({
+      quadro: "EA",
+      entityId: subject.id,
+      occurrenceId: null,
+      occurrenceGroup: null,
+      scope: "standard",
+    })),
   ];
+  for (const asset of assets) {
+    if (!asset.quadro) continue;
+    active.push({
+      quadro: asset.quadro,
+      entityId: asset.id,
+      occurrenceId: null,
+      occurrenceGroup: null,
+      scope: "standard",
+    });
+  }
+  const entityQuadri = new Set<QuadroId>([
+    "Frontespizio",
+    "EA",
+    "EB",
+    "EC",
+    "ED",
+    "EL",
+    "EM",
+    "EN",
+    "EO",
+    "EP",
+    "EQ",
+    "ER",
+  ]);
+  const staticQuadri = new Set<QuadroId>(QUADRI.filter((quadro) => !entityQuadri.has(quadro)));
+  const activeKeys = new Set(active.map((context) => JSON.stringify(context)));
+  const addActiveContext = (context: ActiveContext): void => {
+    const key = JSON.stringify(context);
+    if (activeKeys.has(key)) return;
+    activeKeys.add(key);
+    active.push(context);
+  };
+  for (const storedField of Object.values(declaration.fields)) {
+    if (
+      storedField.value === null ||
+      storedField.value === undefined ||
+      String(storedField.value) === ""
+    )
+      continue;
+    const catalogField = getCatalogField(storedField.fieldId);
+    const quadro = catalogField?.quadro as QuadroId | undefined;
+    if (!quadro || !staticQuadri.has(quadro)) continue;
+    if (catalogField?.entityScope === "occurrence") {
+      const occurrenceGroup = catalogField.occurrenceGroup ?? null;
+      if (!storedField.occurrenceId || !occurrenceGroup) continue;
+      addActiveContext({
+        quadro,
+        entityId: null,
+        occurrenceId: storedField.occurrenceId,
+        occurrenceGroup,
+        scope: "occurrence",
+      });
+      continue;
+    }
+    addActiveContext({
+      quadro,
+      entityId: null,
+      occurrenceId: null,
+      occurrenceGroup: null,
+      scope: "declaration",
+    });
+  }
+  const occurrencePositions = new Map<string, number>();
+  const occurrenceCounts = new Map<string, number>();
+  for (const context of active.filter((candidate) => candidate.scope === "occurrence")) {
+    const group = `${context.quadro}:${context.occurrenceGroup}`;
+    const position = (occurrenceCounts.get(group) ?? 0) + 1;
+    occurrenceCounts.set(group, position);
+    occurrencePositions.set(`${group}:${context.occurrenceId}`, position);
+  }
   for (const context of active) {
     const fields = listQuadroFields(context.quadro).filter(
       (field) =>
         field.entryMode !== "derived" &&
         (field.appliesToDeclarationKinds.length === 0 ||
-          field.appliesToDeclarationKinds.includes(declaration.declarationKind)),
+          field.appliesToDeclarationKinds.includes(declaration.declarationKind)) &&
+        (context.scope === "standard" ||
+          (context.scope === "declaration" && field.entityScope === "declaration") ||
+          (context.scope === "occurrence" &&
+            field.entityScope === "occurrence" &&
+            field.occurrenceGroup === context.occurrenceGroup)),
     );
-    const technicalElements = listQuadroTechnicalElements(context.quadro);
+    const rootPath =
+      context.scope === "occurrence"
+        ? context.occurrenceGroup!
+        : getQuadroActivationRootPath(context.quadro);
+    const technicalElements = listQuadroTechnicalElements(context.quadro).filter(
+      (element) =>
+        context.scope !== "occurrence" ||
+        element.path === rootPath ||
+        isTechnicalDescendant(element.path, rootPath),
+    );
     const fieldsByPath = new Map(fields.map((field) => [field.path, field]));
-    const rootPath = getQuadroActivationRootPath(context.quadro);
-    for (const contextEntityId of context.entityIds) {
+    {
+      const contextEntityId = context.entityId;
+      const contextIdentity = context.occurrenceId ?? contextEntityId ?? "declaration";
+      const occurrencePosition =
+        context.scope === "occurrence"
+          ? occurrencePositions.get(
+              `${context.quadro}:${context.occurrenceGroup}:${context.occurrenceId}`,
+            )
+          : undefined;
+      const declarationLocation =
+        occurrencePosition !== undefined
+          ? `nella posizione ${occurrencePosition} del Quadro ${context.quadro}`
+          : `nel ${context.quadro === "Frontespizio" ? "Frontespizio" : `Quadro ${context.quadro}`}`;
       const entityIdFor = (field: QuadroField): string | null =>
         field.entityScope === "decedent" ? (decedent?.id ?? null) : contextEntityId;
       const hasValue = (field: QuadroField): boolean => {
-        const value = getCanonicalField(declaration, field.canonicalId, entityIdFor(field))?.value;
+        const value = getCanonicalField(
+          declaration,
+          field.canonicalId,
+          entityIdFor(field),
+          field.entityScope === "occurrence" ? context.occurrenceId : null,
+        )?.value;
         return value !== null && value !== undefined && String(value) !== "";
       };
       const activeContainers = new Set<string>([rootPath]);
@@ -2247,25 +2361,25 @@ function requiredFieldIssues(
             .find(Boolean) ?? null;
         if (selected.length === 0 && members.some((member) => member.minOccurs > 0))
           issues.push({
-            id: `REQUIRED_CHOICE_MISSING:${choiceGroup}:${contextEntityId ?? "declaration"}`,
+            id: `REQUIRED_CHOICE_MISSING:${choiceGroup}:${contextIdentity}`,
             level: "blocking",
             fieldId: firstField?.canonicalId ?? null,
             entityId: contextEntityId,
             message: contextEntityId
               ? `Scegli una delle alternative previste per ${entityNames.get(contextEntityId) ?? "la posizione interessata"}.`
-              : `Scegli una delle alternative previste nel ${context.quadro === "Frontespizio" ? "Frontespizio" : `Quadro ${context.quadro}`}.`,
+              : `Scegli una delle alternative previste ${declarationLocation}.`,
             sourceId: firstField?.sourceId ?? members[0]!.sourceId,
             sourcePointer: firstField?.sourcePointer ?? members[0]!.sourcePointer,
           });
         if (selected.length > 1)
           issues.push({
-            id: `CHOICE_EXCLUSIVITY_VIOLATION:${choiceGroup}:${contextEntityId ?? "declaration"}`,
+            id: `CHOICE_EXCLUSIVITY_VIOLATION:${choiceGroup}:${contextIdentity}`,
             level: "blocking",
             fieldId: firstField?.canonicalId ?? null,
             entityId: contextEntityId,
             message: contextEntityId
               ? `Mantieni una sola alternativa per ${entityNames.get(contextEntityId) ?? "la posizione interessata"}.`
-              : `Mantieni una sola alternativa nel ${context.quadro === "Frontespizio" ? "Frontespizio" : `Quadro ${context.quadro}`}.`,
+              : `Mantieni una sola alternativa ${declarationLocation}.`,
             sourceId: firstField?.sourceId ?? members[0]!.sourceId,
             sourcePointer: firstField?.sourcePointer ?? members[0]!.sourcePointer,
           });
@@ -2280,13 +2394,13 @@ function requiredFieldIssues(
           continue;
         const entityId = entityIdFor(field);
         issues.push({
-          id: `REQUIRED_FIELD_MISSING:${field.canonicalId}:${entityId ?? "declaration"}`,
+          id: `REQUIRED_FIELD_MISSING:${field.canonicalId}:${contextIdentity}`,
           level: "blocking",
           fieldId: field.canonicalId,
           entityId,
           message: entityId
             ? `Completa “${field.label}” per ${entityNames.get(entityId) ?? "la posizione interessata"}.`
-            : `Completa “${field.label}” nel ${context.quadro === "Frontespizio" ? "Frontespizio" : `Quadro ${context.quadro}`}.`,
+            : `Completa “${field.label}” ${declarationLocation}.`,
           sourceId: field.sourceId,
           sourcePointer: field.sourcePointer,
         });

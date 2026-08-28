@@ -45,6 +45,10 @@ const SUBSTITUTE_SUCCESSION_OPENING_DATE_FIELD_ID =
   "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/Decesso/DataDecesso";
 const TESTAMENT_FILE_NAME_FIELD_ID =
   "xsd:/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoAll/FileName";
+const MORTGAGE_TAX_FIELD_ID =
+  "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneI_ImpostaIpotecaria/ImpostaProporzionale/ImpostaProporzionale_Imposta";
+const MORTGAGE_TAX_BASE_FIELD_ID =
+  "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneI_ImpostaIpotecaria/ImpostaProporzionale/ImpostaProporzionale_Imponibile";
 
 afterEach(() => {
   for (const directory of directories.splice(0)) {
@@ -593,6 +597,39 @@ describe("persistenza del procedimento", () => {
     expect(
       getCanonicalField(declaration, TESTAMENT_FILE_NAME_FIELD_ID, null, secondOccurrence)?.value,
     ).toBe("TESTAMENTO-SECONDO.PDF");
+    expect(
+      buildComplianceReport(database, practice.id, practice.declarationId).issues.map(
+        ({ id }) => id,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        `REQUIRED_FIELD_MISSING:xsd:/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoAll/FileType:${firstOccurrence}`,
+        `REQUIRED_FIELD_MISSING:xsd:/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoAll/ImageData:${firstOccurrence}`,
+        `REQUIRED_FIELD_MISSING:xsd:/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoAll/FileType:${secondOccurrence}`,
+        `REQUIRED_FIELD_MISSING:xsd:/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoAll/ImageData:${secondOccurrence}`,
+      ]),
+    );
+  });
+
+  it("controlla i campi obbligatori dei quadri compilati senza beni o soggetti propri", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-static-quadro-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento sintetico");
+
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      fieldId: MORTGAGE_TAX_FIELD_ID,
+      value: "200",
+    });
+
+    expect(
+      buildComplianceReport(database, practice.id, practice.declarationId).issues.map(
+        ({ id }) => id,
+      ),
+    ).toContain(`REQUIRED_FIELD_MISSING:${MORTGAGE_TAX_BASE_FIELD_ID}:declaration`);
   });
 
   it("controlla i campi obbligatori nel ramo attivo e una sola alternativa XSD", () => {
