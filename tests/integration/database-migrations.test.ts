@@ -212,7 +212,7 @@ describe("migrazioni della pipeline documentale", () => {
         now,
         now,
       );
-    database.prepare("DELETE FROM schema_migrations WHERE version = 12").run();
+    database.prepare("DELETE FROM schema_migrations WHERE version = 13").run();
     closeDatabase(directory);
 
     database = openDatabase(directory);
@@ -223,9 +223,9 @@ describe("migrazioni della pipeline documentale", () => {
       .prepare("SELECT declaration_json FROM declarations WHERE id = ?")
       .get("declaration-old-calculation") as { declaration_json: string };
     expect(JSON.parse(row.declaration_json).latestCalculationRunId).toBeNull();
-    expect(JSON.parse(row.declaration_json).rulesetVersion).toBe("2026.08.8");
+    expect(JSON.parse(row.declaration_json).rulesetVersion).toBe("2026.08.9");
     expect(
-      database.prepare("SELECT 1 AS applied FROM schema_migrations WHERE version = 12").get(),
+      database.prepare("SELECT 1 AS applied FROM schema_migrations WHERE version = 13").get(),
     ).toEqual({ applied: 1 });
   });
 });

@@ -4,7 +4,7 @@ import {
   usufructCoefficientForAge,
 } from "./temporal-rules.ts";
 
-export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.8" as const;
+export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.9" as const;
 
 export interface BeneficiaryTaxInput {
   beneficiaryId: string;
@@ -42,6 +42,8 @@ export interface SuccessionAllocation {
   treatment: "estate" | "dn" | "bi" | "liability";
   valueCents: bigint;
   assetValueCents: bigint;
+  assetExemptValueCents?: bigint;
+  businessAsset?: boolean;
   reliefCode?: string;
   reductionYears?: 1 | 2 | 3 | 4 | 5;
   previousSuccessionValueCents?: bigint;
@@ -341,6 +343,9 @@ export interface DeclarationTaxOptions {
   stampDutyJurisdictionCount: number;
   automaticLandRegistry: boolean;
   copyRequested: boolean;
+  hasTestament?: boolean;
+  presenterCode?: string;
+  allBeneficiariesDisabled?: boolean;
   paymentTiming: 1 | 2;
   initialSuccessionPaymentCents?: bigint;
   mortgageAlreadyPaidCents?: bigint;
@@ -484,9 +489,23 @@ export function calculateDeclarationTaxSummary(
           : sum,
       0n,
     );
-  const propertyCents = sumKinds(PROPERTY_KINDS, new Set(["A"]));
+  const propertyCents = assetGroups.reduce(
+    (sum, group) =>
+      PROPERTY_KINDS.has(groupKind(group)) &&
+      !hasRelief(group, "A") &&
+      !group.allocations.some((allocation) => allocation.businessAsset)
+        ? sum + group.valueCents
+        : sum,
+    0n,
+  );
   const companiesCents = sumKinds(new Set(["company"]));
-  const securitiesCents = sumKinds(new Set(["securities"]));
+  const securitiesCents = assetGroups.reduce(
+    (sum, group) =>
+      groupKind(group) === "securities"
+        ? sum + group.valueCents + (group.allocations[0]?.assetExemptValueCents ?? 0n)
+        : sum,
+    0n,
+  );
   const aircraftAndVesselsCents = sumKinds(new Set(["aircraft", "vessel"]), new Set(["A"]));
   const otherAssetsCents = sumKinds(new Set(["money", "inventory", "other"]), new Set(["A"]));
   const totalLiabilitiesCents = sumKinds(new Set(["liability"]));
@@ -637,8 +656,22 @@ export function calculateDeclarationTaxSummary(
   const mortgageServicesCents =
     BigInt(options.mortgageJurisdictionCount) *
     BigInt(options.automaticLandRegistry ? 12_000 : 6_500);
+  const propertyAllocations = allocations.filter((allocation) =>
+    PROPERTY_KINDS.has(allocation.assetKind),
+  );
+  const copyStampExempt =
+    propertyAllocations.some((allocation) => allocation.relationshipCode === "36") ||
+    (options.hasTestament === true &&
+      options.presenterCode === "9" &&
+      ((options.openingDate >= "2017-01-01" && options.allBeneficiariesDisabled === true) ||
+        propertyAllocations.some(
+          (allocation) =>
+            allocation.subjectType === "5" &&
+            ["36", "37"].includes(allocation.relationshipCode ?? ""),
+        )));
   const stampDutyCents =
-    BigInt(options.stampDutyJurisdictionCount) * 8_500n + (options.copyRequested ? 3_200n : 0n);
+    BigInt(options.stampDutyJurisdictionCount) * 8_500n +
+    (options.copyRequested && !copyStampExempt ? 3_200n : 0n);
   const specialTaxesCents = options.copyRequested ? 1_600n : 0n;
   const penaltiesCents = (options.penaltiesCents ?? []).reduce((sum, value) => sum + value, 0n);
   const interestCents = (options.interestCents ?? []).reduce((sum, value) => sum + value, 0n);

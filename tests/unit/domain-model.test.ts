@@ -400,6 +400,91 @@ describe("motori deterministici", () => {
     });
   });
 
+  it("compone il Quadro EE con immobili aziendali e valore esente dei titoli", () => {
+    const summary = calculateDeclarationTaxSummary(
+      [
+        {
+          assetId: "immobile-aziendale",
+          beneficiaryId: "beneficiario",
+          treatment: "estate",
+          valueCents: 10_000_000n,
+          assetValueCents: 10_000_000n,
+          assetKind: "building",
+          businessAsset: true,
+        },
+        {
+          assetId: "titolo-con-valore-esente",
+          beneficiaryId: "beneficiario",
+          treatment: "estate",
+          valueCents: 1_000_000n,
+          assetValueCents: 1_000_000n,
+          assetExemptValueCents: 500_000n,
+          assetKind: "securities",
+        },
+      ],
+      0n,
+      {
+        openingDate: "2025-10-22",
+        mortgageJurisdictionCount: 0,
+        stampDutyJurisdictionCount: 0,
+        automaticLandRegistry: true,
+        copyRequested: false,
+        paymentTiming: 1,
+      },
+    );
+
+    expect(summary.estate).toMatchObject({
+      propertyCents: 0n,
+      securitiesCents: 1_500_000n,
+      totalAssetsCents: 1_500_000n,
+    });
+  });
+
+  it.each([
+    {
+      name: "beneficiario con grado di parentela 36",
+      allocation: { relationshipCode: "36" },
+      options: {},
+    },
+    {
+      name: "testamento presentato dal rappresentante di tutti i beneficiari disabili",
+      allocation: { relationshipCode: "01" },
+      options: { hasTestament: true, presenterCode: "9", allBeneficiariesDisabled: true },
+    },
+    {
+      name: "testamento presentato per un trust esente",
+      allocation: { relationshipCode: "37", subjectType: "5" },
+      options: { hasTestament: true, presenterCode: "9" },
+    },
+  ])("azzera il bollo della copia per $name", ({ allocation, options }) => {
+    const summary = calculateDeclarationTaxSummary(
+      [
+        {
+          assetId: "immobile-esente-bollo",
+          beneficiaryId: "beneficiario-esente",
+          treatment: "estate",
+          valueCents: 1_000_000n,
+          assetValueCents: 1_000_000n,
+          assetKind: "building",
+          ...allocation,
+        },
+      ],
+      0n,
+      {
+        openingDate: "2025-10-22",
+        mortgageJurisdictionCount: 0,
+        stampDutyJurisdictionCount: 0,
+        automaticLandRegistry: true,
+        copyRequested: true,
+        paymentTiming: 1,
+        ...options,
+      },
+    );
+
+    expect(summary.stampDutyCents).toBe(0n);
+    expect(summary.specialTaxesCents).toBe(1_600n);
+  });
+
   it("conta una sola imposta fissa per abitazione, pertinenze e immobili contigui", () => {
     const property = (
       assetId: string,

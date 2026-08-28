@@ -1767,6 +1767,8 @@ export function runSuccessionCalculation(
     const provinceField = asset ? assetCatalogField(asset, "Provincia") : null;
     const habitationRightField = asset ? assetCatalogField(asset, "DirittoAbitazione") : null;
     const landTypeField = asset ? assetCatalogField(asset, "TipologiaTerreno") : null;
+    const businessAssetField = asset ? assetCatalogField(asset, "BeneAziendale") : null;
+    const exemptValueField = asset ? assetCatalogField(asset, "ValoreEsente") : null;
     const canonicalAssetValue = (field: ReturnType<typeof assetCatalogField>) =>
       asset && field
         ? String(
@@ -1779,6 +1781,8 @@ export function runSuccessionCalculation(
       treatment: asset?.treatment ?? "estate",
       valueCents: currentShareValues.get(index) ?? 0n,
       assetValueCents: BigInt(asset?.valueCents ?? 0),
+      assetExemptValueCents: wholeEurosToCents(canonicalAssetValue(exemptValueField) ?? "") ?? 0n,
+      businessAsset: canonicalAssetValue(businessAssetField) === "1",
       reliefCode: share.reliefCode,
       reductionYears:
         share.reductionYears === 0 ? undefined : (share.reductionYears as 1 | 2 | 3 | 4 | 5),
@@ -1864,6 +1868,28 @@ export function runSuccessionCalculation(
     declaration.declaration.successionOpenedAt <= "2026-12-31"
       ? declaration.declaration.successionOpenedAt
       : "2026-08-27";
+  const presenterCode = technicalFieldValue(
+    declaration.declaration,
+    "/Fornitura/Dichiarazione/Frontespizio/Presentatore/CodiceCarica",
+  );
+  const hasTestament =
+    technicalFieldValue(
+      declaration.declaration,
+      "/Fornitura/Dichiarazione/Frontespizio/TipoDichiarazione/Devoluzione/DevoluzionePerTestamento",
+    ) === "1" ||
+    technicalFieldValue(
+      declaration.declaration,
+      "/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoNum",
+    ) !== "";
+  const allBeneficiariesDisabled =
+    entries.length > 0 &&
+    entries.every(
+      (entry) =>
+        String(
+          getCanonicalField(declaration.declaration, "quadro-ea.soggetto.disabilita", entry.id)
+            ?.value ?? "0",
+        ) === "1",
+    );
   let declarationTaxes = calculateDeclarationTaxSummary(allocations, result.totalTaxCents, {
     openingDate: openingDateForCalculation,
     mortgageJurisdictionCount,
@@ -1878,6 +1904,9 @@ export function runSuccessionCalculation(
         declaration.declaration,
         "/Fornitura/Dichiarazione/Frontespizio/CasiParticolari/CopiaConforme",
       ) === "1",
+    hasTestament,
+    presenterCode,
+    allBeneficiariesDisabled,
     paymentTiming,
     mortgageAlreadyPaidCents: centsAt("SezioneI_ImpostaIpotecaria/ImpostaIpotecariaVersata"),
     mortgageCreditCents: centsAt("SezioneI_ImpostaIpotecaria/CreditoImposta"),
@@ -1937,9 +1966,9 @@ export function runSuccessionCalculation(
       const messages: Record<string, string> = {
         NUMERO_RATE_NON_VALIDO: "Il numero di rate indicato non è ammesso.",
         RATEAZIONE_NON_AMMESSA:
-          "L’imposta complessiva è inferiore a 1.000 euro e non può essere rateizzata.",
+          "Il residuo dopo l’acconto è inferiore a 1.000 euro e non può essere rateizzato.",
         NUMERO_RATE_NON_AMMESSO:
-          "Con un’imposta complessiva non superiore a 20.000 euro sono ammesse al massimo otto rate.",
+          "Con un residuo non superiore a 20.000 euro sono ammesse al massimo otto rate.",
         ACCONTO_NON_VALIDO:
           "L’acconto deve essere compreso tra il 20% dell’imposta dovuta e l’intero importo.",
       };
@@ -1967,6 +1996,9 @@ export function runSuccessionCalculation(
         declaration.declaration,
         "/Fornitura/Dichiarazione/Frontespizio/CasiParticolari/CopiaConforme",
       ) === "1",
+    hasTestament,
+    presenterCode,
+    allBeneficiariesDisabled,
     paymentTiming,
     initialSuccessionPaymentCents: paymentPlan?.initialPaymentCents,
     mortgageAlreadyPaidCents: declarationTaxes.mortgageTax.alreadyPaidCents,
