@@ -118,7 +118,7 @@ sudo scripts/vps/prune-docker-images.sh
 
 La pulizia protegge sempre runtime corrente, precedente immagine attiva di rollback e qualunque immagine referenziata da un container. Il runtime può essere identificato dal digest Docker previsto dal Compose oppure dai tag locali exact-commit `sequent:*` e `sequent-release:*`. Un candidato VPS qualificato che deve sopravvivere oltre la finestra si registra con il suo image ID completo, una riga per immagine, in `/opt/sequent/runtime/retained-image-ids`; una riga invalida o un’immagine assente blocca la pulizia e un ID trattenuto non può occupare lo slot di rollback. Le immagini Sequent e i layer dangling attribuibili al prodotto hanno una finestra di sicurezza predefinita di 24 ore; ridurla richiede prima la verifica che non esistano build o task concorrenti.
 
-L’installazione operativa colloca lo script in `/opt/sequent/runtime/` e abilita `sequent-docker-prune.timer`. Il timer esegue la stessa manutenzione una volta al giorno con ritardo casuale, resta idempotente dopo un riavvio e non aggira il lock condiviso. Installazione e aggiornamento delle unità fanno parte della futura corsia di release o di una manutenzione VPS esplicitamente autorizzata.
+L’installazione operativa colloca lo script root-owned in `/usr/local/sbin/sequent-prune-docker-images`, fuori dalle directory modificabili dall’account SSH, e abilita `sequent-docker-prune.timer`. Il timer esegue la stessa manutenzione una volta al giorno con ritardo casuale, resta idempotente dopo un riavvio e non aggira il lock condiviso. Installazione e aggiornamento dello script e delle unità fanno parte della futura corsia di release o di una manutenzione VPS esplicitamente autorizzata.
 
 ## Rollback immutabile dell'immagine
 

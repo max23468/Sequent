@@ -84,7 +84,8 @@ test("le build VPS sono confinate dal wrapper con lock, soglia disco e pulizia",
   assert.match(dockerfile, /org\.opencontainers\.image\.revision=\$APP_COMMIT_SHA/);
   assert.match(ci, /--build-arg APP_COMMIT_SHA=\$\{\{ github\.sha \}\}/);
   assert.match(release, /--build-arg APP_COMMIT_SHA=\$\{\{ inputs\.commit \}\}/);
-  assert.match(service, /ExecStart=\/opt\/sequent\/runtime\/prune-docker-images\.sh/);
+  assert.match(service, /ExecStart=\/usr\/local\/sbin\/sequent-prune-docker-images/);
+  assert.doesNotMatch(service, /ExecStart=\/opt\/sequent\/runtime\//);
   assert.match(service, /ProtectSystem=strict/);
   assert.match(timer, /OnCalendar=daily/);
   assert.match(timer, /Persistent=true/);

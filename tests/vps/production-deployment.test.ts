@@ -101,6 +101,12 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /prune_old_directories "\$root\/snapshots"/);
   assert.match(deploy, /sequent-production-deployment\/v1/);
   assert.match(deploy, /sequent-docker-prune\.timer/);
+  assert.match(deploy, /stat -c '%U:%G:%a' \/usr\/local\/sbin.*root:root:755/);
+  assert.match(
+    deploy,
+    /install -o root -g root -m 0755 "\$repository\/scripts\/vps\/prune-docker-images\.sh"[\s\S]*?\/usr\/local\/sbin\/sequent-prune-docker-images/,
+  );
+  assert.doesNotMatch(deploy, /\$root\/runtime\/prune-docker-images\.sh/);
   assert.doesNotMatch(deploy, /docker (?:image )?prune|docker build|\bcaddy\b|\bdynu\b|\bufw\b/i);
 
   const previousImage = deploy.indexOf(
