@@ -509,7 +509,7 @@ import json
 import sys
 
 health = json.loads(sys.argv[1])
-for key in ("status", "commit"):
+for key in ("status", "commit", "imageId"):
     value = health.get(key)
     if not isinstance(value, str) or "\n" in value or "\r" in value:
         raise SystemExit("identità health non valida")
@@ -519,9 +519,10 @@ PY
   fail "health pubblico non interpretabile"
 fi
 readarray -t public_identity <<<"$public_identity_output"
-[[ "${#public_identity[@]}" -eq 2 ]] || fail "identità pubblica non conforme"
+[[ "${#public_identity[@]}" -eq 3 ]] || fail "identità pubblica non conforme"
 [[ "${public_identity[0]:-}" == ok ]] || fail "health pubblico non conforme"
 [[ "${public_identity[1]:-}" == "$commit" ]] || fail "commit pubblico divergente"
+[[ "${public_identity[2]:-}" == "$candidate_image_id" ]] || fail "image ID pubblico divergente"
 
 printf '%s\n' "$candidate_image_id" >"$release_dir/image-id"
 chown root:root "$release_dir/image-id"

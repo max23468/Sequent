@@ -14,6 +14,28 @@ verification_git=
 verification_user=sequent-deploy
 object_directory=
 
+migrate_layout_directory() {
+  local path="$1"
+  local legacy_mode="$2"
+  local current_mode="$3"
+  local layout
+  [[ -d "$path" && ! -L "$path" ]] || {
+    echo "ERRORE: directory del layout assente o non regolare" >&2
+    exit 1
+  }
+  layout="$(/usr/bin/stat -c '%U:%G:%a' "$path")"
+  [[ "$layout" == "ubuntu:ubuntu:$legacy_mode" || "$layout" == "root:root:$current_mode" ]] || {
+    echo "ERRORE: layout preesistente non qualificato" >&2
+    exit 1
+  }
+  /bin/chown root:root "$path"
+  /bin/chmod "$current_mode" "$path"
+  [[ "$(/usr/bin/stat -c '%U:%G:%a' "$path")" == "root:root:$current_mode" ]] || {
+    echo "ERRORE: migrazione amministrativa del layout fallita" >&2
+    exit 1
+  }
+}
+
 git_as_checkout_owner() {
   /usr/sbin/runuser --user ubuntu -- /usr/bin/env -i \
     HOME=/home/ubuntu \
@@ -48,6 +70,7 @@ while (($#)); do
 done
 
 [[ "$(id -u)" -eq 0 ]] || { echo "ERRORE: il launcher richiede root" >&2; exit 1; }
+[[ "$root" == /opt/sequent ]] || { echo "ERRORE: radice Sequent non canonica" >&2; exit 1; }
 if ! /usr/bin/getent passwd "$verification_user" >/dev/null; then
   /usr/sbin/useradd --system --gid ubuntu --no-create-home \
     --home-dir /nonexistent --shell /usr/sbin/nologin "$verification_user"
@@ -69,6 +92,9 @@ for input in "$archive" "$manifest"; do
     exit 1
   }
 done
+migrate_layout_directory "$root" 750 755
+migrate_layout_directory "$root/releases" 750 750
+migrate_layout_directory "$root/snapshots" 700 700
 [[ -d "$repository/.git" || -f "$repository/.git" ]] || {
   echo "ERRORE: checkout Sequent assente" >&2
   exit 1

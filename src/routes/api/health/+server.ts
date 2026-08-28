@@ -14,6 +14,7 @@ export const GET: RequestHandler = () => {
       status: healthy ? "ok" : "degraded",
       sqliteVersion,
       commit: process.env.SEQUENT_COMMIT_SHA ?? "unversioned",
+      imageId: process.env.SEQUENT_IMAGE_ID ?? "unversioned",
     },
     { status: healthy ? 200 : 503 },
   );

@@ -24,10 +24,18 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /--tree "\$candidate_tree"/);
   assert.match(workflow, /archive_sha256=.*sha256sum/);
   assert.match(workflow, /manifest_sha256=.*sha256sum/);
+  assert.match(workflow, /launcher_sha256=.*run-trusted-deploy\.sh/);
   assert.match(workflow, /--archive-sha256 '\$archive_sha256'/);
   assert.match(workflow, /--manifest-sha256 '\$manifest_sha256'/);
   assert.match(workflow, /task: "sequent-production"/);
   assert.match(workflow, /sudo \/usr\/local\/sbin\/sequent-run-trusted-deploy --commit/);
+  assert.match(workflow, /install -o root -g root -m 0600.*run-trusted-deploy\.sh/);
+  assert.match(workflow, /sha256sum --check --strict/);
+  assert.match(workflow, /install -o root -g root -m 0755.*sequent-run-trusted-deploy/);
+  assert.ok(
+    workflow.indexOf("sha256sum --check --strict") <
+      workflow.indexOf("sudo /usr/local/sbin/sequent-run-trusted-deploy --commit"),
+  );
   assert.doesNotMatch(workflow, /sudo \/opt\/sequent\/repo\/scripts/);
   assert.doesNotMatch(workflow, /docker build|continue-on-error/);
 });
@@ -101,9 +109,10 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /if ! public_identity_output=/);
   assert.match(deploy, /rollback non healthy; manutenzione mantenuta/);
   assert.match(deploy, /health pubblico non interpretabile/);
-  assert.match(deploy, /public_identity\[@\].*-eq 2/);
+  assert.match(deploy, /public_identity\[@\].*-eq 3/);
   assert.doesNotMatch(deploy, /readarray -t public_identity < <\(/);
   assert.match(deploy, /public_identity\[1\].*\$commit/);
+  assert.match(deploy, /public_identity\[2\].*\$candidate_image_id/);
   assert.match(deploy, /prune_old_directories "\$root\/releases"/);
   assert.match(deploy, /prune_old_directories "\$root\/snapshots"/);
   assert.match(deploy, /sequent-production-deployment\/v1/);
@@ -173,6 +182,10 @@ test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {
   assert.equal(launcher.match(/\/usr\/bin\/git -C/g)?.length, 1);
   assert.match(launcher, /mktemp -d \/run\/sequent-deploy-source\./);
   assert.match(launcher, /mktemp -d \/run\/sequent-deploy-verification\./);
+  assert.match(launcher, /migrate_layout_directory "\$root" 750 755/);
+  assert.match(launcher, /migrate_layout_directory "\$root\/releases" 750 750/);
+  assert.match(launcher, /migrate_layout_directory "\$root\/snapshots" 700 700/);
+  assert.match(launcher, /layout preesistente non qualificato/);
   assert.match(launcher, /--archive-sha256/);
   assert.match(launcher, /--manifest-sha256/);
   assert.match(launcher, /sha256sum "\$trusted_archive"/);
@@ -218,8 +231,11 @@ test("la manutenzione Docker protegge anche un runtime selezionato per image ID"
   assert.match(prune, /current_ref.*sha256:\[0-9a-f\]\{64\}/s);
 });
 
-test("l'health pubblico espone l'identità exact-commit dell'immagine", () => {
+test("l'health pubblico espone commit e image ID exact dell'immagine", () => {
   const health = read("src/routes/api/health/+server.ts");
+  const compose = read("deploy/compose.example.yml");
 
   assert.match(health, /commit: process\.env\.SEQUENT_COMMIT_SHA/);
+  assert.match(health, /imageId: process\.env\.SEQUENT_IMAGE_ID/);
+  assert.match(compose, /SEQUENT_IMAGE_ID: \$\{SEQUENT_IMAGE:/);
 });
