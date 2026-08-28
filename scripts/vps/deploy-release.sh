@@ -21,7 +21,7 @@ done
 
 fail() {
   echo "ERRORE: $*" >&2
-  exit 1
+  return 1
 }
 
 [[ "$(id -u)" -eq 0 ]] || fail "il deploy richiede privilegi amministrativi"
@@ -281,9 +281,12 @@ curl --fail --silent --header 'X-Forwarded-For: 127.0.0.1' http://127.0.0.1:3300
   fail "progetto Compose live divergente"
 [[ -f "$database" ]] && check_database "$database"
 public_health="$(curl --fail --silent --show-error --max-time 15 "$SEQUENT_ORIGIN/api/health")"
-[[ "$(SEQUENT_NODE_SLOT=current "$repository/scripts/vps/with-node.sh" node -e \
-  'const input = JSON.parse(process.argv[1]); process.stdout.write(input.status ?? "")' \
-  "$public_health")" == ok ]] || fail "health pubblico non conforme"
+readarray -t public_identity < <(SEQUENT_NODE_SLOT=current \
+  "$repository/scripts/vps/with-node.sh" node -e \
+  'const input = JSON.parse(process.argv[1]); console.log(input.status ?? ""); console.log(input.commit ?? "")' \
+  "$public_health")
+[[ "${public_identity[0]}" == ok ]] || fail "health pubblico non conforme"
+[[ "${public_identity[1]}" == "$commit" ]] || fail "commit pubblico divergente"
 
 printf '%s\n' "$candidate_image_id" >"$release_dir/image-id"
 chown ubuntu:ubuntu "$release_dir/image-id"

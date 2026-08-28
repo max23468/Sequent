@@ -26,6 +26,8 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   const deploy = read("scripts/vps/deploy-release.sh");
 
   assert.match(deploy, /hub-fatture-sequent-docker\.lock/);
+  assert.match(deploy, /fail\(\) \{[^}]*return 1[^}]*\}/);
+  assert.doesNotMatch(deploy, /fail\(\) \{[^}]*exit 1[^}]*\}/);
   assert.match(deploy, /SEQUENT_DEPLOY_MAX_DISK_PERCENT:-79/);
   assert.match(deploy, /SEQUENT_RELEASE_RETENTION_COUNT:-2/);
   assert.match(deploy, /release-artifact\.mjs" verify/);
@@ -38,6 +40,7 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /up --detach --no-build --force-recreate/);
   assert.match(deploy, /\.deployment-maintenance/);
   assert.match(deploy, /\$SEQUENT_ORIGIN\/api\/health/);
+  assert.match(deploy, /public_identity\[1\].*\$commit/);
   assert.match(deploy, /prune_old_directories "\$root\/releases"/);
   assert.match(deploy, /prune_old_directories "\$root\/snapshots"/);
   assert.match(deploy, /sequent-production-deployment\/v1/);
@@ -49,4 +52,10 @@ test("la manutenzione Docker protegge anche un runtime selezionato per image ID"
   const prune = read("scripts/vps/prune-docker-images.sh");
 
   assert.match(prune, /current_ref.*sha256:\[0-9a-f\]\{64\}/s);
+});
+
+test("l'health pubblico espone l'identità exact-commit dell'immagine", () => {
+  const health = read("src/routes/api/health/+server.ts");
+
+  assert.match(health, /commit: process\.env\.SEQUENT_COMMIT_SHA/);
 });
