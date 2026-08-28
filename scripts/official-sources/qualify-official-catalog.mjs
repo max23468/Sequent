@@ -237,7 +237,7 @@ semantic.blockers = [];
 
 calculations.schemaVersion = 2;
 calculations.status = "qualified";
-calculations.rulesetVersion = "2026.08.2";
+calculations.rulesetVersion = "2026.08.3";
 calculations.rules = [
   {
     id: "QE",
@@ -436,7 +436,7 @@ calculations.rules = [
     sourceIds: ["SRC-13", "SRC-14", "SRC-16", "SRC-18", "SRC-22"],
     sourcePointer: "pagamento dell’imposta autoliquidata e codici tributo 1539/1635",
     formula:
-      "acconto minimo del 20%, debito residuo, limiti di ammissione e numero massimo di rate; opzione anticipata del trust solo nei casi ammessi",
+      "acconto minimo del 20%; soglie di ammissione e numero massimo di rate determinate sull’imposta complessiva; opzione anticipata del trust solo nei casi ammessi",
     state: "implemented-and-tested",
   },
   {

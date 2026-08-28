@@ -578,6 +578,34 @@ function applyOfficialAttachmentsMigration(database: Database.Database): void {
   })();
 }
 
+function applyCalculationResultsV2Migration(database: Database.Database): void {
+  database.transaction(() => {
+    const alreadyApplied = database
+      .prepare("SELECT 1 FROM schema_migrations WHERE version = 8")
+      .get();
+    if (alreadyApplied) return;
+
+    // I risultati precedenti non contengono il riepilogo delle imposte né il piano
+    // di pagamento del formato corrente. Sono calcoli derivati e riproducibili: eliminarli
+    // evita di presentarli come attuali e obbliga a ricalcolarli con le regole vigenti.
+    database.exec("DELETE FROM calculation_runs");
+    const declarations = database
+      .prepare("SELECT id, declaration_json FROM declarations")
+      .all() as Array<{ id: string; declaration_json: string }>;
+    const updateDeclaration = database.prepare(
+      "UPDATE declarations SET declaration_json = ?, updated_at = ? WHERE id = ?",
+    );
+    const now = new Date().toISOString();
+    for (const declaration of declarations) {
+      const snapshot = JSON.parse(declaration.declaration_json) as Record<string, unknown>;
+      if (snapshot.latestCalculationRunId == null) continue;
+      snapshot.latestCalculationRunId = null;
+      updateDeclaration.run(JSON.stringify(snapshot), now, declaration.id);
+    }
+    database.prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (8, ?)").run(now);
+  })();
+}
+
 function applyMigrations(database: Database.Database): void {
   database.exec(foundationMigration);
   database
@@ -591,6 +619,7 @@ function applyMigrations(database: Database.Database): void {
   applyDeclarationAssetEntriesMigration(database);
   applyDeclarationSubjectSnapshotsMigration(database);
   applyOfficialAttachmentsMigration(database);
+  applyCalculationResultsV2Migration(database);
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

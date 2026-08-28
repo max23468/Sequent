@@ -1874,9 +1874,9 @@ export function runSuccessionCalculation(
       const messages: Record<string, string> = {
         NUMERO_RATE_NON_VALIDO: "Il numero di rate indicato non è ammesso.",
         RATEAZIONE_NON_AMMESSA:
-          "Il debito residuo è inferiore a 1.000 euro e non può essere rateizzato.",
+          "L’imposta complessiva è inferiore a 1.000 euro e non può essere rateizzata.",
         NUMERO_RATE_NON_AMMESSO:
-          "Con un debito residuo non superiore a 20.000 euro sono ammesse al massimo otto rate.",
+          "Con un’imposta complessiva non superiore a 20.000 euro sono ammesse al massimo otto rate.",
         ACCONTO_NON_VALIDO:
           "L’acconto deve essere compreso tra il 20% dell’imposta dovuta e l’intero importo.",
       };

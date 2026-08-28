@@ -167,4 +167,64 @@ describe("migrazioni della pipeline documentale", () => {
     expect(runColumns.map(({ name }) => name)).toContain("output_json");
     expect(uploadColumns.map(({ name }) => name)).toContain("result_document_id");
   });
+
+  it("elimina i vecchi calcoli derivati e richiede un nuovo calcolo", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-calculation-result-migration-"));
+    directories.push(directory);
+    const now = "2026-08-27T00:00:00.000Z";
+    let database = openDatabase(directory);
+    database
+      .prepare(
+        `INSERT INTO practices(id, title, status, created_at, updated_at)
+         VALUES ('practice-old-calculation', 'Pratica con vecchio calcolo', 'active', ?, ?)`,
+      )
+      .run(now, now);
+    database
+      .prepare(
+        `INSERT INTO declarations(
+           id, practice_id, sequence, revision, declaration_json, created_at, updated_at
+         ) VALUES ('declaration-old-calculation', 'practice-old-calculation', 1, 1, ?, ?, ?)`,
+      )
+      .run(
+        JSON.stringify({
+          schemaVersion: 7,
+          declarationKind: "first",
+          fields: {},
+          latestCalculationRunId: "calculation-old-format",
+        }),
+        now,
+        now,
+      );
+    database
+      .prepare(
+        `INSERT INTO calculation_runs(
+           id, practice_id, declaration_id, ruleset_version, input_hash, input_json,
+           result_json, issues_json, status, created_at, updated_at
+         ) VALUES (?, ?, ?, ?, ?, '{}', ?, '[]', 'confirmed', ?, ?)`,
+      )
+      .run(
+        "calculation-old-format",
+        "practice-old-calculation",
+        "declaration-old-calculation",
+        "2026.08.2",
+        "old-input-hash",
+        JSON.stringify({ beneficiaries: [], totalTaxCents: "0" }),
+        now,
+        now,
+      );
+    database.prepare("DELETE FROM schema_migrations WHERE version = 8").run();
+    closeDatabase(directory);
+
+    database = openDatabase(directory);
+    expect(database.prepare("SELECT count(*) AS count FROM calculation_runs").get()).toEqual({
+      count: 0,
+    });
+    const row = database
+      .prepare("SELECT declaration_json FROM declarations WHERE id = ?")
+      .get("declaration-old-calculation") as { declaration_json: string };
+    expect(JSON.parse(row.declaration_json).latestCalculationRunId).toBeNull();
+    expect(
+      database.prepare("SELECT 1 AS applied FROM schema_migrations WHERE version = 8").get(),
+    ).toEqual({ applied: 1 });
+  });
 });

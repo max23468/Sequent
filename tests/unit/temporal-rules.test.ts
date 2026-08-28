@@ -93,11 +93,33 @@ describe("regole fiscali per periodo", () => {
     ).toThrow("RATEAZIONE_NON_AMMESSA");
     expect(() =>
       buildSuccessionPaymentPlan({
-        totalCents: 2_400_000n,
+        totalCents: 2_000_000n,
         openingDate: "2025-10-22",
         installments: 12,
       }),
     ).toThrow("NUMERO_RATE_NON_AMMESSO");
+    expect(
+      buildSuccessionPaymentPlan({
+        totalCents: 110_000n,
+        openingDate: "2025-10-22",
+        installments: 2,
+      }),
+    ).toMatchObject({
+      initialPaymentCents: 22_000n,
+      remainingCents: 88_000n,
+      installments: 2,
+    });
+    expect(
+      buildSuccessionPaymentPlan({
+        totalCents: 2_100_000n,
+        openingDate: "2025-10-22",
+        installments: 12,
+      }),
+    ).toMatchObject({
+      initialPaymentCents: 420_000n,
+      remainingCents: 1_680_000n,
+      installments: 12,
+    });
     expect(() =>
       buildSuccessionPaymentPlan({
         totalCents: 3_000_000n,
