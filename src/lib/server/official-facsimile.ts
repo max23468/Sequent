@@ -19,6 +19,7 @@ import {
   type CanonicalFieldValue,
   type DeclarationSnapshot,
 } from "../../domain/declaration.ts";
+import { specialFacsimilePlacement } from "./official-facsimile-special-layout.ts";
 
 const require = createRequire(import.meta.url);
 const REGULAR_FONT = readFileSync(
@@ -297,6 +298,35 @@ const FRONT_FIELDS: Record<string, Placement> = {
     width: 145,
   },
 };
+
+// Campi presenti nel tracciato tecnico e nelle descrizioni del controllo, ma
+// assenti dalla pagina stampabile SRC-03. Non sono persi: restano nel modello
+// canonico e nel DIZ, mentre il fac-simile non inventa per loro una casella.
+const FACSIMILE_UNPRINTED_FIELDS = new Set([
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/IdentificativoProdSoftware",
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/Versamento/CodiceFiscaleTitolareCC",
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/Versamento/IBAN",
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/F24/Provincia",
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/F24/Comune",
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/F24/CodiceComune",
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/F24/Indirizzo",
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/ImportoDaVersare",
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/CampiServizio/Flag",
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/CampiServizio/Data",
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/CampiServizio/Flag2",
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/CampiServizio/Flag3",
+  "xsd:/Fornitura/Dichiarazione/Frontespizio/Lingua",
+]);
+
+function isFacsimileUnprintedField(fieldId: string): boolean {
+  if (FACSIMILE_UNPRINTED_FIELDS.has(fieldId)) return true;
+  const field = getCatalogField(fieldId);
+  if (!field) return false;
+  return (
+    (field.quadro === "EH" && field.technicalPath.endsWith("/Luogo/CodiceComune")) ||
+    (field.quadro === "EI" && field.technicalPath.endsWith("/Luogo/CodiceComuneAmministrativo"))
+  );
+}
 
 const STATIC_FIELD_PLACEMENTS = new Map<string, Placement>();
 const registerStaticPlacements = (quadro: QuadroId, placements: Placement[]) => {
@@ -591,9 +621,9 @@ export function resolveFacsimileFieldNumber(fieldId: string, occurrenceIndex = 0
   switch (field.quadro) {
     case "EH":
     case "EI":
-      // Questi quadri non numerano tutte le caselle sul modello. Gli attuali
-      // numeri XSD non sono quindi una coordinata grafica qualificata.
-      return null;
+      // La coordinata di EH/EI è risolta dalla mappa semantica esplicita per
+      // pagina; il numero resta soltanto metadato ufficiale del campo.
+      return specialFacsimilePlacement(fieldId, occurrenceIndex) ? field.visibleNumber : null;
     case "EB":
       if (ends("/CodiceComuneAmministrativo")) return null;
       if (ends("/ValorePrecSucc")) return "24";
@@ -683,6 +713,8 @@ function mappedPlacement(
   slot: number,
   occurrenceIndex: number,
 ): ResolvedPlacement | null {
+  const specialPlacement = specialFacsimilePlacement(fieldId, occurrenceIndex);
+  if (specialPlacement) return specialPlacement;
   const staticPlacement = STATIC_FIELD_PLACEMENTS.get(fieldId);
   if (staticPlacement)
     return {
@@ -813,13 +845,25 @@ export async function createOfficialFacsimilePdf(data: OfficialFacsimileData): P
   const values = appliedFields(data.declaration);
   for (const value of values) {
     const field = getCatalogField(value.fieldId);
-    if (!field || field.presentation === "technical-only" || isSignatureField(value.fieldId))
+    if (
+      !field ||
+      field.presentation === "technical-only" ||
+      isFacsimileUnprintedField(value.fieldId) ||
+      isSignatureField(value.fieldId)
+    )
       continue;
     if (field.quadro === "Frontespizio" && !FRONT_FIELDS[value.fieldId])
       throw new OfficialFacsimileError("FIELD_UNMAPPED", value.fieldId);
     if (
       field.quadro !== "Frontespizio" &&
       (!field.visibleNumber || resolveFacsimileFieldNumber(value.fieldId) === null)
+    )
+      throw new OfficialFacsimileError("FIELD_UNMAPPED", value.fieldId);
+    if (
+      (field.quadro === "EH" || field.quadro === "EI") &&
+      field.technicalPath.includes("/Modulo/") &&
+      !field.technicalPath.includes("/PrimoModulo/") &&
+      value.occurrenceId === null
     )
       throw new OfficialFacsimileError("FIELD_UNMAPPED", value.fieldId);
   }
@@ -857,8 +901,15 @@ export async function createOfficialFacsimilePdf(data: OfficialFacsimileData): P
     data.digest,
   ]);
 
-  type PlannedPage = { sourcePage: number; quadri: QuadroId[]; chunk: number };
-  const plan: PlannedPage[] = [{ sourcePage: 2, quadri: ["Frontespizio"], chunk: 0 }];
+  type PlannedPage = {
+    sourcePage: number;
+    quadri: QuadroId[];
+    chunk: number;
+    moduleId: string | null;
+  };
+  const plan: PlannedPage[] = [
+    { sourcePage: 2, quadri: ["Frontespizio"], chunk: 0, moduleId: null },
+  ];
   const handledSharedPages = new Set<number>();
   for (const [quadro, entries] of contexts) {
     if (entries.length === 0) continue;
@@ -877,19 +928,45 @@ export async function createOfficialFacsimilePdf(data: OfficialFacsimileData): P
         ),
       );
       for (let chunk = 0; chunk < copies; chunk += 1)
-        plan.push({ sourcePage, quadri: pageQuadri, chunk });
+        plan.push({ sourcePage, quadri: pageQuadri, chunk, moduleId: null });
+      continue;
+    }
+    if (quadro === "EH" || quadro === "EI") {
+      const additionalModuleIds = [
+        ...new Set(
+          values
+            .filter((value) => {
+              const field = getCatalogField(value.fieldId);
+              return (
+                field?.quadro === quadro &&
+                field.technicalPath.includes("/Modulo/") &&
+                !field.technicalPath.includes("/PrimoModulo/")
+              );
+            })
+            .map((value) => value.occurrenceId)
+            .filter((id): id is string => id !== null),
+        ),
+      ];
+      for (const [chunk, moduleId] of [null, ...additionalModuleIds].entries())
+        for (const sourcePage of pages)
+          plan.push({ sourcePage, quadri: [quadro], chunk, moduleId });
       continue;
     }
     if (pages.length > 1) {
-      for (const sourcePage of pages) plan.push({ sourcePage, quadri: [quadro], chunk: 0 });
+      for (const sourcePage of pages)
+        plan.push({ sourcePage, quadri: [quadro], chunk: 0, moduleId: null });
       continue;
     }
     const capacity = ASSET_CAPACITY[quadro] ?? 1;
     const copies = Math.max(1, Math.ceil(entries.length / capacity));
     for (let chunk = 0; chunk < copies; chunk += 1)
-      plan.push({ sourcePage: pages[0]!, quadri: [quadro], chunk });
+      plan.push({ sourcePage: pages[0]!, quadri: [quadro], chunk, moduleId: null });
   }
-  plan.sort((left, right) => left.sourcePage - right.sourcePage || left.chunk - right.chunk);
+  plan.sort((left, right) => {
+    const leftBase = Math.min(...left.quadri.flatMap((quadro) => SOURCE_PAGES[quadro]));
+    const rightBase = Math.min(...right.quadri.flatMap((quadro) => SOURCE_PAGES[quadro]));
+    return leftBase - rightBase || left.chunk - right.chunk || left.sourcePage - right.sourcePage;
+  });
 
   for (const planned of plan) {
     const [page] = await output.copyPages(source, [planned.sourcePage - 1]);
@@ -917,7 +994,12 @@ export async function createOfficialFacsimilePdf(data: OfficialFacsimileData): P
       }
       for (const value of values) {
         const field = getCatalogField(value.fieldId);
-        if (field?.quadro !== "Frontespizio" || field.presentation === "technical-only") continue;
+        if (
+          field?.quadro !== "Frontespizio" ||
+          field.presentation === "technical-only" ||
+          isFacsimileUnprintedField(value.fieldId)
+        )
+          continue;
         if (isSignatureField(value.fieldId)) continue;
         const placement = FRONT_FIELDS[value.fieldId]!;
         drawValue(page, regular, value.fieldId, value.value, {
@@ -936,8 +1018,20 @@ export async function createOfficialFacsimilePdf(data: OfficialFacsimileData): P
         : quadroContexts;
       for (const value of values) {
         const field = getCatalogField(value.fieldId);
-        if (field?.quadro !== quadro || field.presentation === "technical-only") continue;
+        if (
+          field?.quadro !== quadro ||
+          field.presentation === "technical-only" ||
+          isFacsimileUnprintedField(value.fieldId)
+        )
+          continue;
         if (!field.visibleNumber || isSignatureField(value.fieldId)) continue;
+        if (quadro === "EH" || quadro === "EI") {
+          const additionalModule =
+            field.technicalPath.includes("/Modulo/") &&
+            !field.technicalPath.includes("/PrimoModulo/");
+          if (planned.moduleId === null ? additionalModule : !additionalModule) continue;
+          if (planned.moduleId !== null && value.occurrenceId !== planned.moduleId) continue;
+        }
         const slot =
           field.entityScope === "subject" || field.entityScope === "asset"
             ? chunkContexts.indexOf(value.entityId ?? "")
@@ -991,12 +1085,17 @@ export async function createOfficialFacsimilePdf(data: OfficialFacsimileData): P
     const decedentTaxCode = values.find(
       (value) => value.fieldId === "frontespizio.defunto.codice-fiscale",
     )?.value;
-    if (index > 0 && decedentTaxCode)
-      drawValue(page, regular, "frontespizio.defunto.codice-fiscale", decedentTaxCode, {
-        x: 246,
-        top: 63,
-        width: 315,
-      });
+    if (index > 0 && decedentTaxCode) {
+      const sourcePage = plan[index]?.sourcePage;
+      const continuationHeader = sourcePage !== undefined && [10, 11, 12].includes(sourcePage);
+      drawValue(
+        page,
+        regular,
+        "frontespizio.defunto.codice-fiscale",
+        decedentTaxCode,
+        continuationHeader ? { x: 110, top: 28, width: 168 } : { x: 246, top: 63, width: 315 },
+      );
+    }
     pageMarking(page, regular, bold, data, index + 1, pages.length);
   }
   return output.save();

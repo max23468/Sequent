@@ -11,6 +11,7 @@ import {
   createOfficialFacsimilePdf,
   resolveFacsimileFieldNumber,
 } from "../../src/lib/server/official-facsimile.ts";
+import { specialFacsimilePlacement } from "../../src/lib/server/official-facsimile-special-layout.ts";
 
 function applied(
   declaration: DeclarationSnapshot,
@@ -102,19 +103,72 @@ describe("fac-simile del modello ufficiale", () => {
     expect(Object.values(declaration.fields).map((field) => field.value)).toEqual(["100", "200"]);
   });
 
-  it("blocca i quadri privi di una mappa grafica completa invece di usare numeri XSD", async () => {
+  it("renderizza EH sulla mappa semantica multipagina senza usare il numero XSD come coordinata", async () => {
     const declaration = applied(
       createEmptyDeclaration(),
       "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/Cognome",
       "ROSSI",
     );
-    await expect(
-      createOfficialFacsimilePdf({ ...input(declaration), subjects: [], assets: [] }),
-    ).rejects.toMatchObject({
-      code: "FIELD_UNMAPPED",
-      fieldId:
-        "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/Cognome",
+    const bytes = await createOfficialFacsimilePdf({
+      ...input(declaration),
+      subjects: [],
+      assets: [],
     });
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(5);
+  });
+
+  it("qualifica ogni campo visibile non-firma di EH ed EI", () => {
+    for (const quadro of ["EH", "EI"] as const)
+      for (const field of listQuadroFields(quadro)) {
+        if (
+          field.visibleFieldId === null ||
+          /\/Firma|\.firma/i.test(field.canonicalId) ||
+          (quadro === "EH" && field.canonicalId.endsWith("/Luogo/CodiceComune")) ||
+          (quadro === "EI" && field.canonicalId.endsWith("/Luogo/CodiceComuneAmministrativo"))
+        )
+          continue;
+        expect(specialFacsimilePlacement(field.canonicalId), field.canonicalId).not.toBeNull();
+      }
+  });
+
+  it("separa i moduli aggiuntivi EH e blocca il quarto erede nello stesso modulo", async () => {
+    const fieldId =
+      "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Eredi/CodiceFiscale";
+    let overflowing = createEmptyDeclaration();
+    for (let index = 0; index < 4; index += 1)
+      overflowing = applied(
+        overflowing,
+        fieldId,
+        `RSSMRA80A01H50${index}X`,
+        null,
+        `erede-${index}`,
+      );
+    await expect(
+      createOfficialFacsimilePdf({ ...input(overflowing), subjects: [], assets: [] }),
+    ).rejects.toMatchObject({ code: "FIELD_UNMAPPED", fieldId });
+
+    const moduloField =
+      "xsd:/Fornitura/Dichiarazione/QuadroEH/Modulo/SezioneI_DichSost/Aziende/CameraCommercio";
+    await expect(
+      createOfficialFacsimilePdf({
+        ...input(applied(createEmptyDeclaration(), moduloField, "ROMA")),
+        subjects: [],
+        assets: [],
+      }),
+    ).rejects.toMatchObject({ code: "FIELD_UNMAPPED", fieldId: moduloField });
+    const withContinuation = applied(
+      applied(createEmptyDeclaration(), fieldId, "RSSMRA80A01H501U", null, "erede-1"),
+      moduloField,
+      "ROMA",
+      null,
+      "modulo-2",
+    );
+    const bytes = await createOfficialFacsimilePdf({
+      ...input(withContinuation),
+      subjects: [],
+      assets: [],
+    });
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(9);
   });
 
   it("usa soltanto le pagine pertinenti e conserva il modello come sfondo", async () => {
@@ -140,6 +194,7 @@ describe("fac-simile del modello ufficiale", () => {
     expect(new TextDecoder().decode(bytes.slice(0, 8))).toContain("%PDF-");
     const pdf = await PDFDocument.load(bytes);
     expect(pdf.getPageCount()).toBe(3);
+    expect(pdf.getForm().getFields()).toHaveLength(0);
     expect(pdf.getTitle()).toBe("Fac-simile dichiarazione - revisione 7");
     expect(pdf.getKeywords()).toContain("non trasmettibile");
   });
@@ -161,18 +216,18 @@ describe("fac-simile del modello ufficiale", () => {
     expect(pdf.getPageCount()).toBe(1);
   });
 
-  it("blocca un valore applicato privo di posizione qualificata", async () => {
+  it("non inventa caselle per i campi tecnici assenti dal frontespizio stampato", async () => {
     const declaration = applied(
       createEmptyDeclaration(),
       "xsd:/Fornitura/Dichiarazione/Frontespizio/Versamento/IBAN",
       "IT00X0000000000000000000000",
     );
-    await expect(
-      createOfficialFacsimilePdf({ ...input(declaration), subjects: [], assets: [] }),
-    ).rejects.toMatchObject({
-      code: "FIELD_UNMAPPED",
-      fieldId: "xsd:/Fornitura/Dichiarazione/Frontespizio/Versamento/IBAN",
+    const bytes = await createOfficialFacsimilePdf({
+      ...input(declaration),
+      subjects: [],
+      assets: [],
     });
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
   });
 
   it("blocca un valore che richiederebbe un troncamento", async () => {
@@ -200,6 +255,8 @@ describe("fac-simile del modello ufficiale", () => {
       "EE",
       "EF",
       "EG",
+      "EH",
+      "EI",
       "EL",
       "EM",
       "EN",
@@ -256,7 +313,7 @@ describe("fac-simile del modello ufficiale", () => {
       assets,
     });
     const pdf = await PDFDocument.load(bytes);
-    expect(pdf.getPageCount()).toBe(12);
+    expect(pdf.getPageCount()).toBe(17);
   });
 
   it("renderizza insieme tutti i campi qualificati senza collisioni di mappatura", async () => {
@@ -269,6 +326,8 @@ describe("fac-simile del modello ufficiale", () => {
       "EE",
       "EF",
       "EG",
+      "EH",
+      "EI",
       "EL",
       "EM",
       "EN",
@@ -308,7 +367,11 @@ describe("fac-simile del modello ufficiale", () => {
           "manually_corrected",
           ["fixture"],
           entityQuadri.has(quadro) ? entityId : null,
-          field.occurrenceGroup ? `occurrence-${quadro}-${field.occurrenceGroup}` : null,
+          field.canonicalId.includes("/Modulo/") && !field.canonicalId.includes("/PrimoModulo/")
+            ? `module-${quadro}`
+            : field.occurrenceGroup
+              ? `occurrence-${quadro}-${field.occurrenceGroup}`
+              : null,
         );
       }
     }
@@ -318,6 +381,6 @@ describe("fac-simile del modello ufficiale", () => {
       assets,
     });
     const pdf = await PDFDocument.load(bytes);
-    expect(pdf.getPageCount()).toBe(12);
+    expect(pdf.getPageCount()).toBe(22);
   });
 });
