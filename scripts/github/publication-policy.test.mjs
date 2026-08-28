@@ -68,6 +68,23 @@ test("runtime, DIZ e fonti ufficiali non possono degradare a gate rapidi", () =>
   assert.deepEqual(ocrManifest.unknown, []);
 });
 
+test("la migrazione Docker Debian resta sensibile e richiede ARM64", () => {
+  const result = classifyChangedFiles([
+    "Dockerfile",
+    ".github/dependabot.yml",
+    ".github/workflows/release-candidate.yml",
+    "docs/adr/0002-debian-13-slim-runtime-image.md",
+    "docs/runbooks/vps.md",
+    "scripts/local/verify-docker-runtime.sh",
+    "tests/vps/debian-runtime-image.test.ts",
+  ]);
+
+  assert.equal(result.level, "sensitive");
+  assert.equal(result.runtime, true);
+  assert.equal(result.arm64, true);
+  assert.equal(result.runArm64, true);
+});
+
 test("governance e test non richiedono una release runtime", () => {
   const governance = classifyChangedFiles([
     "AGENTS.md",

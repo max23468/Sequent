@@ -75,7 +75,7 @@ jobs:
         with:
           ref: ${{ inputs.commit }}
           persist-credentials: false
-      - name: Blocca vulnerabilità critiche o correggibili nel lockfile
+      - name: Blocca vulnerabilità correggibili nel lockfile
         run: |
           scan_status=0
           docker run --rm \
@@ -122,6 +122,7 @@ jobs:
           docker build --platform linux/arm64 \
             --build-arg APP_COMMIT_SHA=${{ inputs.commit }} \
             --tag "$IMAGE_TAG" .
+          SEQUENT_IMAGE="$IMAGE_TAG" bash scripts/local/verify-docker-runtime.sh
           docker run --platform linux/arm64 --detach --name sequent-release-smoke \
             --read-only --user 10001:10001 --cap-drop ALL \
             --security-opt no-new-privileges:true \
@@ -182,7 +183,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: sequent-release-${{ inputs.commit }}
-      - name: Blocca vulnerabilità critiche o correggibili nell'archivio candidato
+      - name: Blocca vulnerabilità correggibili nell'archivio candidato
         run: |
           scan_status=0
           docker run --rm \

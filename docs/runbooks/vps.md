@@ -10,6 +10,12 @@
 
 Il preflight legge per default `/opt/sequent/private/preflight.env`, posseduto dall'utente amministrativo e con modalità `0600`. Il file definisce `SEQUENT_EXPECTED_HOST` e `SEQUENT_SHARED_INSTALLATION_MARKER`; i valori effettivi non devono essere copiati in Git, PR, issue o log condivisi. `SEQUENT_PREFLIGHT_ENV` può indicare un file privato alternativo.
 
+## Base dell'immagine applicativa
+
+Tutti gli stage applicativi usano Debian 13 Slim sull'immagine Node ufficiale fissata per digest nel `Dockerfile`. La VPS host resta Ubuntu e non viene modificata da questa scelta. Il manifest della base deve includere `linux/arm64`; `scripts/local/verify-docker-runtime.sh` verifica distribuzione, glibc, Node/npm, converter, lingua italiana, assenza dei tool di build, percorso vendor non scrivibile e inventario setuid prima che l'artefatto possa essere qualificato.
+
+APT usa un solo snapshot APT Debian immutabile, derivato dal timestamp dichiarato dalla base ufficiale. Non eseguire aggiornamenti generali della distribuzione durante la build: gli aggiornamenti entrano tramite pull request sul digest Docker e, quando necessario, tramite avanzamento deliberato e congiunto dello snapshot. Non esistono una variante Alpine o un fallback musl.
+
 ## Accesso amministrativo locale
 
 Il comando versionato `scripts/local/ssh-vps.sh` legge per default `~/.config/sequent/local-vps.env`, esterno a Git e mantenuto con modalità `0600`. La configurazione privata definisce `SEQUENT_SSH_HOST`, `SEQUENT_SSH_USER`, `SEQUENT_SSH_KEY_AGE` e `SEQUENT_AGE_IDENTITY`; endpoint, utente e percorsi reali non devono comparire nel repository pubblico.
@@ -95,6 +101,19 @@ sudo scripts/vps/prune-docker-images.sh
 La pulizia protegge sempre runtime corrente, precedente immagine attiva di rollback e qualunque immagine referenziata da un container. Il runtime può essere identificato dal digest Docker previsto dal Compose oppure dai tag locali exact-commit `sequent:*` e `sequent-release:*`. Un candidato VPS qualificato che deve sopravvivere oltre la finestra si registra con il suo image ID completo, una riga per immagine, in `/opt/sequent/runtime/retained-image-ids`; una riga invalida o un’immagine assente blocca la pulizia e un ID trattenuto non può occupare lo slot di rollback. Le immagini Sequent e i layer dangling attribuibili al prodotto hanno una finestra di sicurezza predefinita di 24 ore; ridurla richiede prima la verifica che non esistano build o task concorrenti.
 
 L’installazione operativa colloca lo script in `/opt/sequent/runtime/` e abilita `sequent-docker-prune.timer`. Il timer esegue la stessa manutenzione una volta al giorno con ritardo casuale, resta idempotente dopo un riavvio e non aggira il lock condiviso. Installazione e aggiornamento delle unità fanno parte della futura corsia di release o di una manutenzione VPS esplicitamente autorizzata.
+
+## Rollback immutabile dell'immagine
+
+La migrazione della distribuzione del container non modifica schema o dati. Il rollback deve quindi selezionare la candidata ARM64 precedente già qualificata, senza ricostruirla e senza down migration:
+
+1. identificare SHA precedente, archivio ARM64 e relativo `release-manifest.json` nel registro delle release approvate;
+2. eseguire `scripts/github/release-artifact.mjs verify` sull'archivio e sul manifest prima del caricamento;
+3. caricare l'archivio verificato e rileggere image ID, piattaforma, label OCI del commit e digest dichiarati dal manifest;
+4. durante una finestra di deploy separatamente autorizzata, puntare il Compose al digest precedente senza modificare i volumi dati;
+5. verificare health, commit, image ID, digest, Node, npm e converter dopo il riavvio;
+6. se il readback diverge, lasciare il servizio fermo e investigare senza ricostruire o sostituire l'artefatto di rollback.
+
+SHA, digest e nomi esatti degli artefatti appartengono al manifest e all'evidenza della migrazione, non a questo runbook stabile.
 
 ## Confini operativi
 

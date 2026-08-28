@@ -1,0 +1,332 @@
+{
+  "format": "sequent-runtime-migration-evidence",
+  "version": 1,
+  "generatedAt": "2026-08-28T14:21:37Z",
+  "result": "locally-qualified-with-unfixed-advisories",
+  "source": {
+    "branch": "codex/debian-13-slim-runtime",
+    "baseCommit": "2074c80054d143bff87a5bb8a14620e569763337",
+    "originMainAtStart": "2074c80054d143bff87a5bb8a14620e569763337",
+    "platform": "linux/arm64",
+    "host": "macOS arm64",
+    "dockerClient": "29.7.2",
+    "dockerServer": "29.5.2",
+    "dockerServerPlatform": "linux/arm64",
+    "buildx": "0.36.1",
+    "builder": "Colima overlayfs"
+  },
+  "baseImages": {
+    "previous": {
+      "reference": "node:26.7.0-alpine3.23",
+      "indexDigest": "sha256:ce3cc39fe3b8b2602d3b1c4d63d301e46b48c550ecb627869853ddcdda418b63",
+      "arm64ManifestDigest": "sha256:0b88f68083e0d252401044f3a1b0b244f7d863134eb523e2c8012535f47b2d1c"
+    },
+    "candidate": {
+      "reference": "node:26.7.0-trixie-slim",
+      "indexDigest": "sha256:5758d367d7b4f48b73a9bb3530e687e47efb289f3b43f9c0450a25225ae0db5d",
+      "arm64ManifestDigest": "sha256:2c23949220991d3a32f9c278e5f9b33039db1684f18fad0cc6f464ff38e67349",
+      "arm64ManifestVerified": true
+    }
+  },
+  "apt": {
+    "distribution": "Debian 13 trixie",
+    "snapshot": "20260827T000000Z",
+    "immutable": true,
+    "generalUpgradeDuringBuild": false,
+    "installRecommends": false
+  },
+  "packageMapping": [
+    {
+      "alpine": ["build-base"],
+      "debian": ["build-essential"],
+      "scope": "dependencies-stage-only"
+    },
+    {
+      "alpine": ["python3"],
+      "debian": ["python3", "python3-venv"],
+      "scope": "isolated-ocr-build-stage"
+    },
+    {
+      "alpine": ["jbig2enc"],
+      "debian": ["jbig2"],
+      "scope": "runtime"
+    },
+    {
+      "alpine": ["libreoffice-common", "libreoffice-calc", "libreoffice-writer"],
+      "debian": [
+        "libreoffice-core-nogui",
+        "libreoffice-calc-nogui",
+        "libreoffice-writer-nogui"
+      ],
+      "scope": "runtime"
+    },
+    {
+      "alpine": ["tesseract-ocr-data-ita"],
+      "debian": ["tesseract-ocr-ita"],
+      "scope": "runtime"
+    },
+    {
+      "alpine": ["gcompat", "libstdc++"],
+      "debian": [],
+      "scope": "removed-glibc-base"
+    },
+    {
+      "alpine": [],
+      "debian": ["fonts-dejavu-core", "icc-profiles-free"],
+      "scope": "runtime-font-and-colour-data"
+    },
+    {
+      "alpine": [
+        "ca-certificates",
+        "file",
+        "ghostscript",
+        "imagemagick",
+        "openssl",
+        "pngquant",
+        "poppler-utils",
+        "python3",
+        "qpdf",
+        "unpaper",
+        "unzip"
+      ],
+      "debian": [
+        "ca-certificates",
+        "file",
+        "ghostscript",
+        "imagemagick",
+        "openssl",
+        "pngquant",
+        "poppler-utils",
+        "python3",
+        "qpdf",
+        "unpaper",
+        "unzip"
+      ],
+      "scope": "runtime-equivalent-names"
+    }
+  ],
+  "baseline": {
+    "commit": "2074c80054d143bff87a5bb8a14620e569763337",
+    "localImageId": "sha256:f01048d72e82a836129ea2f1f5f179a12f7cae5bcf509c478ee859c84ea8c59b",
+    "dockerReportedBytes": 835633542,
+    "dockerSaveArchiveBytes": 835656704,
+    "rootfsLayers": 12,
+    "historyEntries": 23,
+    "runtimePackages": 348,
+    "buildSecondsInformational": 852.92,
+    "healthEndpointSeconds": [11.901, 11.784],
+    "restMemoryMiB": [35.79, 37.33, 35.65],
+    "runtimePids": 11,
+    "versions": {
+      "node": "26.7.0",
+      "npm": "11.19.0",
+      "libreoffice": "25.8.1.1",
+      "python": "3.12.14",
+      "ocrmypdf": "17.10.0",
+      "tesseract": "5.5.1",
+      "ghostscript": "10.06.0",
+      "poppler": "25.12.0",
+      "imagemagick": "7.1.2-24",
+      "qpdf": "12.2.0"
+    },
+    "documentSmoke": "passed-with-versioned-public-fixture",
+    "runtimeUser": "10001:10001",
+    "setidFiles": 1,
+    "ordinaryExecutionAsRoot": false,
+    "imageVulnerabilityGate": {
+      "affectedPackages": 1,
+      "total": 1,
+      "critical": 0,
+      "high": 1,
+      "medium": 0,
+      "low": 0,
+      "unknown": 0,
+      "fixable": 0,
+      "passed": true
+    },
+    "notes": [
+      "The runtime exposed npm 11.19.0 even though the build stage installed npm 12.0.2.",
+      "The versioned screenshot fixture was used because the Alpine runtime had no suitable font for generating a local text image."
+    ]
+  },
+  "candidate": {
+    "commitLabel": "2074c80054d143bff87a5bb8a14620e569763337",
+    "workingTreeDirty": true,
+    "localImageId": "sha256:ba95754533708aa4063f6245674447c06069e56d5df429e9c150ac6de6f5c804",
+    "dockerReportedBytes": 691615772,
+    "dockerSaveArchiveBytes": 691639808,
+    "dockerSaveArchiveSha256": "8689ca37b30be230cf381b70aff8d687a3569061b7392dc3e62d1a9ce9c086d6",
+    "rootfsLayers": 14,
+    "historyEntries": 25,
+    "runtimePackages": 379,
+    "firstCompleteBuildSecondsInformational": 1162.68,
+    "finalIncrementalBuildSecondsInformational": 244.73,
+    "healthEndpointSeconds": [1.341, 9.409, 1.454],
+    "restMemoryMiB": [36.74, 85.77, 86.12],
+    "runtimePids": [17, 11, 11],
+    "versions": {
+      "node": "26.7.0",
+      "npm": "12.0.2",
+      "libreoffice": "25.2.3.2",
+      "python": "3.13.5",
+      "ocrmypdf": "17.10.0",
+      "tesseract": "5.5.0",
+      "ghostscript": "10.05.1",
+      "poppler": "25.03.0",
+      "imagemagick": "7.1.1-43",
+      "qpdf": "12.2.0",
+      "glibc": "2.41",
+      "openssl": "3.5.7",
+      "codex": "0.149.1"
+    },
+    "documentSmoke": {
+      "ocrmypdfReal": true,
+      "tesseractItalian": true,
+      "libreofficeReal": true,
+      "qpdfCheck": true,
+      "pdfTextMeaningful": true,
+      "pdfImageRendering": true,
+      "iccProfiles": 37
+    },
+    "sandbox": {
+      "healthWithNoNewPrivileges": true,
+      "launcherWithRunbookCapabilities": true,
+      "bundledBwrap": true,
+      "realCredentialsUsed": false
+    },
+    "writeBoundaries": {
+      "tmp": true,
+      "dataDirectory": true,
+      "app": false,
+      "openaiVendor": false
+    },
+    "runtimeUser": "10001:10001",
+    "ordinaryExecutionAsRoot": false,
+    "setidFiles": [
+      "/app/node_modules/@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex"
+    ],
+    "fileCapabilities": [],
+    "compilerCommands": [],
+    "sharedMuslLibraries": [],
+    "gcompatInstalled": false,
+    "imageVulnerabilityGate": {
+      "affectedPackages": 46,
+      "total": 244,
+      "critical": 24,
+      "high": 84,
+      "medium": 94,
+      "low": 20,
+      "unknown": 22,
+      "fixable": 0,
+      "passed": true,
+      "policy": "block-any-fixable; report-unfixed-as-advisory",
+      "baseLayerVulnerabilities": 51,
+      "runtimeLayerVulnerabilities": 193,
+      "criticalPackages": [
+        "curl",
+        "ffmpeg",
+        "glib2.0",
+        "glibc",
+        "imagemagick",
+        "libraw",
+        "libxml2",
+        "mbedtls",
+        "perl",
+        "tiff"
+      ],
+      "criticalAdvisories": [
+        "DEBIAN-CVE-2026-10536",
+        "DEBIAN-CVE-2026-11856",
+        "DEBIAN-CVE-2026-8924",
+        "DEBIAN-CVE-2026-8926",
+        "DEBIAN-CVE-2026-8927",
+        "DEBIAN-CVE-2026-9079",
+        "DEBIAN-CVE-2026-75143",
+        "DEBIAN-CVE-2026-58016",
+        "DEBIAN-CVE-2026-5450",
+        "DEBIAN-CVE-2026-56372",
+        "DEBIAN-CVE-2026-20884",
+        "DEBIAN-CVE-2026-20889",
+        "DEBIAN-CVE-2026-21413",
+        "DEBIAN-CVE-2026-24450",
+        "DEBIAN-CVE-2026-6653",
+        "DEBIAN-CVE-2026-34872",
+        "DEBIAN-CVE-2026-34873",
+        "DEBIAN-CVE-2026-34875",
+        "DEBIAN-CVE-2026-12087",
+        "DEBIAN-CVE-2026-13221",
+        "DEBIAN-CVE-2026-42496",
+        "DEBIAN-CVE-2026-57433",
+        "DEBIAN-CVE-2026-8376",
+        "DEBIAN-CVE-2026-52490"
+      ]
+    }
+  },
+  "comparison": {
+    "dockerReportedBytesDelta": -144017770,
+    "dockerReportedPercent": -17.23,
+    "dockerSaveArchiveBytesDelta": -144016896,
+    "runtimePackageDelta": 31,
+    "rootfsLayerDelta": 2,
+    "npmRuntimeCorrectedToRequiredVersion": true,
+    "performanceDisclaimer": "Build, startup and memory values are informational local Colima observations affected by cache, image export, daemon I/O and host load; they are not absolute benchmarks."
+  },
+  "gates": [
+    { "name": "npm-ci-and-npm-audit", "status": "passed", "issues": 0 },
+    { "name": "lockfile-osv-release-policy", "status": "passed", "issues": 0 },
+    { "name": "npm-run-verify-public", "status": "passed" },
+    { "name": "npm-run-doctor", "status": "passed", "score": "100/100" },
+    { "name": "npm-run-test-e2e", "status": "passed", "tests": 22 },
+    {
+      "name": "npm-run-benchmark-extraction-safety-synthetic",
+      "status": "passed",
+      "criticalSilentErrors": 0,
+      "inventedSources": 0
+    },
+    { "name": "npm-run-image-local-linux-arm64", "status": "passed" },
+    { "name": "runtime-structure-and-toolchain", "status": "passed" },
+    { "name": "synthetic-document-conversion", "status": "passed" },
+    {
+      "name": "image-osv-release-policy",
+      "status": "passed-with-unfixed-advisories",
+      "criticalAdvisories": 24,
+      "fixable": 0
+    }
+  ],
+  "residualRisks": [
+    "The owner accepted 24 Critical advisories without a distributable fix, including advisories in the current official Node Debian base. They remain fully reported and must be reevaluated when the base or affected packages change.",
+    "The upstream Codex linux-arm64 package names its self-contained static target directory aarch64-unknown-linux-musl. The Debian runtime contains no musl shared library, musl loader, gcompat package or compatibility fallback.",
+    "Local timing and memory observations are variable and must not be treated as absolute benchmarks."
+  ],
+  "rollback": {
+    "previousMainCommit": "2074c80054d143bff87a5bb8a14620e569763337",
+    "lastQualifiedCandidate": {
+      "commit": "ddb0ce0fcf5f2cfe441d523982246d4008c740ae",
+      "tree": "67b6da6c67b33fa12588d46bc07913b47b79482c",
+      "workflowRun": 33167924111,
+      "artifactId": 9684388051,
+      "artifactName": "sequent-release-ddb0ce0fcf5f2cfe441d523982246d4008c740ae",
+      "artifactBytes": 2172515603,
+      "artifactExpired": false,
+      "platform": "linux/arm64",
+      "imageId": "sha256:eb6c5a239555a35294da9c24fb591a09c85f78de3813bfd08a8c7ce51ce53f37",
+      "archiveName": "sequent-release-arm64.tar",
+      "archiveSha256": "49554cc2193e664ebeda154c6185021bca76d839920c8f0240a48928a0e7b708"
+    },
+    "procedure": [
+      "Download the previous immutable ARM64 archive and manifest without rebuilding.",
+      "Verify archive checksum, commit, tree, platform and image ID with the versioned release-artifact verifier.",
+      "Load the verified archive and read back commit label, image ID, digest, health and toolchain.",
+      "Only during a separately authorized deploy, select the previous image without changing data volumes or schema."
+    ],
+    "schemaOrDataChange": false,
+    "executed": false
+  },
+  "authorizationBoundary": {
+    "githubPublicationAuthorized": false,
+    "productionAuthorized": false,
+    "githubPublished": false,
+    "deployed": false,
+    "liveVerified": false
+  }
+}
