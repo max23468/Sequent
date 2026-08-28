@@ -455,16 +455,23 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     .locator(".export-grid")
     .getByRole("link", { name: "Apri il dossier" })
     .getAttribute("href");
-  const pdfHref = await page
+  const facsimileHref = await page
     .locator(".export-grid")
-    .getByRole("link", { name: "Scarica il PDF" })
+    .getByRole("link", { name: "Scarica il fac-simile" })
+    .getAttribute("href");
+  const dossierPdfHref = await page
+    .locator(".export-grid")
+    .getByRole("link", { name: "Scarica il dossier" })
     .getAttribute("href");
   expect(summaryHref).toBeTruthy();
-  expect(pdfHref).toBeTruthy();
-  const pdfResponse = await page.request.get(pdfHref!);
-  expect(pdfResponse.status()).toBe(200);
-  expect(pdfResponse.headers()["content-type"]).toBe("application/pdf");
-  expect((await pdfResponse.body()).subarray(0, 5).toString()).toBe("%PDF-");
+  expect(facsimileHref).toBeTruthy();
+  expect(dossierPdfHref).toBeTruthy();
+  for (const href of [facsimileHref!, dossierPdfHref!]) {
+    const pdfResponse = await page.request.get(href);
+    expect(pdfResponse.status()).toBe(200);
+    expect(pdfResponse.headers()["content-type"]).toBe("application/pdf");
+    expect((await pdfResponse.body()).subarray(0, 5).toString()).toBe("%PDF-");
+  }
   await page.goto(summaryHref!);
   await expect(page.getByText("Bozza — controlli da completare", { exact: true })).toBeVisible();
   await expect(page.getByText(beneficiaryName, { exact: true }).first()).toBeVisible();

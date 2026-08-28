@@ -31,6 +31,8 @@
     "publication:github": "node scripts/github/publish.mjs",
     "verify:sources": "node scripts/official-sources/verify.ts",
     "verify:suc13-control": "node scripts/official-sources/qualify-suc13-control.mjs",
+    "generate:facsimile-layout": "node scripts/official-sources/generate-facsimile-layout.mjs",
+    "render:facsimile-fixture": "node --experimental-strip-types scripts/official-sources/render-facsimile-fixture.ts",
     "diz:compare": "node scripts/diz/compare.ts",
     "diz:inspect": "node scripts/diz/inspect.ts",
     "diz:inventory": "node scripts/diz/inventory.ts"

@@ -63,6 +63,7 @@ COPY --from=ocr --chown=root:root /opt/ocr /opt/ocr
 COPY --from=build --chown=root:root /app/build ./build
 COPY --from=build --chown=root:root /app/node_modules ./node_modules
 COPY --from=build --chown=root:root /app/package.json ./package.json
+COPY --from=build --chown=root:root /app/private/official-sources/modello-dichiarazione-successione-2025.pdf ./official-sources/modello-dichiarazione-successione-2025.pdf
 COPY --from=build /tmp/codex-launcher /tmp/codex-launcher
 RUN find / -xdev -type f -perm /6000 -exec chmod a-s {} + \
     && getcap -r / 2>/dev/null \

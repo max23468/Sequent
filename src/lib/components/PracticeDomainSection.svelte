@@ -217,7 +217,8 @@
 {:else if selectedSection === "exports"}
   <div class="workspace-panel-heading"><h2>Riepilogo ed esportazione</h2><span>{data.declarationReady ? "Disponibile" : "Bozza"}</span></div>
   <div class="export-grid">
-    <article><FileOutput size={28} /><h3>Dossier della pratica</h3><p>Soggetti, beni, devoluzione, calcoli, documenti richiesti e controlli.</p><a class="button primary" href={`/pratiche/${data.practice.id}/riepilogo?dichiarazione=${data.declaration.id}`} target="_blank">Apri il dossier</a><a class="button secondary" href={`/pratiche/${data.practice.id}/riepilogo.pdf?dichiarazione=${data.declaration.id}`}>Scarica il PDF</a></article>
+    <article><FileOutput size={28} /><h3>Fac-simile del modello</h3><p>Frontespizio e quadri pertinenti sul modello ufficiale, marcati come non trasmettibili.</p><a class="button primary" href={`/pratiche/${data.practice.id}/facsimile.pdf?dichiarazione=${data.declaration.id}`}>Scarica il fac-simile</a></article>
+    <article><FileOutput size={28} /><h3>Dossier della pratica</h3><p>Soggetti, beni, devoluzione, calcoli, documenti richiesti e controlli.</p><a class="button primary" href={`/pratiche/${data.practice.id}/riepilogo?dichiarazione=${data.declaration.id}`} target="_blank">Apri il dossier</a><a class="button secondary" href={`/pratiche/${data.practice.id}/riepilogo.pdf?dichiarazione=${data.declaration.id}`}>Scarica il dossier</a></article>
     <article><ShieldCheck size={28} /><h3>Rapporto dei controlli</h3><p>Esito riproducibile con fonti applicate e codice di verifica.</p><a class="button secondary" href={`/pratiche/${data.practice.id}/riepilogo.json?dichiarazione=${data.declaration.id}`} target="_blank">Scarica i dati</a></article>
   </div>
 {:else if selectedSection === "history"}

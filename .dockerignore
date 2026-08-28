@@ -8,6 +8,11 @@ node_modules
 playwright-report
 test-results
 private
+!private/
+private/*
+!private/official-sources/
+private/official-sources/*
+!private/official-sources/modello-dichiarazione-successione-2025.pdf
 data
 runtime
 releases
