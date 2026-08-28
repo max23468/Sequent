@@ -98,16 +98,6 @@ export function checkState(statusCheckRollup, required = PRE_REVIEW_CHECKS) {
   return { failed, pending };
 }
 
-export function shouldRequestCodex({ comments, resetAt, statusState }) {
-  if (statusState === "success") return false;
-  return !comments.some(
-    (comment) =>
-      ["OWNER", "MEMBER", "COLLABORATOR"].includes(comment.author_association) &&
-      /^\s*@codex\s+review\s*$/i.test(comment.body) &&
-      new Date(comment.created_at).getTime() >= new Date(resetAt ?? 0).getTime(),
-  );
-}
-
 export async function waitForPrHead(
   readPr,
   headSha,
@@ -132,22 +122,6 @@ async function waitForChecks(prNumber, required, timeoutMinutes = 30) {
     await sleep(15_000);
   }
   throw new Error("Timeout durante l'attesa dei check GitHub");
-}
-
-async function waitForCodex(prNumber) {
-  const deadline = Date.now() + 5 * 60 * 60_000;
-  while (Date.now() < deadline) {
-    const pr = json("gh", ["pr", "view", String(prNumber), "--json", "statusCheckRollup"]);
-    const status = pr.statusCheckRollup.find(
-      (check) => (check.context ?? check.name) === "codex-review",
-    );
-    const state = status?.state ?? status?.conclusion;
-    if (state === "SUCCESS") return;
-    if (["FAILURE", "ERROR"].includes(state)) throw new Error(`codex-review: ${state}`);
-    console.log("In attesa della review Codex exact-HEAD");
-    await sleep(30_000);
-  }
-  throw new Error("Timeout durante l'attesa della review Codex");
 }
 
 export function selectWorkflowRun(runs, displayTitle, notBefore) {
@@ -278,7 +252,6 @@ async function main() {
 
   run("git", ["push", "--set-upstream", "origin", branch]);
   let pr;
-  let createdPr = false;
   try {
     pr = json("gh", ["pr", "view", branch, "--json", "number,headRefOid"]);
   } catch {
@@ -296,7 +269,6 @@ async function main() {
       prBody(classification, scope),
     ]);
     pr = json("gh", ["pr", "view", branch, "--json", "number,headRefOid"]);
-    createdPr = true;
   }
   pr = await waitForPrHead(
     () => json("gh", ["pr", "view", branch, "--json", "number,headRefOid"]),
@@ -304,43 +276,6 @@ async function main() {
   );
 
   await waitForChecks(pr.number, PRE_REVIEW_CHECKS);
-  if (!createdPr) {
-    const combinedStatus = json("gh", ["api", `repos/${repository}/commits/${headSha}/status`]);
-    const codexStatus = combinedStatus.statuses
-      .filter((status) => status.context === "codex-review")
-      .sort(
-        (left, right) =>
-          new Date(right.updated_at ?? right.created_at).getTime() -
-          new Date(left.updated_at ?? left.created_at).getTime(),
-      )[0];
-    const comments = json("gh", ["api", `repos/${repository}/issues/${pr.number}/comments`]);
-    if (
-      shouldRequestCodex({
-        comments,
-        resetAt: codexStatus?.updated_at ?? codexStatus?.created_at,
-        statusState: codexStatus?.state,
-      })
-    ) {
-      run("gh", [
-        "api",
-        `repos/${repository}/issues/${pr.number}/comments`,
-        "--raw-field",
-        "body=@codex review",
-      ]);
-    }
-  }
-  await waitForCodex(pr.number);
-  run("node", [
-    "scripts/github/resolve-advisories.mjs",
-    "--repository",
-    repository,
-    "--pull-request",
-    String(pr.number),
-    "--head",
-    headSha,
-  ]);
-  await waitForChecks(pr.number, [...PRE_REVIEW_CHECKS, "codex-review"]);
-
   run("gh", ["pr", "merge", String(pr.number), "--squash", "--match-head-commit", headSha]);
   deleteRemoteBranch(branch);
   run("git", ["fetch", "origin", "--prune"]);

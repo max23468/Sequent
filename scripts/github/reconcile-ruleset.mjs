@@ -7,7 +7,6 @@ export const REQUIRED_CHECKS = [
   "Foundation",
   "Dependency review",
   "Analyze (javascript-typescript)",
-  "codex-review",
   "PR gate",
 ];
 

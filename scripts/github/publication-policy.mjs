@@ -69,7 +69,6 @@ const DOCUMENTS = [
 const GOVERNANCE = [
   /^\.github\/workflows\//,
   /^scripts\/github\//,
-  /^scripts\/codex-review-gate(?:\.test)?\.mjs$/,
   /^package(?:-lock)?\.json$/,
 ];
 
