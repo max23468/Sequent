@@ -37,6 +37,10 @@ test("il preflight richiede gli identificatori dalla configurazione privata", ()
   assert.doesNotMatch(preflight, /SEQUENT_SHARED_INSTALLATION_MARKER:-[^}]/);
   assert.match(preflight, /source "\$preflight_env"/);
   assert.match(preflight, /"\$\(id -un\):600"/);
+  assert.match(preflight, /assert_layout \. root:root:755/);
+  assert.match(preflight, /assert_layout runtime root:ubuntu:750/);
+  assert.match(preflight, /assert_layout releases root:root:750/);
+  assert.match(preflight, /assert_layout snapshots root:root:700/);
 });
 
 test("il runbook non include utente, hostname o endpoint amministrativi reali", () => {
@@ -81,7 +85,8 @@ test("le build VPS sono confinate dal wrapper con lock, soglia disco e pulizia",
   assert.match(dockerfile, /org\.opencontainers\.image\.revision=\$APP_COMMIT_SHA/);
   assert.match(ci, /--build-arg APP_COMMIT_SHA=\$\{\{ github\.sha \}\}/);
   assert.match(release, /--build-arg APP_COMMIT_SHA=\$\{\{ inputs\.commit \}\}/);
-  assert.match(service, /ExecStart=\/opt\/sequent\/runtime\/prune-docker-images\.sh/);
+  assert.match(service, /ExecStart=\/usr\/local\/sbin\/sequent-prune-docker-images/);
+  assert.doesNotMatch(service, /ExecStart=\/opt\/sequent\/runtime\//);
   assert.match(service, /ProtectSystem=strict/);
   assert.match(timer, /OnCalendar=daily/);
   assert.match(timer, /Persistent=true/);

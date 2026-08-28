@@ -4,7 +4,7 @@ ConditionPathExists=/opt/sequent/runtime/runtime.env
 
 [Service]
 Type=oneshot
-ExecStart=/opt/sequent/runtime/prune-docker-images.sh
+ExecStart=/usr/local/sbin/sequent-prune-docker-images
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true

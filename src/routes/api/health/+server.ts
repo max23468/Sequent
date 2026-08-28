@@ -10,7 +10,12 @@ export const GET: RequestHandler = () => {
   ).version;
   const healthy = integrity === "ok";
   return json(
-    { status: healthy ? "ok" : "degraded", sqliteVersion },
+    {
+      status: healthy ? "ok" : "degraded",
+      sqliteVersion,
+      commit: process.env.SEQUENT_COMMIT_SHA ?? "unversioned",
+      imageId: process.env.SEQUENT_IMAGE_ID ?? "unversioned",
+    },
     { status: healthy ? 200 : 503 },
   );
 };

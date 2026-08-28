@@ -46,6 +46,7 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOME=/var/lib/sequent \
     PATH=/opt/ocr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    SEQUENT_COMMIT_SHA=$APP_COMMIT_SHA \
     SEQUENT_DATA_DIR=/var/lib/sequent \
     SEQUENT_CODEX_HOME=/var/lib/sequent/.codex
 WORKDIR /app

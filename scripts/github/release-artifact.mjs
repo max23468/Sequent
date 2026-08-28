@@ -52,8 +52,8 @@ async function verify(args) {
   const expected = {
     archiveName: basename(archive),
     archiveSha256: await sha256(archive),
-    commit: output("git", ["rev-parse", "HEAD"]),
-    tree: output("git", ["rev-parse", "HEAD^{tree}"]),
+    commit: value(args, "--commit"),
+    tree: value(args, "--tree"),
   };
   const preflightFailures = validateManifest(manifest, {
     ...expected,

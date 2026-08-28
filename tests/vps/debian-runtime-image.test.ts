@@ -22,6 +22,7 @@ test("l'immagine applicativa usa una sola base Debian 13 Slim fissata per digest
   assert.match(dockerfile, /rm -rf \/var\/lib\/apt\/lists\/\*/);
   assert.doesNotMatch(dockerfile, /apt-get (?:dist-)?upgrade/);
   assert.match(dockerfile, /npm install --global npm@12\.0\.2/);
+  assert.match(dockerfile, /SEQUENT_COMMIT_SHA=\$APP_COMMIT_SHA/);
   assert.match(dockerfile, /groupadd --gid 10001 sequent/);
   assert.match(dockerfile, /useradd --uid 10001 --gid 10001/);
   assert.match(dockerfile, /^USER 10001:10001$/m);

@@ -241,6 +241,9 @@ test("la candidata rilegge lo stesso artefatto ARM64 senza deploy", async () => 
   assert.match(workflow, /actions\/upload-artifact@[0-9a-f]{40}/);
   assert.match(workflow, /actions\/download-artifact@[0-9a-f]{40}/);
   assert.match(workflow, /release-artifact\.mjs verify/);
+  assert.match(workflow, /candidate_tree=.*git rev-parse.*CANDIDATE_COMMIT.*\^\{tree\}/);
+  assert.match(workflow, /--commit "\$CANDIDATE_COMMIT"/);
+  assert.match(workflow, /--tree "\$candidate_tree"/);
   assert.match(
     workflow,
     /npm run benchmark:extraction-safety -- --dataset tests\/fixtures\/extraction-safety-benchmark\.synthetic\.json/,

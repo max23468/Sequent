@@ -13,6 +13,7 @@ services:
       SEQUENT_DATA_DIR: /var/lib/sequent
       SEQUENT_CODEX_HOME: /var/lib/sequent/.codex
       SEQUENT_CODEX_MODEL: gpt-5.6-terra
+      SEQUENT_IMAGE_ID: ${SEQUENT_IMAGE:?Image ID immutabile obbligatorio}
       SEQUENT_SECURE_COOKIES: "true"
       ORIGIN: ${SEQUENT_ORIGIN:?Origine HTTPS pubblica obbligatoria}
       ADDRESS_HEADER: X-Forwarded-For
