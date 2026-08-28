@@ -216,6 +216,22 @@ function quadroFromPath(path: string): QuadroId | null {
   return (match?.[1] as QuadroId | undefined) ?? null;
 }
 
+export function listQuadroTechnicalElements(quadro: QuadroId): TechnicalElement[] {
+  return technicalElements.filter((element) => quadroFromPath(element.path) === quadro);
+}
+
+export function getQuadroActivationRootPath(quadro: QuadroId): string {
+  const paths = listQuadroTechnicalElements(quadro)
+    .filter((element) => element.kind === "field")
+    .map((element) => element.path.split("/").filter(Boolean));
+  if (paths.length === 0) return "";
+  const common = [...paths[0]!];
+  for (const path of paths.slice(1)) {
+    while (common.some((part, index) => path[index] !== part)) common.pop();
+  }
+  return `/${common.join("/")}`;
+}
+
 function isSystemManagedTechnicalField(element: TechnicalElement): boolean {
   return element.path.startsWith("/Fornitura/Intestazione/");
 }

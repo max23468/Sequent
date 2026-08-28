@@ -34,6 +34,12 @@ import { getCanonicalField } from "../../src/domain/declaration.ts";
 
 const directories: string[] = [];
 const BUILDING_VALUE_FIELD_ID = "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/Valore";
+const BUILDING_PREVIOUS_VALUE_FIELD_ID =
+  "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/ValorePrecSucc";
+const VESSEL_LENGTH_FIELD_ID =
+  "xsd:/Fornitura/Dichiarazione/QuadroEQ/Modulo/Navi/Tipo/Dimensione/Lunghezza";
+const VESSEL_TONNAGE_FIELD_ID =
+  "xsd:/Fornitura/Dichiarazione/QuadroEQ/Modulo/Navi/Tipo/Dimensione/Stazza";
 
 afterEach(() => {
   for (const directory of directories.splice(0)) {
@@ -502,6 +508,80 @@ describe("persistenza del procedimento", () => {
     expect(substituteFields).toEqual(expect.arrayContaining(previousDeclarationFields));
   });
 
+  it("controlla i campi obbligatori nel ramo attivo e una sola alternativa XSD", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-required-branches-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento sintetico");
+    const beneficiary = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Beneficiario",
+    });
+    const building = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Fabbricato",
+    });
+    const vessel = createSharedAsset(database, practice.id, {
+      kind: "vessel",
+      displayName: "Imbarcazione",
+    });
+    const cadastralSheet =
+      "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/DatiFabbricati/DatiCatastali/Foglio";
+    const cadastralParcel =
+      "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/DatiFabbricati/DatiCatastali/Particella";
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      fieldId: cadastralSheet,
+      value: "12",
+      entityId: building.id,
+    });
+
+    const missing = buildComplianceReport(database, practice.id, practice.declarationId).issues;
+    expect(missing).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `REQUIRED_FIELD_MISSING:quadro-ea.soggetto.codice-fiscale:${beneficiary.id}`,
+        }),
+        expect.objectContaining({
+          id: `REQUIRED_FIELD_MISSING:${cadastralParcel}:${building.id}`,
+        }),
+        expect.objectContaining({
+          id: `REQUIRED_CHOICE_MISSING:choice-17:${vessel.id}`,
+        }),
+      ]),
+    );
+
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 2,
+      fieldId: VESSEL_LENGTH_FIELD_ID,
+      value: "750",
+      entityId: vessel.id,
+    });
+    expect(
+      buildComplianceReport(database, practice.id, practice.declarationId).issues.some((issue) =>
+        issue.id.startsWith(`REQUIRED_CHOICE_MISSING:choice-17:${vessel.id}`),
+      ),
+    ).toBe(false);
+
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 3,
+      fieldId: VESSEL_TONNAGE_FIELD_ID,
+      value: "20",
+      entityId: vessel.id,
+    });
+    expect(
+      buildComplianceReport(database, practice.id, practice.declarationId).issues.map(
+        ({ id }) => id,
+      ),
+    ).toContain(`CHOICE_EXCLUSIVITY_VIOLATION:choice-17:${vessel.id}`);
+  });
+
   it("conserva i dati del Frontespizio sul defunto e li riprende nella dichiarazione successiva", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-domain-"));
     directories.push(directory);
@@ -890,6 +970,103 @@ describe("persistenza del procedimento", () => {
         "DEVOLUTION_REDUCTION_INCOMPLETE",
       ]),
     );
+  });
+
+  it("allinea la riduzione al valore ufficiale della successione precedente", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-previous-succession-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento sintetico");
+    const beneficiaries = ["Primo beneficiario", "Secondo beneficiario"].map((displayName) =>
+      createSharedSubject(database, practice.id, { role: "beneficiary", displayName }),
+    );
+    const asset = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Fabbricato",
+      valueCents: 100_000n,
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      fieldId: BUILDING_VALUE_FIELD_ID,
+      value: "1000",
+      entityId: asset.id,
+    });
+    const missingOfficialPreviousValue = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 2,
+      shares: beneficiaries.map((beneficiary) => ({
+        assetId: asset.id,
+        beneficiaryId: beneficiary.id,
+        numerator: 1n,
+        denominator: 2n,
+        rightCode: "1",
+        reductionYears: 2,
+        previousSuccessionValueCents: 5_000n,
+      })),
+    });
+    expect(missingOfficialPreviousValue.issues.map(({ id }) => id)).toContain(
+      "DEVOLUTION_OFFICIAL_PREVIOUS_SUCCESSION_VALUE_MISSING",
+    );
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 2,
+      fieldId: BUILDING_PREVIOUS_VALUE_FIELD_ID,
+      value: "100",
+      entityId: asset.id,
+    });
+    const shares = (firstValue: bigint, secondValue: bigint, secondYears: 2 | 3 = 2) => [
+      {
+        assetId: asset.id,
+        beneficiaryId: beneficiaries[0]!.id,
+        numerator: 1n,
+        denominator: 2n,
+        rightCode: "1",
+        reductionYears: 2 as const,
+        previousSuccessionValueCents: firstValue,
+      },
+      {
+        assetId: asset.id,
+        beneficiaryId: beneficiaries[1]!.id,
+        numerator: 1n,
+        denominator: 2n,
+        rightCode: "1",
+        reductionYears: secondYears,
+        previousSuccessionValueCents: secondValue,
+      },
+    ];
+
+    const divergent = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 3,
+      shares: shares(6_000n, 6_000n),
+    });
+    expect(divergent.issues.map(({ id }) => id)).toContain(
+      "DEVOLUTION_PREVIOUS_SUCCESSION_VALUE_DIVERGENCE",
+    );
+
+    const inconsistentPeriod = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 3,
+      shares: shares(4_000n, 6_000n, 3),
+    });
+    expect(inconsistentPeriod.issues.map(({ id }) => id)).toContain(
+      "DEVOLUTION_REDUCTION_PERIOD_INCONSISTENT",
+    );
+
+    const aligned = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 3,
+      shares: shares(4_000n, 6_000n),
+    });
+    expect(aligned.issues).toEqual([]);
+    expect(aligned.status).toBe("draft");
   });
 
   it("non sceglie automaticamente fra più posizioni dello stesso beneficiario", () => {

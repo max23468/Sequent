@@ -21,8 +21,11 @@ import {
 import {
   getCatalogField,
   getCatalogStatus,
+  getQuadroActivationRootPath,
   listQuadroFields,
+  listQuadroTechnicalElements,
   listTechnicalEnumerationValues,
+  type TechnicalElement,
   type QuadroId,
 } from "../../domain/official-catalog/catalog.ts";
 import {
@@ -88,6 +91,10 @@ function officialAssetValueField(asset: SharedAsset) {
 
 function officialAssetForeignTaxField(asset: SharedAsset) {
   return assetCatalogField(asset, "ImpostaVersataEstero");
+}
+
+function officialAssetPreviousSuccessionField(asset: SharedAsset) {
+  return assetCatalogField(asset, "ValorePrecSucc");
 }
 
 function wholeEurosToCents(value: string): bigint | null {
@@ -1165,6 +1172,46 @@ export function saveDevolutionScenario(
         foreignTaxCents: share.foreignTaxCents ?? 0n,
       };
     });
+  for (const asset of assets.values()) {
+    if (asset.kind === "donation") continue;
+    const assetShares = normalizedShares.filter((share) => share.assetId === asset.id);
+    if (assetShares.length === 0) continue;
+    const previousField = officialAssetPreviousSuccessionField(asset);
+    const officialValue = previousField
+      ? getCanonicalField(declaration.declaration, previousField.canonicalId, asset.id)?.value
+      : null;
+    const officialText =
+      officialValue === null || officialValue === undefined ? "" : String(officialValue);
+    const officialPreviousCents = wholeEurosToCents(officialText);
+    const hasConfiguredReduction = assetShares.some(
+      (share) => share.reductionYears > 0 || share.previousSuccessionValueCents > 0n,
+    );
+    const hasOfficialPreviousValue = officialPreviousCents !== null && officialPreviousCents > 0n;
+    if (!hasConfiguredReduction && !hasOfficialPreviousValue) continue;
+    if (!previousField || officialText === "")
+      addIssue({
+        id: "DEVOLUTION_OFFICIAL_PREVIOUS_SUCCESSION_VALUE_MISSING",
+        message: `Completa il valore da precedenti successioni per “${asset.displayName}” nel Quadro ufficiale.`,
+        blocking: true,
+      });
+    const reductionPeriods = new Set(assetShares.map((share) => share.reductionYears));
+    if (reductionPeriods.size !== 1 || reductionPeriods.has(0))
+      addIssue({
+        id: "DEVOLUTION_REDUCTION_PERIOD_INCONSISTENT",
+        message: `Indica lo stesso periodo di riduzione per tutte le quote di “${asset.displayName}”.`,
+        blocking: true,
+      });
+    const allocatedPreviousValue = assetShares.reduce(
+      (total, share) => total + share.previousSuccessionValueCents,
+      0n,
+    );
+    if (officialPreviousCents !== null && allocatedPreviousValue !== officialPreviousCents)
+      addIssue({
+        id: "DEVOLUTION_PREVIOUS_SUCCESSION_VALUE_DIVERGENCE",
+        message: `La somma dei valori precedenti ripartiti per “${asset.displayName}” deve coincidere con il relativo dato del Quadro ufficiale.`,
+        blocking: true,
+      });
+  }
   for (const beneficiaryId of beneficiaries) {
     const beneficiaryEntries = entries.filter((entry) => entry.subjectId === beneficiaryId);
     if (hasAmbiguousTaxPositions(declaration.declaration, beneficiaryEntries))
@@ -1972,6 +2019,21 @@ export function listPracticeDomainSummaries(database: Database.Database): Practi
   });
 }
 
+type QuadroField = ReturnType<typeof listQuadroFields>[number];
+
+function parentTechnicalPath(path: string): string {
+  return path.slice(0, path.lastIndexOf("/"));
+}
+
+function isTechnicalDescendant(path: string, ancestor: string): boolean {
+  return path.startsWith(`${ancestor}/`);
+}
+
+function isRequiredForPrimaryAssetRow(element: TechnicalElement): boolean {
+  const documentation = element.documentation.join(" ").toLocaleLowerCase("it");
+  return /obbligatori[oa].*continuazione/u.test(documentation);
+}
+
 function requiredFieldIssues(
   database: Database.Database,
   practiceId: string,
@@ -1984,6 +2046,7 @@ function requiredFieldIssues(
     (subject) => subject.role === "decedent",
   );
   const assets = listSharedAssets(database, practiceId, declarationId);
+  const assetIds = new Set(assets.map((asset) => asset.id));
   const entityNames = new Map<string, string>([
     ...subjects.map((subject) => [subject.id, subject.displayName] as const),
     ...(decedent ? [[decedent.id, decedent.displayName] as const] : []),
@@ -2000,20 +2063,123 @@ function requiredFieldIssues(
     ),
   ];
   for (const context of active) {
-    for (const field of listQuadroFields(context.quadro)) {
-      if (
-        field.entryMode === "derived" ||
-        field.effectiveMinOccurs === 0 ||
-        field.choiceGroup !== null ||
-        (field.appliesToDeclarationKinds.length > 0 &&
-          !field.appliesToDeclarationKinds.includes(declaration.declarationKind))
-      )
-        continue;
-      const entityIds =
-        field.entityScope === "decedent" ? [decedent?.id ?? null] : context.entityIds;
-      for (const entityId of entityIds) {
-        const value = getCanonicalField(declaration, field.canonicalId, entityId)?.value;
-        if (value !== null && value !== undefined && String(value) !== "") continue;
+    const fields = listQuadroFields(context.quadro).filter(
+      (field) =>
+        field.entryMode !== "derived" &&
+        (field.appliesToDeclarationKinds.length === 0 ||
+          field.appliesToDeclarationKinds.includes(declaration.declarationKind)),
+    );
+    const technicalElements = listQuadroTechnicalElements(context.quadro);
+    const fieldsByPath = new Map(fields.map((field) => [field.path, field]));
+    const rootPath = getQuadroActivationRootPath(context.quadro);
+    for (const contextEntityId of context.entityIds) {
+      const primaryAssetRow = contextEntityId !== null && assetIds.has(contextEntityId);
+      const entityIdFor = (field: QuadroField): string | null =>
+        field.entityScope === "decedent" ? (decedent?.id ?? null) : contextEntityId;
+      const hasValue = (field: QuadroField): boolean => {
+        const value = getCanonicalField(declaration, field.canonicalId, entityIdFor(field))?.value;
+        return value !== null && value !== undefined && String(value) !== "";
+      };
+      const activeContainers = new Set<string>([rootPath]);
+      for (const field of fields.filter(
+        (candidate) =>
+          hasValue(candidate) ||
+          (candidate.minOccurs > 0 && candidate.appliesToDeclarationKinds.length > 0),
+      )) {
+        let path = parentTechnicalPath(field.path);
+        while (path.length >= rootPath.length) {
+          activeContainers.add(path);
+          if (path === rootPath) break;
+          path = parentTechnicalPath(path);
+        }
+      }
+      let activated = true;
+      while (activated) {
+        activated = false;
+        for (const element of technicalElements) {
+          if (
+            element.kind !== "container" ||
+            element.path === rootPath ||
+            element.choiceGroup !== null ||
+            activeContainers.has(element.path) ||
+            !activeContainers.has(parentTechnicalPath(element.path))
+          )
+            continue;
+          const required =
+            element.minOccurs > 0 || (primaryAssetRow && isRequiredForPrimaryAssetRow(element));
+          if (!required) continue;
+          activeContainers.add(element.path);
+          activated = true;
+        }
+      }
+      const choices = new Map<string, TechnicalElement[]>();
+      for (const element of technicalElements) {
+        if (!element.choiceGroup) continue;
+        if (
+          (element.kind === "field" && !fieldsByPath.has(element.path)) ||
+          (element.kind === "container" &&
+            !fields.some((field) => isTechnicalDescendant(field.path, element.path)))
+        )
+          continue;
+        const members = choices.get(element.choiceGroup) ?? [];
+        members.push(element);
+        choices.set(element.choiceGroup, members);
+      }
+      for (const [choiceGroup, members] of choices) {
+        const parentPath = parentTechnicalPath(members[0]?.path ?? "");
+        const selected = members.filter((member) => {
+          if (member.kind === "field") {
+            const field = fieldsByPath.get(member.path);
+            return field ? hasValue(field) : false;
+          }
+          return fields.some(
+            (field) => isTechnicalDescendant(field.path, member.path) && hasValue(field),
+          );
+        });
+        const choiceIsActive = activeContainers.has(parentPath) || selected.length > 0;
+        if (!choiceIsActive) continue;
+        const firstField =
+          members
+            .map((member) =>
+              member.kind === "field"
+                ? fieldsByPath.get(member.path)
+                : fields.find((field) => isTechnicalDescendant(field.path, member.path)),
+            )
+            .find(Boolean) ?? null;
+        if (selected.length === 0 && members.some((member) => member.minOccurs > 0))
+          issues.push({
+            id: `REQUIRED_CHOICE_MISSING:${choiceGroup}:${contextEntityId ?? "declaration"}`,
+            level: "blocking",
+            fieldId: firstField?.canonicalId ?? null,
+            entityId: contextEntityId,
+            message: contextEntityId
+              ? `Scegli una delle alternative previste per ${entityNames.get(contextEntityId) ?? "la posizione interessata"}.`
+              : `Scegli una delle alternative previste nel ${context.quadro === "Frontespizio" ? "Frontespizio" : `Quadro ${context.quadro}`}.`,
+            sourceId: firstField?.sourceId ?? members[0]!.sourceId,
+            sourcePointer: firstField?.sourcePointer ?? members[0]!.sourcePointer,
+          });
+        if (selected.length > 1)
+          issues.push({
+            id: `CHOICE_EXCLUSIVITY_VIOLATION:${choiceGroup}:${contextEntityId ?? "declaration"}`,
+            level: "blocking",
+            fieldId: firstField?.canonicalId ?? null,
+            entityId: contextEntityId,
+            message: contextEntityId
+              ? `Mantieni una sola alternativa per ${entityNames.get(contextEntityId) ?? "la posizione interessata"}.`
+              : `Mantieni una sola alternativa nel ${context.quadro === "Frontespizio" ? "Frontespizio" : `Quadro ${context.quadro}`}.`,
+            sourceId: firstField?.sourceId ?? members[0]!.sourceId,
+            sourcePointer: firstField?.sourcePointer ?? members[0]!.sourcePointer,
+          });
+      }
+      for (const field of fields) {
+        if (
+          field.choiceGroup !== null ||
+          !activeContainers.has(parentTechnicalPath(field.path)) ||
+          (field.minOccurs === 0 && !(primaryAssetRow && isRequiredForPrimaryAssetRow(field))) ||
+          hasValue(field)
+        )
+          continue;
+        const entityId = entityIdFor(field);
         issues.push({
           id: `REQUIRED_FIELD_MISSING:${field.canonicalId}:${entityId ?? "declaration"}`,
           level: "blocking",
