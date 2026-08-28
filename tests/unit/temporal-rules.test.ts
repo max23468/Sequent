@@ -144,6 +144,7 @@ describe("regole fiscali per periodo", () => {
         advanceTrustPayment: true,
         presenterCode: "1",
         hasTrustBeneficiary: true,
+        paymentTiming: 1,
       }),
     ).toThrow("PAGAMENTO_ANTICIPATO_TRUST_NON_AMMESSO");
     expect(
@@ -153,7 +154,35 @@ describe("regole fiscali per periodo", () => {
         advanceTrustPayment: true,
         presenterCode: "9",
         hasTrustBeneficiary: true,
+        paymentTiming: 1,
       }).advanceTrustPayment,
     ).toBe(true);
+    expect(
+      buildSuccessionPaymentPlan({
+        totalCents: 3_000_000n,
+        openingDate: "2025-10-22",
+        presenterCode: "9",
+        hasTrustBeneficiary: true,
+      }),
+    ).toMatchObject({ advanceTrustPayment: false, interestTaxCode: null });
+    expect(() =>
+      buildSuccessionPaymentPlan({
+        totalCents: 3_000_000n,
+        openingDate: "2025-10-22",
+        presenterCode: "9",
+        hasTrustBeneficiary: true,
+        paymentTiming: 1,
+      }),
+    ).toThrow("TEMPISTICA_TRUST_NON_AMMESSA");
+    expect(() =>
+      buildSuccessionPaymentPlan({
+        totalCents: 3_000_000n,
+        openingDate: "2025-10-22",
+        presenterCode: "9",
+        hasTrustBeneficiary: false,
+        advanceTrustPayment: true,
+        paymentTiming: 1,
+      }),
+    ).toThrow("PAGAMENTO_ANTICIPATO_TRUST_NON_AMMESSO");
   });
 });

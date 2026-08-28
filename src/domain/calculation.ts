@@ -4,7 +4,7 @@ import {
   usufructCoefficientForAge,
 } from "./temporal-rules.ts";
 
-export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.10" as const;
+export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.11" as const;
 
 export interface BeneficiaryTaxInput {
   beneficiaryId: string;

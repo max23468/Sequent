@@ -319,6 +319,78 @@ describe("persistenza del procedimento", () => {
     ).toBe("available");
   });
 
+  it("non richiede la tempistica al trust senza pagamento anticipato", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-trust-payment-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento trust sintetico");
+    const decedent = createSharedSubject(database, practice.id, {
+      role: "decedent",
+      displayName: "Defunto sintetico",
+    });
+    const trust = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Trust sintetico",
+    });
+    const asset = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Fabbricato sintetico",
+      valueCents: 200_000_000n,
+    });
+    const fields = [
+      ["quadro-ea.soggetto.tipo", "5", trust.id],
+      ["quadro-ea.soggetto.grado-parentela", "35", trust.id],
+      ["frontespizio.defunto.data-decesso", "01012025", decedent.id],
+      [BUILDING_VALUE_FIELD_ID, "2000000", asset.id],
+      ["xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/CodiceCarica", "9", undefined],
+    ] as const;
+    let revision = 1;
+    for (const [fieldId, value, entityId] of fields) {
+      revision = saveCanonicalField(database, {
+        practiceId: practice.id,
+        declarationId: practice.declarationId,
+        expectedRevision: revision,
+        fieldId,
+        value,
+        entityId,
+      }).revision;
+    }
+    const scenario = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: revision,
+      shares: [
+        {
+          assetId: asset.id,
+          beneficiaryId: trust.id,
+          numerator: 1n,
+          denominator: 1n,
+          rightCode: "1",
+        },
+      ],
+    });
+    confirmDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      scenarioId: scenario.id,
+      expectedRevision: revision,
+    });
+
+    const calculation = runSuccessionCalculation(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+    });
+
+    expect(calculation.declarationTaxes.successionTax.payableCents).toBeGreaterThan(0n);
+    expect(calculation.paymentPlan).toMatchObject({ advanceTrustPayment: false });
+    expect(calculation.issues.map(({ id }) => id)).not.toContain(
+      "CALCULATION_PAYMENT_PLAN_TEMPISTICA_TRUST_NON_AMMESSA",
+    );
+    expect(calculation.issues.map(({ id }) => id)).not.toContain(
+      "CALCULATION_PAYMENT_PLAN_TEMPISTICA_OBBLIGATORIA",
+    );
+  });
+
   it("rende superati ripartizione e calcolo quando viene aggiunto un nuovo bene", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-domain-stale-"));
     directories.push(directory);
@@ -520,8 +592,8 @@ describe("persistenza del procedimento", () => {
     const report = buildComplianceReport(database, practice.id, practice.declarationId);
     expect(new Set(report.issues.map((issue) => issue.message)).size).toBe(report.issues.length);
     expect(report.qualification).toMatchObject({
-      calculationRulesVersion: "2026.08.10",
-      temporalRulesVersion: "2026.08.10",
+      calculationRulesVersion: "2026.08.11",
+      temporalRulesVersion: "2026.08.11",
       officialControl: { name: "SUC13", version: "2.3.1", blockingDiagnostics: 0 },
       attachments: { files: 0, totalBytes: 0, motivatedExceptions: 0 },
     });

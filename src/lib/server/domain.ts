@@ -1897,6 +1897,25 @@ export function runSuccessionCalculation(
             ?.value ?? "0",
         ) === "1",
     );
+  const hasTrustBeneficiary = entries.some((entry) => {
+    const finalBeneficiary = String(
+      getCanonicalField(
+        declaration.declaration,
+        "quadro-ea.soggetto.trust.beneficiario-finale",
+        entry.id,
+      )?.value ?? "",
+    ).trim();
+    const relationshipCode = String(
+      getCanonicalField(declaration.declaration, "quadro-ea.soggetto.grado-parentela", entry.id)
+        ?.value ?? "",
+    );
+    return finalBeneficiary !== "" || relationshipCode === "35";
+  });
+  const advanceTrustPayment =
+    technicalFieldValue(
+      declaration.declaration,
+      `${EF_PATH}/SezioneVBis_ImpostaSuccessione/PagamentoAnticipatoTrust`,
+    ) === "1";
   let declarationTaxes = calculateDeclarationTaxSummary(allocations, result.totalTaxCents, {
     openingDate: openingDateForCalculation,
     mortgageJurisdictionCount,
@@ -1941,12 +1960,27 @@ export function runSuccessionCalculation(
       "ImpostaSuccessione",
     ].map((section) => centsAt(`SezioneVI_SanzioniInteressi/${section}/${section}_Interessi`)),
   });
-  if (declarationTaxes.successionTax.payableCents > 0n && paymentTimingText === "")
+  const trustAdvanceAllowed = presenterCode === "9" && hasTrustBeneficiary;
+  if (advanceTrustPayment && !trustAdvanceAllowed)
     issues.push({
-      id: "CALCULATION_PAYMENT_TIMING_MISSING",
+      id: "CALCULATION_ADVANCE_TRUST_PAYMENT_NOT_ALLOWED",
+      level: "blocking",
+      fieldId: `xsd:${EF_PATH}/SezioneVBis_ImpostaSuccessione/PagamentoAnticipatoTrust`,
+      message:
+        "Il pagamento anticipato del trust richiede il presentatore previsto e un beneficiario del trust nel Quadro EA.",
+      sourceId: "SRC-08",
+      sourcePointer: "Quadro EF, rigo EF18-ter",
+    });
+  if (
+    paymentTimingText !== "" &&
+    (declarationTaxes.successionTax.payableCents === 0n ||
+      (presenterCode === "9" && !advanceTrustPayment))
+  )
+    issues.push({
+      id: "CALCULATION_PAYMENT_TIMING_NOT_ALLOWED",
       level: "blocking",
       fieldId: `xsd:${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/TempisticaPagamento`,
-      message: "Indica nel Quadro EF quando sarà versata l’imposta di successione.",
+      message: "La tempistica di pagamento non è prevista per questa dichiarazione.",
       sourceId: "SRC-08",
       sourcePointer: "Quadro EF, rigo EF18-ter",
     });
@@ -1968,6 +2002,10 @@ export function runSuccessionCalculation(
         installments: installmentCount,
         initialPaymentCents:
           installmentText === "" ? undefined : (initialPaymentCents ?? undefined),
+        presenterCode,
+        hasTrustBeneficiary,
+        advanceTrustPayment,
+        paymentTiming: paymentTimingText === "" ? undefined : paymentTiming,
       });
     } catch (error) {
       const code = error instanceof Error ? error.message : "PIANO_NON_VALIDO";
@@ -1980,11 +2018,26 @@ export function runSuccessionCalculation(
         ACCONTO_NON_VALIDO:
           "L’acconto deve essere compreso tra il 20% dell’imposta dovuta e l’intero importo.",
         ACCONTO_OBBLIGATORIO: "Indica l’acconto quando scegli il pagamento rateale.",
+        PAGAMENTO_ANTICIPATO_TRUST_NON_AMMESSO:
+          "Il pagamento anticipato non è ammesso per il trust indicato.",
+        TEMPISTICA_TRUST_NON_AMMESSA:
+          "La tempistica di pagamento non è prevista senza pagamento anticipato del trust.",
+        RATEAZIONE_TRUST_NON_AMMESSA:
+          "Il pagamento rateale non è previsto senza pagamento anticipato del trust.",
+        TEMPISTICA_TRUST_OBBLIGATORIA:
+          "Indica la tempistica quando scegli il pagamento anticipato del trust.",
+        TEMPISTICA_OBBLIGATORIA:
+          "Indica nel Quadro EF quando sarà versata l’imposta di successione.",
       };
+      const fieldId = code.startsWith("TEMPISTICA_")
+        ? `xsd:${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/TempisticaPagamento`
+        : code === "PAGAMENTO_ANTICIPATO_TRUST_NON_AMMESSO"
+          ? `xsd:${EF_PATH}/SezioneVBis_ImpostaSuccessione/PagamentoAnticipatoTrust`
+          : `xsd:${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/PagamentoRateale`;
       issues.push({
         id: `CALCULATION_PAYMENT_PLAN_${code}`,
         level: "blocking",
-        fieldId: `xsd:${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/PagamentoRateale`,
+        fieldId,
         message: messages[code] ?? "Il piano di pagamento indicato non è valido.",
         sourceId: "SRC-13",
         sourcePointer: "Pagamento dell’imposta di successione e rateazione",

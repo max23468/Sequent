@@ -1,6 +1,6 @@
 import legalTimeline from "./official-catalog/legal-timeline.json" with { type: "json" };
 
-export const TEMPORAL_RULESET_VERSION = "2026.08.10" as const;
+export const TEMPORAL_RULESET_VERSION = "2026.08.11" as const;
 
 export interface ApplicableLegalFramework {
   id: string;
@@ -199,10 +199,26 @@ export function buildSuccessionPaymentPlan(input: {
   presenterCode?: string;
   hasTrustBeneficiary?: boolean;
   advanceTrustPayment?: boolean;
+  paymentTiming?: 1 | 2;
 }): SuccessionPaymentPlan {
   const { totalCents } = input;
   if (totalCents < 0n) throw new Error("IMPORTO_NON_VALIDO");
+  const advanceTrustPayment = input.advanceTrustPayment ?? false;
+  if (advanceTrustPayment && (input.presenterCode !== "9" || input.hasTrustBeneficiary !== true))
+    throw new Error("PAGAMENTO_ANTICIPATO_TRUST_NON_AMMESSO");
   const installmentPlanRequested = input.installments !== undefined;
+  if (input.presenterCode === "9" && !advanceTrustPayment) {
+    if (input.paymentTiming !== undefined) throw new Error("TEMPISTICA_TRUST_NON_AMMESSA");
+    if (installmentPlanRequested) throw new Error("RATEAZIONE_TRUST_NON_AMMESSA");
+  }
+  if (advanceTrustPayment && input.paymentTiming === undefined)
+    throw new Error("TEMPISTICA_TRUST_OBBLIGATORIA");
+  if (
+    input.presenterCode !== undefined &&
+    input.presenterCode !== "9" &&
+    input.paymentTiming === undefined
+  )
+    throw new Error("TEMPISTICA_OBBLIGATORIA");
   const installments = input.installments ?? 1;
   if (!Number.isInteger(installments) || installments < 1 || installments > 12)
     throw new Error("NUMERO_RATE_NON_VALIDO");
@@ -222,9 +238,6 @@ export function buildSuccessionPaymentPlan(input: {
   if (installmentPlanRequested && remainingCents < 100_000n)
     throw new Error("RATEAZIONE_NON_AMMESSA");
   if (installments > 8 && remainingCents <= 2_000_000n) throw new Error("NUMERO_RATE_NON_AMMESSO");
-  const advanceTrustPayment = input.advanceTrustPayment ?? false;
-  if (advanceTrustPayment && (input.presenterCode !== "9" || input.hasTrustBeneficiary !== true))
-    throw new Error("PAGAMENTO_ANTICIPATO_TRUST_NON_AMMESSO");
   return {
     totalCents,
     initialPaymentCents,
