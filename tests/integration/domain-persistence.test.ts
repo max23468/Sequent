@@ -402,6 +402,29 @@ describe("persistenza del procedimento", () => {
     });
     expect(result.issues.map(({ id }) => id)).toContain("XSD_PATTERN_MISMATCH");
     expect(result.revision).toBe(1);
+    const subject = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Beneficiario sintetico",
+    });
+    const invalidUnion = saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      fieldId: "quadro-ea.soggetto.provincia-nascita",
+      value: "XX",
+      entityId: subject.id,
+    });
+    expect(invalidUnion.issues.map(({ id }) => id)).toContain("XSD_UNION_MISMATCH");
+    expect(invalidUnion.revision).toBe(1);
+    const validUnion = saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      fieldId: "quadro-ea.soggetto.provincia-nascita",
+      value: "RM",
+      entityId: subject.id,
+    });
+    expect(validUnion).toMatchObject({ revision: 2, issues: [] });
   });
 
   it("rimuove dal riepilogo i documenti richiesti non più previsti", () => {
@@ -971,6 +994,85 @@ describe("persistenza del procedimento", () => {
     });
     expect(calculation.status).toBe("blocked");
     expect(calculation.issues.map(({ id }) => id)).toContain("CALCULATION_OPENING_DATE_MISSING");
+  });
+
+  it("blocca il calcolo se l’imposta estera ripartita diverge dal Quadro del bene", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-foreign-tax-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento sintetico");
+    const decedent = createSharedSubject(database, practice.id, {
+      role: "decedent",
+      displayName: "Defunto",
+    });
+    const beneficiary = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Beneficiario",
+    });
+    const asset = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Fabbricato estero",
+      valueCents: 20_000_000n,
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      fieldId: "quadro-ea.soggetto.tipo",
+      value: "1",
+      entityId: beneficiary.id,
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 2,
+      fieldId: "quadro-ea.soggetto.grado-parentela",
+      value: "10",
+      entityId: beneficiary.id,
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 3,
+      fieldId: "frontespizio.defunto.data-decesso",
+      value: "01012025",
+      entityId: decedent.id,
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 4,
+      fieldId: "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/ImpostaVersataEstero",
+      value: "100",
+      entityId: asset.id,
+    });
+    const scenario = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 5,
+      shares: [
+        {
+          assetId: asset.id,
+          beneficiaryId: beneficiary.id,
+          numerator: 1n,
+          denominator: 1n,
+          rightCode: "1",
+          foreignTaxCents: 5_000n,
+        },
+      ],
+    });
+    confirmDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      scenarioId: scenario.id,
+      expectedRevision: 5,
+    });
+    const calculation = runSuccessionCalculation(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+    });
+    expect(calculation.status).toBe("blocked");
+    expect(calculation.issues.map(({ id }) => id)).toContain("CALCULATION_FOREIGN_TAX_DIVERGENCE");
   });
 
   it("trova anche soggetti e beni tramite l’indice di ricerca", () => {

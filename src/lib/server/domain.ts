@@ -86,6 +86,10 @@ function officialAssetValueField(asset: SharedAsset) {
     : null;
 }
 
+function officialAssetForeignTaxField(asset: SharedAsset) {
+  return assetCatalogField(asset, "ImpostaVersataEstero");
+}
+
 function wholeEurosToCents(value: string): bigint | null {
   return /^\d+$/u.test(value) ? BigInt(value) * 100n : value === "" ? 0n : null;
 }
@@ -1376,6 +1380,27 @@ export function runSuccessionCalculation(
       sourceId: "SRC-10",
       sourcePointer: "Regole fiscali applicabili dalla versione 2025",
     });
+  for (const asset of assets.values()) {
+    const officialField = officialAssetForeignTaxField(asset);
+    const officialValue = officialField
+      ? getCanonicalField(declaration.declaration, officialField.canonicalId, asset.id)?.value
+      : null;
+    const officialForeignTaxCents = wholeEurosToCents(String(officialValue ?? ""));
+    const allocatedForeignTaxCents = scenario.shares
+      .filter((share) => share.assetId === asset.id)
+      .reduce((total, share) => total + share.foreignTaxCents, 0n);
+    if (officialForeignTaxCents === null || allocatedForeignTaxCents !== officialForeignTaxCents)
+      issues.push({
+        id: "CALCULATION_FOREIGN_TAX_DIVERGENCE",
+        level: "blocking",
+        fieldId: officialField?.canonicalId ?? null,
+        entityId: asset.id,
+        message:
+          "L’imposta estera ripartita tra i beneficiari deve coincidere con quella indicata nel Quadro del bene.",
+        sourceId: officialField?.sourceIds[0] ?? "SRC-10",
+        sourcePointer: officialField?.sourcePointer ?? "Imposta pagata all’estero",
+      });
+  }
   const beneficiaries = beneficiaryIds.map((beneficiaryId) => {
     const beneficiaryEntries = entriesBySubject.get(beneficiaryId) ?? [];
     const ambiguous = hasAmbiguousTaxPositions(declaration.declaration, beneficiaryEntries);

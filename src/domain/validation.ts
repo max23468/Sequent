@@ -1,6 +1,6 @@
 import {
   getCatalogField,
-  getResolvedTechnicalFacets,
+  getResolvedTechnicalFacetAlternatives,
   getTechnicalField,
 } from "./official-catalog/catalog.ts";
 import { getCanonicalField, type DeclarationSnapshot } from "./declaration.ts";
@@ -21,6 +21,33 @@ function decimalDigits(value: string): { total: number; fraction: number } {
   return { total: integer.replace(/^0+/, "").length + fraction.length, fraction: fraction.length };
 }
 
+function matchesFacets(text: string, facets: Record<string, string[]>): boolean {
+  if (
+    (facets.pattern ?? []).some((pattern) => {
+      try {
+        return !new RegExp(`^(?:${pattern})$`, "u").test(text);
+      } catch {
+        return true;
+      }
+    })
+  )
+    return false;
+  const length = [...text].length;
+  const exactLength = Number(facets.length?.[0]);
+  const minLength = Number(facets.minLength?.[0]);
+  const maxLength = Number(facets.maxLength?.[0]);
+  if (Number.isFinite(exactLength) && length !== exactLength) return false;
+  if (Number.isFinite(minLength) && length < minLength) return false;
+  if (Number.isFinite(maxLength) && length > maxLength) return false;
+  const enumeration = facets.enumeration ?? [];
+  if (enumeration.length > 0 && !enumeration.includes(text)) return false;
+  const digits = decimalDigits(text);
+  const totalDigits = Number(facets.totalDigits?.[0]);
+  const fractionDigits = Number(facets.fractionDigits?.[0]);
+  if (Number.isFinite(totalDigits) && digits.total > totalDigits) return false;
+  return !(Number.isFinite(fractionDigits) && digits.fraction > fractionDigits);
+}
+
 export function validateFieldValue(fieldId: string, value: unknown): ValidationIssue[] {
   const field = getTechnicalField(fieldId);
   if (!field) {
@@ -37,7 +64,22 @@ export function validateFieldValue(fieldId: string, value: unknown): ValidationI
   }
   const text = typeof value === "string" ? value : String(value ?? "");
   const issues: ValidationIssue[] = [];
-  const facets = getResolvedTechnicalFacets(fieldId);
+  const alternatives = getResolvedTechnicalFacetAlternatives(fieldId);
+  if (alternatives.length > 1) {
+    if (alternatives.some((facets) => matchesFacets(text, facets))) return [];
+    return [
+      {
+        id: "XSD_UNION_MISMATCH",
+        level: "blocking",
+        fieldId,
+        message:
+          "Il valore non appartiene a nessuno degli elenchi ammessi dall’Agenzia delle Entrate.",
+        sourceId: field.sourceId,
+        sourcePointer: field.sourcePointer,
+      },
+    ];
+  }
+  const facets = alternatives[0] ?? {};
   for (const pattern of facets.pattern ?? []) {
     let valid = false;
     try {

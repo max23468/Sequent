@@ -327,26 +327,49 @@ function mergeFacets(
 ): Record<string, string[]> {
   const merged = { ...inherited };
   for (const [name, values] of Object.entries(local ?? {}))
-    merged[name] = name === "pattern" ? [...(merged[name] ?? []), ...values] : [...values];
+    merged[name] =
+      name === "pattern" ? [...new Set([...(merged[name] ?? []), ...values])] : [...values];
   return merged;
 }
 
-export function getResolvedTechnicalFacets(fieldId: string): Record<string, string[]> {
-  const field = getTechnicalField(fieldId);
-  if (!field) return {};
-  const typesByName = new Map(technicalTypes.map((type) => [type.name, type]));
-  const visited = new Set<string>();
-  const resolveType = (name: string | undefined): Record<string, string[]> => {
-    if (!name || visited.has(name)) return {};
-    visited.add(name);
-    const type = typesByName.get(name);
-    if (!type) return {};
-    return mergeFacets(resolveType(type.constraints?.base), type.constraints?.facets);
-  };
-  return mergeFacets(
-    mergeFacets(resolveType(field.type), resolveType(field.constraints.base)),
-    field.constraints.facets,
+function combineFacetAlternatives(
+  left: Record<string, string[]>[],
+  right: Record<string, string[]>[],
+): Record<string, string[]>[] {
+  return left.flatMap((leftFacets) =>
+    right.map((rightFacets) => mergeFacets(leftFacets, rightFacets)),
   );
+}
+
+export function getResolvedTechnicalFacetAlternatives(fieldId: string): Record<string, string[]>[] {
+  const field = getTechnicalField(fieldId);
+  if (!field) return [];
+  const typesByName = new Map(technicalTypes.map((type) => [type.name, type]));
+  const resolveType = (
+    name: string | undefined,
+    ancestors = new Set<string>(),
+  ): Record<string, string[]>[] => {
+    if (!name || ancestors.has(name)) return [{}];
+    const type = typesByName.get(name);
+    if (!type) return [{}];
+    const nextAncestors = new Set(ancestors).add(name);
+    let alternatives = resolveType(type.constraints?.base, nextAncestors);
+    const members = type.constraints?.unionMemberTypes ?? [];
+    if (members.length > 0)
+      alternatives = combineFacetAlternatives(
+        alternatives,
+        members.flatMap((member) => resolveType(member, nextAncestors)),
+      );
+    return alternatives.map((facets) => mergeFacets(facets, type.constraints?.facets));
+  };
+  const directMembers = field.constraints.unionMemberTypes ?? [];
+  let alternatives =
+    directMembers.length > 0
+      ? directMembers.flatMap((member) => resolveType(member))
+      : resolveType(field.type);
+  if (field.constraints.base && field.constraints.base !== field.type)
+    alternatives = combineFacetAlternatives(alternatives, resolveType(field.constraints.base));
+  return alternatives.map((facets) => mergeFacets(facets, field.constraints.facets));
 }
 
 export function getCatalogStatus() {
