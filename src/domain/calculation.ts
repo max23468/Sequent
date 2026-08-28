@@ -4,7 +4,7 @@ import {
   usufructCoefficientForAge,
 } from "./temporal-rules.ts";
 
-export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.7" as const;
+export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.8" as const;
 
 export interface BeneficiaryTaxInput {
   beneficiaryId: string;
@@ -427,6 +427,7 @@ const BUILDING_KINDS = new Set<SuccessionAllocation["assetKind"]>([
 ]);
 const LAND_KINDS = new Set<SuccessionAllocation["assetKind"]>(["land", "tavolare_land"]);
 const FIRST_HOME_EXCLUDED_RELATIONSHIPS = new Set(["36", "37", "38", "39"]);
+const FIRST_HOME_RELIEFS = new Set(["P", "X", "Y", "Z"]);
 const FIRST_HOME_HABITATION_RIGHTS = new Set(["1", "2", "3", "5", "6", "7"]);
 const PRIMARY_HOME_HABITATION_RIGHTS = new Set(["1", "5"]);
 const ALTERNATIVE_HOME_HABITATION_RIGHTS = new Set(["2", "6"]);
@@ -499,7 +500,10 @@ export function calculateDeclarationTaxSummary(
     "";
   const proportionalValueCents = (group: (typeof assetGroups)[number]) => {
     const firstHomeHabitation = FIRST_HOME_HABITATION_RIGHTS.has(habitationRight(group));
-    if (firstHomeHabitation || hasTrustBeneficiary(group)) return 0n;
+    const extendedFirstHomeRelief = group.allocations.some((allocation) =>
+      FIRST_HOME_RELIEFS.has(allocation.reliefCode?.toUpperCase() ?? ""),
+    );
+    if (firstHomeHabitation || extendedFirstHomeRelief || hasTrustBeneficiary(group)) return 0n;
     const allocatedTotal = group.allocations.reduce(
       (sum, allocation) => sum + allocation.valueCents,
       0n,
@@ -623,8 +627,9 @@ export function calculateDeclarationTaxSummary(
   const cadastralPayable = roundToWholeEuro(
     positiveDifference(cadastralDue, cadastralAlreadyPaid, cadastralCredit),
   );
+  const roundedSuccessionTaxCents = roundToWholeEuro(successionTaxCents);
   const successionDifference = positiveDifference(
-    successionTaxCents,
+    roundedSuccessionTaxCents,
     successionAlreadyPaid,
     successionCredit,
   );
@@ -671,7 +676,7 @@ export function calculateDeclarationTaxSummary(
     stampDutyCents,
     specialTaxesCents,
     successionTax: {
-      calculatedCents: successionTaxCents,
+      calculatedCents: roundedSuccessionTaxCents,
       alreadyPaidCents: successionAlreadyPaid,
       creditCents: successionCredit,
       payableCents: successionPayable,

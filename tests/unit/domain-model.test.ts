@@ -421,6 +421,7 @@ describe("motori deterministici", () => {
     const summary = calculateDeclarationTaxSummary(
       [
         property("abitazione-principale", "beneficiario-a", "P"),
+        property("abitazione-principale", "beneficiario-altro", ""),
         property("pertinenza", "beneficiario-a", "X"),
         property("contiguo", "beneficiario-a", "Z"),
         property("pertinenza-senza-casa-1", "beneficiario-b", "Y"),
@@ -628,5 +629,22 @@ describe("motori deterministici", () => {
     });
     expect(summary.assessmentMode).toBe("office-assessment");
     expect(summary.totalAtSubmissionCents).toBe(0n);
+  });
+
+  it("arrotonda l’imposta di successione all’euro prima del Quadro EF", () => {
+    const summary = calculateDeclarationTaxSummary([], 886_546n, {
+      openingDate: "2025-10-22",
+      mortgageJurisdictionCount: 0,
+      stampDutyJurisdictionCount: 0,
+      automaticLandRegistry: true,
+      copyRequested: false,
+      paymentTiming: 2,
+    });
+
+    expect(summary.successionTax).toMatchObject({
+      calculatedCents: 886_500n,
+      payableCents: 886_500n,
+    });
+    expect(summary.totalAtSubmissionCents).toBe(886_500n);
   });
 });
