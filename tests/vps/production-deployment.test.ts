@@ -8,6 +8,8 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   const workflow = read(".github/workflows/production.yml");
 
   assert.match(workflow, /^name: Production$/m);
+  assert.match(workflow, /^run-name: Production \$\{\{ inputs\.commit \}\}$/m);
+  assert.doesNotMatch(workflow, /^run-name:.*release_run/m);
   assert.match(workflow, /permissions:\n  actions: read\n  contents: read\n  deployments: write/);
   assert.match(workflow, /environment: Production/);
   assert.match(workflow, /cancel-in-progress: false/);

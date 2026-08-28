@@ -1,5 +1,5 @@
 name: Production
-run-name: Production ${{ inputs.commit }} da candidata ${{ inputs.release_run }}
+run-name: Production ${{ inputs.commit }}
 
 on:
   workflow_dispatch:
