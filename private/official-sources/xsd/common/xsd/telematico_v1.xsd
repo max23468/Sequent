@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tm="www.agenziaentrate.gov.it:specificheTecniche:telent:v1" targetNamespace="www.agenziaentrate.gov.it:specificheTecniche:telent:v1" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.0">
+	<xs:element name="Messaggio">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Intestazione" type="tm:IntestazioneType" minOccurs="1" maxOccurs="1"/>
+				<xs:element name="Contenuto" type="tm:ContenutoType" minOccurs="1" maxOccurs="1"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="IntestazioneType">
+		<xs:sequence>
+			<xs:element name="CodiceFiscaleFornitore" minOccurs="1" maxOccurs="1">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[0-9]{11}|[A-Z0-9]{16}" />
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element> 
+			<xs:element name="SpazioServizioTelematico" minOccurs="0" maxOccurs="1">
+				<xs:simpleType>
+					<xs:restriction base="xs:string" />
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ContenutoType">
+		<xs:sequence>
+			<xs:element ref="tm:Fornitura"/>
+		</xs:sequence>
+		<xs:attribute name="CodiceFornitura">
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[A-Z0-9]{5}" />
+					</xs:restriction>
+				</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:element name="Fornitura" abstract="true"/>
+</xs:schema>

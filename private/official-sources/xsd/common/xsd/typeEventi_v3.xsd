@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="urn:www.agenziaentrate.gov.it:specificheTecniche:sco:common:v3" targetNamespace="urn:www.agenziaentrate.gov.it:specificheTecniche:sco:common:v3" elementFormDefault="qualified" attributeFormDefault="unqualified" version="3.0">
+	<xs:annotation>
+		<xs:documentation xml:lang="it"><![CDATA[
+		Versione 3.0 - 15/02/13
+		- modificato targetNamespace ed elenco valori
+
+		Versione 2.0 - 15/02/12
+		- modificato targetNamespace ed elenco valori
+		]]></xs:documentation>
+	</xs:annotation>
+	<xs:simpleType name="Eventi_Ecc_Type">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="1">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Vittime di richieste estorsive e dell'usura]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="2">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti residenti o aventi sede legale o operativa nel territorio dei comuni colpiti dal sisma del 20 e 29 maggio 2012]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="3">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti interessati dall'emergenza umanitaria legata all'afflusso di migranti dal Nord Africa]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="4">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti interessati dalle eccezionali avversità atmosferiche verificatesi nel mese di ottobre 2011 nel territorio delle province di La Spezia e Massa Carrara]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="5">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti colpiti dalle eccezionali avversità atmosferiche verificatesi nei giorni dal 4 all'8 novembre 2011, nel mese di marzo 2011 e nel periodo dal 18 febbraio al 1 marzo 2011]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="6">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti colpiti dalle eccezionali avversità atmosferiche verificatesi il giorno 22 novembre 2011 nel territorio della provincia di Messina]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="7">
+				<xs:annotation>
+					<xs:documentation><![CDATA[Soggetti colpiti da altri eventi eccezionali]]></xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>

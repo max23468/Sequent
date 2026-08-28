@@ -33,12 +33,11 @@ async function authenticate(page: import("@playwright/test").Page) {
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByLabel("Ripeti la password").fill(password);
     await page.getByRole("button", { name: "Crea account" }).click();
-    return;
-  }
-  if (page.url().endsWith("/login")) {
+  } else if (page.url().endsWith("/login")) {
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Accedi" }).click();
   }
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 }
 
 async function openAccountMenu(page: import("@playwright/test").Page) {
@@ -76,7 +75,7 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
   const workspaceDocument = `workspace-${suffix}.txt`;
   await authenticate(page);
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  await expect(page.getByText("Nessuna verifica da mostrare.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Da verificare" })).toBeVisible();
   await expect(page.locator(".topbar-divider")).toBeVisible();
   expect((await page.locator(".attention-panel").boundingBox())?.height).toBeGreaterThanOrEqual(
     420,
@@ -101,14 +100,16 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
     (await page.locator(".workspace-panel-heading").nth(1).locator(":scope > span").boundingBox())
       ?.width,
   ).toBeGreaterThanOrEqual(46);
-  await expect(page.getByText("Funzionalità non ancora disponibile")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Conferma" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Modifica" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Rifiuta" })).toBeDisabled();
+  await expect(page.getByText("Prima dichiarazione")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Aggiungi una dichiarazione successiva" }),
+  ).toBeVisible();
 
   const workspaceActions = page.locator(".workspace-actions-menu summary");
   await workspaceActions.click();
-  await expect(page.getByRole("button", { name: /Esporta riepilogo/ })).toBeDisabled();
+  await expect(
+    page.locator(".workspace-actions-popover").getByRole("link", { name: "Apri il riepilogo" }),
+  ).toBeVisible();
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByRole("button", { name: "Carica documento" }).click();
   const fileChooser = await fileChooserPromise;
@@ -197,9 +198,9 @@ test("ricerca da tastiera una pratica e un documento", async ({ page }) => {
   const search = page.getByPlaceholder("Cerca in Sequent");
   await expect(search).toBeFocused();
   await search.fill(practiceTitle);
-  const practiceResult = page
-    .locator(".search-results")
-    .getByRole("link", { name: new RegExp(practiceTitle) });
+  const practiceResult = page.locator(".search-results a").filter({
+    has: page.locator("strong", { hasText: practiceTitle }),
+  });
   await expect(practiceResult).toBeVisible();
   await practiceResult.click();
   await expect(page.getByRole("heading", { name: practiceTitle })).toBeVisible();
@@ -284,11 +285,171 @@ test("mostra la fonte e registra una correzione manuale", async ({ page }) => {
   await page.reload();
   await page.getByRole("button", { name: /Da verificare/ }).click();
   await expect(page.getByText("Data del documento", { exact: true })).toBeVisible();
-  await expect(page.getByText("Data proposta: 31/12/2026", { exact: true })).toBeVisible();
+  await expect(page.locator(".source-excerpt")).toHaveText("Data proposta: 31/12/2026");
   await expect(page.getByRole("heading", { name: documentName })).toBeVisible();
   await page.getByLabel("Correggi prima di confermare").fill("30/12/2026");
   await page.getByRole("button", { name: "Conferma correzione" }).click();
   await expect(page.getByText("Nessuna verifica in sospeso.")).toBeVisible();
+});
+
+test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, calcoli e dossier", async ({
+  page,
+}) => {
+  test.slow();
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  const practiceTitle = unique("Pratica soggetti e beni");
+  const beneficiaryName = unique("Beneficiario sintetico");
+  const decedentName = unique("Defunto sintetico");
+  const assetName = unique("Immobile sintetico");
+  const taxCode = "RSSMRA80A01H501U";
+  const decedentTaxCode = "VRDLGI80A01H501U";
+  await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+
+  await page.getByRole("button", { name: "Soggetti" }).click();
+  const subjectForm = page.locator("form.domain-inline-form");
+  await subjectForm.getByLabel("Ruolo").selectOption("decedent");
+  await subjectForm.getByLabel("Nome o denominazione").fill(decedentName);
+  await subjectForm.getByLabel("Codice fiscale").fill(decedentTaxCode);
+  await subjectForm.getByRole("button", { name: "Aggiungi" }).click();
+  await expect(page.getByText(decedentName, { exact: true })).toBeVisible();
+
+  await subjectForm.getByLabel("Ruolo").selectOption("beneficiary");
+  await subjectForm.getByLabel("Nome o denominazione").fill(beneficiaryName);
+  await subjectForm.getByLabel("Codice fiscale").fill(taxCode);
+  await subjectForm.getByRole("button", { name: "Aggiungi" }).click();
+  await expect(page.getByText(beneficiaryName, { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Beni e passività" }).click();
+  const assetForm = page.locator("form.domain-inline-form");
+  await assetForm.getByLabel("Tipo").selectOption("building");
+  await assetForm.getByLabel("Descrizione").fill(assetName);
+  await assetForm.getByLabel("Valore").fill("200000,00");
+  await assetForm.getByRole("button", { name: "Aggiungi" }).click();
+  await expect(page.getByText(assetName, { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Vista Quadri" }).click();
+  await expect(page.getByRole("heading", { name: "Quadro EA", level: 2 })).toBeVisible();
+  await expect(page.getByRole("link", { name: beneficiaryName })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(page.getByRole("textbox", { name: "1 Codice fiscale", exact: true })).toHaveValue(
+    taxCode,
+  );
+  await page.getByRole("combobox", { name: "2 Tipo soggetto", exact: true }).selectOption("1");
+  await page
+    .getByRole("combobox", { name: "4 Grado di parentela", exact: true })
+    .selectOption("10");
+  await page.getByRole("button", { name: "Salva questa posizione" }).click();
+  await page.getByRole("button", { name: /^Frontespizio:/ }).click();
+  await expect(page.getByRole("heading", { name: "Frontespizio", level: 2 })).toBeVisible();
+  await expect(page.getByText(decedentName, { exact: true })).toBeVisible();
+  await expect(page.locator('output[id="field-frontespizio.beneficiari.numero-eredi"]')).toHaveText(
+    "1",
+  );
+  await expect(
+    page.locator('output[id="field-frontespizio.beneficiari.numero-chiamati"]'),
+  ).toHaveText("0");
+  const legalDevolution = page.getByRole("checkbox", { name: "Devoluzione per legge" });
+  await legalDevolution.check();
+  await page.getByRole("button", { name: "Salva dati generali" }).click();
+  await expect(legalDevolution).toBeChecked();
+  await expect(page.getByRole("textbox", { name: "Codice fiscale del defunto" })).toHaveValue(
+    decedentTaxCode,
+  );
+  const civilStatus = page.getByRole("combobox", { name: "Stato civile" });
+  const deathDate = page.getByRole("textbox", {
+    name: "Data del decesso, assenza o morte presunta",
+  });
+  await expect(
+    page.locator(".official-fields").getByRole("button", { name: /^Salva/ }),
+  ).toHaveCount(15);
+  await civilStatus.selectOption("3");
+  await deathDate.fill("01012025");
+  await page.getByRole("button", { name: "Salva dati del defunto" }).click();
+  await expect(civilStatus).toHaveValue("3");
+  await expect(deathDate).toHaveValue("01012025");
+  await page.getByRole("button", { name: /^Quadro EA:/ }).click();
+  await expect(
+    page.locator(".official-fields").getByRole("button", { name: /^Salva/ }),
+  ).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Salva questa posizione" })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Aggiungi un’altra posizione per questo soggetto" })
+    .click();
+  await expect(page.getByRole("link", { name: `${beneficiaryName} · posizione 1` })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: `${beneficiaryName} · posizione 2` }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("textbox", { name: "1 Codice fiscale", exact: true })).toHaveValue(
+    taxCode,
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.setViewportSize({ width: 1440, height: 1000 });
+
+  await page.getByRole("button", { name: /^Quadro EC:/ }).click();
+  await expect(page.getByRole("heading", { name: "Quadro EC", level: 2 })).toBeVisible();
+  await expect(page.getByRole("link", { name: assetName })).toHaveAttribute("aria-current", "page");
+  const officialAssetValue = page.getByRole("textbox", { name: "Valore", exact: true });
+  await officialAssetValue.fill("200000");
+  await page
+    .locator("form")
+    .filter({ has: officialAssetValue })
+    .getByRole("button", { name: "Salva questo bene" })
+    .click();
+  await expect(officialAssetValue).toHaveValue("200000");
+
+  await page.getByRole("button", { name: "Vista operativa" }).click();
+  await page.getByRole("button", { name: "Devoluzione" }).click();
+  await page.getByLabel("Numeratore").fill("1");
+  await page.getByLabel("Denominatore").fill("1");
+  await page.getByRole("button", { name: "Salva proposta di devoluzione" }).click();
+  await expect(page.getByText("Proposta pronta per la conferma")).toBeVisible();
+  await page.getByRole("button", { name: "Conferma professionalmente" }).click();
+  await expect(page.getByText("Devoluzione confermata")).toBeVisible();
+
+  await page.getByRole("button", { name: "Calcoli" }).click();
+  await page.getByRole("button", { name: "Esegui il calcolo" }).click();
+  await expect(page.getByText(/Imposta complessiva:/)).toBeVisible();
+  await expect(page.getByText("Dati da completare")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Conferma il calcolo" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Documenti richiesti" }).click();
+  for (const status of await page.locator('.checklist-row select[name^="status:"]').all())
+    await status.selectOption("available");
+  await page.getByRole("button", { name: "Salva documenti richiesti" }).click();
+
+  await page.getByRole("button", { name: "Riepilogo ed esportazione" }).click();
+  const summaryHref = await page
+    .locator(".export-grid")
+    .getByRole("link", { name: "Apri il dossier" })
+    .getAttribute("href");
+  const pdfHref = await page
+    .locator(".export-grid")
+    .getByRole("link", { name: "Scarica il PDF" })
+    .getAttribute("href");
+  expect(summaryHref).toBeTruthy();
+  expect(pdfHref).toBeTruthy();
+  const pdfResponse = await page.request.get(pdfHref!);
+  expect(pdfResponse.status()).toBe(200);
+  expect(pdfResponse.headers()["content-type"]).toBe("application/pdf");
+  expect((await pdfResponse.body()).subarray(0, 5).toString()).toBe("%PDF-");
+  await page.goto(summaryHref!);
+  await expect(page.getByText("Bozza — controlli da completare", { exact: true })).toBeVisible();
+  await expect(page.getByText(beneficiaryName, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(assetName, { exact: true }).first()).toBeVisible();
+  const checklistRows = await page
+    .locator("section")
+    .filter({ hasText: "Documenti richiesti" })
+    .locator("tbody tr")
+    .allTextContents();
+  expect(new Set(checklistRows).size).toBe(checklistRows.length);
+  expect(pageErrors).toEqual([]);
 });
 
 test("persiste i temi chiaro e scuro e ripristina il tema di sistema", async ({ page }) => {

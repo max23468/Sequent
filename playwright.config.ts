@@ -1,6 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const e2ePort = Number(process.env.SEQUENT_E2E_PORT ?? 14173);
+const e2eDataDirectory =
+  process.env.SEQUENT_E2E_DATA_DIR ?? mkdtempSync(join(tmpdir(), "sequent-e2e-"));
+process.env.SEQUENT_E2E_DATA_DIR = e2eDataDirectory;
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -15,10 +21,11 @@ export default defineConfig({
   webServer: {
     command: `npm run build && npm run preview -- --host 127.0.0.1 --port ${e2ePort}`,
     port: e2ePort,
+    timeout: 120_000,
     // Un runtime preesistente potrebbe avere codice o dati diversi dall'HEAD sotto test.
     reuseExistingServer: false,
     env: {
-      SEQUENT_DATA_DIR: process.env.SEQUENT_E2E_DATA_DIR ?? ".test-data/e2e",
+      SEQUENT_DATA_DIR: e2eDataDirectory,
       SEQUENT_SECURE_COOKIES: "false",
       SEQUENT_DESIGN_LAB: "test",
     },

@@ -6,6 +6,8 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ### Added
 
+- pubblicazione intermedia del dominio della pratica e della dichiarazione, con campi ufficiali organizzati per Quadri, devoluzione assistita, prima catena di calcolo, ricerca di dominio e riepilogo PDF/JSON; la chiusura della conformità resta esplicitamente bloccata fino alla riconciliazione completa delle fonti;
+- pacchetto versionato delle fonti ministeriali pubbliche, comprensivo di manifest verificabile, albero XSD, fonti normative e operative, Desktop Telematico per macOS e modulo di controllo SUC13 conservato tramite Git LFS;
 - bootstrap VPS-first e layout separato;
 - gate riproducibile per il source bundle ufficiale;
 - scheletro del catalogo derivato e del DIZ Lab;

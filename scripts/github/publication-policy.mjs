@@ -46,6 +46,7 @@ const DIZ = [
   /^docs\/(?:contracts\/diz|diz-lab\/)/,
 ];
 const COMPLIANCE = [
+  /^private\/official-sources\//,
   /^src\/domain\/official-catalog\//,
   /^scripts\/official-sources\//,
   /^tests\/official-sources\//,
@@ -88,6 +89,7 @@ const KNOWN_NON_RUNTIME = [
   ...TEST_ONLY,
   /^\.github\//,
   /^scripts\/(?!vps\/)/,
+  /^private\/official-sources\//,
   /^tests\//,
   /^(?:CONTRIBUTING\.md|\.dockerignore|\.gitignore|svelte-doctor\.config\.json)$/,
 ];

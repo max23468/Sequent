@@ -22,7 +22,7 @@ export async function getCodexCapability(
         state: "api_key_disallowed",
         label: "Metodo non ammesso",
         instructions:
-          "Sequent richiede l’accesso ChatGPT incluso nella subscription e non usa API key a consumo.",
+          "Sequent usa l’accesso ChatGPT compreso nell’abbonamento; non sono previsti addebiti API separati.",
       };
     }
     if (/chatgpt|logged in/i.test(status)) {
@@ -36,16 +36,19 @@ export async function getCodexCapability(
     return {
       state: "signed_out",
       label: "Accesso richiesto",
-      instructions: "Esegui codex login --device-auth sulla VPS e completa l’accesso dal browser.",
+      instructions:
+        "Per collegare Codex, completa l’accesso ChatGPT dal browser dell’amministratore.",
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     return {
       state: message.startsWith("TOOL_UNAVAILABLE") ? "unavailable" : "signed_out",
-      label: message.startsWith("TOOL_UNAVAILABLE") ? "CLI non disponibile" : "Accesso richiesto",
+      label: message.startsWith("TOOL_UNAVAILABLE")
+        ? "Collegamento non disponibile"
+        : "Accesso richiesto",
       instructions: message.startsWith("TOOL_UNAVAILABLE")
-        ? "Il runtime non contiene la CLI Codex richiesta dall’SDK."
-        : "Esegui codex login --device-auth sulla VPS e completa l’accesso dal browser.",
+        ? "Codex non è installato nell’ambiente in cui opera Sequent."
+        : "Per collegare Codex, completa l’accesso ChatGPT dal browser dell’amministratore.",
     };
   }
 }

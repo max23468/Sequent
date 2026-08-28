@@ -3,61 +3,66 @@
   import { page } from "$app/state";
   import { tick } from "svelte";
   import {
-    ArrowLeft, Bot, Building2, Check, CheckCircle2, ChevronDown, Eye,
-    FileText, FolderOpen, History, LayoutDashboard, ListChecks, LoaderCircle,
-    MoreHorizontal, Pencil, ShieldCheck, Upload, UserRound, UsersRound, X,
+    ArrowLeft, Bot, Building2, Calculator, Check, CheckCircle2, ChevronDown, CircleAlert,
+    FileOutput, FileText, FolderOpen, History, Landmark, LayoutDashboard, ListChecks, LoaderCircle,
+    PackageCheck, Pencil, Scale, ShieldCheck, Upload, UserRound, UsersRound, X,
   } from "@lucide/svelte";
   import ProcessingErrors from "$lib/components/ProcessingErrors.svelte";
   import ActiveProcessing from "$lib/components/ActiveProcessing.svelte";
   import CodexRunHistory from "$lib/components/CodexRunHistory.svelte";
+  import DocumentSourcePanel from "$lib/components/DocumentSourcePanel.svelte";
   import DocumentList from "$lib/components/DocumentList.svelte";
+  import PracticeContextPanel from "$lib/components/PracticeContextPanel.svelte";
+  import PracticeDomainSection from "$lib/components/PracticeDomainSection.svelte";
+  import PracticeOverview from "$lib/components/PracticeOverview.svelte";
+  import QuadroFields from "$lib/components/QuadroFields.svelte";
+  import QuadroReferences from "$lib/components/QuadroReferences.svelte";
   import ReviewQueue from "$lib/components/ReviewQueue.svelte";
-  import SourceTabs from "$lib/components/SourceTabs.svelte";
   import { uploadFilesResumably } from "$lib/client/resumable-upload";
-  import { formatItalianDate, formatMegabytes } from "$lib/format";
+  import { formatItalianDate } from "$lib/format";
 
   let { data, form } = $props();
-  let selectedSection = $state(page.url.searchParams.get("sezione") ?? "documents");
+  let selectedSection = $derived(page.url.searchParams.get("sezione") ?? "documents");
+  let viewMode = $derived<"operational" | "quadri">(
+    page.url.searchParams.get("vista") === "quadri" ||
+      page.url.searchParams.get("sezione") === "quadri"
+      ? "quadri"
+      : "operational",
+  );
   let selectedFileName = $state("");
   let editedValue = $state("");
   let uploadProgress = $state<number | null>(null);
   let resumableUploadError = $state("");
 
   const sections = [
-    { id: "overview", label: "Panoramica", available: false, icon: LayoutDashboard },
+    { id: "overview", label: "Panoramica", available: true, icon: LayoutDashboard },
     { id: "documents", label: "Documenti", available: true, icon: FolderOpen },
     { id: "verifications", label: "Da verificare", available: true, icon: ListChecks },
-    { id: "declaration", label: "Defunto e dichiarazione", available: false, icon: UserRound },
-    { id: "beneficiaries", label: "Beneficiari", available: false, icon: UsersRound },
-    { id: "properties", label: "Immobili", available: false, icon: Building2 },
-    { id: "checks", label: "Controlli", available: false, icon: ShieldCheck },
-    { id: "history", label: "Cronologia", available: false, icon: History },
+    { id: "declaration", label: "Defunto e dichiarazione", available: true, icon: UserRound },
+    { id: "beneficiaries", label: "Soggetti", available: true, icon: UsersRound },
+    { id: "assets", label: "Beni e passività", available: true, icon: Building2 },
+    { id: "checklist", label: "Documenti richiesti", available: true, icon: PackageCheck },
+    { id: "devolution", label: "Devoluzione", available: true, icon: Scale },
+    { id: "calculations", label: "Calcoli", available: true, icon: Calculator },
+    { id: "checks", label: "Controlli", available: true, icon: ShieldCheck },
+    { id: "exports", label: "Riepilogo ed esportazione", available: true, icon: FileOutput },
+    { id: "history", label: "Cronologia", available: true, icon: History },
   ] as const;
   const statusLabels: Record<string, string> = {
     received: "Ricevuto", classifying: "Classificazione…", processing: "Elaborazione…",
     processed: "Elaborato", to_review: "Da verificare", unsupported: "Non elaborabile",
     unreadable: "Illeggibile", authoritative: "Fonte autorevole",
   };
+  const domainSections = new Set([
+    "declaration", "beneficiaries", "assets", "checklist", "devolution",
+    "calculations", "checks", "exports", "history",
+  ]);
 
   let selectedSourceRef = $derived(
     data.selectedReview?.sourceRefs.find(
       (source: { documentId: string }) => source.documentId === data.selectedDocument?.id,
     ),
   );
-  let selectedReviewPage = $derived(
-    selectedSourceRef?.pageNumber ?? data.selectedReview?.pageNumber ?? null,
-  );
-  let selectedSourcePage = $derived(
-    selectedReviewPage
-      ? data.selectedDocumentPages.find((candidate: { pageNumber: number }) => candidate.pageNumber === selectedReviewPage)
-      : data.selectedDocumentPages.at(0),
-  );
-
-  $effect(() => {
-    const requested = page.url.searchParams.get("sezione");
-    if (requested) selectedSection = requested;
-    else if (page.url.searchParams.has("documento")) selectedSection = "documents";
-  });
   $effect(() => {
     if (data.activeJobs.length === 0) return;
     const timer = window.setInterval(() => void invalidateAll(), 1_500);
@@ -69,15 +74,41 @@
     return typeof value === "string" ? value : JSON.stringify(value);
   }
   async function selectSection(event: MouseEvent) {
-    selectedSection = (event.currentTarget as HTMLButtonElement).dataset.section ?? "documents";
+    const section = (event.currentTarget as HTMLButtonElement).dataset.section ?? "documents";
     const search = new URLSearchParams(page.url.searchParams);
-    search.set("sezione", selectedSection);
-    if (selectedSection !== "documents") search.delete("documento");
-    if (selectedSection !== "verifications") search.delete("verifica");
+    search.set("sezione", section);
+    if (section !== "documents") search.delete("documento");
+    if (section !== "verifications") search.delete("verifica");
     await goto(`${page.url.pathname}?${search}`, { replaceState: true, noScroll: true, keepFocus: true, invalidateAll: false });
   }
+  async function selectView(mode: "operational" | "quadri") {
+    const nextSection = mode === "quadri" ? "quadri" : "overview";
+    const search = new URLSearchParams(page.url.searchParams);
+    search.set("vista", mode);
+    search.set("sezione", nextSection);
+    if (mode === "quadri" && !search.has("quadro")) search.set("quadro", "EA");
+    await goto(`${page.url.pathname}?${search}`, { replaceState: true, noScroll: true, keepFocus: true });
+  }
+  function selectOperationalView() {
+    return selectView("operational");
+  }
+  function selectQuadriView() {
+    return selectView("quadri");
+  }
+  async function selectQuadro(event: MouseEvent) {
+    const quadro = (event.currentTarget as HTMLButtonElement).dataset.quadro ?? "EA";
+    const search = new URLSearchParams(page.url.searchParams);
+    search.set("vista", "quadri");
+    search.set("sezione", "quadri");
+    search.set("quadro", quadro);
+    await goto(`${page.url.pathname}?${search}`, { replaceState: true, noScroll: true, keepFocus: true });
+  }
   async function chooseWorkspaceFile() {
-    selectedSection = "documents";
+    const search = new URLSearchParams(page.url.searchParams);
+    search.set("sezione", "documents");
+    search.set("vista", "operational");
+    search.delete("documento");
+    await goto(`${page.url.pathname}?${search}`, { replaceState: true, noScroll: true });
     await tick();
     document.querySelector<HTMLInputElement>("#workspace-file")?.click();
   }
@@ -86,6 +117,15 @@
   }
   function handleEditedValue(event: Event) {
     editedValue = (event.currentTarget as HTMLInputElement).value;
+  }
+  function formAction(name: string, section = selectedSection): string {
+    const search = new URLSearchParams(page.url.searchParams);
+    const actionKeys = Array.from(search.keys()).filter((key) => key.startsWith("/"));
+    for (const key of actionKeys) search.delete(key);
+    search.set("sezione", section);
+    search.set("vista", section === "quadri" ? "quadri" : "operational");
+    if (section === "quadri" && !search.has("quadro")) search.set("quadro", data.selectedQuadro);
+    return `?/${name}&${search.toString()}`;
   }
   async function uploadDocument(event: SubmitEvent) {
     event.preventDefault();
@@ -122,10 +162,14 @@
       <div class="practice-title-line"><h1>{data.practice.title}</h1><span>Aggiornata {formatItalianDate(data.practice.updatedAt)}</span><span class="saved-state"><CheckCircle2 size={18} />Salvato</span></div>
     </div>
     <div class="practice-heading-actions">
-      <span class="practice-revision">Revisione {data.practice.revision}</span>
+      <div class="practice-view-switch" aria-label="Organizzazione della pratica">
+        <button type="button" class:active={viewMode === "operational"} aria-pressed={viewMode === "operational"} onclick={selectOperationalView}>Vista operativa</button>
+        <button type="button" class:active={viewMode === "quadri"} aria-pressed={viewMode === "quadri"} onclick={selectQuadriView}>Vista Quadri</button>
+      </div>
+      <span class="practice-revision">Revisione {data.declaration.revision}</span>
       <details class="workspace-actions-menu">
         <summary class="button secondary">Azioni <ChevronDown size={17} /></summary>
-        <div class="workspace-actions-popover"><button type="button" onclick={chooseWorkspaceFile}><Upload size={17} />Carica documento</button><button type="button" disabled><FileText size={17} />Esporta riepilogo <small>In preparazione</small></button></div>
+        <div class="workspace-actions-popover"><button type="button" onclick={chooseWorkspaceFile}><Upload size={17} />Carica documento</button><a href={`/pratiche/${data.practice.id}/riepilogo`} target="_blank"><FileText size={17} />Apri il riepilogo</a></div>
       </details>
       <a class="button secondary" href="/" data-sveltekit-prefetch><ArrowLeft size={18} />Dashboard</a>
     </div>
@@ -133,16 +177,26 @@
 
   <div class="practice-workspace">
     <aside class="workspace-sections">
-      <div class="workspace-panel-heading"><h2>Sezioni</h2></div>
-      <nav aria-label="Sezioni pratica">
-        {#each sections as section (section.id)}
-          {@const Icon = section.icon}
-          <button type="button" class:active={selectedSection === section.id} data-section={section.id} aria-pressed={selectedSection === section.id} onclick={selectSection}>
-            <Icon size={19} /><span>{section.label}</span>
-            {#if section.id === "verifications" && data.reviewItems.length > 0}<small>{data.reviewItems.length}</small>{:else if !section.available}<small>In preparazione</small>{/if}
-          </button>
-        {/each}
-      </nav>
+      <div class="workspace-panel-heading"><h2>{viewMode === "quadri" ? "Quadri" : "Sezioni"}</h2></div>
+      {#if viewMode === "operational"}
+        <nav aria-label="Sezioni pratica">
+          {#each sections as section (section.id)}
+            {@const Icon = section.icon}
+            <button type="button" class:active={selectedSection === section.id} data-section={section.id} aria-pressed={selectedSection === section.id} onclick={selectSection}>
+              <Icon size={19} /><span>{section.label}</span>
+              {#if section.id === "verifications" && data.reviewItems.length > 0}<small>{data.reviewItems.length}</small>{/if}
+            </button>
+          {/each}
+        </nav>
+      {:else}
+        <nav aria-label="Quadri della dichiarazione" class="quadri-navigation">
+          {#each data.quadri as quadro (quadro.id)}
+            <button type="button" class:active={data.selectedQuadro === quadro.id} data-quadro={quadro.id} aria-pressed={data.selectedQuadro === quadro.id} aria-label={`${quadro.id === "Frontespizio" ? "Frontespizio" : `Quadro ${quadro.id}`}: ${quadro.mappedFieldCount} etichette verificate su ${quadro.technicalFieldCount} campi`} title={`${quadro.mappedFieldCount} etichette verificate su ${quadro.technicalFieldCount} campi`} onclick={selectQuadro}>
+              <FileText size={18} /><span>{quadro.id === "Frontespizio" ? "Frontespizio" : `Quadro ${quadro.id}`}</span><small>{quadro.mappedFieldCount}/{quadro.technicalFieldCount}</small>
+            </button>
+          {/each}
+        </nav>
+      {/if}
     </aside>
 
     <section class="workspace-main">
@@ -151,7 +205,11 @@
       {/if}
       {#if form?.retryError}<p class="workspace-form-error" role="alert">{form.retryError}</p>{/if}
       {#if form?.cancelError}<p class="workspace-form-error" role="alert">{form.cancelError}</p>{/if}
-      {#if selectedSection === "documents"}
+      {#if viewMode === "quadri"}
+        <QuadroFields {data} {form} actionUrl={formAction("saveFields", "quadri")} duplicateActionUrl={formAction("duplicateSubjectEntry", "quadri")} />
+      {:else if selectedSection === "overview"}
+        <PracticeOverview {data} />
+      {:else if selectedSection === "documents"}
         <div class="workspace-panel-heading"><h2>Documenti</h2><span>{data.documents.length}</span></div>
         <form class="inline-upload" method="POST" action="?/upload" enctype="multipart/form-data" onsubmit={uploadDocument}>
           <label for="workspace-file">Aggiungi un documento</label>
@@ -175,7 +233,7 @@
         <div class="workspace-panel-heading"><h2>Da verificare</h2><span>{data.reviewItems.length}</span></div>
         <div class="analysis-toolbar">
           <div><Bot size={20} /><span><strong>Analisi assistita</strong><small>Codex propone; la decisione resta tua.</small></span></div>
-          <form method="POST" action="?/analyze"><button class="button secondary" type="submit" disabled={data.activeJobs.some((job: { type: string }) => job.type === "codex.analyze_practice")}>
+          <form method="POST" action={formAction("analyze", "verifications")}><button class="button secondary" type="submit" disabled={data.activeJobs.some((job: { type: string }) => job.type === "codex.analyze_practice")}>
             {#if data.activeJobs.some((job: { type: string }) => job.type === "codex.analyze_practice")}<LoaderCircle class="spinning" size={17} />Analisi in corso{:else}<Bot size={17} />{data.codexRuns.length > 0 ? "Rianalizza con Codex" : "Analizza con Codex"}{/if}
           </button></form>
         </div>
@@ -198,7 +256,7 @@
                 <div><dt>Fonte</dt><dd>{data.selectedReview.documentName ?? "—"}{data.selectedReview.pageNumber ? `, pagina ${data.selectedReview.pageNumber}` : ""}</dd></div>
                 {#if selectedSourceRef?.excerpt ?? data.selectedReview.sourceExcerpt}<div><dt>Estratto</dt><dd class="source-excerpt">{selectedSourceRef?.excerpt ?? data.selectedReview.sourceExcerpt}</dd></div>{/if}
               </dl>
-              <form class="review-decision-form" method="POST" action="?/review">
+              <form class="review-decision-form" method="POST" action={formAction("review", "verifications")}>
                 <input type="hidden" name="itemId" value={data.selectedReview.id} /><label for="review-edit">Correggi prima di confermare</label><input id="review-edit" name="value" value={editedValue} oninput={handleEditedValue} placeholder={displayValue(data.selectedReview.proposedValue)} maxlength="2000" />
                 <div class="review-actions"><button class="button primary" type="submit" name="decision" value="confirmed" disabled={data.selectedReview.proposedValue === null}><Check size={17} />Conferma</button><button class="button secondary" type="submit" name="decision" value="edited" disabled={!editedValue.trim()}><Pencil size={17} />Conferma correzione</button><button class="button secondary" type="submit" name="decision" value="rejected"><X size={17} />Rifiuta</button><button class="button text" type="submit" name="decision" value="ignored">Ignora</button></div>
               </form>
@@ -206,26 +264,34 @@
             <ReviewQueue items={data.reviewItems} selectedId={data.selectedReview.id} />
           </div>
         {/if}
+      {:else if domainSections.has(selectedSection)}
+        <PracticeDomainSection
+          {data}
+          {form}
+          {selectedSection}
+          createDeclarationAction={formAction("createDeclaration", "declaration")}
+          addSubjectAction={formAction("addSubject", "beneficiaries")}
+          addAssetAction={formAction("addAsset", "assets")}
+          checklistAction={formAction("updateChecklist", "checklist")}
+          saveDevolutionAction={formAction("saveDevolution", "devolution")}
+          confirmDevolutionAction={formAction("confirmDevolution", "devolution")}
+          runCalculationAction={formAction("runCalculation", "calculations")}
+          confirmCalculationAction={formAction("confirmCalculation", "calculations")}
+        />
       {:else}
-        <div class="workspace-panel-heading"><h2>{sections.find((section) => section.id === selectedSection)?.label ?? "Sezione"}</h2><span>In preparazione</span></div>
-        <div class="review-placeholder"><div class="placeholder-kicker"><MoreHorizontal size={18} /><span>Perimetro in preparazione</span></div><section class="review-card"><div class="review-card-heading"><span>Dominio non ancora qualificato</span><small>Nessun dato disponibile</small></div><div class="review-values"><div><span>Valore attuale</span><strong>—</strong></div><div><span>Valore proposto</span><strong>—</strong></div></div><dl><div><dt>Metodo di verifica</dt><dd>Funzionalità non ancora disponibile</dd></div><div><dt>Confidenza</dt><dd>Non calcolata</dd></div></dl><div class="review-actions"><button class="button primary" type="button" disabled><Check size={17} />Conferma</button><button class="button secondary" type="button" disabled><Pencil size={17} />Modifica</button><button class="button secondary" type="button" disabled><X size={17} />Rifiuta</button></div></section><div class="future-list-heading">Contenuto futuro</div><div class="future-empty">Questa sezione sarà collegata soltanto a dati e regole ufficiali qualificati.</div></div>
+        <div class="panel-empty workspace-empty"><LayoutDashboard size={27} /><p>Sezione non disponibile.</p><span>Torna alla panoramica della pratica.</span></div>
       {/if}
+      {#if form?.domainError}<p class="workspace-form-error" role="alert">{form.domainError}</p>{/if}
     </section>
 
     <aside class="workspace-source">
-      <div class="workspace-panel-heading"><h2>Fonte</h2>{#if data.selectedReview?.pageNumber}<span>Pag. {data.selectedReview.pageNumber}</span>{/if}</div>
-      {#if data.selectedReview && data.selectedReview.sourceRefs.length > 1}
-        <SourceTabs sourceRefs={data.selectedReview.sourceRefs} documents={data.documents} selectedDocumentId={data.selectedDocument?.id ?? null} reviewId={data.selectedReview.id} />
+      {#if viewMode === "quadri"}
+        <QuadroReferences {data} />
+      {:else if selectedSection !== "documents" && selectedSection !== "verifications"}
+        <PracticeContextPanel {data} />
+      {:else}
+        <DocumentSourcePanel {data} {statusLabels} {selectedSourceRef} />
       {/if}
-      {#if data.selectedDocument}
-        <div class="source-viewer">
-          {#if data.selectedDocument.mediaType.startsWith("image/")}<img src={`/api/documents/${data.selectedDocument.id}/content`} alt={`Originale ${data.selectedDocument.originalName}`} />
-          {:else if data.selectedDocument.mediaType === "application/pdf"}<iframe src={`/api/documents/${data.selectedDocument.id}/content`} title={`Originale ${data.selectedDocument.originalName}`}></iframe>
-          {:else if selectedSourcePage}<pre>{selectedSourcePage.text || "Nessun testo estraibile."}</pre>
-          {:else}<div class="panel-empty source-preview-empty"><FileText size={27} /><p>Anteprima non disponibile.</p><span>L’originale è conservato e può essere aperto separatamente.</span></div>{/if}
-        </div>
-        <div class="source-metadata"><h3>{data.selectedDocument.originalName}</h3><dl><div><dt>Formato</dt><dd>{data.selectedDocument.detectedFormat ?? data.selectedDocument.mediaType}</dd></div><div><dt>Stato</dt><dd>{statusLabels[data.selectedDocument.status] ?? data.selectedDocument.status}</dd></div><div><dt>Dimensione</dt><dd>{formatMegabytes(data.selectedDocument.byteSize)}</dd></div><div><dt>Caricato</dt><dd>{formatItalianDate(data.selectedDocument.createdAt)}</dd></div></dl><a class="button text source-open" href={`/api/documents/${data.selectedDocument.id}/content`} target="_blank" rel="noreferrer"><Eye size={16} />Apri originale</a></div>
-      {:else}<div class="panel-empty source-empty"><FileText size={27} /><p>Nessuna fonte selezionata.</p><span>Seleziona un documento o una verifica per consultarne la fonte.</span></div>{/if}
     </aside>
   </div>
 </div>

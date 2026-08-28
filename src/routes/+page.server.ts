@@ -7,6 +7,7 @@ import { describeDocumentIngestionFailure, ingestDocument } from "$lib/server/do
 import { listPendingReviewSummaries } from "$lib/server/documents";
 import { listFailedBlobVerifications } from "$lib/server/jobs";
 import { getLauncherCapabilities } from "$lib/server/launchers";
+import { listPracticeDomainSummaries } from "$lib/server/domain";
 import { createPractice, listPractices } from "$lib/server/practices";
 
 const titleSchema = z
@@ -26,6 +27,7 @@ export const load: PageServerLoad = ({ locals }) => {
     failedVerifications: listFailedBlobVerifications(database),
     launchers: getLauncherCapabilities(),
     lastPractice: practices.at(0) ?? null,
+    domainSummaries: listPracticeDomainSummaries(database),
   };
 };
 

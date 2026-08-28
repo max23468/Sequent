@@ -17,7 +17,7 @@ Il preflight legge per default `/opt/sequent/private/preflight.env`, posseduto d
 | `/opt/sequent/repo`      | `ubuntu:ubuntu`                   |   `0750` | checkout Git                                |
 | `/opt/sequent/runtime`   | `ubuntu:ubuntu`                   |   `0750` | toolchain e runtime futuro                  |
 | `/opt/sequent/data`      | `sequent-runtime:sequent-runtime` |   `0700` | dati operativi, non scrivibili dal checkout |
-| `/opt/sequent/private`   | `ubuntu:ubuntu`                   |   `0700` | fonti ufficiali e corpus fuori da Git       |
+| `/opt/sequent/private`   | `ubuntu:ubuntu`                   |   `0700` | corpus reale, dati operativi e segreti      |
 | `/opt/sequent/releases`  | `ubuntu:ubuntu`                   |   `0750` | release approvate future                    |
 | `/opt/sequent/snapshots` | `ubuntu:ubuntu`                   |   `0700` | rollback tecnico                            |
 | `/opt/sequent/tmp`       | `ubuntu:ubuntu`                   |   `0700` | copie isolate per prove rischiose           |

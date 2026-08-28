@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="urn:www.agenziaentrate.gov.it:specificheTecniche:common:v2" targetNamespace="urn:www.agenziaentrate.gov.it:specificheTecniche:common:v2" elementFormDefault="qualified" attributeFormDefault="unqualified" version="2.0">
+	<xs:annotation>
+		<xs:documentation xml:lang="it"><![CDATA[
+		Versione 2.0 - 15/02/12
+		- modificato il tipo Intestazione_Type: introdotto il tipo complesso Dati_Intestazione_Type
+		- modificato il tipo Codice_Fornitura_Type
+		- modificato l'elemento TipoFornitore: associato il type DatoNP_Type
+		- modificato targetNamespace
+		]]></xs:documentation>
+	</xs:annotation>
+	<xs:include schemaLocation="typesDati_v2.xsd"/>
+	<xs:element name="Fornitura">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Intestazione" type="Intestazione_Type"/>
+				<xs:element ref="Documento" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="Documento" type="Documento_Type" abstract="true"/>
+	<xs:complexType name="Documento_Type">
+		<xs:annotation>
+			<xs:documentation xml:lang="it">Documento trasmesso</xs:documentation>
+		</xs:annotation>
+		<xs:attribute name="identificativo" type="Identificativo_Type" use="required"/>
+	</xs:complexType>
+	<xs:complexType name="Intestazione_Type">
+		<xs:annotation>
+			<xs:documentation xml:lang="it">Dati generali della fornitura</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent>
+			<xs:extension base="Dati_Intestazione_Type">
+				<xs:sequence>
+					<xs:element name="CodiceFornitura" type="CodiceFornitura_Type"/>
+					<xs:element name="TipoFornitore" type="DatoNP_Type"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Dati_Intestazione_Type">
+		<xs:sequence>
+			<xs:element name="CodiceFiscaleFornitore" type="DatoCF_Type"/>
+			<xs:element name="SpazioUtente" type="DatoAN_Type" minOccurs="0"/>
+			<xs:element name="SpazioServizioTelematico" type="DatoAN_Type" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="CodiceFornitura_Type">
+		<xs:restriction base="DatoAN_Type">
+			<xs:length value="5"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Identificativo_Type">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="[0-9]{4}[1-9]|[0-9]{3}[1-9][0-9]|[0-9]{2}[1-9][0-9]{2}|[0-9][1-9][0-9]{3}|[1-9][0-9]{4}
+"/>
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,7 @@ type Source = {
   pages: number | null;
   bytes: number;
   sha256: string;
+  officialSha256?: string;
 };
 
 type SourceManifest = {
@@ -80,6 +81,28 @@ function verifyPdfPages(filePath: string, expectedPages: number): void {
   }
 }
 
+function verifyHtmlSnapshot(filePath: string): void {
+  const content = readFileSync(filePath, "utf8");
+  if (!/<html\b/iu.test(content)) {
+    fail(`snapshot HTML non valido: ${path.basename(filePath)}`);
+  }
+  if (/Errore nel caricamento delle informazioni/iu.test(content)) {
+    fail(`snapshot HTML contiene una pagina di errore: ${path.basename(filePath)}`);
+  }
+}
+
+function verifyArchive(filePath: string): void {
+  run("unzip", ["-tqq", filePath]);
+}
+
+function listFiles(root: string, relativeRoot = ""): string[] {
+  const directory = path.join(root, relativeRoot);
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const relativePath = path.posix.join(relativeRoot, entry.name);
+    return entry.isDirectory() ? listFiles(root, relativePath) : [relativePath];
+  });
+}
+
 function verifyFile(
   root: string,
   relativePath: string,
@@ -110,16 +133,43 @@ export function verifyOfficialSources(officialRoot: string): void {
 
   assertCanonicalManifestParity(privateManifest, xsdManifest, manifest);
 
-  if (manifest.sources.length !== 10) fail(`fonti attese 10, trovate ${manifest.sources.length}`);
+  if (manifest.sources.length === 0) fail("manifest privo di fonti");
+  const sourceIds = new Set(manifest.sources.map((source) => source.id));
+  const sourceAliases = new Set(manifest.sources.map((source) => source.alias));
+  if (sourceIds.size !== manifest.sources.length) fail("identificativi fonte duplicati");
+  if (sourceAliases.size !== manifest.sources.length) fail("alias fonte duplicati");
   if (xsdManifest.entries.length !== xsdManifest.fileCount || xsdManifest.fileCount !== 13) {
     fail(`XSD attesi 13, trovati ${xsdManifest.entries.length}`);
+  }
+
+  const expectedFiles = new Set([
+    "manifest.json",
+    "xsd-manifest.json",
+    ...manifest.sources.map((source) => source.alias),
+    ...xsdManifest.entries.map((entry) => path.posix.join("xsd", entry.path)),
+  ]);
+  const actualFiles = listFiles(officialRoot);
+  const undeclaredFiles = actualFiles.filter((file) => !expectedFiles.has(file));
+  const missingFiles = [...expectedFiles].filter((file) => !actualFiles.includes(file));
+  if (undeclaredFiles.length > 0) {
+    fail(`file non dichiarati nel pacchetto ufficiale: ${undeclaredFiles.join(", ")}`);
+  }
+  if (missingFiles.length > 0) {
+    fail(`file dichiarati ma mancanti nel pacchetto ufficiale: ${missingFiles.join(", ")}`);
   }
 
   const sourceLines = [...manifest.sources]
     .sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0))
     .map((source) => {
       const result = verifyFile(officialRoot, source.alias, source.bytes, source.sha256);
+      if (source.officialSha256 && result.actualHash !== source.officialSha256) {
+        fail(`hash diverso dall'impronta ufficiale per ${source.alias}`);
+      }
       if (source.pages !== null) verifyPdfPages(result.filePath, source.pages);
+      if (source.alias.endsWith(".html")) verifyHtmlSnapshot(result.filePath);
+      if (source.alias.endsWith(".zip") || source.alias.endsWith(".jar")) {
+        verifyArchive(result.filePath);
+      }
       return `${source.id}:${result.actualHash}\n`;
     });
   const sourceComposite = compositeDigest(sourceLines);
@@ -162,7 +212,7 @@ export function verifyOfficialSources(officialRoot: string): void {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === scriptPath) {
   const officialRoot = path.resolve(
-    process.env.SEQUENT_OFFICIAL_SOURCES_DIR ?? path.join(repoRoot, "../private/official-sources"),
+    process.env.SEQUENT_OFFICIAL_SOURCES_DIR ?? path.join(repoRoot, "private/official-sources"),
   );
   verifyOfficialSources(officialRoot);
 }

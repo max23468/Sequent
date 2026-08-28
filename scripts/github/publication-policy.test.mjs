@@ -54,6 +54,12 @@ test("runtime, DIZ e fonti ufficiali non possono degradare a gate rapidi", () =>
     classifyChangedFiles(["src/domain/official-catalog/semantic-rules.json"]).compliance,
     true,
   );
+  const original = classifyChangedFiles([
+    "private/official-sources/modello-dichiarazione-successione-2025.pdf",
+  ]);
+  assert.equal(original.compliance, true);
+  assert.equal(original.runtime, false);
+  assert.deepEqual(original.unknown, []);
 });
 
 test("governance e test non richiedono una release runtime", () => {
@@ -193,6 +199,8 @@ test("la CI aggrega i job pertinenti senza duplicare Doctor", async () => {
   assert.equal(workflow.match(/npm run doctor/g)?.length, 1);
   assert.match(workflow, /needs\.classify\.outputs\.browser == 'true'/);
   assert.match(workflow, /needs\.classify\.outputs\.arm64 == 'true'/);
+  assert.match(workflow, /needs\.classify\.outputs\.compliance == 'true'/);
+  assert.match(workflow, /npm run verify:sources/);
 });
 
 test("la candidata rilegge lo stesso artefatto ARM64 senza deploy", async () => {

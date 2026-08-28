@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2012 (http://www.altova.com) by rdobrowolny (Sogei S.p.A.) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:cm="urn:www.agenziaentrate.gov.it:specificheTecniche:common:v2" xmlns:sc="urn:www.agenziaentrate.gov.it:specificheTecniche:sco:common:v3" targetNamespace="urn:www.agenziaentrate.gov.it:specificheTecniche:sco:common:v3" elementFormDefault="qualified" attributeFormDefault="unqualified" version="3.0">
+	<xs:annotation>
+		<xs:documentation xml:lang="it"><![CDATA[
+			Versione 3.0 - 15/02/13
+			- modificato targetNamespace
+			
+			Versione 2.0 - 15/02/12
+			- modificato targetNamespace
+		]]></xs:documentation>
+	</xs:annotation>
+	<xs:import namespace="urn:www.agenziaentrate.gov.it:specificheTecniche:common:v2" schemaLocation="typesDati_v2.xsd"/>
+	<xs:import namespace="urn:www.agenziaentrate.gov.it:specificheTecniche:common:v2" schemaLocation="fornitura_v2.xsd"/>
+	<xs:element name="EsitoFornitura">
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="sc:Esito_Fornitura_Type"/>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="Esito_Fornitura_Type">
+		<xs:sequence>
+			<xs:element name="IdentificativoFornitura" type="xs:string"/>
+			<xs:element name="EsitoXsd" type="sc:Esito_Xsd_Type"/>
+			<xs:element name="EsitoHash" type="xs:boolean" minOccurs="0"/>
+			<xs:element name="EsitoControllo" type="sc:Esito_Controllo_Type" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Diagnostico_Type" abstract="false">
+		<xs:sequence>
+			<xs:element name="ReturnCode" type="xs:int"/>
+			<xs:choice>
+				<xs:element name="Message" type="xs:string"/>
+				<xs:element name="MessageKey" type="xs:string"/>
+			</xs:choice>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Diagnostico_Controllo_Type">
+		<xs:complexContent>
+			<xs:extension base="sc:Diagnostico_Type">
+				<xs:sequence minOccurs="0">
+					<xs:element name="FieldName" type="cm:DatoAN_Type" minOccurs="0"/>
+					<xs:element name="FieldValue" type="cm:DatoNU_Type" minOccurs="0"/>
+					<xs:element name="CalcValue" type="cm:DatoNU_Type" minOccurs="0"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Controllo_Type">
+		<xs:sequence>
+			<xs:element name="DiagnosticoControllo" type="sc:Diagnostico_Controllo_Type" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Riepilogo_Type">
+		<xs:sequence>
+			<xs:element name="DocElaborati" type="xs:int"/>
+			<xs:element name="DocCorretti" type="xs:int"/>
+			<xs:element name="DocScartati" type="xs:int"/>
+			<xs:element name="DocNoRisp" type="xs:int"/>
+			<xs:element name="DocConfermati" type="xs:int"/>
+			<xs:element name="DocSegnalati" type="xs:int"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Validazione_Xsd_Type">
+		<xs:sequence>
+			<xs:element name="DiagnosticoXsd" type="sc:Diagnostico_Xsd_Type" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Esito_Doc_Xsd_Type">
+		<xs:complexContent>
+			<xs:extension base="sc:Validazione_Xsd_Type">
+				<xs:sequence>
+					<xs:element name="Identificativo" type="xs:string"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Esito_Doc_Controllo_Type">
+		<xs:complexContent>
+			<xs:extension base="sc:Controllo_Type">
+				<xs:sequence>
+					<xs:element name="Identificativo" type="cm:Identificativo_Type"/>
+					<xs:element name="Stato" type="xs:int"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Esito_Xsd_Type">
+		<xs:sequence>
+			<xs:element name="IdentificativoXsd" type="xs:string"/>
+			<xs:element name="WellFormed" type="xs:boolean"/>
+			<xs:element name="Valid" type="xs:boolean" minOccurs="0"/>
+			<xs:element name="EsitoIntestazione" type="sc:Validazione_Xsd_Type" minOccurs="0"/>
+			<xs:element name="EsitoDatiGenerali" type="sc:Validazione_Xsd_Type" minOccurs="0"/>
+			<xs:element name="EsitoDocumento" type="sc:Esito_Doc_Xsd_Type" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="Completo" type="xs:boolean"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Esito_Controllo_Type">
+		<xs:sequence>
+			<xs:element name="EsitoDocumento" type="sc:Esito_Doc_Controllo_Type" maxOccurs="unbounded"/>
+			<xs:element name="Riepilogo" type="sc:Riepilogo_Type"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Diagnostico_Xsd_Type">
+		<xs:complexContent>
+			<xs:extension base="sc:Diagnostico_Type">
+				<xs:sequence>
+					<xs:element name="Path" type="xs:string"/>
+					<xs:element name="Line" type="xs:int" minOccurs="0"/>
+					<xs:element name="Col" type="xs:int" minOccurs="0"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+</xs:schema>

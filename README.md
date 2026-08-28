@@ -2,7 +2,7 @@
 
 Sequent è un assistente operativo per dichiarazioni di successione. È un prodotto deterministico-first: rende visibili fonti e divergenze, conserva gli originali e mantiene il controllo professionale umano.
 
-Questo repository pubblico contiene esclusivamente codice, documentazione, cataloghi derivati e fixture sintetiche. Le fonti ufficiali dichiarate dal manifest, gli XSD originali, i DIZ reali e i documenti dei clienti restano fuori da Git in `/opt/sequent/private/`.
+Questo repository pubblico contiene codice, documentazione, cataloghi derivati, fixture sintetiche e le fonti ministeriali pubbliche dichiarate dal manifest. DIZ reali, documenti dei clienti, dati operativi e segreti restano fuori da Git.
 
 ## Piano e operatività
 
@@ -24,7 +24,7 @@ scripts/vps/with-node.sh npm run verify:sources
 scripts/vps/preflight.sh
 ```
 
-`verify:sources` legge per default `/opt/sequent/private/official-sources/`, controlla manifest, dimensioni, pagine, hash, sicurezza dello ZIP, XSD e compilazione offline dello schema principale.
+`verify:sources` legge per default `private/official-sources/` nel repository e controlla manifest, dimensioni, pagine, hash, sicurezza dello ZIP, XSD e compilazione offline dello schema principale.
 
 ## Sviluppo applicativo
 

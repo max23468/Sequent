@@ -155,10 +155,39 @@ jobs:
         if: always()
         run: docker rm --force sequent-pr-smoke || true
 
+  official-sources:
+    name: Fonti e catalogo ministeriale
+    if: needs.classify.outputs.compliance == 'true'
+    needs: classify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26.7.0
+          cache: npm
+      - name: Installa i lettori delle fonti ufficiali
+        run: sudo apt-get update && sudo apt-get install --yes libxml2-utils poppler-utils python3-lxml
+      - run: npm ci
+      - run: npm run verify:sources
+
   pr-gate:
     name: PR gate
     if: always()
-    needs: [classify, rapid-gates, public-gates, svelte-doctor, browser-gates, arm64-image]
+    needs:
+      [
+        classify,
+        rapid-gates,
+        public-gates,
+        svelte-doctor,
+        browser-gates,
+        arm64-image,
+        official-sources,
+      ]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -170,10 +199,12 @@ jobs:
           PUBLICATION_LEVEL: ${{ needs.classify.outputs.level }}
           REQUIRE_ARM64: ${{ needs.classify.outputs.arm64 }}
           REQUIRE_BROWSER: ${{ needs.classify.outputs.browser }}
+          REQUIRE_COMPLIANCE: ${{ needs.classify.outputs.compliance }}
           CLASSIFICATION_RESULT: ${{ needs.classify.result }}
           RAPID_RESULT: ${{ needs.rapid-gates.result }}
           PUBLIC_RESULT: ${{ needs.public-gates.result }}
           DOCTOR_RESULT: ${{ needs.svelte-doctor.result }}
           BROWSER_RESULT: ${{ needs.browser-gates.result }}
           ARM64_RESULT: ${{ needs.arm64-image.result }}
+          COMPLIANCE_RESULT: ${{ needs.official-sources.result }}
         run: node scripts/github/pr-gate.mjs

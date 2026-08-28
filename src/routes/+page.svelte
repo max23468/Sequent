@@ -62,6 +62,12 @@
     launcherDialog?.close();
   }
 
+  function domainSummary(practiceId: string) {
+    return data.domainSummaries.find(
+      (summary: (typeof data.domainSummaries)[number]) => summary.practiceId === practiceId,
+    );
+  }
+
   async function uploadFromDashboard(event: SubmitEvent) {
     event.preventDefault();
     const formElement = event.currentTarget as HTMLFormElement;
@@ -140,10 +146,21 @@
         <span class="mobile-panel-mark attention-mark" aria-hidden="true"></span>
         <h2 id="attention-title">Da verificare</h2>
       </div>
-      {#if data.failedVerifications.length === 0 && data.pendingReviews.length === 0}
+      {#if data.failedVerifications.length === 0 && data.pendingReviews.length === 0 && data.domainSummaries.length === 0}
         <div class="panel-empty"><p>Nessuna verifica da mostrare.</p><span>Le verifiche documentali compariranno qui quando saranno disponibili.</span></div>
       {:else}
         <ul class="verification-list">
+          {#each data.domainSummaries.slice(0, 5) as summary (summary.practiceId)}
+            {@const practice = data.practices.find((candidate: (typeof data.practices)[number]) => candidate.id === summary.practiceId)}
+            {#if practice}
+              <li>
+                <a href={`/pratiche/${summary.practiceId}?sezione=overview`}>
+                  <span><strong>{summary.nextStep}</strong><small>{practice.title} · {summary.label}</small></span>
+                  <ChevronRight size={19} aria-hidden="true" />
+                </a>
+              </li>
+            {/if}
+          {/each}
           {#each data.pendingReviews.slice(0, 8) as review (review.id)}
             <li>
               <a href={`/pratiche/${review.practiceId}?sezione=verifications&verifica=${review.id}`}>
@@ -179,10 +196,10 @@
         <div class="panel-empty recent-empty"><p>Non ci sono ancora pratiche.</p><span>Crea la prima pratica o carica un documento per iniziare.</span></div>
       {:else}
         <div class="responsive-table">
-          <div class="table-row table-header" aria-hidden="true"><span>Pratica</span><span>Documenti</span><span>Revisione</span><span>Aggiornato</span><span></span></div>
+          <div class="table-row table-header" aria-hidden="true"><span>Pratica</span><span>Stato</span><span>Documenti</span><span>Aggiornato</span><span></span></div>
           {#each data.practices.slice(0, 6) as practice (practice.id)}
             <a class="table-row practice-row" href={`/pratiche/${practice.id}`}>
-              <strong>{practice.title}</strong><span>{practice.documentCount}</span><span>{practice.revision}</span>
+              <strong>{practice.title}</strong><span class="status-cell"><i></i>{domainSummary(practice.id)?.label ?? "Da impostare"}</span><span>{practice.documentCount}</span>
               <time datetime={practice.updatedAt}>{formatItalianDate(practice.updatedAt)}</time><ChevronRight size={19} aria-hidden="true" />
             </a>
           {/each}

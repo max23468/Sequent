@@ -7,7 +7,7 @@ Prima di lavorare, leggi integralmente in `docs/MASTER_PLAN.md` i capitoli «Com
 Regole inderogabili:
 
 - `docs/MASTER_PLAN.md` è la fonte canonica del prodotto.
-- Le fonti ufficiali risiedono soltanto in `/opt/sequent/private/official-sources/` e non entrano in Git.
+- Le fonti ufficiali pubbliche risiedono in `private/official-sources/` e sono versionate insieme al repository; dati reali, documenti cliente e segreti restano esclusi da Git.
 - Non dedurre campi, formule, codici o controlli per analogia; una divergenza irrisolta è un blocker esplicito.
 - Il checkout `/opt/sequent/repo/`, il runtime, i dati e le copie temporanee restano separati.
 - Non eseguire la working tree sui dati operativi e non usare dati reali come fixture.
@@ -27,7 +27,7 @@ Per una modifica runtime, il ciclo `Pubblica` include la candidata completa. Se 
 
 Quando richiesti dalla policy di versione, bump e voce di changelog appartengono alla stessa pull request della modifica runtime. Non fondere consapevolmente una modifica runtime incompleta per aprire poi una pull request solo di release, salvo deroga esplicita del proprietario.
 
-Non aggiungere fonti ufficiali, dati reali, documenti cliente, segreti o artefatti privati al repository pubblico. `Pubblica` non autorizza invii telematici, uso di pratiche reali, modifiche fiscali non qualificate, attivazione iniziale del servizio o cambiamenti a Caddy, Dynu, firewall e Hub Fatture. Gli aggiornamenti automatici restano limitati alla proposta di pull request: runtime, toolchain, Codex, SQLite, OCR, Oxfmt, Oxlint, DIZ e versioni major richiedono valutazione deliberata.
+Non aggiungere dati reali, documenti cliente, segreti o artefatti privati al repository pubblico. Le sole fonti ministeriali pubbliche dichiarate dal manifest appartengono invece a `private/official-sources/`. `Pubblica` non autorizza invii telematici, uso di pratiche reali, modifiche fiscali non qualificate, attivazione iniziale del servizio o cambiamenti a Caddy, Dynu, firewall e Hub Fatture. Gli aggiornamenti automatici restano limitati alla proposta di pull request: runtime, toolchain, Codex, SQLite, OCR, Oxfmt, Oxlint, DIZ e versioni major richiedono valutazione deliberata.
 
 La pulizia finale rimuove soltanto branch e worktree temporanei creati nel ciclo corrente e già assorbiti. Se un passaggio non è applicabile, dichiaralo e prosegui con gli altri. Non dichiarare `pubblicato` finché tutti i passaggi applicabili e la rilettura finale di PR, check, candidata, eventuale deploy/release e stato Git non sono completi.
 

@@ -18,6 +18,8 @@ const implementationFiles = execFileSync(
     "ls-files",
     "-z",
     "--cached",
+    "--others",
+    "--exclude-standard",
     "--",
     "*.js",
     "*.json",
@@ -36,6 +38,9 @@ const implementationFiles = execFileSync(
   .sort();
 
 const satelliteExceptions = new Set(["CHANGELOG.md", "docs/MASTER_PLAN.md"]);
+const generatedImplementationExceptions = new Set([
+  "src/domain/official-catalog/technical-schema.json",
+]);
 const milestoneIdentifierPattern = /(?<!AR)M\d+|(?:^|[^a-z])m\d+/u;
 const sourceManifest = JSON.parse(
   readFileSync("src/domain/official-catalog/source-manifest.json", "utf8"),
@@ -78,7 +83,10 @@ for (const file of markdownFiles) {
 
 for (const file of implementationFiles) {
   const content = readFileSync(file, "utf8");
-  if (milestoneIdentifierPattern.test(file) || milestoneIdentifierPattern.test(content)) {
+  if (
+    milestoneIdentifierPattern.test(file) ||
+    (!generatedImplementationExceptions.has(file) && milestoneIdentifierPattern.test(content))
+  ) {
     violations.push(`${file}: usa un ID milestone nel codice permanente`);
   }
 }
