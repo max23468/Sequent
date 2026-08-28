@@ -17,6 +17,9 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /actions\/download-artifact@[0-9a-f]{40} # v8\.0\.1/);
   assert.match(workflow, /run-id: \$\{\{ inputs\.release_run \}\}/);
   assert.match(workflow, /release-artifact\.mjs verify/);
+  assert.match(workflow, /candidate_tree=.*git rev-parse.*CANDIDATE_COMMIT.*\^\{tree\}/);
+  assert.match(workflow, /--commit "\$CANDIDATE_COMMIT"/);
+  assert.match(workflow, /--tree "\$candidate_tree"/);
   assert.match(workflow, /archive_sha256=.*sha256sum/);
   assert.match(workflow, /manifest_sha256=.*sha256sum/);
   assert.match(workflow, /--archive-sha256 '\$archive_sha256'/);

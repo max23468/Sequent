@@ -165,10 +165,15 @@ jobs:
         with:
           name: sequent-release-${{ inputs.commit }}
       - name: Verifica manifest, digest, commit, tree e immagine
+        env:
+          CANDIDATE_COMMIT: ${{ inputs.commit }}
         run: |
+          candidate_tree="$(git rev-parse "${CANDIDATE_COMMIT}^{tree}")"
           node scripts/github/release-artifact.mjs verify \
             --archive sequent-release-arm64.tar \
-            --manifest release-manifest.json
+            --manifest release-manifest.json \
+            --commit "$CANDIDATE_COMMIT" \
+            --tree "$candidate_tree"
 
   scan-image:
     name: Scansione immagine ARM64 release
