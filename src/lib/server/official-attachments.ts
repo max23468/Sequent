@@ -238,29 +238,33 @@ async function prepareImage(
 ): Promise<PreparedFile[]> {
   const stem = basename(originalName, extname(originalName)).replaceAll(/[^A-Za-z0-9._-]+/gu, "-");
   const pattern = join(directory, `${stem || "allegato"}-%03d.tiff`);
-  await runner(
-    "magick",
-    [
-      inputPath,
-      "-alpha",
-      "off",
-      "-colorspace",
-      "Gray",
-      "-threshold",
-      "50%",
-      "-units",
-      "PixelsPerInch",
-      "-density",
-      "300",
-      "-depth",
-      "1",
-      "-compress",
-      "Group4",
-      "+adjoin",
-      pattern,
-    ],
-    { timeoutMs: 5 * 60_000, maxOutputBytes: 2 * 1024 * 1024 },
-  );
+  const args = [
+    inputPath,
+    "-alpha",
+    "off",
+    "-colorspace",
+    "Gray",
+    "-threshold",
+    "50%",
+    "-units",
+    "PixelsPerInch",
+    "-density",
+    "300",
+    "-depth",
+    "1",
+    "-compress",
+    "Group4",
+    "+adjoin",
+    pattern,
+  ];
+  const options = { timeoutMs: 5 * 60_000, maxOutputBytes: 2 * 1024 * 1024 };
+  try {
+    await runner("magick", args, options);
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.startsWith("TOOL_UNAVAILABLE:magick:"))
+      throw error;
+    await runner("convert", args, options);
+  }
   const files: PreparedFile[] = [];
   for (let index = 0; ; index += 1) {
     const path = pattern.replace("%03d", String(index).padStart(3, "0"));

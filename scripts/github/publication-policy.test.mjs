@@ -202,6 +202,7 @@ test("la CI aggrega i job pertinenti senza duplicare Doctor", async () => {
   assert.match(workflow, /name: PR gate/);
   assert.match(workflow, /if: always\(\)/);
   assert.match(workflow, /npm run verify:application/);
+  assert.match(workflow, /ghostscript icc-profiles-free imagemagick poppler-utils qpdf/);
   assert.equal(workflow.match(/npm run doctor/g)?.length, 1);
   assert.match(workflow, /needs\.classify\.outputs\.browser == 'true'/);
   assert.match(workflow, /needs\.classify\.outputs\.arm64 == 'true'/);
