@@ -1,6 +1,6 @@
-import { getQualifiedSuccessioniOnLineUrl } from "./config.ts";
+import { getQualifiedSuccessioniOnLineUrl, isDizEnabled } from "./config.ts";
 
-type LauncherState = "available" | "unsupported" | "unknown";
+type LauncherState = "available" | "unsupported" | "unknown" | "disabled";
 
 export interface LauncherCapability {
   id: "desktopTelematico" | "successioniOnLine";
@@ -11,6 +11,7 @@ export interface LauncherCapability {
 }
 
 export function getLauncherCapabilities(): LauncherCapability[] {
+  const dizEnabled = isDizEnabled();
   const successioniUrl = getQualifiedSuccessioniOnLineUrl();
   return [
     {
@@ -24,10 +25,11 @@ export function getLauncherCapabilities(): LauncherCapability[] {
     {
       id: "successioniOnLine",
       label: "SuccessioniOnLine",
-      state: successioniUrl ? "available" : "unknown",
+      state: !dizEnabled ? "disabled" : successioniUrl ? "available" : "unknown",
       url: successioniUrl,
-      instructions:
-        "Apri il collegamento con OpenWebStart. L’avvio diretto resta disabilitato finché il collegamento non è stato verificato.",
+      instructions: dizEnabled
+        ? "Apri il collegamento con OpenWebStart. L’avvio diretto resta disabilitato finché il collegamento non è stato verificato."
+        : "L’interoperabilità DIZ è disattivata in questo ambiente.",
     },
   ];
 }

@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 CREATE TABLE IF NOT EXISTS owner (
   id TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  username_normalized TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   created_at TEXT NOT NULL,
   password_changed_at TEXT NOT NULL
@@ -646,6 +648,28 @@ function applyCalculationRulesMigration(
   })();
 }
 
+function applyOwnerUsernameMigration(database: Database.Database): void {
+  database.transaction(() => {
+    addColumnIfMissing(database, "owner", "username", "TEXT NOT NULL DEFAULT 'Proprietario'");
+    addColumnIfMissing(
+      database,
+      "owner",
+      "username_normalized",
+      "TEXT NOT NULL DEFAULT 'proprietario'",
+    );
+    database.exec(`
+      UPDATE owner
+      SET username = 'Proprietario', username_normalized = 'proprietario'
+      WHERE username IS NULL OR username_normalized IS NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS owner_username_normalized
+      ON owner(username_normalized);
+    `);
+    database
+      .prepare("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (17, ?)")
+      .run(new Date().toISOString());
+  })();
+}
+
 function applyMigrations(database: Database.Database): void {
   database.exec(foundationMigration);
   database
@@ -668,6 +692,7 @@ function applyMigrations(database: Database.Database): void {
   applyCalculationRulesMigration(database, 14, "2026.08.10");
   applyCalculationRulesMigration(database, 15, "2026.08.11");
   applyCalculationRulesMigration(database, 16, "2026.08.12");
+  applyOwnerUsernameMigration(database);
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

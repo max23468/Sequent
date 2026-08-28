@@ -4,6 +4,7 @@ import { openDatabase } from "$lib/server/database";
 import { blocksMutationDuringDeployment } from "$lib/server/deployment-maintenance";
 import {
   ensureDevelopmentOwner,
+  getOwnerUsername,
   issueSession,
   readSession,
   SESSION_COOKIE,
@@ -12,6 +13,7 @@ import {
 import { cleanupStaleUploads } from "$lib/server/blob-store";
 import {
   getDevelopmentPassword,
+  getDevelopmentUsername,
   getDataDirectory,
   useDevelopmentAutoLogin,
   useSecureCookies,
@@ -55,7 +57,11 @@ export const handle: Handle = async ({ event, resolve }) => {
     });
   }
   if (!session && useDevelopmentAutoLogin(dev, event.getClientAddress())) {
-    const ownerId = await ensureDevelopmentOwner(database, getDevelopmentPassword());
+    const ownerId = await ensureDevelopmentOwner(
+      database,
+      getDevelopmentUsername(),
+      getDevelopmentPassword(),
+    );
     const issued = issueSession(database, ownerId);
     event.cookies.set(SESSION_COOKIE, issued.token, {
       path: "/",
@@ -64,11 +70,19 @@ export const handle: Handle = async ({ event, resolve }) => {
       secure: useSecureCookies(),
       maxAge: SESSION_COOKIE_MAX_AGE,
     });
-    session = { id: issued.id, ownerId, renewed: false };
+    session = {
+      id: issued.id,
+      ownerId,
+      username: getOwnerUsername(database, ownerId),
+      renewed: false,
+    };
   }
   event.locals.ownerId = session?.ownerId ?? null;
   event.locals.sessionId = session?.id ?? null;
-  return resolve(event, {
+  event.locals.username = session?.username ?? null;
+  const response = await resolve(event, {
     filterSerializedResponseHeaders: (name) => name === "content-type",
   });
+  response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+  return response;
 };

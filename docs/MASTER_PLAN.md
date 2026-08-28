@@ -2173,13 +2173,15 @@ Niente e-mail o notifiche push/browser per le pratiche.
 ## 34.1 Account proprietario
 
 - un solo account;
+- username univoco nell’istanza, conservato nella forma visualizzata e confrontato senza distinzione tra maiuscole e minuscole;
 - nessuna registrazione pubblica, invito o ruolo;
 - creazione al primo avvio;
 - reset d'emergenza tramite comando sulla VPS.
 
 ## 34.2 Metodi di accesso
 
-- password robusta come metodo universale;
+- username e password come metodo universale;
+- password da 8 a 128 caratteri, senza requisiti di composizione;
 - passkey facoltativa per comodità;
 - nessun magic link, TOTP, recovery code o dipendenza dall'e-mail.
 
@@ -2221,7 +2223,7 @@ Il cambio di hostname/RP ID può rendere non valide le passkey esistenti. La pas
 
 ## 34.8 Onboarding
 
-1. creazione account;
+1. scelta del nome utente;
 2. scelta password;
 3. passkey facoltativa;
 4. verifica Codex e strumenti documentali;
@@ -3703,7 +3705,7 @@ Dopo il completamento dello sviluppo, se un ambiente Windows è già disponibile
 
 | ID      | Requisito                                                                                                                            |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| SEQ-S01 | Account proprietario con password e passkey facoltativa                                                                              |
+| SEQ-S01 | Account proprietario con username non sensibile alle maiuscole, password e passkey facoltativa                                       |
 | SEQ-S02 | HTTPS, cookie sicuri, rate limiting, CSRF e segreti fuori da Git                                                                     |
 | SEQ-S03 | Separazione forte da Hub Fatture                                                                                                     |
 | SEQ-S04 | Backup manuale, tre snapshot tecnici e restore CLI                                                                                   |
@@ -3749,7 +3751,7 @@ La chiusura richiede una prova e, se la scelta è difficile da invertire, un ADR
 | Codex avviato su ogni upload                             | Codex su comando                                                                                                                                                                          |
 | rete Codex sempre disponibile                            | analisi pratica senza rete; ricerca normativa esplicita online                                                                                                                            |
 | Prettier/ESLint                                          | Oxfmt/Oxlint diretti                                                                                                                                                                      |
-| magic link, TOTP, recovery code e Turnstile              | password + passkey facoltativa + reset VPS                                                                                                                                                |
+| magic link, TOTP, recovery code e Turnstile              | username + password, passkey facoltativa e reset VPS                                                                                                                                      |
 | cifratura applicativa dati/cache                         | hardening infrastrutturale e protezione OS/browser                                                                                                                                        |
 | backup automatico/cifrato                                | backup manuale non cifrato                                                                                                                                                                |
 | restore completo dall'interfaccia                        | restore CLI da runbook                                                                                                                                                                    |

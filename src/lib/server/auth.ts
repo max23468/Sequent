@@ -6,6 +6,23 @@ import { SESSION_COOKIE } from "./config.ts";
 const SESSION_DAYS = 365;
 const SESSION_TOUCH_INTERVAL_MS = 24 * 60 * 60 * 1_000;
 const developmentOwnerPromises = new WeakMap<Database.Database, Promise<string>>();
+export const MIN_PASSWORD_LENGTH = 8;
+
+export function normalizeUsername(username: string): string {
+  return username.trim().normalize("NFKC").toLocaleLowerCase("it-IT");
+}
+
+function displayUsername(username: string): string {
+  return username.trim().normalize("NFKC");
+}
+
+function assertCredentialPolicy(username: string, password: string): void {
+  const storedUsername = displayUsername(username);
+  if (storedUsername.length === 0 || storedUsername.length > 64)
+    throw new Error("USERNAME_INVALID");
+  if (password.length < MIN_PASSWORD_LENGTH || password.length > 128)
+    throw new Error("PASSWORD_INVALID");
+}
 
 function tokenHash(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -54,17 +71,34 @@ function getOwnerId(database: Database.Database): string | null {
   return owner?.id ?? null;
 }
 
-export async function createOwner(database: Database.Database, password: string): Promise<string> {
+export function getOwnerUsername(database: Database.Database, ownerId: string): string {
+  const owner = database.prepare("SELECT username FROM owner WHERE id = ?").get(ownerId) as
+    | { username: string }
+    | undefined;
+  if (!owner) throw new Error("OWNER_NOT_FOUND");
+  return owner.username;
+}
+
+export async function createOwner(
+  database: Database.Database,
+  username: string,
+  password: string,
+): Promise<string> {
+  assertCredentialPolicy(username, password);
   const ownerId = randomUUID();
   const now = new Date().toISOString();
   const passwordHash = await hash(password, { type: 2 });
+  const storedUsername = displayUsername(username);
+  const normalizedUsername = normalizeUsername(username);
   const create = database.transaction(() => {
     if (hasOwner(database)) throw new Error("OWNER_EXISTS");
     database
       .prepare(
-        "INSERT INTO owner(id, password_hash, created_at, password_changed_at) VALUES (?, ?, ?, ?)",
+        `INSERT INTO owner(
+           id, username, username_normalized, password_hash, created_at, password_changed_at
+         ) VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .run(ownerId, passwordHash, now, now);
+      .run(ownerId, storedUsername, normalizedUsername, passwordHash, now, now);
   });
   create.immediate();
   return ownerId;
@@ -72,6 +106,7 @@ export async function createOwner(database: Database.Database, password: string)
 
 export async function ensureDevelopmentOwner(
   database: Database.Database,
+  username: string,
   password: string,
 ): Promise<string> {
   const existingOwnerId = getOwnerId(database);
@@ -80,7 +115,7 @@ export async function ensureDevelopmentOwner(
   const pending = developmentOwnerPromises.get(database);
   if (pending) return pending;
 
-  const creation = createOwner(database, password).catch((error) => {
+  const creation = createOwner(database, username, password).catch((error) => {
     if (error instanceof Error && error.message === "OWNER_EXISTS") {
       const concurrentOwnerId = getOwnerId(database);
       if (concurrentOwnerId) return concurrentOwnerId;
@@ -97,19 +132,32 @@ export async function ensureDevelopmentOwner(
 
 export async function createOwnerSession(
   database: Database.Database,
+  username: string,
   password: string,
 ): Promise<{ ownerId: string; id: string; token: string }> {
+  assertCredentialPolicy(username, password);
   const ownerId = randomUUID();
   const now = new Date();
   const passwordHash = await hash(password, { type: 2 });
+  const storedUsername = displayUsername(username);
+  const normalizedUsername = normalizeUsername(username);
   const session = prepareSession(ownerId, now);
   const create = database.transaction(() => {
     if (hasOwner(database)) throw new Error("OWNER_EXISTS");
     database
       .prepare(
-        "INSERT INTO owner(id, password_hash, created_at, password_changed_at) VALUES (?, ?, ?, ?)",
+        `INSERT INTO owner(
+           id, username, username_normalized, password_hash, created_at, password_changed_at
+         ) VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .run(ownerId, passwordHash, now.toISOString(), now.toISOString());
+      .run(
+        ownerId,
+        storedUsername,
+        normalizedUsername,
+        passwordHash,
+        now.toISOString(),
+        now.toISOString(),
+      );
     insertSession(database, session);
   });
   create.immediate();
@@ -118,6 +166,7 @@ export async function createOwnerSession(
 
 export async function authenticate(
   database: Database.Database,
+  username: string,
   password: string,
   clientKey: string,
   now = new Date(),
@@ -127,9 +176,9 @@ export async function authenticate(
     .prepare("SELECT failed_count, blocked_until FROM login_attempts WHERE client_key = ?")
     .get(storedClientKey) as { failed_count: number; blocked_until: string | null } | undefined;
   if (attempt?.blocked_until && new Date(attempt.blocked_until) > now) return null;
-  const owner = database.prepare("SELECT id, password_hash FROM owner LIMIT 1").get() as
-    | { id: string; password_hash: string }
-    | undefined;
+  const owner = database
+    .prepare("SELECT id, password_hash FROM owner WHERE username_normalized = ?")
+    .get(normalizeUsername(username)) as { id: string; password_hash: string } | undefined;
   if (!owner || !(await verify(owner.password_hash, password))) {
     recordFailedAttempt(database, storedClientKey, now);
     return null;
@@ -190,15 +239,18 @@ export function readSession(
   database: Database.Database,
   token: string | undefined,
   now = new Date(),
-): { id: string; ownerId: string; renewed: boolean } | null {
+): { id: string; ownerId: string; username: string; renewed: boolean } | null {
   if (!token) return null;
   const nowIso = now.toISOString();
   const session = database
     .prepare(
-      "SELECT id, owner_id, last_seen_at FROM sessions WHERE token_hash = ? AND expires_at > ?",
+      `SELECT sessions.id, sessions.owner_id, sessions.last_seen_at, owner.username
+       FROM sessions
+       JOIN owner ON owner.id = sessions.owner_id
+       WHERE sessions.token_hash = ? AND sessions.expires_at > ?`,
     )
     .get(tokenHash(token), nowIso) as
-    | { id: string; owner_id: string; last_seen_at: string }
+    | { id: string; owner_id: string; username: string; last_seen_at: string }
     | undefined;
   if (!session) return null;
   const renewed =
@@ -209,7 +261,44 @@ export function readSession(
       .prepare("UPDATE sessions SET last_seen_at = ?, expires_at = ? WHERE id = ?")
       .run(nowIso, expiresAt, session.id);
   }
-  return { id: session.id, ownerId: session.owner_id, renewed };
+  return { id: session.id, ownerId: session.owner_id, username: session.username, renewed };
+}
+
+export async function resetOwnerCredentials(
+  database: Database.Database,
+  username: string,
+  password: string,
+): Promise<string> {
+  assertCredentialPolicy(username, password);
+  const now = new Date().toISOString();
+  const passwordHash = await hash(password, { type: 2 });
+  const storedUsername = displayUsername(username);
+  const normalizedUsername = normalizeUsername(username);
+  const existingOwnerId = getOwnerId(database);
+  const ownerId = existingOwnerId ?? randomUUID();
+  const reset = database.transaction(() => {
+    if (existingOwnerId) {
+      database
+        .prepare(
+          `UPDATE owner
+           SET username = ?, username_normalized = ?, password_hash = ?, password_changed_at = ?
+           WHERE id = ?`,
+        )
+        .run(storedUsername, normalizedUsername, passwordHash, now, ownerId);
+    } else {
+      database
+        .prepare(
+          `INSERT INTO owner(
+             id, username, username_normalized, password_hash, created_at, password_changed_at
+           ) VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run(ownerId, storedUsername, normalizedUsername, passwordHash, now, now);
+    }
+    database.prepare("DELETE FROM sessions").run();
+    database.prepare("DELETE FROM login_attempts").run();
+  });
+  reset.immediate();
+  return ownerId;
 }
 
 export function revokeSession(database: Database.Database, sessionId: string): void {
