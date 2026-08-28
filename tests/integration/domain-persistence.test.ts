@@ -520,8 +520,8 @@ describe("persistenza del procedimento", () => {
     const report = buildComplianceReport(database, practice.id, practice.declarationId);
     expect(new Set(report.issues.map((issue) => issue.message)).size).toBe(report.issues.length);
     expect(report.qualification).toMatchObject({
-      calculationRulesVersion: "2026.08.5",
-      temporalRulesVersion: "2026.08.5",
+      calculationRulesVersion: "2026.08.6",
+      temporalRulesVersion: "2026.08.6",
       officialControl: { name: "SUC13", version: "2.3.1", blockingDiagnostics: 0 },
       attachments: { files: 0, totalBytes: 0, motivatedExceptions: 0 },
     });

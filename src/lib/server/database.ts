@@ -633,6 +633,33 @@ function applyCalculationRulesV3Migration(database: Database.Database): void {
   })();
 }
 
+function applyCalculationRulesV4Migration(database: Database.Database): void {
+  database.transaction(() => {
+    const alreadyApplied = database
+      .prepare("SELECT 1 FROM schema_migrations WHERE version = 10")
+      .get();
+    if (alreadyApplied) return;
+
+    // Le quote immobiliari con agevolazione G sono ora separate dalle quote proporzionali.
+    // I risultati derivati precedenti devono essere ricalcolati con questa regola.
+    database.exec("DELETE FROM calculation_runs");
+    const declarations = database
+      .prepare("SELECT id, declaration_json FROM declarations")
+      .all() as Array<{ id: string; declaration_json: string }>;
+    const updateDeclaration = database.prepare(
+      "UPDATE declarations SET declaration_json = ?, updated_at = ? WHERE id = ?",
+    );
+    const now = new Date().toISOString();
+    for (const declaration of declarations) {
+      const snapshot = JSON.parse(declaration.declaration_json) as Record<string, unknown>;
+      snapshot.latestCalculationRunId = null;
+      snapshot.rulesetVersion = "2026.08.6";
+      updateDeclaration.run(JSON.stringify(snapshot), now, declaration.id);
+    }
+    database.prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (10, ?)").run(now);
+  })();
+}
+
 function applyMigrations(database: Database.Database): void {
   database.exec(foundationMigration);
   database
@@ -648,6 +675,7 @@ function applyMigrations(database: Database.Database): void {
   applyOfficialAttachmentsMigration(database);
   applyCalculationResultsV2Migration(database);
   applyCalculationRulesV3Migration(database);
+  applyCalculationRulesV4Migration(database);
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

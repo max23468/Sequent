@@ -447,6 +447,39 @@ describe("motori deterministici", () => {
     expect(summary.cadastralTax).toMatchObject({ taxableCents: 0n, dueCents: 60_000n });
   });
 
+  it("mantiene proporzionale la quota dello stesso immobile non coperta dall’agevolazione G", () => {
+    const allocation = (beneficiaryId: string, reliefCode: string): SuccessionAllocation => ({
+      assetId: "immobile-misto-g",
+      beneficiaryId,
+      treatment: "estate",
+      valueCents: 10_000_000n,
+      assetValueCents: 20_000_000n,
+      assetKind: "building",
+      reliefCode,
+    });
+    const summary = calculateDeclarationTaxSummary(
+      [allocation("beneficiario-agevolato", "G"), allocation("beneficiario-ordinario", "")],
+      0n,
+      {
+        openingDate: "2025-10-22",
+        mortgageJurisdictionCount: 0,
+        stampDutyJurisdictionCount: 0,
+        automaticLandRegistry: true,
+        copyRequested: false,
+        paymentTiming: 1,
+      },
+    );
+
+    expect(summary.mortgageTax).toMatchObject({
+      taxableCents: 10_000_000n,
+      dueCents: 200_000n,
+    });
+    expect(summary.cadastralTax).toMatchObject({
+      taxableCents: 10_000_000n,
+      dueCents: 100_000n,
+    });
+  });
+
   it("limita le imposte al valore dei soli terreni non edificabili sotto soglia", () => {
     const summary = calculateDeclarationTaxSummary(
       [

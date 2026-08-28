@@ -4,7 +4,7 @@ import {
   usufructCoefficientForAge,
 } from "./temporal-rules.ts";
 
-export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.5" as const;
+export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.6" as const;
 
 export interface BeneficiaryTaxInput {
   beneficiaryId: string;
@@ -492,22 +492,41 @@ export function calculateDeclarationTaxSummary(
   const totalAssetsCents =
     propertyCents + companiesCents + securitiesCents + aircraftAndVesselsCents + otherAssetsCents;
   const propertyGroups = assetGroups.filter((group) => PROPERTY_KINDS.has(groupKind(group)));
-  const groupReliefs = (group: (typeof assetGroups)[number]) =>
-    new Set(group.allocations.map((allocation) => allocation.reliefCode?.toUpperCase() ?? ""));
   const hasTrustBeneficiary = (group: (typeof assetGroups)[number]) =>
     group.allocations.some((allocation) => allocation.subjectType === "5");
   const habitationRight = (group: (typeof assetGroups)[number]) =>
     group.allocations.find((allocation) => allocation.habitationRightCode)?.habitationRightCode ??
     "";
-  const taxablePropertyCents = propertyGroups.reduce((sum, group) => {
-    const reliefs = groupReliefs(group);
-    const onlyProportional = [...reliefs].every((code) => PROPORTIONAL_PROPERTY_RELIEFS.has(code));
+  const proportionalValueCents = (group: (typeof assetGroups)[number]) => {
     const firstHomeHabitation = FIRST_HOME_HABITATION_RIGHTS.has(habitationRight(group));
-    return onlyProportional && !firstHomeHabitation && !hasTrustBeneficiary(group)
-      ? sum + group.valueCents
-      : sum;
-  }, 0n);
-  const fixedG = propertyGroups.some((group) => hasRelief(group, "G")) ? 20_000 : 0;
+    if (firstHomeHabitation || hasTrustBeneficiary(group)) return 0n;
+    const allocatedTotal = group.allocations.reduce(
+      (sum, allocation) => sum + allocation.valueCents,
+      0n,
+    );
+    if (allocatedTotal <= 0n) return 0n;
+    const proportionalAllocated = group.allocations.reduce(
+      (sum, allocation) =>
+        PROPORTIONAL_PROPERTY_RELIEFS.has(allocation.reliefCode?.toUpperCase() ?? "")
+          ? sum + allocation.valueCents
+          : sum,
+      0n,
+    );
+    return divideRoundedHalfUp(group.valueCents * proportionalAllocated, allocatedTotal);
+  };
+  const taxablePropertyCents = propertyGroups.reduce(
+    (sum, group) => sum + proportionalValueCents(group),
+    0n,
+  );
+  const proportionalGPropertyCents = propertyGroups.reduce(
+    (sum, group) => (hasRelief(group, "G") ? sum + proportionalValueCents(group) : sum),
+    0n,
+  );
+  const fixedG =
+    propertyGroups.some((group) => hasRelief(group, "G")) &&
+    roundToWholeEuro((proportionalGPropertyCents * 2n) / 100n) < 20_000n
+      ? 20_000
+      : 0;
   const fixedM = propertyGroups.some((group) => hasRelief(group, "M")) ? 20_000 : 0;
   const fixedTrust = propertyGroups.some(hasTrustBeneficiary) ? 20_000 : 0;
   const eligibleFirstHomeAllocations = (group: (typeof assetGroups)[number]) =>
