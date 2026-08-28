@@ -608,7 +608,7 @@ function applyCalculationResultsV2Migration(database: Database.Database): void {
 
 function applyCalculationRulesMigration(
   database: Database.Database,
-  version: 9 | 10 | 11 | 12 | 13 | 14 | 15,
+  version: 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16,
   rulesetVersion:
     | "2026.08.5"
     | "2026.08.6"
@@ -616,7 +616,8 @@ function applyCalculationRulesMigration(
     | "2026.08.8"
     | "2026.08.9"
     | "2026.08.10"
-    | "2026.08.11",
+    | "2026.08.11"
+    | "2026.08.12",
 ): void {
   database.transaction(() => {
     const alreadyApplied = database
@@ -666,6 +667,7 @@ function applyMigrations(database: Database.Database): void {
   applyCalculationRulesMigration(database, 13, "2026.08.9");
   applyCalculationRulesMigration(database, 14, "2026.08.10");
   applyCalculationRulesMigration(database, 15, "2026.08.11");
+  applyCalculationRulesMigration(database, 16, "2026.08.12");
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

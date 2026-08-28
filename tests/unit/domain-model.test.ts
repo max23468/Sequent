@@ -566,6 +566,121 @@ describe("motori deterministici", () => {
     });
   });
 
+  it("estende l’agevolazione M a tutte le quote dello stesso immobile", () => {
+    const allocation = (beneficiaryId: string, reliefCode: string): SuccessionAllocation => ({
+      assetId: "immobile-misto-m",
+      beneficiaryId,
+      treatment: "estate",
+      valueCents: 10_000_000n,
+      assetValueCents: 20_000_000n,
+      assetKind: "building",
+      reliefCode,
+    });
+    const summary = calculateDeclarationTaxSummary(
+      [allocation("beneficiario-agevolato", "M"), allocation("beneficiario-ordinario", "")],
+      0n,
+      {
+        openingDate: "2025-10-22",
+        mortgageJurisdictionCount: 0,
+        stampDutyJurisdictionCount: 0,
+        automaticLandRegistry: true,
+        copyRequested: false,
+        paymentTiming: 1,
+      },
+    );
+
+    expect(summary.mortgageTax).toMatchObject({ taxableCents: 0n, dueCents: 20_000n });
+    expect(summary.cadastralTax).toMatchObject({ taxableCents: 0n, dueCents: 0n });
+  });
+
+  it("applica il regime agevolato del trust soltanto dal 2017", () => {
+    const allocation: SuccessionAllocation = {
+      assetId: "immobile-trust",
+      beneficiaryId: "trust",
+      treatment: "estate",
+      valueCents: 1_000_000n,
+      assetValueCents: 1_000_000n,
+      assetKind: "building",
+      subjectType: "5",
+    };
+    const options = {
+      mortgageJurisdictionCount: 0,
+      stampDutyJurisdictionCount: 0,
+      automaticLandRegistry: true,
+      copyRequested: false,
+      paymentTiming: 1 as const,
+    };
+
+    const before2017 = calculateDeclarationTaxSummary([allocation], 0n, {
+      ...options,
+      openingDate: "2016-12-31",
+    });
+    const from2017 = calculateDeclarationTaxSummary([allocation], 0n, {
+      ...options,
+      openingDate: "2017-01-01",
+    });
+
+    expect(before2017.mortgageTax).toMatchObject({ taxableCents: 1_000_000n, dueCents: 20_000n });
+    expect(before2017.cadastralTax).toMatchObject({ taxableCents: 1_000_000n, dueCents: 20_000n });
+    expect(from2017.mortgageTax).toMatchObject({ taxableCents: 0n, dueCents: 20_000n });
+    expect(from2017.cadastralTax).toMatchObject({ taxableCents: 0n, dueCents: 20_000n });
+  });
+
+  it.each(["G", "M"])("usa l’imposta fissa storica per l’agevolazione %s", (reliefCode) => {
+    const summary = calculateDeclarationTaxSummary(
+      [
+        {
+          assetId: `immobile-storico-${reliefCode}`,
+          beneficiaryId: "beneficiario",
+          treatment: "estate",
+          valueCents: 1_000_000n,
+          assetValueCents: 1_000_000n,
+          assetKind: "building",
+          reliefCode,
+        },
+      ],
+      0n,
+      {
+        openingDate: "2013-12-31",
+        mortgageJurisdictionCount: 0,
+        stampDutyJurisdictionCount: 0,
+        automaticLandRegistry: true,
+        copyRequested: false,
+        paymentTiming: 1,
+      },
+    );
+
+    expect(summary.mortgageTax.dueCents).toBe(16_800n);
+  });
+
+  it("usa il minimo e la prima casa storici prima del 2014", () => {
+    const ordinary: SuccessionAllocation = {
+      assetId: "immobile-storico-ordinario",
+      beneficiaryId: "beneficiario",
+      treatment: "estate",
+      valueCents: 500_000n,
+      assetValueCents: 500_000n,
+      assetKind: "building",
+    };
+    const firstHome = { ...ordinary, assetId: "prima-casa-storica", reliefCode: "P" };
+    const options = {
+      openingDate: "2013-12-31",
+      mortgageJurisdictionCount: 0,
+      stampDutyJurisdictionCount: 0,
+      automaticLandRegistry: true,
+      copyRequested: false,
+      paymentTiming: 1 as const,
+    };
+
+    const ordinarySummary = calculateDeclarationTaxSummary([ordinary], 0n, options);
+    const firstHomeSummary = calculateDeclarationTaxSummary([firstHome], 0n, options);
+
+    expect(ordinarySummary.mortgageTax.dueCents).toBe(16_800n);
+    expect(ordinarySummary.cadastralTax.dueCents).toBe(16_800n);
+    expect(firstHomeSummary.mortgageTax.dueCents).toBe(16_800n);
+    expect(firstHomeSummary.cadastralTax.dueCents).toBe(16_800n);
+  });
+
   it("limita le imposte al valore dei soli terreni non edificabili sotto soglia", () => {
     const summary = calculateDeclarationTaxSummary(
       [

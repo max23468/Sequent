@@ -4,7 +4,7 @@ import {
   usufructCoefficientForAge,
 } from "./temporal-rules.ts";
 
-export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.11" as const;
+export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.12" as const;
 
 export interface BeneficiaryTaxInput {
   beneficiaryId: string;
@@ -515,6 +515,8 @@ export function calculateDeclarationTaxSummary(
   const propertyGroups = assetGroups.filter((group) => PROPERTY_KINDS.has(groupKind(group)));
   const hasTrustBeneficiary = (group: (typeof assetGroups)[number]) =>
     group.allocations.some((allocation) => allocation.subjectType === "5");
+  const trustReliefApplies = (group: (typeof assetGroups)[number]) =>
+    options.openingDate >= "2017-01-01" && hasTrustBeneficiary(group);
   const habitationRight = (group: (typeof assetGroups)[number]) =>
     group.allocations.find((allocation) => allocation.habitationRightCode)?.habitationRightCode ??
     "";
@@ -523,7 +525,13 @@ export function calculateDeclarationTaxSummary(
     const extendedFirstHomeRelief = group.allocations.some((allocation) =>
       FIRST_HOME_RELIEFS.has(allocation.reliefCode?.toUpperCase() ?? ""),
     );
-    if (firstHomeHabitation || extendedFirstHomeRelief || hasTrustBeneficiary(group)) return 0n;
+    if (
+      firstHomeHabitation ||
+      extendedFirstHomeRelief ||
+      hasRelief(group, "M") ||
+      trustReliefApplies(group)
+    )
+      return 0n;
     const allocatedTotal = group.allocations.reduce(
       (sum, allocation) => sum + allocation.valueCents,
       0n,
@@ -548,10 +556,14 @@ export function calculateDeclarationTaxSummary(
   );
   const hasReliefG = propertyGroups.some((group) => hasRelief(group, "G"));
   const hasReliefM = propertyGroups.some((group) => hasRelief(group, "M"));
+  const historicalFixedTaxCents = options.openingDate >= "2014-01-01" ? 20_000n : 16_800n;
   const fixedG =
-    hasReliefG && roundToWholeEuro((proportionalGPropertyCents * 2n) / 100n) < 20_000n ? 20_000 : 0;
-  const fixedM = hasReliefM ? 20_000 : 0;
-  const fixedTrust = propertyGroups.some(hasTrustBeneficiary) ? 20_000 : 0;
+    hasReliefG &&
+    roundToWholeEuro((proportionalGPropertyCents * 2n) / 100n) < historicalFixedTaxCents
+      ? historicalFixedTaxCents
+      : 0n;
+  const fixedM = hasReliefM ? historicalFixedTaxCents : 0n;
+  const fixedTrust = propertyGroups.some(trustReliefApplies) ? 20_000n : 0n;
   const eligibleFirstHomeAllocations = (group: (typeof assetGroups)[number]) =>
     group.allocations.filter(
       (allocation) =>
@@ -592,7 +604,7 @@ export function calculateDeclarationTaxSummary(
       beneficiariesWithAlternativeHome.add(allocation.beneficiaryId);
   }
   const firstHomeCount = firstHomeUnits.size;
-  const firstHomeFixed = firstHomeCount * 20_000;
+  const firstHomeFixed = BigInt(firstHomeCount) * historicalFixedTaxCents;
   let proportionalMortgage = roundToWholeEuro((taxablePropertyCents * 2n) / 100n);
   let proportionalCadastral = roundToWholeEuro(taxablePropertyCents / 100n);
   const onlyNonBuildingLandWithoutRelief =
@@ -606,8 +618,14 @@ export function calculateDeclarationTaxSummary(
         ),
     );
   if (onlyNonBuildingLandWithoutRelief) {
-    const mortgageWithMinimum = proportionalMortgage < 20_000n ? 20_000n : proportionalMortgage;
-    const cadastralWithMinimum = proportionalCadastral < 20_000n ? 20_000n : proportionalCadastral;
+    const mortgageWithMinimum =
+      proportionalMortgage < historicalFixedTaxCents
+        ? historicalFixedTaxCents
+        : proportionalMortgage;
+    const cadastralWithMinimum =
+      proportionalCadastral < historicalFixedTaxCents
+        ? historicalFixedTaxCents
+        : proportionalCadastral;
     if (taxablePropertyCents < mortgageWithMinimum + cadastralWithMinimum) {
       proportionalMortgage = roundToWholeEuro((taxablePropertyCents * 2n) / 3n);
       proportionalCadastral = taxablePropertyCents - proportionalMortgage;
@@ -621,19 +639,19 @@ export function calculateDeclarationTaxSummary(
       ? onlyNonBuildingLandWithoutRelief
         ? proportionalMortgage
         : [
-            proportionalMortgage + BigInt(fixedG + fixedM + fixedTrust + firstHomeFixed),
-            20_000n,
+            proportionalMortgage + fixedG + fixedM + fixedTrust + firstHomeFixed,
+            historicalFixedTaxCents,
           ].reduce((maximum, value) => (value > maximum ? value : maximum), 0n)
-      : BigInt(fixedG + fixedM + fixedTrust + firstHomeFixed);
+      : fixedG + fixedM + fixedTrust + firstHomeFixed;
   const cadastralDue =
     taxablePropertyCents > 0n
       ? onlyNonBuildingLandWithoutRelief
         ? proportionalCadastral
-        : [proportionalCadastral + BigInt(fixedTrust + firstHomeFixed), 20_000n].reduce(
+        : [proportionalCadastral + fixedTrust + firstHomeFixed, historicalFixedTaxCents].reduce(
             (maximum, value) => (value > maximum ? value : maximum),
             0n,
           )
-      : BigInt(fixedTrust + firstHomeFixed);
+      : fixedTrust + firstHomeFixed;
   const mortgageAlreadyPaid = options.mortgageAlreadyPaidCents ?? 0n;
   const mortgageCredit = options.mortgageCreditCents ?? 0n;
   const cadastralAlreadyPaid = options.cadastralAlreadyPaidCents ?? 0n;
@@ -646,7 +664,7 @@ export function calculateDeclarationTaxSummary(
   const cadastralDifference = roundToWholeEuro(
     positiveDifference(cadastralDue, cadastralAlreadyPaid, cadastralCredit),
   );
-  const substituteMinimumCents = options.openingDate >= "2014-01-01" ? 20_000n : 16_800n;
+  const substituteMinimumCents = historicalFixedTaxCents;
   const mortgagePayable =
     options.substituteType === "1" &&
     !hasReliefG &&
