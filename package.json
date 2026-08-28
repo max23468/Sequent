@@ -30,14 +30,17 @@
     "publication:classify": "node scripts/github/publication-policy.mjs",
     "publication:github": "node scripts/github/publish.mjs",
     "verify:sources": "node scripts/official-sources/verify.ts",
+    "verify:suc13-control": "node scripts/official-sources/qualify-suc13-control.mjs",
     "diz:compare": "node scripts/diz/compare.ts",
     "diz:inspect": "node scripts/diz/inspect.ts",
     "diz:inventory": "node scripts/diz/inventory.ts"
   },
   "dependencies": {
+    "@expo-google-fonts/noto-sans": "0.4.2",
     "@lucide/svelte": "1.34.0",
     "@modelcontextprotocol/sdk": "1.30.0",
     "@openai/codex-sdk": "0.149.1",
+    "@pdf-lib/fontkit": "1.1.1",
     "@sveltejs/adapter-node": "5.5.7",
     "@sveltejs/kit": "2.70.3",
     "argon2": "0.45.1",

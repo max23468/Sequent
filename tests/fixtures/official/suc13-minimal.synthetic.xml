@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suc:Fornitura
+  xmlns:suc="urn:www.agenziaentrate.gov.it:specificheTecniche:sco:suc:v1"
+  xmlns:reg="urn:www.agenziaentrate.gov.it:specificheTecniche:sco:reg:v2"
+>
+  <suc:Intestazione>
+    <suc:TipoFornitore>1</suc:TipoFornitore>
+  </suc:Intestazione>
+  <suc:Dichiarazione identificativo="00001">
+    <suc:Frontespizio>
+      <suc:CodiceFiscaleDefunto>RSSMRA80A01H501U</suc:CodiceFiscaleDefunto>
+      <suc:TipoDichiarazione>
+        <suc:PrimaDichiarazione>1</suc:PrimaDichiarazione>
+        <suc:Devoluzione>
+          <suc:DevoluzionePerLegge>1</suc:DevoluzionePerLegge>
+        </suc:Devoluzione>
+      </suc:TipoDichiarazione>
+      <suc:DatiDefunto>
+        <suc:DatiAnagrafici>
+          <reg:Cognome>ROSSI</reg:Cognome>
+          <reg:Nome>MARIO</reg:Nome>
+          <reg:Sesso>M</reg:Sesso>
+          <reg:DataNascita>01011980</reg:DataNascita>
+          <reg:ComuneNascita>ROMA</reg:ComuneNascita>
+          <reg:ProvinciaNascita>RM</reg:ProvinciaNascita>
+        </suc:DatiAnagrafici>
+        <suc:UlterioriDati>
+          <suc:DataDecesso>01012025</suc:DataDecesso>
+          <suc:StatoCivile>1</suc:StatoCivile>
+        </suc:UlterioriDati>
+      </suc:DatiDefunto>
+      <suc:Presentatore>
+        <suc:CodiceFiscale>BNCLGU80A01H501A</suc:CodiceFiscale>
+        <suc:CodiceCarica>5</suc:CodiceCarica>
+        <suc:DatiAnagrafici>
+          <reg:Cognome>BIANCHI</reg:Cognome>
+          <reg:Nome>LUIGI</reg:Nome>
+          <reg:Sesso>M</reg:Sesso>
+          <reg:DataNascita>01011980</reg:DataNascita>
+          <reg:ComuneNascita>ROMA</reg:ComuneNascita>
+          <reg:ProvinciaNascita>RM</reg:ProvinciaNascita>
+        </suc:DatiAnagrafici>
+        <suc:Email>studio@example.invalid</suc:Email>
+      </suc:Presentatore>
+      <suc:FirmaModello>
+        <suc:FirmaDichiarante>1</suc:FirmaDichiarante>
+      </suc:FirmaModello>
+    </suc:Frontespizio>
+  </suc:Dichiarazione>
+</suc:Fornitura>

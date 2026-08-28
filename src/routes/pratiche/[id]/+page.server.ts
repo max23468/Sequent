@@ -49,6 +49,10 @@ import {
   type QuadroId,
 } from "../../../domain/official-catalog/catalog.ts";
 import { validateFieldValue } from "../../../domain/validation.ts";
+import {
+  listOfficialAttachments,
+  prepareOfficialAttachment,
+} from "$lib/server/official-attachments";
 
 const shortLabel = z.string().trim().min(1, "Inserisci una descrizione.").max(160);
 const subjectRole = z.enum(["decedent", "beneficiary", "representative", "other"]);
@@ -126,7 +130,9 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     quadroAssets.at(0) ??
     null;
   const complianceReport = buildComplianceReport(database, params.id, declaration.id);
-  const quadroFields = listQuadroFields(selectedQuadro);
+  const quadroFields = listQuadroFields(selectedQuadro).filter(
+    (field) => field.visibleFieldId !== null,
+  );
   const newOccurrenceIds = Object.fromEntries(
     [...new Set(quadroFields.map((field) => field.occurrenceGroup).filter(Boolean))].map(
       (group) => [group, randomUUID()],
@@ -137,6 +143,7 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     documents,
     failedVerifications: listFailedBlobVerifications(database, params.id),
     selectedDocument,
+    officialAttachments: listOfficialAttachments(database, params.id),
     selectedDocumentPages: selectedDocument ? getDocumentText(database, selectedDocument.id) : [],
     reviewItems,
     selectedReview,
@@ -250,6 +257,38 @@ export const actions = {
     resetCodexThread(database, params.id);
     redirect(303, `/pratiche/${params.id}?sezione=verifications`);
   },
+  prepareAttachment: async ({ locals, params, request }) => {
+    if (!locals.ownerId) redirect(303, "/login");
+    const formData = await request.formData();
+    const documentId = String(formData.get("documentId") ?? "");
+    if (!documentId) return fail(400, { attachmentError: "Documento non identificato." });
+    try {
+      await prepareOfficialAttachment(openDatabase(), { practiceId: params.id, documentId });
+    } catch (attachmentError) {
+      const messages: Record<string, string> = {
+        FORMATO_ALLEGATO_NON_PREPARABILE:
+          "Questo formato non può ancora essere trasformato in un allegato ufficiale.",
+        ALLEGATO_OLTRE_5_MB:
+          "L’allegato supera 5 MB anche dopo la preparazione e deve essere suddiviso.",
+        PAGINA_PDF_OLTRE_5_MB:
+          "Una singola pagina supera 5 MB e non può essere inclusa senza una nuova scansione.",
+        PACCHETTO_ALLEGATI_OLTRE_40_MB:
+          "L’insieme degli allegati supererebbe il limite complessivo di 40 MB.",
+        VALIDAZIONE_PDFA_NON_SUPERATA:
+          "La conversione non ha superato il controllo effettivo PDF/A-1b.",
+        VALIDAZIONE_TIFF_NON_SUPERATA:
+          "La conversione non ha superato il controllo TIFF in bianco e nero a 300 DPI.",
+      };
+      if (attachmentError instanceof Error)
+        return fail(400, {
+          attachmentError:
+            messages[attachmentError.message] ??
+            "Non è stato possibile preparare e controllare l’allegato.",
+        });
+      throw attachmentError;
+    }
+    redirect(303, `/pratiche/${params.id}?documento=${encodeURIComponent(documentId)}`);
+  },
   addSubject: async ({ locals, params, request }) => {
     if (!locals.ownerId) redirect(303, "/login");
     const database = openDatabase();
@@ -335,7 +374,11 @@ export const actions = {
     });
     if (!parsed.success)
       return fail(400, { domainError: parsed.error.issues[0]?.message ?? "Dati non validi." });
-    const valueCents = euroToCents(formData.get("value")) ?? 0n;
+    const valueCents = euroToCents(formData.get("value"));
+    if (valueCents === null)
+      return fail(400, {
+        domainError: "Inserisci il valore in euro, usando al massimo due decimali.",
+      });
     createSharedAsset(database, params.id, { ...parsed.data, valueCents, declarationId });
     redirect(303, `/pratiche/${params.id}?sezione=assets&dichiarazione=${declarationId}`);
   },
@@ -367,9 +410,10 @@ export const actions = {
         expectedRevision,
         entityId,
         occurrenceId,
+        confirmOfficialRules: formData.get("confirmOfficialRules") === "yes",
         fields: fieldIds.map((fieldId) => ({
           fieldId,
-          value: String(formData.get(`value:${fieldId}`) ?? "").trim(),
+          value: String(formData.getAll(`value:${fieldId}`).at(-1) ?? "").trim(),
         })),
       });
       if (result.issues.length > 0)

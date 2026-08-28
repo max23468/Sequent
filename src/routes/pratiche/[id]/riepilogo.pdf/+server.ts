@@ -67,6 +67,7 @@ export const GET: RequestHandler = async ({ locals, params, url }) => {
     ready: report.ready,
     digest: report.digest,
     officialSourceLabel: OFFICIAL_SOURCE_LABEL,
+    qualification: report.qualification,
     subjects: subjects.map((subject) => ({
       name: subject.displayName,
       role: roleLabels[subject.role] ?? subject.role,
@@ -88,6 +89,25 @@ export const GET: RequestHandler = async ({ locals, params, url }) => {
     calculation: calculation
       ? {
           totalTaxCents: calculation.totalTaxCents.toString(),
+          taxSummary: {
+            totalAssetsCents: calculation.declarationTaxes.estate.totalAssetsCents.toString(),
+            totalLiabilitiesCents:
+              calculation.declarationTaxes.estate.totalLiabilitiesCents.toString(),
+            netEstateCents: calculation.declarationTaxes.estate.netEstateCents.toString(),
+            mortgageTaxCents: calculation.declarationTaxes.mortgageTax.payableCents.toString(),
+            cadastralTaxCents: calculation.declarationTaxes.cadastralTax.payableCents.toString(),
+            relatedTaxesCents: (
+              calculation.declarationTaxes.mortgageServicesCents +
+              calculation.declarationTaxes.stampDutyCents +
+              calculation.declarationTaxes.specialTaxesCents
+            ).toString(),
+            successionTaxCents: calculation.declarationTaxes.successionTax.payableCents.toString(),
+            penaltiesAndInterestCents: (
+              calculation.declarationTaxes.penaltiesCents +
+              calculation.declarationTaxes.interestCents
+            ).toString(),
+            totalAtSubmissionCents: calculation.declarationTaxes.totalAtSubmissionCents.toString(),
+          },
           beneficiaries: calculation.beneficiaries.map((result) => ({
             beneficiary: subjectNames.get(result.beneficiaryId) ?? "Beneficiario non disponibile",
             netEstateCents: result.an.toString(),

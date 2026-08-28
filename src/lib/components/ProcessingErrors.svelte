@@ -18,7 +18,7 @@
               ? "Elaborazione documento non riuscita"
               : "Analisi Codex non riuscita"}
         </strong>
-        <small>{job.errorCode}</small>
+        <small>{job.errorCode ? "Riprova. Se il problema persiste, consulta la cronologia della pratica." : "Puoi riprovare l’attività."}</small>
       </span>
       <form method="POST" action="?/retry">
         <input type="hidden" name="jobId" value={job.id} />

@@ -363,6 +363,27 @@ CREATE INDEX IF NOT EXISTS declaration_asset_entries_asset
   ON declaration_asset_entries(asset_id, declaration_id);
 `;
 
+const officialAttachmentsMigration = `
+CREATE TABLE IF NOT EXISTS official_attachments (
+  id TEXT PRIMARY KEY,
+  document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  original_name TEXT NOT NULL,
+  prepared_name TEXT NOT NULL,
+  format TEXT NOT NULL CHECK (format IN ('PDF/A-1b', 'TIFF-G4')),
+  byte_size INTEGER NOT NULL CHECK (byte_size BETWEEN 1 AND 5242880),
+  sha256 TEXT NOT NULL,
+  blob_path TEXT NOT NULL,
+  validation_json TEXT NOT NULL,
+  source_refs_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE (document_id, sha256)
+);
+
+CREATE INDEX IF NOT EXISTS official_attachments_practice
+  ON official_attachments(practice_id, document_id, created_at);
+`;
+
 function hasColumn(database: Database.Database, table: string, column: string): boolean {
   return (database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some(
     (candidate) => candidate.name === column,
@@ -548,6 +569,83 @@ function applyDeclarationSubjectSnapshotsMigration(database: Database.Database):
   })();
 }
 
+function applyOfficialAttachmentsMigration(database: Database.Database): void {
+  database.transaction(() => {
+    database.exec(officialAttachmentsMigration);
+    database
+      .prepare("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (7, ?)")
+      .run(new Date().toISOString());
+  })();
+}
+
+function applyCalculationResultsV2Migration(database: Database.Database): void {
+  database.transaction(() => {
+    const alreadyApplied = database
+      .prepare("SELECT 1 FROM schema_migrations WHERE version = 8")
+      .get();
+    if (alreadyApplied) return;
+
+    // I risultati precedenti non contengono il riepilogo delle imposte né il piano
+    // di pagamento del formato corrente. Sono calcoli derivati e riproducibili: eliminarli
+    // evita di presentarli come attuali e obbliga a ricalcolarli con le regole vigenti.
+    database.exec("DELETE FROM calculation_runs");
+    const declarations = database
+      .prepare("SELECT id, declaration_json FROM declarations")
+      .all() as Array<{ id: string; declaration_json: string }>;
+    const updateDeclaration = database.prepare(
+      "UPDATE declarations SET declaration_json = ?, updated_at = ? WHERE id = ?",
+    );
+    const now = new Date().toISOString();
+    for (const declaration of declarations) {
+      const snapshot = JSON.parse(declaration.declaration_json) as Record<string, unknown>;
+      if (snapshot.latestCalculationRunId == null) continue;
+      snapshot.latestCalculationRunId = null;
+      updateDeclaration.run(JSON.stringify(snapshot), now, declaration.id);
+    }
+    database.prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (8, ?)").run(now);
+  })();
+}
+
+function applyCalculationRulesMigration(
+  database: Database.Database,
+  version: 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16,
+  rulesetVersion:
+    | "2026.08.5"
+    | "2026.08.6"
+    | "2026.08.7"
+    | "2026.08.8"
+    | "2026.08.9"
+    | "2026.08.10"
+    | "2026.08.11"
+    | "2026.08.12",
+): void {
+  database.transaction(() => {
+    const alreadyApplied = database
+      .prepare("SELECT 1 FROM schema_migrations WHERE version = ?")
+      .get(version);
+    if (alreadyApplied) return;
+
+    // I risultati sono derivati e riproducibili: ogni nuova versione fiscale impone il ricalcolo.
+    database.exec("DELETE FROM calculation_runs");
+    const declarations = database
+      .prepare("SELECT id, declaration_json FROM declarations")
+      .all() as Array<{ id: string; declaration_json: string }>;
+    const updateDeclaration = database.prepare(
+      "UPDATE declarations SET declaration_json = ?, updated_at = ? WHERE id = ?",
+    );
+    const now = new Date().toISOString();
+    for (const declaration of declarations) {
+      const snapshot = JSON.parse(declaration.declaration_json) as Record<string, unknown>;
+      snapshot.latestCalculationRunId = null;
+      snapshot.rulesetVersion = rulesetVersion;
+      updateDeclaration.run(JSON.stringify(snapshot), now, declaration.id);
+    }
+    database
+      .prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)")
+      .run(version, now);
+  })();
+}
+
 function applyMigrations(database: Database.Database): void {
   database.exec(foundationMigration);
   database
@@ -560,6 +658,16 @@ function applyMigrations(database: Database.Database): void {
   applyDeclarationSubjectEntriesMigration(database);
   applyDeclarationAssetEntriesMigration(database);
   applyDeclarationSubjectSnapshotsMigration(database);
+  applyOfficialAttachmentsMigration(database);
+  applyCalculationResultsV2Migration(database);
+  applyCalculationRulesMigration(database, 9, "2026.08.5");
+  applyCalculationRulesMigration(database, 10, "2026.08.6");
+  applyCalculationRulesMigration(database, 11, "2026.08.7");
+  applyCalculationRulesMigration(database, 12, "2026.08.8");
+  applyCalculationRulesMigration(database, 13, "2026.08.9");
+  applyCalculationRulesMigration(database, 14, "2026.08.10");
+  applyCalculationRulesMigration(database, 15, "2026.08.11");
+  applyCalculationRulesMigration(database, 16, "2026.08.12");
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

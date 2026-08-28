@@ -14,6 +14,7 @@ import {
   listDeclarationSubjectEntries,
   listCalculationRuns,
   listDevolutionScenarios,
+  listPracticeDeadlines,
   listSharedAssets,
   listSharedSubjects,
   runSuccessionCalculation,
@@ -144,7 +145,7 @@ describe("persistenza del procedimento", () => {
     const asset = createSharedAsset(database, practice.id, {
       kind: "building",
       displayName: "Fabbricato sintetico",
-      valueCents: 20_000_000n,
+      valueCents: 10_000_000n,
     });
     saveCanonicalField(database, {
       practiceId: practice.id,
@@ -218,7 +219,13 @@ describe("persistenza del procedimento", () => {
       declarationId: practice.declarationId,
     });
     expect(calculation).toMatchObject({ status: "blocked", totalTaxCents: 660_000n });
-    expect(calculation.issues.map(({ id }) => id)).toContain("CALCULATION_RULES_INCOMPLETE");
+    expect(calculation.issues.map(({ id }) => id)).not.toContain("CALCULATION_RULES_INCOMPLETE");
+    expect(calculation.issues.map(({ id }) => id)).toEqual(
+      expect.arrayContaining([
+        "CALCULATION_MORTGAGE_JURISDICTIONS_MISSING",
+        "CALCULATION_STAMP_DUTY_JURISDICTIONS_MISSING",
+      ]),
+    );
     expect(() =>
       confirmCalculationRun(database, {
         practiceId: practice.id,
@@ -275,12 +282,113 @@ describe("persistenza del procedimento", () => {
         documentId: null,
         decisionNote: null,
       }),
+    ).toBe(false);
+    const checklistDocumentId = "documento-checklist-sintetico";
+    const checklistDocumentDate = new Date().toISOString();
+    database
+      .prepare(
+        `INSERT INTO documents(
+           id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at
+         ) VALUES (?, ?, 'prova.pdf', 'application/pdf', 1, 'prova-checklist', 'blobs/aa/prova', ?)`,
+      )
+      .run(checklistDocumentId, practice.id, checklistDocumentDate);
+    expect(
+      updateChecklistItem(database, {
+        practiceId: practice.id,
+        declarationId: practice.declarationId,
+        itemId: deathProof!.id,
+        status: "available",
+        documentId: checklistDocumentId,
+        decisionNote: null,
+      }),
     ).toBe(true);
+    expect(
+      updateChecklistItem(database, {
+        practiceId: practice.id,
+        declarationId: practice.declarationId,
+        itemId: deathProof!.id,
+        status: "overridden",
+        documentId: null,
+        decisionNote: "Deroga non consentita",
+      }),
+    ).toBe(false);
     expect(
       synchronizeChecklist(database, practice.id, practice.declarationId).find(
         (item) => item.id === deathProof!.id,
       )?.status,
     ).toBe("available");
+  });
+
+  it("non richiede la tempistica al trust senza pagamento anticipato", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-trust-payment-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento trust sintetico");
+    const decedent = createSharedSubject(database, practice.id, {
+      role: "decedent",
+      displayName: "Defunto sintetico",
+    });
+    const trust = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Trust sintetico",
+    });
+    const asset = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Fabbricato sintetico",
+      valueCents: 200_000_000n,
+    });
+    const fields = [
+      ["quadro-ea.soggetto.tipo", "5", trust.id],
+      ["quadro-ea.soggetto.grado-parentela", "35", trust.id],
+      ["frontespizio.defunto.data-decesso", "01012025", decedent.id],
+      [BUILDING_VALUE_FIELD_ID, "2000000", asset.id],
+      ["xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/CodiceCarica", "9", undefined],
+    ] as const;
+    let revision = 1;
+    for (const [fieldId, value, entityId] of fields) {
+      revision = saveCanonicalField(database, {
+        practiceId: practice.id,
+        declarationId: practice.declarationId,
+        expectedRevision: revision,
+        fieldId,
+        value,
+        entityId,
+      }).revision;
+    }
+    const scenario = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: revision,
+      shares: [
+        {
+          assetId: asset.id,
+          beneficiaryId: trust.id,
+          numerator: 1n,
+          denominator: 1n,
+          rightCode: "1",
+        },
+      ],
+    });
+    confirmDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      scenarioId: scenario.id,
+      expectedRevision: revision,
+    });
+
+    const calculation = runSuccessionCalculation(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+    });
+
+    expect(calculation.declarationTaxes.successionTax.payableCents).toBeGreaterThan(0n);
+    expect(calculation.paymentPlan).toMatchObject({ advanceTrustPayment: false });
+    expect(calculation.issues.map(({ id }) => id)).not.toContain(
+      "CALCULATION_PAYMENT_PLAN_TEMPISTICA_TRUST_NON_AMMESSA",
+    );
+    expect(calculation.issues.map(({ id }) => id)).not.toContain(
+      "CALCULATION_PAYMENT_PLAN_TEMPISTICA_OBBLIGATORIA",
+    );
   });
 
   it("rende superati ripartizione e calcolo quando viene aggiunto un nuovo bene", () => {
@@ -483,6 +591,75 @@ describe("persistenza del procedimento", () => {
     expect(new Set(checklist.map((item) => item.label)).size).toBe(checklist.length);
     const report = buildComplianceReport(database, practice.id, practice.declarationId);
     expect(new Set(report.issues.map((issue) => issue.message)).size).toBe(report.issues.length);
+    expect(report.qualification).toMatchObject({
+      calculationRulesVersion: "2026.08.12",
+      temporalRulesVersion: "2026.08.12",
+      officialControl: { name: "SUC13", version: "2.3.1", blockingDiagnostics: 0 },
+      attachments: { files: 0, totalBytes: 0, motivatedExceptions: 0 },
+    });
+  });
+
+  it("mantiene la checklist legata alla devoluzione confermata", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-confirmed-checklist-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento con devoluzione confermata");
+    const beneficiary = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Beneficiario",
+    });
+    const building = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Abitazione",
+      valueCents: 20_000_000n,
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      fieldId: BUILDING_VALUE_FIELD_ID,
+      value: "200000",
+      entityId: building.id,
+    });
+    const confirmed = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 2,
+      shares: [
+        {
+          assetId: building.id,
+          beneficiaryId: beneficiary.id,
+          numerator: 1n,
+          denominator: 1n,
+          rightCode: "1",
+          reliefCode: "P",
+        },
+      ],
+    });
+    expect(confirmed.status).toBe("draft");
+    confirmDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      scenarioId: confirmed.id,
+      expectedRevision: 2,
+    });
+    const laterBlocked = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 3,
+      shares: [],
+    });
+    expect(laterBlocked.status).toBe("blocked");
+    database
+      .prepare("UPDATE devolution_scenarios SET updated_at = ? WHERE id = ?")
+      .run("2099-01-01T00:00:00.000Z", laterBlocked.id);
+
+    const checklist = synchronizeChecklist(database, practice.id, practice.declarationId);
+    expect(
+      checklist.some(
+        (item) => item.label === "Dichiarazione e documenti per l’agevolazione prima casa",
+      ),
+    ).toBe(true);
   });
 
   it("richiede i riferimenti alla dichiarazione precedente soltanto nelle sostitutive", () => {
@@ -561,54 +738,104 @@ describe("persistenza del procedimento", () => {
     ).toBe(false);
   });
 
-  it("conserva due allegati omogenei in posizioni ufficiali distinte", () => {
+  it("mostra in dashboard la scadenza ordinaria calcolata dalla data del decesso", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-deadline-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Successione con scadenza");
+    const decedent = createSharedSubject(database, practice.id, {
+      role: "decedent",
+      displayName: "Defunto",
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      fieldId: "frontespizio.defunto.data-decesso",
+      value: "15082025",
+      entityId: decedent.id,
+    });
+
+    expect(listPracticeDeadlines(database, "2026-08-10")).toEqual([
+      expect.objectContaining({
+        practiceId: practice.id,
+        practiceTitle: "Successione con scadenza",
+        dueDate: "2026-08-15",
+        timing: "soon",
+        timingLabel: "Scade tra 5 giorni",
+        sourceId: "SRC-05",
+      }),
+    ]);
+    expect(listPracticeDeadlines(database, "2026-08-16")[0]).toEqual(
+      expect.objectContaining({
+        timing: "overdue",
+        timingLabel: "Scaduta da 1 giorno",
+      }),
+    );
+
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 2,
+      fieldId:
+        "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/DecorrenzaTerminePresentazione",
+      value: "01092025",
+    });
+    expect(listPracticeDeadlines(database, "2026-08-10")[0]).toEqual(
+      expect.objectContaining({
+        dueDate: "2026-09-01",
+        timing: "soon",
+        timingLabel: "Scade tra 22 giorni",
+      }),
+    );
+
+    const substitute = createSuccessiveDeclaration(
+      database,
+      practice.id,
+      practice.declarationId,
+      "substitute-1",
+    );
+    expect(
+      getCanonicalField(
+        substitute.declaration,
+        "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/DecorrenzaTerminePresentazione",
+      ),
+    ).toBeUndefined();
+    expect(listPracticeDeadlines(database, "2026-08-10")[0]).toEqual(
+      expect.objectContaining({
+        dueDate: null,
+        timing: "unqualified",
+        timingLabel:
+          "Decorrenza particolare: indica la data da cui parte il termine di dodici mesi",
+      }),
+    );
+  });
+
+  it("impedisce la modifica manuale dei dati tecnici degli allegati", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-domain-occurrences-"));
     directories.push(directory);
     const database = openDatabase(directory);
     const practice = createPractice(database, "Procedimento sintetico");
     const firstOccurrence = "11111111-1111-4111-8111-111111111111";
-    const secondOccurrence = "22222222-2222-4222-8222-222222222222";
+    const result = saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      fieldId: TESTAMENT_FILE_NAME_FIELD_ID,
+      value: "TESTAMENTO-PRIMO.PDF",
+      occurrenceId: firstOccurrence,
+    });
 
+    expect(result.revision).toBe(1);
+    expect(result.issues.map(({ id }) => id)).toEqual(["TECHNICAL_FIELD_NOT_EDITABLE"]);
     expect(
-      saveCanonicalField(database, {
-        practiceId: practice.id,
-        declarationId: practice.declarationId,
-        expectedRevision: 1,
-        fieldId: TESTAMENT_FILE_NAME_FIELD_ID,
-        value: "TESTAMENTO-PRIMO.PDF",
-        occurrenceId: firstOccurrence,
-      }).issues,
-    ).toEqual([]);
-    expect(
-      saveCanonicalField(database, {
-        practiceId: practice.id,
-        declarationId: practice.declarationId,
-        expectedRevision: 2,
-        fieldId: TESTAMENT_FILE_NAME_FIELD_ID,
-        value: "TESTAMENTO-SECONDO.PDF",
-        occurrenceId: secondOccurrence,
-      }).issues,
-    ).toEqual([]);
-
-    const declaration = getDeclaration(database, practice.declarationId)!.declaration;
-    expect(
-      getCanonicalField(declaration, TESTAMENT_FILE_NAME_FIELD_ID, null, firstOccurrence)?.value,
-    ).toBe("TESTAMENTO-PRIMO.PDF");
-    expect(
-      getCanonicalField(declaration, TESTAMENT_FILE_NAME_FIELD_ID, null, secondOccurrence)?.value,
-    ).toBe("TESTAMENTO-SECONDO.PDF");
-    expect(
-      buildComplianceReport(database, practice.id, practice.declarationId).issues.map(
-        ({ id }) => id,
+      getCanonicalField(
+        getDeclaration(database, practice.declarationId)!.declaration,
+        TESTAMENT_FILE_NAME_FIELD_ID,
+        null,
+        firstOccurrence,
       ),
-    ).toEqual(
-      expect.arrayContaining([
-        `REQUIRED_FIELD_MISSING:xsd:/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoAll/FileType:${firstOccurrence}`,
-        `REQUIRED_FIELD_MISSING:xsd:/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoAll/ImageData:${firstOccurrence}`,
-        `REQUIRED_FIELD_MISSING:xsd:/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoAll/FileType:${secondOccurrence}`,
-        `REQUIRED_FIELD_MISSING:xsd:/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoAll/ImageData:${secondOccurrence}`,
-      ]),
-    );
+    ).toBeUndefined();
   });
 
   it("controlla i campi obbligatori dei quadri compilati senza beni o soggetti propri", () => {

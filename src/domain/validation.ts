@@ -3,8 +3,9 @@ import {
   getResolvedTechnicalFacetAlternatives,
   getResolvedTechnicalPrimitiveTypes,
   getTechnicalField,
+  listOfficialInstructions,
 } from "./official-catalog/catalog.ts";
-import { getCanonicalField, type DeclarationSnapshot } from "./declaration.ts";
+import { canonicalFieldKey, getCanonicalField, type DeclarationSnapshot } from "./declaration.ts";
 
 export interface ValidationIssue {
   id: string;
@@ -260,6 +261,29 @@ export function validateDeclaration(declaration: DeclarationSnapshot): Validatio
         message: `Conferma professionalmente “${label}” prima dei documenti finali.`,
         sourceId: technical?.sourceId ?? "SRC-08",
         sourcePointer: technical?.sourcePointer ?? "technical-schema.json",
+      });
+    }
+    if (field.value === null || field.value === undefined || field.value === "") continue;
+    const instructions = listOfficialInstructions(field.fieldId);
+    if (instructions.length === 0) continue;
+    const confirmationKey = canonicalFieldKey(field.fieldId, field.entityId, field.occurrenceId);
+    const confirmation = declaration.officialRuleConfirmations[confirmationKey];
+    const ruleIds = instructions.map((instruction) => instruction.id).sort();
+    if (
+      !confirmation ||
+      confirmation.valueJson !== JSON.stringify(field.value) ||
+      JSON.stringify([...confirmation.ruleIds].sort()) !== JSON.stringify(ruleIds)
+    ) {
+      const label = getCatalogField(field.fieldId)?.label ?? "questo dato";
+      issues.push({
+        id: `OFFICIAL_INSTRUCTION_CONFIRMATION_REQUIRED:${key}`,
+        level: "blocking",
+        fieldId: field.fieldId,
+        entityId: field.entityId,
+        occurrenceId: field.occurrenceId,
+        message: `Verifica le indicazioni ministeriali mostrate per “${label}”.`,
+        sourceId: instructions[0]?.sourceIds[0] ?? "SRC-07",
+        sourcePointer: instructions[0]?.sourcePointer ?? "Controlli ministeriali",
       });
     }
   }

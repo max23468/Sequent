@@ -185,7 +185,28 @@
         <span class="mobile-panel-mark" aria-hidden="true"><CalendarClock size={21} /></span>
         <h2 id="deadlines-title">Scadenze</h2>
       </div>
-      <div class="panel-empty"><p>Nessuna scadenza registrata.</p><span>Sequent mostrerà soltanto le scadenze essenziali della pratica.</span></div>
+      {#if data.deadlines.length === 0}
+        <div class="panel-empty"><p>Nessuna scadenza registrata.</p><span>Sequent mostrerà soltanto le scadenze essenziali della pratica.</span></div>
+      {:else}
+        <ul class="verification-list deadline-list">
+          {#each data.deadlines.slice(0, 5) as deadline (deadline.practiceId)}
+            <li class:deadline-overdue={deadline.timing === "overdue"}>
+              <a href={`/pratiche/${deadline.practiceId}?sezione=checks`}>
+                <span>
+                  <strong>{deadline.label}</strong>
+                  <small>{deadline.practiceTitle} · {deadline.timingLabel}</small>
+                </span>
+                {#if deadline.dueDate}
+                  <time datetime={deadline.dueDate}>{formatItalianDate(deadline.dueDate)}</time>
+                {:else}
+                  <span class="deadline-to-check">Da verificare</span>
+                {/if}
+                <ChevronRight size={19} aria-hidden="true" />
+              </a>
+            </li>
+          {/each}
+        </ul>
+      {/if}
     </section>
     <section class="dashboard-panel recent-panel" aria-labelledby="recent-title">
       <div class="panel-title dashboard-panel-title">

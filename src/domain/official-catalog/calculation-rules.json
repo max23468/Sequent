@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "bundleId": "SUC-OFFICIAL-2026-08-27-COMPREHENSIVE",
-  "status": "partial-chain-only",
+  "status": "qualified",
   "rules": [
     {
       "id": "QE",
@@ -93,6 +93,112 @@
       "sourcePointer": "pagina 8",
       "formula": "max(0, ISL - RID - DET.estero)",
       "state": "implemented-and-tested"
+    },
+    {
+      "id": "EE-QUADRATURA",
+      "sourceIds": ["SRC-03", "SRC-07", "SRC-08", "SRC-10"],
+      "sourcePointer": "Quadro EE; istruzioni di calcolo, pagine 1-8",
+      "formula": "attivo per categoria - passività = asse ereditario netto, con quote ricondotte ai singoli cespiti",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "EF-IPOTECARIA",
+      "sourceIds": ["SRC-03", "SRC-07", "SRC-08", "SRC-11", "SRC-19"],
+      "sourcePointer": "Quadro EF, sezioni I e I-bis; Testo unico tributi indiretti",
+      "formula": "imponibile immobiliare × 2%, con minimo e importi fissi delle agevolazioni; sottrazione di versato e credito",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "EF-CATASTALE",
+      "sourceIds": ["SRC-03", "SRC-07", "SRC-08", "SRC-11", "SRC-19"],
+      "sourcePointer": "Quadro EF, sezioni II e II-bis; Testo unico tributi indiretti",
+      "formula": "imponibile immobiliare × 1%, con minimo e importi fissi delle agevolazioni; sottrazione di versato e credito",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "EF-SERVIZI",
+      "sourceIds": ["SRC-03", "SRC-07", "SRC-08", "SRC-11", "SRC-19"],
+      "sourcePointer": "Quadro EF, sezione III; servizi ipotecari e catastali",
+      "formula": "importo per circoscrizione, distinto per voltura automatica o manuale",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "EF-BOLLO-SPECIALI",
+      "sourceIds": ["SRC-03", "SRC-07", "SRC-08", "SRC-11", "SRC-19"],
+      "sourcePointer": "Quadro EF, sezioni IV e V",
+      "formula": "bollo per circoscrizione, copia conforme e tributi speciali quando richiesti",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "EF-VBIS",
+      "sourceIds": ["SRC-07", "SRC-08", "SRC-09", "SRC-11", "SRC-12", "SRC-13", "SRC-14"],
+      "sourcePointer": "Quadro EF, sezione V-bis; aggiornamenti 2025",
+      "formula": "imposta calcolata - imposta già versata - credito; soglia minima, scelta del momento di pagamento e acconto",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "EF-SANZIONI-INTERESSI-TOTALE",
+      "sourceIds": ["SRC-03", "SRC-07", "SRC-08", "SRC-13", "SRC-14"],
+      "sourcePointer": "Quadro EF, sezioni VI, VII e totale",
+      "formula": "somma degli importi dichiarati per sanzioni e interessi al totale delle imposte e dei servizi da versare",
+      "qualification": "Gli importi sono acquisiti e quadrati; il sistema non presume autonomamente una sanzione senza gli elementi professionali del caso.",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "VALORE-DIRITTI-REALI",
+      "sourceIds": ["SRC-04", "SRC-05", "SRC-23", "SRC-24", "SRC-25", "SRC-26", "SRC-27"],
+      "sourcePointer": "Fascicolo 1, diritti reali ed esempi; decreti annuali; sentenza 89/2026",
+      "formula": "piena e nuda proprietà, usufrutto, uso, abitazione, enfiteusi e concedente con quota, età e periodo applicabile",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "VALORE-CATASTALE",
+      "sourceIds": ["SRC-04", "SRC-05", "SRC-19"],
+      "sourcePointer": "Fascicolo 1, terreni e fabbricati; Testo unico tributi indiretti",
+      "formula": "rendita o reddito dominicale rivalutato × coefficiente della categoria × quota posseduta",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "VALORE-AZIENDA",
+      "sourceIds": ["SRC-04", "SRC-05", "SRC-16", "SRC-18"],
+      "sourcePointer": "Fascicolo 1, aziende e partecipazioni",
+      "formula": "attività - passività - beni esclusi - avviamento non imponibile",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "PASSIVITA-MANUTENZIONE",
+      "sourceIds": ["SRC-04", "SRC-05", "SRC-16"],
+      "sourcePointer": "Fascicolo 1, passività, esempio delle spese mediche e di mantenimento",
+      "formula": "minimo fra debito residuo e limite mensile per i mesi interi ammissibili",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "RATEO-TITOLI",
+      "sourceIds": ["SRC-04", "SRC-05", "SRC-16"],
+      "sourcePointer": "Fascicolo 2, titoli e due esempi di rateo",
+      "formula": "capitale × tasso annuo × giorni maturati / giorni del periodo / pagamenti annui",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "SCADENZA-DICHIARAZIONE",
+      "sourceIds": ["SRC-05", "SRC-16", "SRC-18", "SRC-19"],
+      "sourcePointer": "termine ordinario della dichiarazione",
+      "formula": "dodici mesi dalla data di apertura della successione, conservando il giorno quando esiste nel mese di scadenza",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "PAGAMENTO-RATEAZIONE",
+      "sourceIds": ["SRC-13", "SRC-14", "SRC-16", "SRC-18", "SRC-22"],
+      "sourcePointer": "pagamento dell’imposta autoliquidata e codici tributo 1539/1635",
+      "formula": "acconto minimo del 20%; soglie di ammissione e numero massimo di rate determinate sull’imposta complessiva; opzione anticipata del trust solo nei casi ammessi",
+      "state": "implemented-and-tested"
+    },
+    {
+      "id": "SELEZIONE-TEMPORALE",
+      "sourceIds": ["SRC-16", "SRC-17", "SRC-18", "SRC-19", "SRC-20", "SRC-21", "SRC-22"],
+      "sourcePointer": "legal-timeline.json",
+      "formula": "disciplina sostanziale scelta dalla data di apertura; norme di adempimento dalla propria decorrenza; nessuna retroattività presunta",
+      "state": "implemented-and-tested"
     }
   ],
   "requiredGoldenSeries": [
@@ -108,9 +214,24 @@
     "RID-AGEV",
     "RID-ART25",
     "DET-ESTERO",
-    "ISN"
+    "ISN",
+    "EE-QUADRATURA",
+    "EF-IPOTECARIA",
+    "EF-CATASTALE",
+    "EF-SERVIZI",
+    "EF-BOLLO-SPECIALI",
+    "EF-VBIS",
+    "EF-SANZIONI-INTERESSI-TOTALE",
+    "VALORE-DIRITTI-REALI",
+    "VALORE-CATASTALE",
+    "VALORE-AZIENDA",
+    "PASSIVITA-MANUTENZIONE",
+    "RATEO-TITOLI",
+    "SCADENZA-DICHIARAZIONE",
+    "PAGAMENTO-RATEAZIONE",
+    "SELEZIONE-TEMPORALE"
   ],
-  "rulesetVersion": "2025.01.1",
+  "rulesetVersion": "2026.08.12",
   "goldenExamples": [
     {
       "id": "SRC10-fratelli-esempio-completo",
@@ -137,16 +258,54 @@
         "isn": 4432.73
       },
       "expectedTotalEuro": 8865.46
+    },
+    {
+      "id": "SRC04-nuda-proprieta-eta-65",
+      "sourceIds": ["SRC-04", "SRC-24"],
+      "sourcePointer": "Fascicolo 1, esempio valore della nuda proprietà",
+      "inputEuro": {
+        "fullOwnership": 200000,
+        "possessionPercent": 50,
+        "age": 65
+      },
+      "expectedEuro": {
+        "usufruct": 50000,
+        "bareOwnership": 50000
+      }
+    },
+    {
+      "id": "SRC04-diritti-divisi",
+      "sourceIds": ["SRC-04", "SRC-24"],
+      "sourcePointer": "Fascicolo 1, esempio EA1-EA3",
+      "inputEuro": {
+        "fullOwnership": 200000,
+        "possessionPercent": 50
+      },
+      "expectedEuro": {
+        "usufructEA2": 47500,
+        "usufructEA3": 45000,
+        "bareOwnershipEA1": 7500
+      }
+    },
+    {
+      "id": "SRC04-debito-mantenimento",
+      "sourceIds": ["SRC-04"],
+      "sourcePointer": "Fascicolo 1, esempio del debito residuo",
+      "inputEuro": {
+        "outstandingDebt": 3000,
+        "eligibleFullMonths": 3,
+        "monthlyLimit": 258
+      },
+      "expectedEuro": 774
+    },
+    {
+      "id": "SRC05-ratei-titoli",
+      "sourceIds": ["SRC-05"],
+      "sourcePointer": "Fascicolo 2, esempi dei ratei al 3% e al 5%",
+      "expectedEuro": [7.58, 8.42]
     }
   ],
-  "blockers": [
-    "Copertura di calcolo non ancora qualificata: Sezione V-bis del Quadro EF, credito, imposta da versare, acconto e rateazione.",
-    "Copertura di calcolo non ancora qualificata: imposte ipotecaria e catastale, servizi ipotecari e catastali, bollo e tributi speciali.",
-    "Copertura di calcolo non ancora qualificata: sanzioni, interessi e totale da versare.",
-    "Copertura di calcolo non ancora qualificata: valori catastali e diritti reali.",
-    "Copertura di calcolo non ancora qualificata: quadrature complete dei Quadri EE ed EF.",
-    "Copertura di calcolo non ancora qualificata: tutti gli esempi ufficiali ulteriori rispetto al caso completo già acquisito."
-  ],
+  "blockers": [],
   "coverage": {
     "implementedChain": [
       "QE",
@@ -161,16 +320,24 @@
       "RID-AGEV",
       "RID-ART25",
       "DET-ESTERO",
-      "ISN"
+      "ISN",
+      "EE-QUADRATURA",
+      "EF-IPOTECARIA",
+      "EF-CATASTALE",
+      "EF-SERVIZI",
+      "EF-BOLLO-SPECIALI",
+      "EF-VBIS",
+      "EF-SANZIONI-INTERESSI-TOTALE",
+      "VALORE-DIRITTI-REALI",
+      "VALORE-CATASTALE",
+      "VALORE-AZIENDA",
+      "PASSIVITA-MANUTENZIONE",
+      "RATEO-TITOLI",
+      "SCADENZA-DICHIARAZIONE",
+      "PAGAMENTO-RATEAZIONE",
+      "SELEZIONE-TEMPORALE"
     ],
-    "goldenExamples": 1,
-    "missingAreas": [
-      "Sezione V-bis del Quadro EF, credito, imposta da versare, acconto e rateazione",
-      "imposte ipotecaria e catastale, servizi ipotecari e catastali, bollo e tributi speciali",
-      "sanzioni, interessi e totale da versare",
-      "valori catastali e diritti reali",
-      "quadrature complete dei Quadri EE ed EF",
-      "tutti gli esempi ufficiali ulteriori rispetto al caso completo già acquisito"
-    ]
+    "goldenExamples": 5,
+    "missingAreas": []
   }
 }

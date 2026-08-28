@@ -70,6 +70,8 @@ jobs:
         with:
           node-version: 26.7.0
           cache: npm
+      - name: Installa gli strumenti per gli allegati ufficiali
+        run: sudo apt-get update && sudo apt-get install --yes ghostscript icc-profiles-free imagemagick poppler-utils qpdf
       - run: npm ci
       - run: npm run verify:application
 

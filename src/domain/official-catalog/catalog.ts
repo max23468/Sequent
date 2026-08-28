@@ -42,10 +42,25 @@ export interface CatalogField {
   control?: "checkbox";
   appliesToDeclarationKinds?: Array<"first" | "substitute-1" | "substitute-2" | "substitute-3">;
   options?: Array<{ value: string; label: string }>;
+  officialControlCode?: string;
+  presentation?: "visible" | "technical-only";
   technicalPath: string;
   technicalType: string;
   status: string;
   sourceIds: string[];
+}
+
+export interface OfficialInstruction {
+  id: string;
+  targetFieldId: string;
+  scope: string;
+  instruction: string;
+  sourceIds: string[];
+  sourcePointer: string;
+  state: string;
+  applicability?: { kind: string };
+  effectiveFrom?: string;
+  effectiveBasis?: string;
 }
 
 const technicalElements = (technicalSchema.elements ?? []) as TechnicalElement[];
@@ -205,6 +220,7 @@ function catalogFieldFor(element: TechnicalElement, quadro: QuadroId): CatalogFi
     options: curated?.options ?? technicalOptions(element),
     technicalPath: element.path,
     technicalType: element.type,
+    presentation: curated?.presentation,
     status: curated?.status ?? "qualified-from-current-technical-source",
     sourceIds: curated?.sourceIds ?? ["SRC-07", "SRC-08"],
   };
@@ -278,7 +294,8 @@ export function listQuadroFields(quadro: QuadroId): Array<
     visibleFieldId: string | null;
     visibleStatus: string;
     sourceIds: string[];
-    mappingKind: "curated-visible" | "qualified-technical";
+    mappingKind: "curated-visible" | "official-control-visible" | "technical-only";
+    instructions: OfficialInstruction[];
   }
 > {
   return technicalElements
@@ -286,6 +303,7 @@ export function listQuadroFields(quadro: QuadroId): Array<
     .map((element) => {
       const visible = fieldsByPath.get(element.path);
       const field = catalogFieldFor(element, quadro);
+      const technicalOnly = visible?.presentation === "technical-only";
       return {
         ...element,
         canonicalId: field.id,
@@ -301,10 +319,15 @@ export function listQuadroFields(quadro: QuadroId): Array<
         control: field.control ?? null,
         appliesToDeclarationKinds: field.appliesToDeclarationKinds ?? [],
         options: field.options ?? [],
-        visibleFieldId: field.id,
+        visibleFieldId: technicalOnly ? null : field.id,
         visibleStatus: field.status,
         sourceIds: field.sourceIds,
-        mappingKind: visible ? ("curated-visible" as const) : ("qualified-technical" as const),
+        mappingKind: technicalOnly
+          ? ("technical-only" as const)
+          : visible?.status === "qualified-from-official-control-description"
+            ? ("official-control-visible" as const)
+            : ("curated-visible" as const),
+        instructions: listOfficialInstructions(field.id),
       };
     })
     .sort((left, right) => {
@@ -320,11 +343,10 @@ export function listQuadroFields(quadro: QuadroId): Array<
 }
 
 export function getCatalogField(fieldId: string): CatalogField | null {
-  const curated = fieldsById.get(fieldId);
-  if (curated) return curated;
-  const element = technicalElements.find(
-    (candidate) => candidate.kind === "field" && candidate.id === fieldId,
-  );
+  const mapped = fieldsById.get(fieldId);
+  const element = mapped
+    ? technicalElementsByPath.get(mapped.technicalPath)
+    : technicalElements.find((candidate) => candidate.kind === "field" && candidate.id === fieldId);
   const quadro = element ? quadroFromPath(element.path) : null;
   return element && quadro ? catalogFieldFor(element, quadro) : null;
 }
@@ -338,6 +360,17 @@ export function getTechnicalField(fieldId: string): TechnicalElement | null {
         element.kind === "field" &&
         (element.id === fieldId || (technicalPath !== undefined && element.path === technicalPath)),
     ) ?? null
+  );
+}
+
+export function listOfficialInstructions(fieldId: string): OfficialInstruction[] {
+  const technical = getTechnicalField(fieldId);
+  if (!technical) return [];
+  return (semanticRules.rules as OfficialInstruction[]).filter(
+    (rule) =>
+      rule.targetFieldId === technical.id &&
+      rule.scope === "official-cross-field-instruction" &&
+      Boolean(rule.instruction),
   );
 }
 
@@ -439,9 +472,19 @@ export function getResolvedTechnicalPrimitiveTypes(fieldId: string): string[] {
 
 export function getCatalogStatus() {
   const fields = technicalElements.filter((element) => element.kind === "field");
-  const mapped = fields.filter((element) => quadroFromPath(element.path) !== null).length;
-  const systemManaged = fields.filter(isSystemManagedTechnicalField).length;
-  const curatedVisible = fields.filter((element) => fieldsByPath.has(element.path)).length;
+  const mapped = fields.filter(
+    (element) =>
+      !isSystemManagedTechnicalField(element) &&
+      fieldsByPath.get(element.path)?.presentation !== "technical-only",
+  ).length;
+  const systemManaged = fields.filter(
+    (element) =>
+      isSystemManagedTechnicalField(element) ||
+      fieldsByPath.get(element.path)?.presentation === "technical-only",
+  ).length;
+  const curatedVisible = fields.filter(
+    (element) => fieldsByPath.get(element.path)?.presentation === "visible",
+  ).length;
   const unresolvedOverlays = deltaOverlays.overlays.filter((overlay) =>
     String(overlay.state).startsWith("unresolved"),
   );
@@ -481,11 +524,12 @@ export function getCatalogStatus() {
 
 export function listQuadroSummaries() {
   return QUADRI.map((id) => {
-    const fields = listQuadroFields(id);
+    const userFields = listQuadroFields(id).filter((field) => field.visibleFieldId !== null);
     return {
       id,
-      technicalFieldCount: fields.length,
-      mappedFieldCount: fields.filter((field) => field.mappingKind === "curated-visible").length,
+      userFieldCount: userFields.length,
+      verifiedFieldCount: userFields.filter((field) => field.mappingKind !== "technical-only")
+        .length,
     };
   });
 }

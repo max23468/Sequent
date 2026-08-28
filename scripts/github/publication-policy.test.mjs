@@ -60,6 +60,12 @@ test("runtime, DIZ e fonti ufficiali non possono degradare a gate rapidi", () =>
   assert.equal(original.compliance, true);
   assert.equal(original.runtime, false);
   assert.deepEqual(original.unknown, []);
+
+  const ocrManifest = classifyChangedFiles(["requirements-ocr.txt"]);
+  assert.equal(ocrManifest.arm64, true);
+  assert.equal(ocrManifest.documents, true);
+  assert.equal(ocrManifest.runArm64, true);
+  assert.deepEqual(ocrManifest.unknown, []);
 });
 
 test("governance e test non richiedono una release runtime", () => {
@@ -196,6 +202,7 @@ test("la CI aggrega i job pertinenti senza duplicare Doctor", async () => {
   assert.match(workflow, /name: PR gate/);
   assert.match(workflow, /if: always\(\)/);
   assert.match(workflow, /npm run verify:application/);
+  assert.match(workflow, /ghostscript icc-profiles-free imagemagick poppler-utils qpdf/);
   assert.equal(workflow.match(/npm run doctor/g)?.length, 1);
   assert.match(workflow, /needs\.classify\.outputs\.browser == 'true'/);
   assert.match(workflow, /needs\.classify\.outputs\.arm64 == 'true'/);

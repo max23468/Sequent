@@ -6,7 +6,7 @@ La fonte unica per identità del bundle, artefatti, date ufficiali, dimensioni, 
 
 `npm run verify:sources` confronta gli originali con i manifest, verifica PDF, programmi e archivi, controlla le impronte ufficiali dichiarate e compila offline lo schema principale. Il contratto non replica valori che il verificatore può leggere deterministicamente.
 
-Il catalogo corrente è collegato al pacchetto identificato da [`source-manifest.json`](../../src/domain/official-catalog/source-manifest.json), ma non è ancora qualificato per la chiusura. Copertura, numero di campi, regole, passaggi di calcolo e divergenze irrisolte sono letti dalle strutture macchina collegate, senza duplicarne qui i valori. La struttura dei campi è disponibile nei Quadri; denominazioni, condizioni e controlli restano bloccanti dove la corrispondenza con le fonti visibili e semantiche non è stata dimostrata.
+Il catalogo corrente è collegato al pacchetto identificato da [`source-manifest.json`](../../src/domain/official-catalog/source-manifest.json) ed è qualificato per l’ambito definito nel Master Plan. Copertura, numero di campi, regole, passaggi di calcolo e divergenze sono letti dalle strutture macchina collegate, senza duplicarne qui i valori. Ogni campo visibile ha una descrizione proveniente dal modello o dal controllo ufficiale; i soli contenuti binari degli allegati restano dati tecnici interni.
 
 ## Gerarchia
 
@@ -20,17 +20,30 @@ Quando un’istruzione ufficiale richiede un giudizio professionale e non consen
 
 ## Qualificazione corrente
 
-`TG-COMPLIANCE` è aperto. Sono dimostrati l’inventario strutturale XSD, la provenienza tecnica dei campi, il caso ministeriale già acquisito della catena `QE → ISN`, la conservazione degli originali e le regressioni interne presenti.
+Il gate di conformità previsto dal Master Plan è chiuso per l’ambito corrente. Sono dimostrati:
 
-Il bundle ampliato acquisisce anche approvazione e chiarimenti della riforma, codici di pagamento, norme e correttivi successivi, valori annuali, la sentenza costituzionale pertinente, materiale operativo e copie integre dei programmi ufficiali necessari al collaudo. Queste fonti sono catalogate e verificabili, ma non ancora interamente tradotte in regole con periodo e test. Restano quindi da qualificare:
+- inventario e compilazione locale degli XSD ufficiali;
+- corrispondenza completa degli elementi della dichiarazione, incluse le proprietà tecniche degli allegati;
+- regole e passaggi di calcolo, quadrature dei Quadri EE ed EF ed esempi ufficiali acquisiti;
+- distinzione normativa fra i periodi registrati nella cronologia legale, con blocco dei periodi annuali non qualificati;
+- interessi, coefficienti annuali e caso storico della sentenza costituzionale catalogata;
+- preparazione reale degli allegati in PDF/A-1b o TIFF Group 4, limiti per file e per pratica e conservazione dell’originale;
+- checklist condizionale per allegati, dichiarazioni sostitutive, trust, prima casa e casi del Modello 4;
+- controllo ufficiale eseguito in modo riproducibile su una pratica sintetica senza rilievi bloccanti.
 
-- la linea temporale delle norme applicabile alla singola pratica;
-- pagamenti, interessi, coefficienti, rendite, usufrutto e casi storici;
-- la versione corrente di SUC13 dichiarata nel manifest, il relativo modulo conservato nel bundle e gli archivi territoriali letti dal vivo;
-- ricevute, allegati e casi residui del Modello 4;
-- le prescrizioni ministeriali già classificate ma non applicate, l’intera autoliquidazione, la checklist completa e la preparazione degli allegati.
+La prova del controllo ufficiale usa una successione sintetica anteriore all’autoliquidazione. I campi di autoliquidazione sono qualificati separatamente mediante XSD corrente, regole temporali e casi di calcolo. I servizi territoriali e le ricevute restano soggetti a una nuova lettura dal canale vivo prima del futuro invio: è un controllo operativo successivo, non un vuoto dell’ambito corrente.
 
-I blocchi correnti risiedono negli artefatti macchina del catalogo e impediscono di chiudere il risultato di dominio, interfaccia e output.
+Il report della singola dichiarazione è disponibile in forma leggibile nel riepilogo e nel PDF, e in forma macchina nel riepilogo JSON. Riporta fonti e versioni applicate, Quadri presenti, esito del controllo ministeriale, allegati preparati, dimensioni, formati, eccezioni motivate, avvisi e blocchi.
+
+## Riproduzione della qualificazione
+
+```bash
+npm run verify:sources
+npm run verify:suc13-control
+npm run test
+```
+
+Gli esiti conclusivi sono registrati in [`official-catalog.json`](../../src/domain/official-catalog/official-catalog.json), [`legal-timeline.json`](../../src/domain/official-catalog/legal-timeline.json) e [`suc13-control-qualification.json`](../../src/domain/official-catalog/suc13-control-qualification.json). La suite completa e i gate di pubblicazione verificano che il catalogo non torni in stato bloccato.
 
 ## Criterio di arresto
 

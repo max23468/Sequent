@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "SUC-OFFICIAL-2026-08-27-COMPREHENSIVE",
+  "status": "qualified",
+  "control": {
+    "name": "SUC13",
+    "version": "2.3.1",
+    "releaseDate": "11/03/2026",
+    "sourceId": "SRC-39",
+    "sourceSha256": "eb36a6df004e517f0f754eb42902a2f2a110ae5707df408e8dd2d0a23ed24c58"
+  },
+  "runtime": {
+    "name": "Desktop Telematico per macOS",
+    "sourceId": "SRC-33",
+    "sourceSha256": "40b99a0212b71ce6b57b7ccf373aa4f0e01575315bf6de27e90035943b1100d6"
+  },
+  "fixture": {
+    "path": "tests/fixtures/official/suc13-control.synthetic.xml",
+    "sha256": "ae210078d5f065bf51650e600b2c6aaca1faa797fee73e5256e313dac3594e38",
+    "synthetic": true,
+    "successionOpenedOn": "2024-01-01",
+    "includes": [
+      "presentatore con carica 5",
+      "soggetto del Quadro EA",
+      "titolo esente devoluto",
+      "allegati TIFF Group 4"
+    ]
+  },
+  "result": {
+    "wellFormed": true,
+    "schemaValid": true,
+    "blockingDiagnostics": [],
+    "advisoryDiagnostics": [
+      {
+        "severity": "04",
+        "code": "3345",
+        "field": "XXX01",
+        "declarationId": "00001"
+      }
+    ],
+    "accepted": true
+  },
+  "headlessExecution": {
+    "signatureHandling": "Le sole firme dei JAR annidati vengono rimosse da copie temporanee per riprodurre fuori da Eclipse il classloader a bundle; gli originali versionati non vengono modificati e sono verificati per hash.",
+    "outputEvidence": "diagnostic-record-zero-blocking-errors"
+  },
+  "scope": {
+    "proven": "Il pacchetto ufficiale corrente e il runtime ufficiale eseguono il controllo completo della pratica sintetica pre-2025 senza errori bloccanti.",
+    "temporalBoundary": "I campi di autoliquidazione introdotti dal 2025 sono qualificati separatamente mediante XSD corrente, regole temporali e casi di calcolo; non sono dedotti da questa pratica pre-2025."
+  }
+}
