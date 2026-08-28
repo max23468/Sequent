@@ -216,6 +216,10 @@ test("la candidata rilegge lo stesso artefatto ARM64 senza deploy", async () => 
     "utf8",
   );
   assert.match(workflow, /workflow_dispatch:/);
+  const publicSuiteJob = workflow.match(/  public-suite:\n(?<job>[\s\S]*?)\n  scan-dependencies:/)
+    ?.groups?.job;
+  assert.ok(publicSuiteJob, "job public-suite assente");
+  assert.match(publicSuiteJob, /ghostscript icc-profiles-free imagemagick poppler-utils qpdf/);
   assert.match(workflow, /docker save --output sequent-release-arm64\.tar/);
   assert.match(workflow, /actions\/upload-artifact@[0-9a-f]{40}/);
   assert.match(workflow, /actions\/download-artifact@[0-9a-f]{40}/);
