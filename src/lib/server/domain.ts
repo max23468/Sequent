@@ -53,6 +53,10 @@ export type AssetKind =
   | "liability"
   | "donation";
 
+const SUCCESSION_OPENING_DATE_FIELD_ID = "frontespizio.defunto.data-decesso";
+const SUBSTITUTE_SUCCESSION_OPENING_DATE_FIELD_ID =
+  "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/Decesso/DataDecesso";
+
 const ASSET_KIND_DETAILS: Record<
   AssetKind,
   { category: AssetCategory; quadro: QuadroId | null; treatment: SuccessionAllocation["treatment"] }
@@ -1201,14 +1205,13 @@ export function saveDevolutionScenario(
         message: `Indica lo stesso periodo di riduzione per tutte le quote di “${asset.displayName}”.`,
         blocking: true,
       });
-    const allocatedPreviousValue = assetShares.reduce(
-      (total, share) => total + share.previousSuccessionValueCents,
-      0n,
-    );
-    if (officialPreviousCents !== null && allocatedPreviousValue !== officialPreviousCents)
+    if (
+      officialPreviousCents !== null &&
+      assetShares.some((share) => share.previousSuccessionValueCents !== officialPreviousCents)
+    )
       addIssue({
         id: "DEVOLUTION_PREVIOUS_SUCCESSION_VALUE_DIVERGENCE",
-        message: `La somma dei valori precedenti ripartiti per “${asset.displayName}” deve coincidere con il relativo dato del Quadro ufficiale.`,
+        message: `Ogni quota di “${asset.displayName}” deve usare il valore da precedenti successioni indicato nel Quadro ufficiale.`,
         blocking: true,
       });
   }
@@ -1418,6 +1421,8 @@ export function runSuccessionCalculation(
   }
   const beneficiaryIds = [...new Set(scenario.shares.map((share) => share.beneficiaryId))];
   const issues: ValidationIssue[] = [];
+  const openingDateIssue = successionOpeningDateDivergenceIssue(declaration.declaration);
+  if (openingDateIssue) issues.push(openingDateIssue);
   if (!declaration.declaration.successionOpenedAt)
     issues.push({
       id: "CALCULATION_OPENING_DATE_MISSING",
@@ -1831,7 +1836,7 @@ export function saveCanonicalFields(
       ["manual-entry"],
       entityId,
     );
-    if (getCatalogField(field.fieldId)?.technicalPath.endsWith("/DataDecesso"))
+    if (field.fieldId === SUCCESSION_OPENING_DATE_FIELD_ID)
       declaration = {
         ...declaration,
         successionOpenedAt: officialDateToIso(field.value),
@@ -2029,9 +2034,35 @@ function isTechnicalDescendant(path: string, ancestor: string): boolean {
   return path.startsWith(`${ancestor}/`);
 }
 
-function isRequiredForPrimaryAssetRow(element: TechnicalElement): boolean {
-  const documentation = element.documentation.join(" ").toLocaleLowerCase("it");
-  return /obbligatori[oa].*continuazione/u.test(documentation);
+function successionOpeningDateDivergenceIssue(
+  declaration: DeclarationSnapshot,
+): ValidationIssue | null {
+  const frontespizioDate = Object.values(declaration.fields).find(
+    (field) => field.fieldId === SUCCESSION_OPENING_DATE_FIELD_ID,
+  )?.value;
+  const substituteDate = getCanonicalField(
+    declaration,
+    SUBSTITUTE_SUCCESSION_OPENING_DATE_FIELD_ID,
+  )?.value;
+  if (
+    frontespizioDate === null ||
+    frontespizioDate === undefined ||
+    String(frontespizioDate) === "" ||
+    substituteDate === null ||
+    substituteDate === undefined ||
+    String(substituteDate) === "" ||
+    String(frontespizioDate) === String(substituteDate)
+  )
+    return null;
+  return {
+    id: "SUCCESSION_OPENING_DATE_DIVERGENCE",
+    level: "blocking",
+    fieldId: SUBSTITUTE_SUCCESSION_OPENING_DATE_FIELD_ID,
+    message:
+      "La data del decesso ripetuta nella dichiarazione sostitutiva deve coincidere con quella del Frontespizio.",
+    sourceId: "SRC-08",
+    sourcePointer: "Frontespizio e Quadro EH — data del decesso",
+  };
 }
 
 function requiredFieldIssues(
@@ -2046,7 +2077,6 @@ function requiredFieldIssues(
     (subject) => subject.role === "decedent",
   );
   const assets = listSharedAssets(database, practiceId, declarationId);
-  const assetIds = new Set(assets.map((asset) => asset.id));
   const entityNames = new Map<string, string>([
     ...subjects.map((subject) => [subject.id, subject.displayName] as const),
     ...(decedent ? [[decedent.id, decedent.displayName] as const] : []),
@@ -2073,7 +2103,6 @@ function requiredFieldIssues(
     const fieldsByPath = new Map(fields.map((field) => [field.path, field]));
     const rootPath = getQuadroActivationRootPath(context.quadro);
     for (const contextEntityId of context.entityIds) {
-      const primaryAssetRow = contextEntityId !== null && assetIds.has(contextEntityId);
       const entityIdFor = (field: QuadroField): string | null =>
         field.entityScope === "decedent" ? (decedent?.id ?? null) : contextEntityId;
       const hasValue = (field: QuadroField): boolean => {
@@ -2105,9 +2134,7 @@ function requiredFieldIssues(
             !activeContainers.has(parentTechnicalPath(element.path))
           )
             continue;
-          const required =
-            element.minOccurs > 0 || (primaryAssetRow && isRequiredForPrimaryAssetRow(element));
-          if (!required) continue;
+          if (element.minOccurs === 0) continue;
           activeContainers.add(element.path);
           activated = true;
         }
@@ -2175,7 +2202,7 @@ function requiredFieldIssues(
         if (
           field.choiceGroup !== null ||
           !activeContainers.has(parentTechnicalPath(field.path)) ||
-          (field.minOccurs === 0 && !(primaryAssetRow && isRequiredForPrimaryAssetRow(field))) ||
+          field.minOccurs === 0 ||
           hasValue(field)
         )
           continue;
@@ -2236,6 +2263,8 @@ export function buildComplianceReport(
     ...validateRepeatedEaSubjects(declaration, entries),
     ...requiredFieldIssues(database, practiceId, declarationId, declaration),
   ];
+  const openingDateIssue = successionOpeningDateDivergenceIssue(declaration);
+  if (openingDateIssue) issues.push(openingDateIssue);
   if (getCatalogStatus().status !== "qualified") {
     issues.push({
       id: "OFFICIAL_RULES_INCOMPLETE",

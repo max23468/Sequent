@@ -40,6 +40,9 @@ const VESSEL_LENGTH_FIELD_ID =
   "xsd:/Fornitura/Dichiarazione/QuadroEQ/Modulo/Navi/Tipo/Dimensione/Lunghezza";
 const VESSEL_TONNAGE_FIELD_ID =
   "xsd:/Fornitura/Dichiarazione/QuadroEQ/Modulo/Navi/Tipo/Dimensione/Stazza";
+const VESSEL_TYPE_FIELD_ID = "xsd:/Fornitura/Dichiarazione/QuadroEQ/Modulo/Navi/Tipo/TipoUnita";
+const SUBSTITUTE_SUCCESSION_OPENING_DATE_FIELD_ID =
+  "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/Decesso/DataDecesso";
 
 afterEach(() => {
   for (const directory of directories.splice(0)) {
@@ -508,6 +511,54 @@ describe("persistenza del procedimento", () => {
     expect(substituteFields).toEqual(expect.arrayContaining(previousDeclarationFields));
   });
 
+  it("usa soltanto la data del Frontespizio e blocca una data diversa nel Quadro EH", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-opening-date-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento sintetico");
+    const decedent = createSharedSubject(database, practice.id, {
+      role: "decedent",
+      displayName: "Defunto",
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      fieldId: "frontespizio.defunto.data-decesso",
+      value: "31122024",
+      entityId: decedent.id,
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 2,
+      fieldId: SUBSTITUTE_SUCCESSION_OPENING_DATE_FIELD_ID,
+      value: "01012025",
+    });
+
+    expect(getDeclaration(database, practice.declarationId)?.declaration.successionOpenedAt).toBe(
+      "2024-12-31",
+    );
+    expect(
+      buildComplianceReport(database, practice.id, practice.declarationId).issues.map(
+        ({ id }) => id,
+      ),
+    ).toContain("SUCCESSION_OPENING_DATE_DIVERGENCE");
+
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 3,
+      fieldId: SUBSTITUTE_SUCCESSION_OPENING_DATE_FIELD_ID,
+      value: "31122024",
+    });
+    expect(
+      buildComplianceReport(database, practice.id, practice.declarationId).issues.some(
+        ({ id }) => id === "SUCCESSION_OPENING_DATE_DIVERGENCE",
+      ),
+    ).toBe(false);
+  });
+
   it("controlla i campi obbligatori nel ramo attivo e una sola alternativa XSD", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-domain-required-branches-"));
     directories.push(directory);
@@ -537,6 +588,14 @@ describe("persistenza del procedimento", () => {
       value: "12",
       entityId: building.id,
     });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 2,
+      fieldId: VESSEL_TYPE_FIELD_ID,
+      value: "1",
+      entityId: vessel.id,
+    });
 
     const missing = buildComplianceReport(database, practice.id, practice.declarationId).issues;
     expect(missing).toEqual(
@@ -556,7 +615,7 @@ describe("persistenza del procedimento", () => {
     saveCanonicalField(database, {
       practiceId: practice.id,
       declarationId: practice.declarationId,
-      expectedRevision: 2,
+      expectedRevision: 3,
       fieldId: VESSEL_LENGTH_FIELD_ID,
       value: "750",
       entityId: vessel.id,
@@ -570,7 +629,7 @@ describe("persistenza del procedimento", () => {
     saveCanonicalField(database, {
       practiceId: practice.id,
       declarationId: practice.declarationId,
-      expectedRevision: 3,
+      expectedRevision: 4,
       fieldId: VESSEL_TONNAGE_FIELD_ID,
       value: "20",
       entityId: vessel.id,
@@ -1053,7 +1112,7 @@ describe("persistenza del procedimento", () => {
       practiceId: practice.id,
       declarationId: practice.declarationId,
       expectedRevision: 3,
-      shares: shares(4_000n, 6_000n, 3),
+      shares: shares(10_000n, 10_000n, 3),
     });
     expect(inconsistentPeriod.issues.map(({ id }) => id)).toContain(
       "DEVOLUTION_REDUCTION_PERIOD_INCONSISTENT",
@@ -1063,7 +1122,7 @@ describe("persistenza del procedimento", () => {
       practiceId: practice.id,
       declarationId: practice.declarationId,
       expectedRevision: 3,
-      shares: shares(4_000n, 6_000n),
+      shares: shares(10_000n, 10_000n),
     });
     expect(aligned.issues).toEqual([]);
     expect(aligned.status).toBe("draft");
