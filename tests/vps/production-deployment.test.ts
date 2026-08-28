@@ -72,8 +72,10 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
     /required_bytes=\$\(\(2 \* archive_bytes \+ 2 \* data_bytes \+ safety_bytes\)\)/,
   );
   assert.match(deploy, /available_bytes >= required_bytes/);
-  assert.match(deploy, /release-artifact\.mjs" verify/);
-  assert.match(deploy, /--commit "\$commit" --tree "\$candidate_tree"/);
+  assert.match(deploy, /schema manifest non valido/);
+  assert.match(deploy, /commit manifest divergente/);
+  assert.match(deploy, /tree manifest divergente/);
+  assert.match(deploy, /image ID del tag candidato divergente/);
   assert.match(deploy, /migration-\$commit/);
   assert.match(deploy, /source\.backup\(destination\)/);
   assert.match(deploy, /PRAGMA quick_check/);
@@ -121,7 +123,7 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
     'write_trusted_runtime_env "$previous_runtime_image"',
     previousImage,
   );
-  const artifactLoad = deploy.indexOf('release-artifact.mjs" verify', immutableRollbackEnv);
+  const artifactLoad = deploy.indexOf('docker load --input "$archive"', immutableRollbackEnv);
   assert.ok(
     previousImage >= 0 &&
       previousImage < immutableRollbackEnv &&
@@ -199,6 +201,10 @@ test("il deploy trusted non esegue Git come root", () => {
   assert.match(deploy, /git_as_checkout_owner rev-parse 'HEAD\^\{tree\}'/);
   assert.equal(deploy.match(/\/usr\/bin\/git -C/g)?.length, 1);
   assert.doesNotMatch(deploy, /^\s*git -C/m);
+  assert.doesNotMatch(deploy, /with-node\.sh|SEQUENT_NODE_SLOT/);
+  assert.match(deploy, /\/usr\/bin\/python3 - "\$manifest"/);
+  assert.match(deploy, /sha256sum "\$archive"/);
+  assert.match(deploy, /docker load --input "\$archive"/);
   const artifact = read("scripts/github/release-artifact.mjs");
   const verify = artifact.slice(artifact.indexOf("async function verify"));
   assert.match(verify, /commit: value\(args, "--commit"\)/);

@@ -224,18 +224,35 @@ PY
 
 [[ -f "$database" ]] && check_database "$database"
 
-SEQUENT_NODE_SLOT=current "$repository/scripts/vps/with-node.sh" node \
-  "$repository/scripts/github/release-artifact.mjs" verify \
-  --archive "$archive" --manifest "$manifest" --commit "$commit" --tree "$candidate_tree"
+artifact_identity_output=
+if ! artifact_identity_output="$(/usr/bin/python3 - "$manifest" <<'PY'
+import json
+import sys
 
-readarray -t artifact_identity < <(SEQUENT_NODE_SLOT=current "$repository/scripts/vps/with-node.sh" node - "$manifest" <<'NODE'
-const manifest = require(process.argv[2]);
-for (const value of [manifest.schema, manifest.commit, manifest.tree, manifest.platform,
-  manifest.imageTag, manifest.imageId, manifest.archive?.name, manifest.archive?.sha256]) {
-  console.log(value ?? "");
-}
-NODE
-)
+with open(sys.argv[1], encoding="utf-8") as source:
+    manifest = json.load(source)
+archive = manifest.get("archive")
+if not isinstance(archive, dict):
+    raise SystemExit("archive manifest non valido")
+for value in (
+    manifest.get("schema"),
+    manifest.get("commit"),
+    manifest.get("tree"),
+    manifest.get("platform"),
+    manifest.get("imageTag"),
+    manifest.get("imageId"),
+    archive.get("name"),
+    archive.get("sha256"),
+):
+    if not isinstance(value, str) or "\n" in value or "\r" in value:
+        raise SystemExit("identità manifest non valida")
+    print(value)
+PY
+)"; then
+  fail "manifest release non interpretabile"
+fi
+readarray -t artifact_identity <<<"$artifact_identity_output"
+[[ "${#artifact_identity[@]}" -eq 8 ]] || fail "identità manifest non conforme"
 [[ "${artifact_identity[0]}" == "sequent-release-artifact/v1" ]] || fail "schema manifest non valido"
 [[ "${artifact_identity[1]}" == "$commit" ]] || fail "commit manifest divergente"
 [[ "${artifact_identity[2]}" == "$candidate_tree" ]] ||
@@ -244,6 +261,13 @@ NODE
 [[ "${artifact_identity[4]}" == "sequent-release:$commit" ]] || fail "tag manifest divergente"
 candidate_image_id="${artifact_identity[5]}"
 [[ "$candidate_image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "image ID candidato non valido"
+[[ "${artifact_identity[6]}" == "$(basename "$archive")" ]] || fail "nome archivio divergente"
+[[ "${artifact_identity[7]}" =~ ^[0-9a-f]{64}$ ]] || fail "SHA archivio manifest non valido"
+[[ "$(sha256sum "$archive" | cut -d' ' -f1)" == "${artifact_identity[7]}" ]] ||
+  fail "SHA archivio divergente"
+docker load --input "$archive" >/dev/null
+[[ "$(docker image inspect --format '{{.Id}}' "${artifact_identity[4]}")" == "$candidate_image_id" ]] ||
+  fail "image ID del tag candidato divergente"
 [[ "$(docker image inspect --format '{{.Id}}' "$candidate_image_id")" == "$candidate_image_id" ]] ||
   fail "immagine candidata assente"
 [[ "$(docker image inspect --format '{{.Architecture}}' "$candidate_image_id")" == arm64 ]] ||
@@ -480,10 +504,18 @@ curl --fail --silent --header 'X-Forwarded-For: 127.0.0.1' http://127.0.0.1:3300
 [[ -f "$database" ]] && check_database "$database"
 public_health="$(curl --fail --silent --show-error --max-time 15 "$SEQUENT_ORIGIN/api/health")"
 public_identity_output=
-if ! public_identity_output="$(SEQUENT_NODE_SLOT=current \
-  "$repository/scripts/vps/with-node.sh" node -e \
-  'const input = JSON.parse(process.argv[1]); console.log(input.status ?? ""); console.log(input.commit ?? "")' \
-  "$public_health")"; then
+if ! public_identity_output="$(/usr/bin/python3 - "$public_health" <<'PY'
+import json
+import sys
+
+health = json.loads(sys.argv[1])
+for key in ("status", "commit"):
+    value = health.get(key)
+    if not isinstance(value, str) or "\n" in value or "\r" in value:
+        raise SystemExit("identità health non valida")
+    print(value)
+PY
+)"; then
   fail "health pubblico non interpretabile"
 fi
 readarray -t public_identity <<<"$public_identity_output"
@@ -494,20 +526,25 @@ readarray -t public_identity <<<"$public_identity_output"
 printf '%s\n' "$candidate_image_id" >"$release_dir/image-id"
 chown root:root "$release_dir/image-id"
 chmod 0640 "$release_dir/image-id"
-SEQUENT_NODE_SLOT=current "$repository/scripts/vps/with-node.sh" node - \
-  "$release_dir/deployment.json" "$commit" "$candidate_image_id" "$previous_commit" \
-  "$previous_image_id" "$deployment_stamp" <<'NODE'
-const fs = require("node:fs");
-const [output, commit, imageId, previousCommit, previousImageId, deployedAt] = process.argv.slice(2);
-fs.writeFileSync(output, `${JSON.stringify({
-  schema: "sequent-production-deployment/v1",
-  commit,
-  imageId,
-  previousCommit,
-  previousImageId,
-  deployedAt,
-}, null, 2)}\n`, { mode: 0o640 });
-NODE
+/usr/bin/python3 - "$release_dir/deployment.json" "$commit" "$candidate_image_id" \
+  "$previous_commit" "$previous_image_id" "$deployment_stamp" <<'PY'
+import json
+import os
+import sys
+
+output, commit, image_id, previous_commit, previous_image_id, deployed_at = sys.argv[1:]
+descriptor = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o640)
+with os.fdopen(descriptor, "w", encoding="utf-8") as destination:
+    json.dump({
+        "schema": "sequent-production-deployment/v1",
+        "commit": commit,
+        "imageId": image_id,
+        "previousCommit": previous_commit,
+        "previousImageId": previous_image_id,
+        "deployedAt": deployed_at,
+    }, destination, ensure_ascii=False, indent=2)
+    destination.write("\n")
+PY
 chown root:root "$release_dir/deployment.json"
 
 rm "$maintenance_marker"

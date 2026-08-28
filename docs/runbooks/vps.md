@@ -72,7 +72,7 @@ Ogni release riuscita conserva archivio, manifest, image ID e ricevuta sotto `/o
 
 ## Toolchain
 
-Le versioni richieste di Node e npm sono definite dagli `engines` di `package.json` e dal lockfile. Sulla VPS provengono dall'archivio ARM64 ufficiale verificato con `SHASUMS256.txt`. Le installazioni immutabili vivono sotto `/opt/sequent/runtime/toolchains/versions/`; i puntatori `node-current` e `node-rollback` identificano rispettivamente la linea attiva e quella di ritorno. Nessuna delle due viene aggiunta al `PATH` globale, così la toolchain di Sequent non interferisce con Hub Fatture.
+Le versioni richieste di Node e npm sono definite dagli `engines` di `package.json` e dal lockfile. Sulla VPS provengono dall'archivio ARM64 ufficiale verificato con `SHASUMS256.txt`. Le installazioni immutabili vivono sotto `/opt/sequent/runtime/toolchains/versions/`; i puntatori `node-current` e `node-rollback` identificano rispettivamente la linea attiva e quella di ritorno. Nessuna delle due viene aggiunta al `PATH` globale, così la toolchain di Sequent non interferisce con Hub Fatture. La corsia privilegiata di deploy non esegue questa toolchain: interpreta manifest, health e ricevuta con `/usr/bin/python3` root-owned e usa Node soltanto all'interno dell'immagine candidata confinata dai gate runtime.
 
 La selezione avviene soltanto dopo avere collocato e verificato l'archivio nella directory `versions`:
 
