@@ -7,15 +7,15 @@ import { resolvableAdvisoryThreadIds } from "../codex-review-gate.mjs";
 const ADVISORY_MARKER = "<!-- sequent-codex-advisories:";
 
 function output(command, args) {
-  return execFileSync(command, args, { encoding: "utf8" }).trim();
+  return execFileSync(command, args, { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }).trim();
 }
 
 function json(command, args) {
   return JSON.parse(output(command, args));
 }
 
-function paged(path) {
-  return json("gh", ["api", "--paginate", "--slurp", path]).flat();
+function paged(path, projection) {
+  return json("gh", ["api", "--paginate", "--slurp", path, "--jq", `[.[][] | ${projection}]`]);
 }
 
 export function recordedAdvisoryThreadIds({ headSha, issueComments, reviewComments, threads }) {
@@ -80,8 +80,14 @@ function main(args = process.argv.slice(2)) {
 
   const threadIds = recordedAdvisoryThreadIds({
     headSha,
-    issueComments: paged(`repos/${repository}/issues/${number}/comments?per_page=100`),
-    reviewComments: paged(`repos/${repository}/pulls/${number}/comments?per_page=100`),
+    issueComments: paged(
+      `repos/${repository}/issues/${number}/comments?per_page=100`,
+      "{body, user: {login: .user.login}}",
+    ),
+    reviewComments: paged(
+      `repos/${repository}/pulls/${number}/comments?per_page=100`,
+      "{id, original_commit_id, body}",
+    ),
     threads: reviewThreads(repository, number),
   });
   for (const threadId of threadIds) resolveThread(threadId);

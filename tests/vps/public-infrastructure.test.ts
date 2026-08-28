@@ -114,6 +114,10 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
     assert.match(compose, new RegExp(`\\s- ${capability}`));
   }
   assert.match(dockerfile, /ca-certificates/);
+  assert.match(dockerfile, /node:\$\{NODE_VERSION\}-\$\{NODE_IMAGE_VARIANT\}/);
+  assert.match(dockerfile, /COPY requirements-ocr\.txt/);
+  assert.match(dockerfile, /COPY --from=ocr --chown=root:root \/opt\/ocr \/opt\/ocr/);
+  assert.match(dockerfile, /rm -rf \/usr\/lib\/python3\.12\/ensurepip/);
   assert.match(dockerfile, /scripts\/codex-launcher\.c/);
   assert.match(dockerfile, /find \/ -xdev -type f -perm \/6000 -exec chmod a-s/);
   assert.match(dockerfile, /install -o root -g root -m 4755/);
