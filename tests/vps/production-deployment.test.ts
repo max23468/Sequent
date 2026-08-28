@@ -36,6 +36,10 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /sorgente trusted del deploy non root-owned/);
   assert.match(deploy, /artefatto fuori dalla sorgente trusted/);
   assert.match(deploy, /root:root:600/);
+  assert.ok(
+    deploy.indexOf('repository="${SEQUENT_TRUSTED_REPOSITORY:-}"') <
+      deploy.indexOf('for input in "$archive" "$manifest"'),
+  );
   assert.match(deploy, /mktemp \/run\/sequent-rollback-compose\./);
   assert.match(deploy, /show "\$previous_commit:deploy\/compose\.example\.yml"/);
   assert.match(deploy, /chown root:root "\$rollback_compose_file"/);

@@ -31,13 +31,6 @@ fail() {
 [[ "$retention_count" =~ ^[0-9]+$ ]] || fail "retention release non valida"
 ((retention_count >= 2)) || fail "la retention deve preservare almeno runtime e rollback"
 
-for input in "$archive" "$manifest"; do
-  [[ "$input" == "$repository/"* ]] || fail "artefatto fuori dalla sorgente trusted"
-  [[ -f "$input" && ! -L "$input" ]] || fail "artefatto assente o non regolare"
-  [[ "$(stat -c '%U:%G:%a' "$input")" == "root:root:600" ]] ||
-    fail "permessi dell'artefatto trusted non conformi"
-done
-
 runtime_env="$root/runtime/runtime.env"
 runtime_compose="$root/runtime/compose.yml"
 repository="${SEQUENT_TRUSTED_REPOSITORY:-}"
@@ -48,6 +41,13 @@ rollback_compose_file=
 previous_runtime_image=
 runtime_uid=
 runtime_gid=
+
+for input in "$archive" "$manifest"; do
+  [[ "$input" == "$repository/"* ]] || fail "artefatto fuori dalla sorgente trusted"
+  [[ -f "$input" && ! -L "$input" ]] || fail "artefatto assente o non regolare"
+  [[ "$(stat -c '%U:%G:%a' "$input")" == "root:root:600" ]] ||
+    fail "permessi dell'artefatto trusted non conformi"
+done
 
 git_as_checkout_owner() {
   /usr/sbin/runuser --user ubuntu -- /usr/bin/env -i \
