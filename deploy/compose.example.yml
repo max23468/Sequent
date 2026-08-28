@@ -22,6 +22,7 @@ services:
       - /opt/sequent/data:/var/lib/sequent
     networks:
       - sequent
+      - sequent-proxy
     ports:
       - 127.0.0.1:3300:3000
     mem_limit: 4g
@@ -43,3 +44,6 @@ services:
 networks:
   sequent:
     name: sequent
+  sequent-proxy:
+    name: sequent-proxy
+    external: true
