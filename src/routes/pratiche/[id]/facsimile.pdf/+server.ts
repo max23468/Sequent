@@ -12,6 +12,8 @@ import { getDeclaration, getPractice } from "$lib/server/practices";
 function facsimileErrorMessage(failure: OfficialFacsimileError): string {
   if (failure.code === "SOURCE_MISMATCH")
     return "Il modello ufficiale disponibile non coincide con la versione qualificata per questa dichiarazione.";
+  if (failure.code === "VERSION_MISMATCH")
+    return "La dichiarazione usa una versione di catalogo, regole o fonti ufficiali diversa da quella qualificata per il fac-simile.";
   if (failure.code === "VALUE_OVERFLOW")
     return `Il valore del campo ${failure.fieldId ?? "non identificato"} non entra nello spazio ufficiale senza essere troncato.`;
   return `Il campo ${failure.fieldId ?? "non identificato"} contiene un valore ma non dispone ancora di una posizione qualificata nel fac-simile ufficiale.`;

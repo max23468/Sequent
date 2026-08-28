@@ -7,13 +7,17 @@ import {
   setCanonicalField,
   type DeclarationSnapshot,
 } from "../../src/domain/declaration.ts";
-import { createOfficialFacsimilePdf } from "../../src/lib/server/official-facsimile.ts";
+import {
+  createOfficialFacsimilePdf,
+  resolveFacsimileFieldNumber,
+} from "../../src/lib/server/official-facsimile.ts";
 
 function applied(
   declaration: DeclarationSnapshot,
   fieldId: string,
   value: string,
   entityId: string | null = null,
+  occurrenceId: string | null = null,
 ): DeclarationSnapshot {
   return setCanonicalField(
     declaration,
@@ -22,6 +26,7 @@ function applied(
     "manually_corrected",
     ["fixture"],
     entityId,
+    occurrenceId,
   );
 }
 
@@ -38,6 +43,80 @@ function input(declaration: DeclarationSnapshot) {
 }
 
 describe("fac-simile del modello ufficiale", () => {
+  it("usa i numeri stampati del modello e non la sequenza tecnica XSD", () => {
+    expect(
+      resolveFacsimileFieldNumber(
+        "xsd:/Fornitura/Dichiarazione/QuadroEB/Modulo/Terreni/ValorePrecSucc",
+      ),
+    ).toBe("24");
+    expect(
+      resolveFacsimileFieldNumber(
+        "xsd:/Fornitura/Dichiarazione/QuadroEB/Modulo/Terreni/DevoluzioneEB/Devoluzione/IdentificazioneSoggetto/Rigo",
+      ),
+    ).toBe("28");
+    expect(
+      resolveFacsimileFieldNumber(
+        "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/Graffati/ImmobiliGraffati/DatiCatastali/SezioneUrbana",
+        2,
+      ),
+    ).toBe("38");
+    expect(
+      resolveFacsimileFieldNumber(
+        "xsd:/Fornitura/Dichiarazione/QuadroEN/Modulo/Aziende/ImmobiliAziendali/Quadro",
+        2,
+      ),
+    ).toBe("16");
+    expect(
+      resolveFacsimileFieldNumber(
+        "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/Graffati/ImmobiliGraffati/DatiCatastali/SezioneUrbana",
+        4,
+      ),
+    ).toBeNull();
+    expect(
+      resolveFacsimileFieldNumber(
+        "xsd:/Fornitura/Dichiarazione/QuadroEN/Modulo/Aziende/ImmobiliAziendali/Quadro",
+        9,
+      ),
+    ).toBeNull();
+    expect(
+      resolveFacsimileFieldNumber(
+        "xsd:/Fornitura/Dichiarazione/QuadroEL/Modulo/TerreniTavolare/LuogoTavolare/CodiceComuneAmministrativo",
+      ),
+    ).toBeNull();
+  });
+
+  it("blocca una dichiarazione costruita su versioni ufficiali diverse", async () => {
+    const declaration = createEmptyDeclaration();
+    declaration.catalogVersion = "catalogo-obsoleto";
+    await expect(
+      createOfficialFacsimilePdf({ ...input(declaration), subjects: [], assets: [] }),
+    ).rejects.toMatchObject({ code: "VERSION_MISMATCH", fieldId: null });
+  });
+
+  it("preserva più occorrenze annidate nello stesso cespite", () => {
+    const fieldId =
+      "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/Graffati/ImmobiliGraffati/DatiCatastali/Particella";
+    let declaration = createEmptyDeclaration();
+    declaration = applied(declaration, fieldId, "100", "asset-1", "graffato-1");
+    declaration = applied(declaration, fieldId, "200", "asset-1", "graffato-2");
+    expect(Object.values(declaration.fields).map((field) => field.value)).toEqual(["100", "200"]);
+  });
+
+  it("blocca i quadri privi di una mappa grafica completa invece di usare numeri XSD", async () => {
+    const declaration = applied(
+      createEmptyDeclaration(),
+      "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/Cognome",
+      "ROSSI",
+    );
+    await expect(
+      createOfficialFacsimilePdf({ ...input(declaration), subjects: [], assets: [] }),
+    ).rejects.toMatchObject({
+      code: "FIELD_UNMAPPED",
+      fieldId:
+        "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/Cognome",
+    });
+  });
+
   it("usa soltanto le pagine pertinenti e conserva il modello come sfondo", async () => {
     const ebProvince = listQuadroFields("EB").find((field) => field.visibleNumber === "1");
     expect(ebProvince).toBeDefined();
@@ -111,7 +190,7 @@ describe("fac-simile del modello ufficiale", () => {
     });
   });
 
-  it("genera tutte le pagine pertinenti dei quadri supportati", async () => {
+  it("genera tutte le pagine pertinenti dei quadri con mappa grafica qualificata", async () => {
     const quadri: QuadroId[] = [
       "EA",
       "EB",
@@ -121,8 +200,6 @@ describe("fac-simile del modello ufficiale", () => {
       "EE",
       "EF",
       "EG",
-      "EH",
-      "EI",
       "EL",
       "EM",
       "EN",
@@ -179,6 +256,68 @@ describe("fac-simile del modello ufficiale", () => {
       assets,
     });
     const pdf = await PDFDocument.load(bytes);
-    expect(pdf.getPageCount()).toBe(17);
+    expect(pdf.getPageCount()).toBe(12);
+  });
+
+  it("renderizza insieme tutti i campi qualificati senza collisioni di mappatura", async () => {
+    const quadri: QuadroId[] = [
+      "EA",
+      "EB",
+      "EC",
+      "ER",
+      "ED",
+      "EE",
+      "EF",
+      "EG",
+      "EL",
+      "EM",
+      "EN",
+      "EO",
+      "EP",
+      "EQ",
+    ];
+    const entityQuadri = new Set<QuadroId>([
+      "EA",
+      "EB",
+      "EC",
+      "ER",
+      "ED",
+      "EL",
+      "EM",
+      "EN",
+      "EO",
+      "EP",
+      "EQ",
+    ]);
+    let declaration = createEmptyDeclaration();
+    const assets: Array<{ id: string; quadro: QuadroId }> = [];
+    for (const quadro of quadri) {
+      const entityId = quadro === "EA" ? "subject-full" : `asset-full-${quadro}`;
+      if (quadro !== "EA" && entityQuadri.has(quadro)) assets.push({ id: entityId, quadro });
+      for (const field of listQuadroFields(quadro)) {
+        if (
+          field.visibleFieldId === null ||
+          /\/Firma|\.firma/i.test(field.canonicalId) ||
+          resolveFacsimileFieldNumber(field.canonicalId) === null
+        )
+          continue;
+        declaration = setCanonicalField(
+          declaration,
+          field.canonicalId,
+          "1",
+          "manually_corrected",
+          ["fixture"],
+          entityQuadri.has(quadro) ? entityId : null,
+          field.occurrenceGroup ? `occurrence-${quadro}-${field.occurrenceGroup}` : null,
+        );
+      }
+    }
+    const bytes = await createOfficialFacsimilePdf({
+      ...input(declaration),
+      subjects: [{ id: "subject-full", sequence: 1 }],
+      assets,
+    });
+    const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getPageCount()).toBe(12);
   });
 });

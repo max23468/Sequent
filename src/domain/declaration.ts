@@ -1,8 +1,8 @@
-const CURRENT_DECLARATION_SCHEMA = 7;
-const CURRENT_CATALOG_VERSION = "2026.08.27.2";
-const CURRENT_RULESET_VERSION = "2026.08.12";
+export const CURRENT_DECLARATION_SCHEMA = 7;
+export const CURRENT_CATALOG_VERSION = "2026.08.27.2";
+export const CURRENT_RULESET_VERSION = "2026.08.12";
 const CURRENT_VALIDATOR_VERSION = "suc13-2.3.1.202603101508";
-const OFFICIAL_SOURCE_BUNDLE_ID = "SUC-OFFICIAL-2026-08-27-COMPREHENSIVE";
+export const OFFICIAL_SOURCE_BUNDLE_ID = "SUC-OFFICIAL-2026-08-27-COMPREHENSIVE";
 export const OFFICIAL_SOURCE_LABEL = "Fonti ufficiali acquisite al 27 agosto 2026";
 
 export type FieldState =
@@ -119,6 +119,7 @@ export function canonicalFieldKey(
   entityId: string | null = null,
   occurrenceId: string | null = null,
 ): string {
+  if (entityId && occurrenceId) return `${fieldId}::entity:${entityId}::occurrence:${occurrenceId}`;
   if (entityId) return `${fieldId}::${entityId}`;
   if (occurrenceId) return `${fieldId}::occurrence:${occurrenceId}`;
   return fieldId;

@@ -12,6 +12,9 @@ import {
 } from "../../domain/official-catalog/catalog.ts";
 import facsimileLayout from "../../domain/official-catalog/facsimile-layout.json" with { type: "json" };
 import {
+  CURRENT_CATALOG_VERSION,
+  CURRENT_RULESET_VERSION,
+  OFFICIAL_SOURCE_BUNDLE_ID,
   getCanonicalField,
   type CanonicalFieldValue,
   type DeclarationSnapshot,
@@ -427,11 +430,11 @@ export interface OfficialFacsimileData {
 }
 
 export class OfficialFacsimileError extends Error {
-  readonly code: "SOURCE_MISMATCH" | "FIELD_UNMAPPED" | "VALUE_OVERFLOW";
+  readonly code: "SOURCE_MISMATCH" | "VERSION_MISMATCH" | "FIELD_UNMAPPED" | "VALUE_OVERFLOW";
   readonly fieldId: string | null;
 
   constructor(
-    code: "SOURCE_MISMATCH" | "FIELD_UNMAPPED" | "VALUE_OVERFLOW",
+    code: "SOURCE_MISMATCH" | "VERSION_MISMATCH" | "FIELD_UNMAPPED" | "VALUE_OVERFLOW",
     fieldId: string | null,
   ) {
     super(fieldId ? `${code}:${fieldId}` : code);
@@ -480,11 +483,12 @@ function drawValue(
   placement: Placement,
 ): void {
   const printable = displayValue(value);
-  if (!printable || printable === "0") return;
+  if (!printable || (placement.kind === "checkbox" && printable === "0")) return;
   if (placement.kind === "checkbox") {
+    const verticalOffset = placement.verticalOffset ?? 0.7;
     page.drawText("X", {
       x: placement.x + Math.max(0, placement.width / 2 - 3),
-      y: PAGE_HEIGHT - placement.top - 8.7,
+      y: PAGE_HEIGHT - placement.top - verticalOffset - 8,
       size: 8,
       font,
       color: rgb(0.05, 0.05, 0.05),
@@ -562,39 +566,151 @@ function anchorsFor(quadro: QuadroId, number: string, sourcePage?: number): Layo
     .sort((left, right) => left.page - right.page || left.top - right.top || left.x - right.x);
 }
 
-function mappedAnchor(
+function occurrenceGroup(field: ReturnType<typeof getCatalogField>): string | null {
+  if (!field) return null;
+  const path = field.technicalPath;
+  const knownGroup = path.match(
+    /\/(Devoluzione[A-Z]{2}\/Devoluzione|RipartizioneED\/Ripartizione|Graffati\/ImmobiliGraffati|ImmobiliAziendali)\//,
+  )?.[1];
+  return knownGroup ?? field.occurrenceGroup ?? null;
+}
+
+/**
+ * SRC-03 numbers the printed boxes independently from the XSD sequence. This
+ * resolver is deliberately explicit: a field without a verified printed box
+ * returns null and therefore blocks the export instead of being guessed.
+ */
+export function resolveFacsimileFieldNumber(fieldId: string, occurrenceIndex = 0): string | null {
+  const field = getCatalogField(fieldId);
+  if (!field?.visibleNumber) return null;
+  const number = Number(field.visibleNumber);
+  const path = field.technicalPath;
+  const ends = (suffix: string) => path.endsWith(suffix);
+  const inside = (segment: string) => path.includes(segment);
+
+  switch (field.quadro) {
+    case "EH":
+    case "EI":
+      // Questi quadri non numerano tutte le caselle sul modello. Gli attuali
+      // numeri XSD non sono quindi una coordinata grafica qualificata.
+      return null;
+    case "EB":
+      if (ends("/CodiceComuneAmministrativo")) return null;
+      if (ends("/ValorePrecSucc")) return "24";
+      if (ends("/DiscordanzaDatiIntestatario")) return "25";
+      if (ends("/PassaggiSenzaAttiLegali")) return "26";
+      if (ends("/ImpostaVersataEstero")) return "27";
+      if (inside("/DevoluzioneEB/Devoluzione/")) return String(number + 1);
+      if (ends("/DevoluzioneEB/Continuazione")) return "36";
+      break;
+    case "EC":
+      if (ends("/CodiceComuneAmministrativo")) return null;
+      if (ends("/ValorePrecSucc")) return "26";
+      if (ends("/DiscordanzaDatiIntestatario")) return "27";
+      if (ends("/PassaggiSenzaAttiLegali")) return "28";
+      if (ends("/DirittoAbitazione")) return "29";
+      if (inside("/Graffati/ImmobiliGraffati/"))
+        return occurrenceIndex <= 3 ? String(number + 2 + occurrenceIndex * 4) : null;
+      if (ends("/Graffati/ContinuazioneGraffati")) return "46";
+      if (inside("/DevoluzioneEC/Devoluzione/")) return String(number + 2);
+      if (ends("/DevoluzioneEC/Continuazione")) return "55";
+      break;
+    case "ED":
+      if (ends("/RipartizioneED/Ripartizione/Quota/QuotaValore")) return "15";
+      if (ends("/RipartizioneED/Continuazione")) return "16";
+      break;
+    case "EL":
+      if (ends("/CodiceComuneAmministrativo")) return null;
+      if (ends("/SuperficieMetriQuadri")) return "15";
+      if (number >= 15 && number <= 21) return String(number + 1);
+      if (ends("/ValorePrecSucc")) return "23";
+      if (ends("/PartitaTavolare")) return "24";
+      if (ends("/CorpoTavolare")) return "25";
+      break;
+    case "EM":
+      if (ends("/CodiceComuneAmministrativo")) return null;
+      if (ends("/ValorePrecSucc")) return "26";
+      if (ends("/DirittoAbitazione")) return "27";
+      if (inside("/Graffati/ImmobiliGraffati/"))
+        return occurrenceIndex <= 3 ? String(number + occurrenceIndex * 5) : null;
+      break;
+    case "EN":
+      if (ends("/CodiceDiritto_P")) return "5";
+      if (ends("/Aziende/Valore")) return "6";
+      if (ends("/ValorePrecSucc")) return "7";
+      if (ends("/BeneSitoEstero")) return "8";
+      if (ends("/ImpostaVersataEstero")) return "9";
+      if (inside("/ImmobiliAziendali/"))
+        return occurrenceIndex <= 8 ? String(number - 1 + occurrenceIndex * 3) : null;
+      if (ends("/ContinuazioneImmobiliAziendali")) return "37";
+      if (inside("/DevoluzioneEN/Devoluzione/")) return String(number - 1);
+      if (ends("/DevoluzioneEN/Continuazione")) return "46";
+      break;
+    case "EO":
+      if (ends("/ValoreEsente")) return "12";
+      if (ends("/ValorePrecSucc")) return "13";
+      if (ends("/BeneSitoEstero")) return "14";
+      if (ends("/ImpostaVersataEstero")) return "15";
+      if (inside("/DevoluzioneEO/Devoluzione/")) return String(number + 2);
+      if (ends("/DevoluzioneEO/Continuazione")) return "24";
+      break;
+    case "EP":
+      if (ends("/ValorePrecSucc")) return "12";
+      if (inside("/DevoluzioneEP/Devoluzione/")) return String(number + 1);
+      if (ends("/DevoluzioneEP/Continuazione")) return "21";
+      break;
+    case "EQ":
+      if (ends("/ValorePrecSucc")) return "15";
+      if (inside("/DevoluzioneEQ/Devoluzione/")) return String(number + 1);
+      if (ends("/DevoluzioneEQ/Continuazione")) return "24";
+      break;
+    case "ER":
+      if (ends("/ValorePrecSucc")) return "9";
+      if (inside("/DevoluzioneER/Devoluzione/")) return String(number + 1);
+      if (ends("/DevoluzioneER/Continuazione")) return "18";
+      break;
+  }
+  return field.visibleNumber;
+}
+
+type ResolvedPlacement = Placement & { page: number };
+
+function mappedPlacement(
   quadro: QuadroId,
   fieldId: string,
-  visibleNumber: string,
+  printedNumber: string,
   sourcePage: number,
   slot: number,
   occurrenceIndex: number,
-): LayoutAnchor | null {
+): ResolvedPlacement | null {
   const staticPlacement = STATIC_FIELD_PLACEMENTS.get(fieldId);
   if (staticPlacement)
     return {
-      number: visibleNumber,
       page: sourcePage,
-      x: staticPlacement.x,
-      top: staticPlacement.top,
-      width: staticPlacement.width,
+      ...staticPlacement,
     };
   const field = getCatalogField(fieldId);
   if (!field) return null;
   if (field.entityScope === "subject" || field.entityScope === "asset") {
-    const anchors = anchorsFor(quadro, visibleNumber, sourcePage);
+    const anchors = anchorsFor(quadro, printedNumber, sourcePage);
     if (anchors.length === 0) return null;
     const capacity = ASSET_CAPACITY[quadro] ?? 1;
     const anchorsPerSlot = Math.max(1, Math.floor(anchors.length / capacity));
-    return anchors[slot * anchorsPerSlot] ?? null;
+    const repeatedRows =
+      /\/(?:Devoluzione[A-Z]{2}\/Devoluzione|RipartizioneED\/Ripartizione)\//.test(
+        field.technicalPath,
+      );
+    const row = repeatedRows ? occurrenceIndex : 0;
+    return anchors[slot * anchorsPerSlot + row] ?? null;
   }
-  const anchors = anchorsFor(quadro, visibleNumber);
+  const anchors = anchorsFor(quadro, printedNumber);
   if (anchors.length === 0) return null;
   const siblings = listQuadroFields(quadro).filter(
     (candidate) =>
-      candidate.visibleNumber === visibleNumber &&
+      resolveFacsimileFieldNumber(candidate.canonicalId) === printedNumber &&
       candidate.visibleFieldId !== null &&
-      candidate.entityScope === field.entityScope,
+      candidate.entityScope === field.entityScope &&
+      (candidate.occurrenceGroup ?? null) === (field.occurrenceGroup ?? null),
   );
   const rank = siblings.findIndex((candidate) => candidate.canonicalId === fieldId);
   if (rank < 0) return null;
@@ -681,6 +797,13 @@ function activeContexts(data: OfficialFacsimileData, fields: CanonicalFieldValue
 }
 
 export async function createOfficialFacsimilePdf(data: OfficialFacsimileData): Promise<Uint8Array> {
+  if (
+    data.declaration.officialSourceBundleId !== OFFICIAL_SOURCE_BUNDLE_ID ||
+    data.declaration.catalogVersion !== CURRENT_CATALOG_VERSION ||
+    data.declaration.rulesetVersion !== CURRENT_RULESET_VERSION
+  )
+    throw new OfficialFacsimileError("VERSION_MISMATCH", null);
+
   const sourcePath = resolveOfficialModelPath();
   const sourceBytes = readFileSync(sourcePath);
   const sourceSha256 = createHash("sha256").update(sourceBytes).digest("hex");
@@ -694,7 +817,10 @@ export async function createOfficialFacsimilePdf(data: OfficialFacsimileData): P
       continue;
     if (field.quadro === "Frontespizio" && !FRONT_FIELDS[value.fieldId])
       throw new OfficialFacsimileError("FIELD_UNMAPPED", value.fieldId);
-    if (field.quadro !== "Frontespizio" && !field.visibleNumber)
+    if (
+      field.quadro !== "Frontespizio" &&
+      (!field.visibleNumber || resolveFacsimileFieldNumber(value.fieldId) === null)
+    )
       throw new OfficialFacsimileError("FIELD_UNMAPPED", value.fieldId);
   }
 
@@ -808,14 +934,6 @@ export async function createOfficialFacsimilePdf(data: OfficialFacsimileData): P
       const chunkContexts = ENTITY_QUADRI.has(quadro)
         ? quadroContexts.slice(planned.chunk * capacity, (planned.chunk + 1) * capacity)
         : quadroContexts;
-      const occurrenceIds = [
-        ...new Set(
-          values
-            .filter((value) => getCatalogField(value.fieldId)?.quadro === quadro)
-            .map((value) => value.occurrenceId)
-            .filter((id): id is string => id !== null),
-        ),
-      ];
       for (const value of values) {
         const field = getCatalogField(value.fieldId);
         if (field?.quadro !== quadro || field.presentation === "technical-only") continue;
@@ -825,25 +943,44 @@ export async function createOfficialFacsimilePdf(data: OfficialFacsimileData): P
             ? chunkContexts.indexOf(value.entityId ?? "")
             : 0;
         if (slot < 0) continue;
+        const group = occurrenceGroup(field);
+        const occurrenceIds = group
+          ? [
+              ...new Set(
+                values
+                  .filter((candidate) => {
+                    const candidateField = getCatalogField(candidate.fieldId);
+                    return (
+                      candidateField?.quadro === quadro &&
+                      occurrenceGroup(candidateField) === group &&
+                      candidate.entityId === value.entityId
+                    );
+                  })
+                  .map((candidate) => candidate.occurrenceId)
+                  .filter((id): id is string => id !== null),
+              ),
+            ]
+          : [];
         const occurrenceIndex = value.occurrenceId
           ? Math.max(0, occurrenceIds.indexOf(value.occurrenceId))
           : 0;
-        const anchor = mappedAnchor(
+        const printedNumber = resolveFacsimileFieldNumber(value.fieldId, occurrenceIndex);
+        if (printedNumber === null)
+          throw new OfficialFacsimileError("FIELD_UNMAPPED", value.fieldId);
+        const placement = mappedPlacement(
           quadro,
           value.fieldId,
-          field.visibleNumber,
+          printedNumber,
           planned.sourcePage,
           slot,
           occurrenceIndex,
         );
-        if (!anchor) throw new OfficialFacsimileError("FIELD_UNMAPPED", value.fieldId);
-        if (anchor.page !== planned.sourcePage) continue;
+        if (!placement) throw new OfficialFacsimileError("FIELD_UNMAPPED", value.fieldId);
+        if (placement.page !== planned.sourcePage) continue;
         drawValue(page, regular, value.fieldId, value.value, {
-          x: anchor.x,
-          top: anchor.top,
-          width: anchor.width,
-          kind: field.control === "checkbox" ? "checkbox" : "text",
-          verticalOffset: 3.5,
+          ...placement,
+          kind: placement.kind ?? (field.control === "checkbox" ? "checkbox" : "text"),
+          verticalOffset: placement.verticalOffset ?? 3.5,
         });
       }
     }

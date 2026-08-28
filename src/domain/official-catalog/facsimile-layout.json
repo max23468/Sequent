@@ -4,9 +4,7 @@
   "sourceAlias": "modello-dichiarazione-successione-2025.pdf",
   "sourceSha256": "26a93d2e30be6e8cead56f53b175e956df4e8c1187db5521e2f461c404e2cce0",
   "sourcePages": 18,
-  "omittedSourcePages": [
-    1
-  ],
+  "omittedSourcePages": [1],
   "quadri": {
     "EA": {
       "bands": [
