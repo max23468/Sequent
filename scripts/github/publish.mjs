@@ -202,8 +202,6 @@ Pubblicazione GitHub classificata automaticamente come **${classification.level}
 
 - [x] Preflight locale proporzionato
 - [ ] Gate GitHub pertinenti
-- [ ] Review Codex exact-HEAD
-- [ ] P2/P3 registrati; thread umani preservati
 - [ ] Nessun dato reale, documento cliente o segreto aggiunto; le sole fonti originali presenti sono pubbliche e dichiarate dal manifest
 
 ## Impatto operativo

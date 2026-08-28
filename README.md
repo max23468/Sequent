@@ -8,7 +8,7 @@ Questo repository pubblico contiene codice, documentazione, cataloghi derivati, 
 
 Il piano canonico e la sequenza di implementazione sono in [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md). Lo stato effettivo del software deriva dall'HEAD corrente, dai gate e dalla configurazione privata dell'istanza: non viene duplicato in questo README.
 
-La configurazione del repository, i required checks e la procedura di review Codex exact-HEAD sono descritti nel [`runbook GitHub`](docs/runbooks/github.md).
+La configurazione del repository e i required checks sono descritti nel [`runbook GitHub`](docs/runbooks/github.md).
 
 Il preflight proporzionato di una pubblicazione GitHub si avvia con `npm run publication:github`. Senza l'opzione esplicita di esecuzione il comando non esegue push, non apre PR e non effettua merge.
 
