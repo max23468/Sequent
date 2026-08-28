@@ -54,10 +54,10 @@ Il processo Node resta non root e senza capability effettive. L'immagine rimuove
 
 ## Prima attivazione e deploy
 
-La corsia `Production` trasferisce sulla VPS esclusivamente l'archivio ARM64 e il manifest prodotti dal run `Release candidate` exact-commit. Non esegue build sulla VPS. Il comando operativo, invocato dal workflow con percorsi temporanei controllati, è:
+La corsia `Production` trasferisce sulla VPS esclusivamente l'archivio ARM64 e il manifest prodotti dal run `Release candidate` exact-commit. Non esegue build sulla VPS. Il launcher stabile `scripts/vps/run-trusted-deploy.sh` viene installato come `/usr/local/sbin/sequent-run-trusted-deploy`, `root:root:0755`, durante il bootstrap autorizzato. Il launcher verifica l'HEAD e la pulizia del checkout, estrae con `git archive` l'esatto commit in una directory root-only sotto `/run` ed esegue il deploy soltanto da quella copia; nessuno script scrivibile dall'account SSH viene elevato direttamente. Il comando operativo, invocato dal workflow con percorsi temporanei controllati, è:
 
 ```bash
-sudo /opt/sequent/repo/scripts/vps/deploy-release.sh \
+sudo /usr/local/sbin/sequent-run-trusted-deploy \
   --commit <sha-main> \
   --archive /opt/sequent/tmp/<trasferimento>/sequent-release-arm64.tar \
   --manifest /opt/sequent/tmp/<trasferimento>/release-manifest.json

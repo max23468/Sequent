@@ -18,7 +18,8 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /run-id: \$\{\{ inputs\.release_run \}\}/);
   assert.match(workflow, /release-artifact\.mjs verify/);
   assert.match(workflow, /task: "sequent-production"/);
-  assert.match(workflow, /deploy-release\.sh --commit/);
+  assert.match(workflow, /sudo \/usr\/local\/sbin\/sequent-run-trusted-deploy --commit/);
+  assert.doesNotMatch(workflow, /sudo \/opt\/sequent\/repo\/scripts/);
   assert.doesNotMatch(workflow, /docker build|continue-on-error/);
 });
 
@@ -26,6 +27,9 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   const deploy = read("scripts/vps/deploy-release.sh");
 
   assert.match(deploy, /hub-fatture-sequent-docker\.lock/);
+  assert.match(deploy, /SEQUENT_TRUSTED_REPOSITORY/);
+  assert.match(deploy, /sequent-deploy-source/);
+  assert.match(deploy, /sorgente trusted del deploy non root-owned/);
   assert.match(deploy, /fail\(\) \{[^}]*return 1[^}]*\}/);
   assert.doesNotMatch(deploy, /fail\(\) \{[^}]*exit 1[^}]*\}/);
   assert.match(deploy, /load_runtime_env\(\)/);
@@ -65,6 +69,19 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /sequent-production-deployment\/v1/);
   assert.match(deploy, /sequent-docker-prune\.timer/);
   assert.doesNotMatch(deploy, /docker (?:image )?prune|docker build|\bcaddy\b|\bdynu\b|\bufw\b/i);
+});
+
+test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {
+  const launcher = read("scripts/vps/run-trusted-deploy.sh");
+
+  assert.match(launcher, /export PATH=\/usr\/sbin:\/usr\/bin:\/sbin:\/bin/);
+  assert.match(launcher, /git -C "\$repository" rev-parse HEAD/);
+  assert.match(launcher, /git -C "\$repository" diff --quiet/);
+  assert.match(launcher, /git -C "\$repository" archive --format=tar "\$commit"/);
+  assert.match(launcher, /mktemp -d \/run\/sequent-deploy-source\./);
+  assert.match(launcher, /chown -R root:root "\$trusted_source"/);
+  assert.match(launcher, /SEQUENT_TRUSTED_REPOSITORY="\$trusted_source"/);
+  assert.doesNotMatch(launcher, /source |eval |docker build/);
 });
 
 test("la manutenzione Docker protegge anche un runtime selezionato per image ID", () => {

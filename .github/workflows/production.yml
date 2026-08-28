@@ -123,7 +123,7 @@ jobs:
           # Percorsi e SHA sono stati validati prima del trasferimento.
           # shellcheck disable=SC2029
           ssh "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" \
-            "sudo /opt/sequent/repo/scripts/vps/deploy-release.sh --commit '$CANDIDATE_COMMIT' --archive '$incoming/sequent-release-arm64.tar' --manifest '$incoming/release-manifest.json'"
+            "sudo /usr/local/sbin/sequent-run-trusted-deploy --commit '$CANDIDATE_COMMIT' --archive '$incoming/sequent-release-arm64.tar' --manifest '$incoming/release-manifest.json'"
 
           deployment_status success
           trap - ERR

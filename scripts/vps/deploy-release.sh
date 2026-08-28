@@ -38,7 +38,8 @@ done
 
 runtime_env="$root/runtime/runtime.env"
 runtime_compose="$root/runtime/compose.yml"
-repository="$root/repo"
+repository="${SEQUENT_TRUSTED_REPOSITORY:-}"
+checkout_repository="${SEQUENT_CHECKOUT_REPOSITORY:-$root/repo}"
 database="$root/data/sequent.sqlite"
 trusted_runtime_env=
 previous_runtime_image=
@@ -108,6 +109,11 @@ cleanup_trusted_runtime_env() {
 
 [[ -f "$runtime_env" && ! -L "$runtime_env" ]] || fail "configurazione runtime assente"
 [[ -f "$runtime_compose" && ! -L "$runtime_compose" ]] || fail "Compose runtime assente"
+[[ "$repository" == /run/sequent-deploy-source.* && -d "$repository" && ! -L "$repository" ]] ||
+  fail "sorgente trusted del deploy assente"
+[[ "$(stat -c '%U:%G' "$repository")" == root:root ]] ||
+  fail "sorgente trusted del deploy non root-owned"
+[[ "$checkout_repository" == "$root/repo" ]] || fail "checkout di verifica non valido"
 [[ "$(stat -c '%U:%G:%a' "$runtime_env")" == "ubuntu:ubuntu:600" ]] ||
   fail "permessi della configurazione runtime non conformi"
 [[ "$(stat -c '%U:%G:%a' "$runtime_compose")" == "ubuntu:ubuntu:640" ]] ||
@@ -134,10 +140,11 @@ safety_bytes=$((2 * 1024 * 1024 * 1024))
 required_bytes=$((2 * archive_bytes + 2 * data_bytes + safety_bytes))
 ((available_bytes >= required_bytes)) || fail "spazio insufficiente per artefatto, prove e rollback"
 
-[[ "$(git -C "$repository" rev-parse HEAD)" == "$commit" ]] || fail "checkout non exact-commit"
-git -C "$repository" diff --quiet || fail "checkout modificato"
-git -C "$repository" diff --cached --quiet || fail "index modificato"
-cd "$repository"
+[[ "$(git -C "$checkout_repository" rev-parse HEAD)" == "$commit" ]] ||
+  fail "checkout non exact-commit"
+git -C "$checkout_repository" diff --quiet || fail "checkout modificato"
+git -C "$checkout_repository" diff --cached --quiet || fail "index modificato"
+cd "$checkout_repository"
 
 compose=(docker compose --project-name sequent --env-file "$trusted_runtime_env" --file "$runtime_compose")
 current_container="$("${compose[@]}" ps --quiet sequent)"
@@ -182,7 +189,7 @@ NODE
 )
 [[ "${artifact_identity[0]}" == "sequent-release-artifact/v1" ]] || fail "schema manifest non valido"
 [[ "${artifact_identity[1]}" == "$commit" ]] || fail "commit manifest divergente"
-[[ "${artifact_identity[2]}" == "$(git -C "$repository" rev-parse 'HEAD^{tree}')" ]] ||
+[[ "${artifact_identity[2]}" == "$(git -C "$checkout_repository" rev-parse 'HEAD^{tree}')" ]] ||
   fail "tree manifest divergente"
 [[ "${artifact_identity[3]}" == "linux/arm64" ]] || fail "piattaforma manifest divergente"
 [[ "${artifact_identity[4]}" == "sequent-release:$commit" ]] || fail "tag manifest divergente"
