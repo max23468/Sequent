@@ -1,6 +1,7 @@
 import { dev } from "$app/environment";
 import type { Handle } from "@sveltejs/kit";
 import { openDatabase } from "$lib/server/database";
+import { blocksMutationDuringDeployment } from "$lib/server/deployment-maintenance";
 import {
   ensureDevelopmentOwner,
   issueSession,
@@ -33,6 +34,15 @@ export const handle: Handle = async ({ event, resolve }) => {
   const database = openDatabase();
   initialization ??= initialize();
   await initialization;
+  if (blocksMutationDuringDeployment(event.request.method, getDataDirectory())) {
+    return new Response(JSON.stringify({ error: "DEPLOYMENT_MAINTENANCE" }), {
+      status: 503,
+      headers: {
+        "content-type": "application/json",
+        "retry-after": "30",
+      },
+    });
+  }
   const sessionToken = event.cookies.get(SESSION_COOKIE);
   let session = readSession(database, sessionToken);
   if (session?.renewed && sessionToken) {

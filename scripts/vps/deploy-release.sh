@@ -4,6 +4,7 @@ set -euo pipefail
 root="${SEQUENT_ROOT:-/opt/sequent}"
 shared_lock="${SHARED_DOCKER_LOCK:-/run/lock/hub-fatture-sequent-docker.lock}"
 max_disk_percent="${SEQUENT_DEPLOY_MAX_DISK_PERCENT:-79}"
+retention_count="${SEQUENT_RELEASE_RETENTION_COUNT:-2}"
 commit=
 archive=
 manifest=
@@ -27,6 +28,8 @@ fail() {
 [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || fail "commit non valido"
 [[ "$max_disk_percent" =~ ^[0-9]+$ ]] || fail "soglia disco non valida"
 ((max_disk_percent < 100)) || fail "soglia disco non valida"
+[[ "$retention_count" =~ ^[0-9]+$ ]] || fail "retention release non valida"
+((retention_count >= 2)) || fail "la retention deve preservare almeno runtime e rollback"
 
 for input in "$archive" "$manifest"; do
   [[ "$input" == "$root/tmp/"* ]] || fail "artefatto fuori dalla directory temporanea"
@@ -150,6 +153,22 @@ rollback() {
   cleanup
   exit "$status"
 }
+
+prune_old_directories() {
+  local parent="$1"
+  local pattern="$2"
+  local kept=0
+  local directory basename
+  while IFS= read -r directory; do
+    basename="${directory##*/}"
+    [[ "$basename" =~ $pattern ]] || continue
+    kept=$((kept + 1))
+    ((kept <= retention_count)) && continue
+    [[ "$directory" == "$parent/"* ]] || return 1
+    rm -rf --one-file-system "$directory"
+  done < <(find "$parent" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' |
+    sort -rn | cut -d' ' -f2-)
+}
 trap rollback ERR
 trap cleanup EXIT
 
@@ -207,6 +226,10 @@ fi
 rollback_armed=true
 "${compose[@]}" down --remove-orphans
 rsync --archive --delete "$root/data/" "$snapshot/data/"
+[[ -f "$database" ]] && check_database "$database"
+maintenance_marker="$root/data/.deployment-maintenance"
+install -o "$SEQUENT_RUNTIME_UID" -g "$SEQUENT_RUNTIME_GID" -m 0600 /dev/null \
+  "$maintenance_marker"
 
 install -d -o ubuntu -g ubuntu -m 0750 "$release_dir"
 install -o ubuntu -g ubuntu -m 0640 "$manifest" "$release_dir/release-manifest.json"
@@ -216,6 +239,7 @@ install -d -o ubuntu -g ubuntu -m 0750 "$previous_release_dir"
 printf '%s\n' "$previous_image_id" >"$previous_release_dir/image-id"
 chown ubuntu:ubuntu "$previous_release_dir/image-id"
 chmod 0640 "$previous_release_dir/image-id"
+touch "$previous_release_dir"
 
 install -o ubuntu -g ubuntu -m 0640 "$repository/deploy/compose.example.yml" "$runtime_compose"
 runtime_env_next="$(mktemp "$root/runtime/runtime.env.next.XXXXXX")"
@@ -226,6 +250,15 @@ chmod 0600 "$runtime_env_next"
 mv "$runtime_env_next" "$runtime_env"
 
 "${compose[@]}" config --quiet
+install -o root -g root -m 0755 "$repository/scripts/vps/prune-docker-images.sh" \
+  "$root/runtime/prune-docker-images.sh"
+install -o root -g root -m 0644 "$repository/deploy/systemd/sequent-docker-prune.service" \
+  /etc/systemd/system/sequent-docker-prune.service
+install -o root -g root -m 0644 "$repository/deploy/systemd/sequent-docker-prune.timer" \
+  /etc/systemd/system/sequent-docker-prune.timer
+systemctl daemon-reload
+systemctl enable --now sequent-docker-prune.timer >/dev/null
+
 "${compose[@]}" up --detach --no-build --force-recreate
 candidate_container="$("${compose[@]}" ps --quiet sequent)"
 for _attempt in $(seq 1 60); do
@@ -247,6 +280,10 @@ curl --fail --silent --header 'X-Forwarded-For: 127.0.0.1' http://127.0.0.1:3300
 [[ "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$candidate_container")" == sequent ]] ||
   fail "progetto Compose live divergente"
 [[ -f "$database" ]] && check_database "$database"
+public_health="$(curl --fail --silent --show-error --max-time 15 "$SEQUENT_ORIGIN/api/health")"
+[[ "$(SEQUENT_NODE_SLOT=current "$repository/scripts/vps/with-node.sh" node -e \
+  'const input = JSON.parse(process.argv[1]); process.stdout.write(input.status ?? "")' \
+  "$public_health")" == ok ]] || fail "health pubblico non conforme"
 
 printf '%s\n' "$candidate_image_id" >"$release_dir/image-id"
 chown ubuntu:ubuntu "$release_dir/image-id"
@@ -267,15 +304,11 @@ fs.writeFileSync(output, `${JSON.stringify({
 NODE
 chown ubuntu:ubuntu "$release_dir/deployment.json"
 
-install -o root -g root -m 0755 "$repository/scripts/vps/prune-docker-images.sh" \
-  "$root/runtime/prune-docker-images.sh"
-install -o root -g root -m 0644 "$repository/deploy/systemd/sequent-docker-prune.service" \
-  /etc/systemd/system/sequent-docker-prune.service
-install -o root -g root -m 0644 "$repository/deploy/systemd/sequent-docker-prune.timer" \
-  /etc/systemd/system/sequent-docker-prune.timer
-systemctl daemon-reload
-systemctl enable --now sequent-docker-prune.timer >/dev/null
-
+rm "$maintenance_marker"
 rollback_armed=false
 trap - ERR
+prune_old_directories "$root/releases" '^[0-9a-f]{40}$' ||
+  echo "Avviso: retention delle release non completata" >&2
+prune_old_directories "$root/snapshots" '^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{40}$' ||
+  echo "Avviso: retention degli snapshot non completata" >&2
 echo "OK: release $commit distribuita e verificata"

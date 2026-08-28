@@ -27,6 +27,7 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
 
   assert.match(deploy, /hub-fatture-sequent-docker\.lock/);
   assert.match(deploy, /SEQUENT_DEPLOY_MAX_DISK_PERCENT:-79/);
+  assert.match(deploy, /SEQUENT_RELEASE_RETENTION_COUNT:-2/);
   assert.match(deploy, /release-artifact\.mjs" verify/);
   assert.match(deploy, /migration-\$commit/);
   assert.match(deploy, /source\.backup\(destination\)/);
@@ -35,7 +36,17 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /status IN \('queued', 'running'\)/);
   assert.match(deploy, /rsync --archive --delete "\$snapshot\/data\/" "\$root\/data\/"/);
   assert.match(deploy, /up --detach --no-build --force-recreate/);
+  assert.match(deploy, /\.deployment-maintenance/);
+  assert.match(deploy, /\$SEQUENT_ORIGIN\/api\/health/);
+  assert.match(deploy, /prune_old_directories "\$root\/releases"/);
+  assert.match(deploy, /prune_old_directories "\$root\/snapshots"/);
   assert.match(deploy, /sequent-production-deployment\/v1/);
   assert.match(deploy, /sequent-docker-prune\.timer/);
   assert.doesNotMatch(deploy, /docker (?:image )?prune|docker build|\bcaddy\b|\bdynu\b|\bufw\b/i);
+});
+
+test("la manutenzione Docker protegge anche un runtime selezionato per image ID", () => {
+  const prune = read("scripts/vps/prune-docker-images.sh");
+
+  assert.match(prune, /current_ref.*sha256:\[0-9a-f\]\{64\}/s);
 });

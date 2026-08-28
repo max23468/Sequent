@@ -81,6 +81,7 @@ flock -n 9 || { echo "Una build, un deploy o una manutenzione Docker è già in 
 current_ref="$(read_current_image)" || { echo "Immagine runtime non univoca" >&2; exit 1; }
 [[ "$current_ref" =~ ^sequent:[0-9a-f]{40}$ \
   || "$current_ref" =~ ^sequent-release:[0-9a-f]{40}$ \
+  || "$current_ref" =~ ^sha256:[0-9a-f]{64}$ \
   || "$current_ref" =~ ^([a-z0-9.-]+(:[0-9]+)?/)?[a-z0-9._/-]+@sha256:[0-9a-f]{64}$ ]] \
   || { echo "Riferimento runtime Sequent non valido" >&2; exit 1; }
 current_id="$(docker image inspect --format '{{.Id}}' "$current_ref")" \

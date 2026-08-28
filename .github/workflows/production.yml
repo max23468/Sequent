@@ -125,8 +125,6 @@ jobs:
           ssh "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" \
             "sudo /opt/sequent/repo/scripts/vps/deploy-release.sh --commit '$CANDIDATE_COMMIT' --archive '$incoming/sequent-release-arm64.tar' --manifest '$incoming/release-manifest.json'"
 
-          response="$(curl --fail --silent --show-error --max-time 15 "$SEQUENT_ORIGIN/api/health")"
-          test "$(jq -r .status <<<"$response")" = ok
           deployment_status success
           trap - ERR
 
