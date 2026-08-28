@@ -21,11 +21,17 @@ function decimalDigits(value: string): { total: number; fraction: number } {
   return { total: integer.replace(/^0+/, "").length + fraction.length, fraction: fraction.length };
 }
 
+function compileXsdPattern(pattern: string): RegExp {
+  // XML Schema consente di proteggere il trattino anche fuori dalle classi di
+  // caratteri; JavaScript con il flag Unicode lo rifiuta come escape non valido.
+  return new RegExp(`^(?:${pattern.replaceAll("\\-", "\\x2D")})$`, "u");
+}
+
 function matchesFacets(text: string, facets: Record<string, string[]>): boolean {
   if (
     (facets.pattern ?? []).some((pattern) => {
       try {
-        return !new RegExp(`^(?:${pattern})$`, "u").test(text);
+        return !compileXsdPattern(pattern).test(text);
       } catch {
         return true;
       }
@@ -83,7 +89,7 @@ export function validateFieldValue(fieldId: string, value: unknown): ValidationI
   for (const pattern of facets.pattern ?? []) {
     let valid = false;
     try {
-      valid = new RegExp(`^(?:${pattern})$`, "u").test(text);
+      valid = compileXsdPattern(pattern).test(text);
     } catch {
       issues.push({
         id: "CATALOG_PATTERN_UNSUPPORTED",

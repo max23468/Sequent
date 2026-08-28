@@ -53,6 +53,15 @@ describe("modello canonico della dichiarazione", () => {
     ).toBe(true);
   });
 
+  it("interpreta i pattern ministeriali con il trattino protetto", () => {
+    const fieldId =
+      "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/Luogo/Italia/CodiceComune";
+    expect(validateFieldValue(fieldId, "H501")).toEqual([]);
+    expect(validateFieldValue(fieldId, "h501").map(({ id }) => id)).toContain(
+      "XSD_PATTERN_MISMATCH",
+    );
+  });
+
   it("blocca la chiusura finché la copertura semantica non è dimostrata", () => {
     const status = getCatalogStatus();
     expect(status.technicalFields).toBe(761);

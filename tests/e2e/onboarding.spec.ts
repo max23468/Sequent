@@ -392,6 +392,18 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   );
   await page.setViewportSize({ width: 1440, height: 1000 });
 
+  await page.getByRole("button", { name: /^Quadro EC:/ }).click();
+  await expect(page.getByRole("heading", { name: "Quadro EC", level: 2 })).toBeVisible();
+  await expect(page.getByRole("link", { name: assetName })).toHaveAttribute("aria-current", "page");
+  const officialAssetValue = page.getByRole("textbox", { name: "Valore", exact: true });
+  await officialAssetValue.fill("200000");
+  await page
+    .locator("form")
+    .filter({ has: officialAssetValue })
+    .getByRole("button", { name: "Salva questo bene" })
+    .click();
+  await expect(officialAssetValue).toHaveValue("200000");
+
   await page.getByRole("button", { name: "Vista operativa" }).click();
   await page.getByRole("button", { name: "Devoluzione" }).click();
   await page.getByLabel("Numeratore").fill("1");

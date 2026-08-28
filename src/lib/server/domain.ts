@@ -1105,6 +1105,16 @@ export function saveDevolutionScenario(
   }
   for (const asset of assets.values()) {
     if (asset.kind === "donation") continue;
+    const valueField = officialAssetValueField(asset);
+    const officialValue = valueField
+      ? getCanonicalField(declaration.declaration, valueField.canonicalId, asset.id)?.value
+      : null;
+    if (officialValue === null || officialValue === undefined || String(officialValue) === "")
+      addIssue({
+        id: "DEVOLUTION_OFFICIAL_ASSET_VALUE_MISSING",
+        message: `Completa il valore di “${asset.displayName}” nel Quadro ufficiale prima della ripartizione.`,
+        blocking: true,
+      });
     if (!input.shares.some((share) => share.assetId === asset.id))
       addIssue({
         id: "DEVOLUTION_ASSET_UNASSIGNED",
@@ -1994,7 +2004,9 @@ function requiredFieldIssues(
       if (
         field.entryMode === "derived" ||
         field.effectiveMinOccurs === 0 ||
-        field.choiceGroup !== null
+        field.choiceGroup !== null ||
+        (field.appliesToDeclarationKinds.length > 0 &&
+          !field.appliesToDeclarationKinds.includes(declaration.declarationKind))
       )
         continue;
       const entityIds =
