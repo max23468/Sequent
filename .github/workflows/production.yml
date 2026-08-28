@@ -1,0 +1,148 @@
+name: Production
+run-name: Production ${{ inputs.commit }} da candidata ${{ inputs.release_run }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: Commit completo di main da distribuire
+        required: true
+        type: string
+      release_run:
+        description: Run ID della candidata ARM64 qualificata
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  deployments: write
+
+concurrency:
+  group: sequent-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy immutabile e readback
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: Production
+    steps:
+      - name: Verifica identità della candidata
+        env:
+          CANDIDATE_COMMIT: ${{ inputs.commit }}
+          RELEASE_RUN: ${{ inputs.release_run }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$CANDIDATE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$RELEASE_RUN" =~ ^[0-9]+$ ]]
+          run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RELEASE_RUN")"
+          test "$(jq -r .head_sha <<<"$run_json")" = "$CANDIDATE_COMMIT"
+          test "$(jq -r .head_branch <<<"$run_json")" = main
+          test "$(jq -r .event <<<"$run_json")" = workflow_dispatch
+          test "$(jq -r .conclusion <<<"$run_json")" = success
+          test "$(jq -r .path <<<"$run_json")" = .github/workflows/release-candidate.yml
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Richiede main exact-commit
+        env:
+          CANDIDATE_COMMIT: ${{ inputs.commit }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_COMMIT"
+          test "$(git rev-parse origin/main)" = "$CANDIDATE_COMMIT"
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sequent-release-${{ inputs.commit }}
+          path: release-artifact
+          run-id: ${{ inputs.release_run }}
+          github-token: ${{ github.token }}
+
+      - name: Rilegge l'artefatto ARM64 senza ricostruirlo
+        run: |
+          node scripts/github/release-artifact.mjs verify \
+            --archive release-artifact/sequent-release-arm64.tar \
+            --manifest release-artifact/release-manifest.json
+
+      - name: Prepara il canale SSH effimero
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SEQUENT_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SEQUENT_SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 0700 "$RUNNER_TEMP/sequent-ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" >"$RUNNER_TEMP/sequent-ssh/key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" >"$RUNNER_TEMP/sequent-ssh/known_hosts"
+          chmod 0600 "$RUNNER_TEMP/sequent-ssh/key" "$RUNNER_TEMP/sequent-ssh/known_hosts"
+
+      - name: Distribuisce, verifica e registra il deployment
+        env:
+          CANDIDATE_COMMIT: ${{ inputs.commit }}
+          RELEASE_RUN: ${{ inputs.release_run }}
+          SSH_HOST: ${{ secrets.SEQUENT_SSH_HOST }}
+          SSH_USER: ${{ secrets.SEQUENT_SSH_USER }}
+          SEQUENT_ORIGIN: ${{ secrets.SEQUENT_ORIGIN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ssh_options=(-i "$RUNNER_TEMP/sequent-ssh/key" -o IdentitiesOnly=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/sequent-ssh/known_hosts" -o StrictHostKeyChecking=yes)
+          incoming="/opt/sequent/tmp/incoming-$CANDIDATE_COMMIT-$GITHUB_RUN_ID"
+          deployment_id=
+          deployment_status() {
+            local state="$1"
+            [[ -n "$deployment_id" ]] || return 0
+            jq -n --arg state "$state" --arg url "$SEQUENT_ORIGIN" \
+              '{state: $state, environment: "Production", environment_url: $url, auto_inactive: false}' |
+              gh api --method POST "repos/$GITHUB_REPOSITORY/deployments/$deployment_id/statuses" \
+                --input - >/dev/null
+          }
+          failed() {
+            status=$?
+            deployment_status failure || true
+            exit "$status"
+          }
+          trap failed ERR
+
+          deployment_id="$(jq -n --arg ref "$CANDIDATE_COMMIT" \
+            '{ref: $ref, environment: "Production", task: "sequent-production", auto_merge: false, required_contexts: []}' |
+            gh api --method POST "repos/$GITHUB_REPOSITORY/deployments" --input - --jq .id)"
+          deployment_status in_progress
+
+          # Le sole espansioni client sono valori validati e necessari al comando remoto.
+          # shellcheck disable=SC2029
+          ssh "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" \
+            "cd /opt/sequent/repo && git diff --quiet && git diff --cached --quiet && git fetch origin main && git checkout main && git merge --ff-only origin/main && test \"\$(git rev-parse HEAD)\" = '$CANDIDATE_COMMIT' && install -d -m 0700 '$incoming'"
+          scp "${ssh_options[@]}" release-artifact/sequent-release-arm64.tar \
+            release-artifact/release-manifest.json "$SSH_USER@$SSH_HOST:$incoming/"
+          # Percorsi e SHA sono stati validati prima del trasferimento.
+          # shellcheck disable=SC2029
+          ssh "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" \
+            "sudo /opt/sequent/repo/scripts/vps/deploy-release.sh --commit '$CANDIDATE_COMMIT' --archive '$incoming/sequent-release-arm64.tar' --manifest '$incoming/release-manifest.json'"
+
+          response="$(curl --fail --silent --show-error --max-time 15 "$SEQUENT_ORIGIN/api/health")"
+          test "$(jq -r .status <<<"$response")" = ok
+          deployment_status success
+          trap - ERR
+
+      - name: Elimina materiale SSH e trasferimento temporaneo
+        if: always()
+        env:
+          CANDIDATE_COMMIT: ${{ inputs.commit }}
+          SSH_HOST: ${{ secrets.SEQUENT_SSH_HOST }}
+          SSH_USER: ${{ secrets.SEQUENT_SSH_USER }}
+        run: |
+          if [[ -f "$RUNNER_TEMP/sequent-ssh/key" ]]; then
+            # Il percorso contiene esclusivamente SHA e run ID validati dal workflow.
+            # shellcheck disable=SC2029
+            ssh -i "$RUNNER_TEMP/sequent-ssh/key" -o IdentitiesOnly=yes \
+              -o UserKnownHostsFile="$RUNNER_TEMP/sequent-ssh/known_hosts" \
+              -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+              "incoming='/opt/sequent/tmp/incoming-$CANDIDATE_COMMIT-$GITHUB_RUN_ID'; case \"\$incoming\" in /opt/sequent/tmp/incoming-*) rm -rf --one-file-system \"\$incoming\" ;; *) exit 1 ;; esac" || true
+          fi
+          rm -rf "$RUNNER_TEMP/sequent-ssh"

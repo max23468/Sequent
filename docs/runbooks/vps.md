@@ -52,6 +52,21 @@ Il `tmpfs` di `/tmp` usa gli stessi UID e GID numerici del processo applicativo 
 
 Il processo Node resta non root e senza capability effettive. L'immagine rimuove ogni bit setuid/setgid preesistente e lo assegna soltanto a un launcher minimo della CLI Codex, che porta UID e GID reali a root prima di avviare il binario vendor da un percorso fisso e non scrivibile. Il bounding set del container contiene esclusivamente `DAC_OVERRIDE`, `NET_ADMIN`, `SETFCAP`, `SETGID`, `SETUID` e `SYS_ADMIN`, richieste da `bwrap` per leggere la home autenticata e creare le mappe, i mount e il loopback dei namespace isolati. Le eccezioni `seccomp=unconfined` e `apparmor=unconfined` consentono le relative syscall; il filesystem dell'immagine resta in sola lettura. Senza questa configurazione il login risulta valido, ma ogni analisi fallisce prima dell'avvio della run. L'isolamento applicativo Codex continua a consentire la lettura del solo workspace temporaneo e a negare la rete agli strumenti del modello.
 
+## Prima attivazione e deploy
+
+La corsia `Production` trasferisce sulla VPS esclusivamente l'archivio ARM64 e il manifest prodotti dal run `Release candidate` exact-commit. Non esegue build sulla VPS. Il comando operativo, invocato dal workflow con percorsi temporanei controllati, è:
+
+```bash
+sudo /opt/sequent/repo/scripts/vps/deploy-release.sh \
+  --commit <sha-main> \
+  --archive /opt/sequent/tmp/<trasferimento>/sequent-release-arm64.tar \
+  --manifest /opt/sequent/tmp/<trasferimento>/release-manifest.json
+```
+
+Il comando serializza l'operazione sul lock Docker condiviso, verifica disco, HEAD e artefatto, controlla il database e l'assenza di job attivi, quindi avvia la candidata su una copia isolata dei dati. Soltanto dopo health e coerenza SQLite della copia arresta il container Sequent, crea uno snapshot e applica il nuovo Compose. Il readback vincola image ID, commit OCI, utente, filesystem, capability, health e database; se fallisce ripristina automaticamente lo snapshot e l'immagine precedente. Non esegue down migration e non modifica Caddy, Dynu, firewall o servizi estranei.
+
+Ogni release riuscita conserva archivio, manifest, image ID e ricevuta sotto `/opt/sequent/releases/<sha>/`; lo snapshot precedente resta sotto `/opt/sequent/snapshots/`. La prima attivazione richiede inoltre una route Caddy qualificata, con Caddy quale unico proxy e `X-Forwarded-For` sovrascritto. Le release successive riutilizzano quella route e non mutano l'infrastruttura pubblica.
+
 ## Toolchain
 
 Le versioni richieste di Node e npm sono definite dagli `engines` di `package.json` e dal lockfile. Sulla VPS provengono dall'archivio ARM64 ufficiale verificato con `SHASUMS256.txt`. Le installazioni immutabili vivono sotto `/opt/sequent/runtime/toolchains/versions/`; i puntatori `node-current` e `node-rollback` identificano rispettivamente la linea attiva e quella di ritorno. Nessuna delle due viene aggiunta al `PATH` globale, così la toolchain di Sequent non interferisce con Hub Fatture.
