@@ -114,6 +114,9 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
   assert.match(compose, /ADDRESS_HEADER: X-Forwarded-For/);
   assert.match(compose, /XFF_DEPTH: "1"/);
   assert.match(compose, /127\.0\.0\.1:3300:3000/);
+  assert.match(compose, /networks:\s*\n\s*- sequent\s*\n\s*- sequent-proxy/);
+  assert.match(compose, /sequent-proxy:\s*\n\s*name: sequent-proxy\s*\n\s*external: true/);
+  assert.doesNotMatch(compose, /hub-fatture|frontend/);
   assert.match(
     compose,
     /\/tmp:size=256m,mode=1777,uid=\$\{SEQUENT_RUNTIME_UID:\?[^}]+\},gid=\$\{SEQUENT_RUNTIME_GID:\?[^}]+\}/,
@@ -149,6 +152,11 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
   assert.match(runbook, /`bwrap`/);
   assert.match(runbook, /sovrascrivere gli header inoltrati dal client/);
   assert.match(runbook, /unico hop davanti a Sequent/);
+  assert.match(runbook, /rete esterna dedicata `sequent-proxy`/);
+  assert.match(
+    runbook,
+    /Caddy è l'unico container collegato sia alla propria rete frontend sia a `sequent-proxy`/,
+  );
 });
 
 test("la toolchain conserva e qualifica lo slot di rollback", () => {
