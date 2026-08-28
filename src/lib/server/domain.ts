@@ -1856,7 +1856,7 @@ export function runSuccessionCalculation(
     declaration.declaration,
     `${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/PagamentoRateale`,
   );
-  const installmentCount = /^\d+$/u.test(installmentText) ? Number(installmentText) : 1;
+  const installmentCount = /^\d+$/u.test(installmentText) ? Number(installmentText) : undefined;
   const initialPaymentText = technicalFieldValue(
     declaration.declaration,
     `${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/Acconto`,
@@ -1872,6 +1872,13 @@ export function runSuccessionCalculation(
     declaration.declaration,
     "/Fornitura/Dichiarazione/Frontespizio/Presentatore/CodiceCarica",
   );
+  const substituteTypeText = technicalFieldValue(
+    declaration.declaration,
+    "/Fornitura/Dichiarazione/Frontespizio/TipoDichiarazione/DichiarazioneSostitutiva",
+  );
+  const substituteType = ["1", "2", "3"].includes(substituteTypeText)
+    ? (substituteTypeText as "1" | "2" | "3")
+    : undefined;
   const hasTestament =
     technicalFieldValue(
       declaration.declaration,
@@ -1907,6 +1914,7 @@ export function runSuccessionCalculation(
     hasTestament,
     presenterCode,
     allBeneficiariesDisabled,
+    substituteType,
     paymentTiming,
     mortgageAlreadyPaidCents: centsAt("SezioneI_ImpostaIpotecaria/ImpostaIpotecariaVersata"),
     mortgageCreditCents: centsAt("SezioneI_ImpostaIpotecaria/CreditoImposta"),
@@ -1971,6 +1979,7 @@ export function runSuccessionCalculation(
           "Con un residuo non superiore a 20.000 euro sono ammesse al massimo otto rate.",
         ACCONTO_NON_VALIDO:
           "L’acconto deve essere compreso tra il 20% dell’imposta dovuta e l’intero importo.",
+        ACCONTO_OBBLIGATORIO: "Indica l’acconto quando scegli il pagamento rateale.",
       };
       issues.push({
         id: `CALCULATION_PAYMENT_PLAN_${code}`,
@@ -1999,6 +2008,7 @@ export function runSuccessionCalculation(
     hasTestament,
     presenterCode,
     allBeneficiariesDisabled,
+    substituteType,
     paymentTiming,
     initialSuccessionPaymentCents: paymentPlan?.initialPaymentCents,
     mortgageAlreadyPaidCents: declarationTaxes.mortgageTax.alreadyPaidCents,

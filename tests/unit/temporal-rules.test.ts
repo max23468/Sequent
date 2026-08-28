@@ -75,6 +75,7 @@ describe("regole fiscali per periodo", () => {
         totalCents: 3_000_000n,
         openingDate: "2025-10-22",
         installments: 12,
+        initialPaymentCents: 600_000n,
       }),
     ).toMatchObject({
       initialPaymentCents: 600_000n,
@@ -89,6 +90,7 @@ describe("regole fiscali per periodo", () => {
         totalCents: 90_000n,
         openingDate: "2025-01-01",
         installments: 2,
+        initialPaymentCents: 18_000n,
       }),
     ).toThrow("RATEAZIONE_NON_AMMESSA");
     expect(() =>
@@ -96,6 +98,7 @@ describe("regole fiscali per periodo", () => {
         totalCents: 2_000_000n,
         openingDate: "2025-10-22",
         installments: 12,
+        initialPaymentCents: 400_000n,
       }),
     ).toThrow("NUMERO_RATE_NON_AMMESSO");
     expect(() =>
@@ -103,6 +106,7 @@ describe("regole fiscali per periodo", () => {
         totalCents: 110_000n,
         openingDate: "2025-10-22",
         installments: 2,
+        initialPaymentCents: 22_000n,
       }),
     ).toThrow("RATEAZIONE_NON_AMMESSA");
     expect(() =>
@@ -110,8 +114,29 @@ describe("regole fiscali per periodo", () => {
         totalCents: 2_100_000n,
         openingDate: "2025-10-22",
         installments: 12,
+        initialPaymentCents: 420_000n,
       }),
     ).toThrow("NUMERO_RATE_NON_AMMESSO");
+    expect(
+      buildSuccessionPaymentPlan({
+        totalCents: 300_000n,
+        openingDate: "2025-10-22",
+        installments: 1,
+        initialPaymentCents: 60_000n,
+      }),
+    ).toMatchObject({
+      initialPaymentCents: 60_000n,
+      remainingCents: 240_000n,
+      installments: 1,
+      interestTaxCode: "1635",
+    });
+    expect(() =>
+      buildSuccessionPaymentPlan({
+        totalCents: 300_000n,
+        openingDate: "2025-10-22",
+        installments: 1,
+      }),
+    ).toThrow("ACCONTO_OBBLIGATORIO");
     expect(() =>
       buildSuccessionPaymentPlan({
         totalCents: 3_000_000n,

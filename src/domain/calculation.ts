@@ -4,7 +4,7 @@ import {
   usufructCoefficientForAge,
 } from "./temporal-rules.ts";
 
-export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.9" as const;
+export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.10" as const;
 
 export interface BeneficiaryTaxInput {
   beneficiaryId: string;
@@ -346,6 +346,7 @@ export interface DeclarationTaxOptions {
   hasTestament?: boolean;
   presenterCode?: string;
   allBeneficiariesDisabled?: boolean;
+  substituteType?: "1" | "2" | "3";
   paymentTiming: 1 | 2;
   initialSuccessionPaymentCents?: bigint;
   mortgageAlreadyPaidCents?: bigint;
@@ -545,12 +546,11 @@ export function calculateDeclarationTaxSummary(
     (sum, group) => (hasRelief(group, "G") ? sum + proportionalValueCents(group) : sum),
     0n,
   );
+  const hasReliefG = propertyGroups.some((group) => hasRelief(group, "G"));
+  const hasReliefM = propertyGroups.some((group) => hasRelief(group, "M"));
   const fixedG =
-    propertyGroups.some((group) => hasRelief(group, "G")) &&
-    roundToWholeEuro((proportionalGPropertyCents * 2n) / 100n) < 20_000n
-      ? 20_000
-      : 0;
-  const fixedM = propertyGroups.some((group) => hasRelief(group, "M")) ? 20_000 : 0;
+    hasReliefG && roundToWholeEuro((proportionalGPropertyCents * 2n) / 100n) < 20_000n ? 20_000 : 0;
+  const fixedM = hasReliefM ? 20_000 : 0;
   const fixedTrust = propertyGroups.some(hasTrustBeneficiary) ? 20_000 : 0;
   const eligibleFirstHomeAllocations = (group: (typeof assetGroups)[number]) =>
     group.allocations.filter(
@@ -640,12 +640,27 @@ export function calculateDeclarationTaxSummary(
   const cadastralCredit = options.cadastralCreditCents ?? 0n;
   const successionAlreadyPaid = options.successionAlreadyPaidCents ?? 0n;
   const successionCredit = options.successionCreditCents ?? 0n;
-  const mortgagePayable = roundToWholeEuro(
+  const mortgageDifference = roundToWholeEuro(
     positiveDifference(mortgageDue, mortgageAlreadyPaid, mortgageCredit),
   );
-  const cadastralPayable = roundToWholeEuro(
+  const cadastralDifference = roundToWholeEuro(
     positiveDifference(cadastralDue, cadastralAlreadyPaid, cadastralCredit),
   );
+  const substituteMinimumCents = options.openingDate >= "2014-01-01" ? 20_000n : 16_800n;
+  const mortgagePayable =
+    options.substituteType === "1" &&
+    !hasReliefG &&
+    !hasReliefM &&
+    mortgageDifference > 0n &&
+    mortgageDifference < substituteMinimumCents
+      ? substituteMinimumCents
+      : mortgageDifference;
+  const cadastralPayable =
+    options.substituteType === "1" &&
+    cadastralDifference > 0n &&
+    cadastralDifference < substituteMinimumCents
+      ? substituteMinimumCents
+      : cadastralDifference;
   const roundedSuccessionTaxCents = roundToWholeEuro(successionTaxCents);
   const successionDifference = positiveDifference(
     roundedSuccessionTaxCents,

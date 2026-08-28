@@ -237,7 +237,7 @@ semantic.blockers = [];
 
 calculations.schemaVersion = 2;
 calculations.status = "qualified";
-calculations.rulesetVersion = "2026.08.9";
+calculations.rulesetVersion = "2026.08.10";
 calculations.rules = [
   {
     id: "QE",

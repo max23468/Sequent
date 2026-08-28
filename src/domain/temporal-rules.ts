@@ -1,6 +1,6 @@
 import legalTimeline from "./official-catalog/legal-timeline.json" with { type: "json" };
 
-export const TEMPORAL_RULESET_VERSION = "2026.08.9" as const;
+export const TEMPORAL_RULESET_VERSION = "2026.08.10" as const;
 
 export interface ApplicableLegalFramework {
   id: string;
@@ -202,20 +202,25 @@ export function buildSuccessionPaymentPlan(input: {
 }): SuccessionPaymentPlan {
   const { totalCents } = input;
   if (totalCents < 0n) throw new Error("IMPORTO_NON_VALIDO");
+  const installmentPlanRequested = input.installments !== undefined;
   const installments = input.installments ?? 1;
   if (!Number.isInteger(installments) || installments < 1 || installments > 12)
     throw new Error("NUMERO_RATE_NON_VALIDO");
   const minimumInitial = roundHalfUp(totalCents * 20n, 100n);
-  const initialPaymentCents =
-    input.initialPaymentCents ?? (installments > 1 ? minimumInitial : totalCents);
+  if (installmentPlanRequested && input.initialPaymentCents === undefined)
+    throw new Error("ACCONTO_OBBLIGATORIO");
+  if (!installmentPlanRequested && input.initialPaymentCents !== undefined)
+    throw new Error("ACCONTO_NON_VALIDO");
+  const initialPaymentCents = input.initialPaymentCents ?? totalCents;
   if (
     initialPaymentCents < 0n ||
     initialPaymentCents > totalCents ||
-    (installments > 1 && initialPaymentCents < minimumInitial)
+    (installmentPlanRequested && initialPaymentCents < minimumInitial)
   )
     throw new Error("ACCONTO_NON_VALIDO");
   const remainingCents = totalCents - initialPaymentCents;
-  if (installments > 1 && remainingCents < 100_000n) throw new Error("RATEAZIONE_NON_AMMESSA");
+  if (installmentPlanRequested && remainingCents < 100_000n)
+    throw new Error("RATEAZIONE_NON_AMMESSA");
   if (installments > 8 && remainingCents <= 2_000_000n) throw new Error("NUMERO_RATE_NON_AMMESSO");
   const advanceTrustPayment = input.advanceTrustPayment ?? false;
   if (advanceTrustPayment && (input.presenterCode !== "9" || input.hasTrustBeneficiary !== true))
@@ -227,7 +232,7 @@ export function buildSuccessionPaymentPlan(input: {
     installments,
     paymentDeadline: successionTaxPaymentDeadline(input.openingDate),
     taxCode: "1539",
-    interestTaxCode: installments > 1 ? "1635" : null,
+    interestTaxCode: installmentPlanRequested ? "1635" : null,
     advanceTrustPayment,
     sourceIds: ["SRC-13", "SRC-14"],
   };

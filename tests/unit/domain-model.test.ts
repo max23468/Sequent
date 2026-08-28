@@ -732,4 +732,66 @@ describe("motori deterministici", () => {
     });
     expect(summary.totalAtSubmissionCents).toBe(886_500n);
   });
+
+  it("riapplica il minimo alle imposte immobiliari della sostitutiva di tipo 1", () => {
+    const allocation: SuccessionAllocation = {
+      assetId: "immobile-sostitutiva",
+      beneficiaryId: "beneficiario",
+      treatment: "estate",
+      valueCents: 1_000_000n,
+      assetValueCents: 1_000_000n,
+      assetKind: "building",
+    };
+    const options = {
+      openingDate: "2025-10-22",
+      mortgageJurisdictionCount: 0,
+      stampDutyJurisdictionCount: 0,
+      automaticLandRegistry: true,
+      copyRequested: false,
+      paymentTiming: 1 as const,
+      mortgageAlreadyPaidCents: 15_000n,
+      cadastralAlreadyPaidCents: 15_000n,
+    };
+
+    const substitute = calculateDeclarationTaxSummary([allocation], 0n, {
+      ...options,
+      substituteType: "1",
+    });
+    const ordinary = calculateDeclarationTaxSummary([allocation], 0n, options);
+
+    expect(substitute.mortgageTax.payableCents).toBe(20_000n);
+    expect(substitute.cadastralTax.payableCents).toBe(20_000n);
+    expect(ordinary.mortgageTax.payableCents).toBe(5_000n);
+    expect(ordinary.cadastralTax.payableCents).toBe(5_000n);
+  });
+
+  it("non riapplica il minimo ipotecario della sostitutiva in presenza del rigo EF2", () => {
+    const summary = calculateDeclarationTaxSummary(
+      [
+        {
+          assetId: "immobile-agevolazione-g",
+          beneficiaryId: "beneficiario",
+          treatment: "estate",
+          valueCents: 100_000_000n,
+          assetValueCents: 100_000_000n,
+          assetKind: "building",
+          reliefCode: "G",
+        },
+      ],
+      0n,
+      {
+        openingDate: "2025-10-22",
+        mortgageJurisdictionCount: 0,
+        stampDutyJurisdictionCount: 0,
+        automaticLandRegistry: true,
+        copyRequested: false,
+        paymentTiming: 1,
+        substituteType: "1",
+        mortgageAlreadyPaidCents: 15_000n,
+      },
+    );
+
+    expect(summary.mortgageTax.dueCents).toBe(20_000n);
+    expect(summary.mortgageTax.payableCents).toBe(5_000n);
+  });
 });
