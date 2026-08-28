@@ -189,6 +189,7 @@ test("il deploy trusted non esegue Git come root", () => {
   const deploy = read("scripts/vps/deploy-release.sh");
 
   assert.match(deploy, /\/usr\/sbin\/runuser --user ubuntu -- \/usr\/bin\/env -i/);
+  assert.equal(deploy.match(/GIT_NO_REPLACE_OBJECTS=1/g)?.length, 1);
   assert.match(deploy, /git_as_checkout_owner rev-parse HEAD/);
   assert.match(deploy, /git_as_checkout_owner diff --quiet/);
   assert.match(
