@@ -10,6 +10,9 @@ archive=
 archive_sha256=
 manifest=
 manifest_sha256=
+verification_git=
+verification_user=sequent-deploy
+object_directory=
 
 git_as_checkout_owner() {
   /usr/sbin/runuser --user ubuntu -- /usr/bin/env -i \
@@ -17,7 +20,19 @@ git_as_checkout_owner() {
     PATH=/usr/bin:/bin \
     GIT_CONFIG_NOSYSTEM=1 \
     GIT_CONFIG_GLOBAL=/dev/null \
+    GIT_NO_REPLACE_OBJECTS=1 \
     /usr/bin/git -C "$repository" "$@"
+}
+
+git_as_tree_verifier() {
+  /usr/sbin/runuser --user "$verification_user" -- /usr/bin/env -i \
+    HOME=/nonexistent \
+    PATH=/usr/bin:/bin \
+    GIT_CONFIG_NOSYSTEM=1 \
+    GIT_CONFIG_GLOBAL=/dev/null \
+    GIT_NO_REPLACE_OBJECTS=1 \
+    GIT_ALTERNATE_OBJECT_DIRECTORIES="$object_directory" \
+    /usr/bin/git --git-dir="$verification_git" --work-tree="$trusted_source" "$@"
 }
 
 while (($#)); do
@@ -33,6 +48,18 @@ while (($#)); do
 done
 
 [[ "$(id -u)" -eq 0 ]] || { echo "ERRORE: il launcher richiede root" >&2; exit 1; }
+if ! /usr/bin/getent passwd "$verification_user" >/dev/null; then
+  /usr/sbin/useradd --system --gid ubuntu --no-create-home \
+    --home-dir /nonexistent --shell /usr/sbin/nologin "$verification_user"
+fi
+verification_passwd="$(/usr/bin/getent passwd "$verification_user")"
+IFS=: read -r _ _ verification_uid _ _ verification_home verification_shell <<<"$verification_passwd"
+[[ "$verification_uid" =~ ^[0-9]+$ && "$verification_uid" -lt 1000 &&
+  "$verification_home" == /nonexistent && "$verification_shell" == /usr/sbin/nologin &&
+  "$(/usr/bin/id -gn "$verification_user")" == ubuntu ]] || {
+  echo "ERRORE: account di verifica Git non conforme" >&2
+  exit 1
+}
 [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || { echo "ERRORE: commit non valido" >&2; exit 1; }
 [[ "$archive_sha256" =~ ^[0-9a-f]{64}$ ]] || { echo "ERRORE: SHA archivio non valido" >&2; exit 1; }
 [[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]] || { echo "ERRORE: SHA manifest non valido" >&2; exit 1; }
@@ -50,21 +77,50 @@ done
   echo "ERRORE: checkout non exact-commit" >&2
   exit 1
 }
+expected_tree="$(git_as_checkout_owner rev-parse "$commit^{tree}")"
+[[ "$expected_tree" =~ ^[0-9a-f]{40}$ ]] || {
+  echo "ERRORE: tree Git atteso non valido" >&2
+  exit 1
+}
+object_directory="$(git_as_checkout_owner rev-parse --path-format=absolute --git-path objects)"
+[[ "$object_directory" == "$repository/"* && -d "$object_directory" && ! -L "$object_directory" ]] || {
+  echo "ERRORE: object database Git non confinato" >&2
+  exit 1
+}
 git_as_checkout_owner diff --quiet
 git_as_checkout_owner diff --cached --quiet
+if git_as_checkout_owner ls-tree -r "$commit" | /usr/bin/cut -d' ' -f1 | /usr/bin/grep -qx 160000; then
+  echo "ERRORE: gitlink non ammesso nel tree di deploy" >&2
+  exit 1
+fi
 
 trusted_source="$(mktemp -d /run/sequent-deploy-source.XXXXXX)"
+verification_git="$(mktemp -d /run/sequent-deploy-verification.XXXXXX)"
 cleanup() {
   if [[ "$trusted_source" == /run/sequent-deploy-source.* ]]; then
     rm -rf --one-file-system "$trusted_source"
   fi
+  if [[ "$verification_git" == /run/sequent-deploy-verification.* ]]; then
+    rm -rf --one-file-system "$verification_git"
+  fi
 }
 trap cleanup EXIT HUP INT TERM
 
-git_as_checkout_owner archive --format=tar "$commit" |
+/bin/chmod 0755 "$trusted_source"
+/bin/chown "$verification_user":ubuntu "$verification_git"
+/bin/chmod 0700 "$verification_git"
+git_as_tree_verifier init --quiet
+git_as_tree_verifier archive --format=tar "$commit" |
   /usr/bin/tar --extract --directory "$trusted_source" --no-same-owner --no-same-permissions
 /bin/chown -R root:root "$trusted_source"
 /bin/chmod -R go-w "$trusted_source"
+/bin/chmod 0755 "$trusted_source"
+git_as_tree_verifier add --all --force -- .
+extracted_tree="$(git_as_tree_verifier write-tree)"
+[[ "$extracted_tree" == "$expected_tree" ]] || {
+  echo "ERRORE: tree estratto divergente dal commit" >&2
+  exit 1
+}
 trusted_archive="$trusted_source/sequent-release-arm64.tar"
 trusted_manifest="$trusted_source/release-manifest.json"
 /usr/bin/install -o root -g root -m 0600 "$archive" "$trusted_archive"

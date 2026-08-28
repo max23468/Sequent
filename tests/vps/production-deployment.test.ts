@@ -156,11 +156,21 @@ test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {
   assert.match(launcher, /\/usr\/sbin\/runuser --user ubuntu -- \/usr\/bin\/env -i/);
   assert.match(launcher, /GIT_CONFIG_NOSYSTEM=1/);
   assert.match(launcher, /GIT_CONFIG_GLOBAL=\/dev\/null/);
+  assert.equal(launcher.match(/GIT_NO_REPLACE_OBJECTS=1/g)?.length, 2);
   assert.match(launcher, /git_as_checkout_owner rev-parse HEAD/);
+  assert.match(launcher, /git_as_checkout_owner rev-parse "\$commit\^\{tree\}"/);
   assert.match(launcher, /git_as_checkout_owner diff --quiet/);
-  assert.match(launcher, /git_as_checkout_owner archive --format=tar "\$commit"/);
+  assert.match(launcher, /git_as_tree_verifier archive --format=tar "\$commit"/);
+  assert.match(launcher, /git_as_tree_verifier write-tree/);
+  assert.match(launcher, /"\$extracted_tree" == "\$expected_tree"/);
+  assert.match(launcher, /GIT_ALTERNATE_OBJECT_DIRECTORIES="\$object_directory"/);
+  assert.match(launcher, /useradd --system --gid ubuntu --no-create-home/);
+  assert.match(launcher, /--shell \/usr\/sbin\/nologin "\$verification_user"/);
+  assert.match(launcher, /account di verifica Git non conforme/);
+  assert.match(launcher, /object database Git non confinato/);
   assert.equal(launcher.match(/\/usr\/bin\/git -C/g)?.length, 1);
   assert.match(launcher, /mktemp -d \/run\/sequent-deploy-source\./);
+  assert.match(launcher, /mktemp -d \/run\/sequent-deploy-verification\./);
   assert.match(launcher, /--archive-sha256/);
   assert.match(launcher, /--manifest-sha256/);
   assert.match(launcher, /sha256sum "\$trusted_archive"/);
@@ -168,6 +178,10 @@ test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {
   assert.match(launcher, /install -o root -g root -m 0600 "\$archive" "\$trusted_archive"/);
   assert.match(launcher, /chown -R root:root "\$trusted_source"/);
   assert.match(launcher, /SEQUENT_TRUSTED_REPOSITORY="\$trusted_source"/);
+  assert.ok(
+    launcher.indexOf('"$extracted_tree" == "$expected_tree"') <
+      launcher.indexOf('"$deploy_script" --commit'),
+  );
   assert.doesNotMatch(launcher, /source |eval |docker build/);
 });
 
