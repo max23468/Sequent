@@ -102,9 +102,22 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   const maintenance = deploy.indexOf(
     'install -o "$runtime_uid" -g "$runtime_gid" -m 0600 /dev/null "$maintenance_marker"',
   );
+  const frozenJobCheck = deploy.indexOf(
+    '[[ -f "$database" ]] && check_database "$database"',
+    maintenance,
+  );
+  const migration = deploy.indexOf(
+    'migration_copy="$(mktemp -d "$root/snapshots/.migration-$commit.XXXXXX")"',
+  );
   const shutdown = deploy.indexOf('"${candidate_compose[@]}" down --remove-orphans', maintenance);
   const snapshot = deploy.indexOf('snapshot="$(mktemp -d', shutdown);
-  assert.ok(maintenance >= 0 && maintenance < shutdown && shutdown < snapshot);
+  assert.ok(
+    maintenance >= 0 &&
+      maintenance < frozenJobCheck &&
+      frozenJobCheck < migration &&
+      migration < shutdown &&
+      shutdown < snapshot,
+  );
 });
 
 test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {

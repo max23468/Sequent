@@ -333,6 +333,11 @@ trap 'handle_signal 130' INT
 trap 'handle_signal 143' TERM
 trap cleanup EXIT
 
+[[ ! -e "$maintenance_marker" ]] || fail "marker di manutenzione già presente"
+install -o "$runtime_uid" -g "$runtime_gid" -m 0600 /dev/null "$maintenance_marker"
+maintenance_active=true
+[[ -f "$database" ]] && check_database "$database"
+
 migration_copy="$(mktemp -d "$root/snapshots/.migration-$commit.XXXXXX")"
 chown "$runtime_uid:$runtime_gid" "$migration_copy"
 chmod 0700 "$migration_copy"
@@ -368,9 +373,6 @@ done
 docker rm --force "$migration_container" >/dev/null
 [[ -f "$migration_copy/sequent.sqlite" ]] && check_database "$migration_copy/sequent.sqlite"
 
-[[ ! -e "$maintenance_marker" ]] || fail "marker di manutenzione già presente"
-install -o "$runtime_uid" -g "$runtime_gid" -m 0600 /dev/null "$maintenance_marker"
-maintenance_active=true
 "${candidate_compose[@]}" down --remove-orphans
 [[ -f "$database" ]] && check_database "$database"
 
