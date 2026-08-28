@@ -42,6 +42,7 @@ repository="${SEQUENT_TRUSTED_REPOSITORY:-}"
 checkout_repository="${SEQUENT_CHECKOUT_REPOSITORY:-$root/repo}"
 database="$root/data/sequent.sqlite"
 trusted_runtime_env=
+rollback_compose_file=
 previous_runtime_image=
 
 load_runtime_env() {
@@ -105,6 +106,9 @@ cleanup_trusted_runtime_env() {
   if [[ "$trusted_runtime_env" == /run/sequent-runtime-env.* ]]; then
     rm -f "$trusted_runtime_env"
   fi
+  if [[ "$rollback_compose_file" == /run/sequent-rollback-compose.* ]]; then
+    rm -f "$rollback_compose_file"
+  fi
 }
 
 [[ -f "$runtime_env" && ! -L "$runtime_env" ]] || fail "configurazione runtime assente"
@@ -146,14 +150,23 @@ git -C "$checkout_repository" diff --quiet || fail "checkout modificato"
 git -C "$checkout_repository" diff --cached --quiet || fail "index modificato"
 cd "$checkout_repository"
 
-compose=(docker compose --project-name sequent --env-file "$trusted_runtime_env" --file "$runtime_compose")
-current_container="$("${compose[@]}" ps --quiet sequent)"
+candidate_compose=(docker compose --project-name sequent --env-file "$trusted_runtime_env" \
+  --file "$repository/deploy/compose.example.yml")
+current_container="$("${candidate_compose[@]}" ps --quiet sequent)"
 [[ -n "$current_container" ]] || fail "runtime precedente assente"
 [[ "$(docker inspect --format '{{.State.Health.Status}}' "$current_container")" == healthy ]] ||
   fail "runtime precedente non healthy"
 previous_image_id="$(docker inspect --format '{{.Image}}' "$current_container")"
 previous_commit="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$previous_image_id")"
 [[ "$previous_commit" =~ ^[0-9a-f]{40}$ ]] || fail "commit precedente non leggibile"
+rollback_compose_file="$(mktemp /run/sequent-rollback-compose.XXXXXX)"
+git -C "$checkout_repository" show "$previous_commit:deploy/compose.example.yml" \
+  >"$rollback_compose_file" || fail "Compose del rollback non ricostruibile dal commit precedente"
+chown root:root "$rollback_compose_file"
+chmod 0600 "$rollback_compose_file"
+rollback_compose=(docker compose --project-name sequent --env-file "$trusted_runtime_env" \
+  --file "$rollback_compose_file")
+"${rollback_compose[@]}" config --quiet
 
 check_database() {
   python3 - "$1" <<'PY'
@@ -235,12 +248,12 @@ rollback() {
   trap - ERR HUP INT TERM
   if [[ "$rollback_armed" == true ]]; then
     echo "Deploy fallito: ripristino automatico dell'immagine precedente" >&2
-    "${compose[@]}" down --remove-orphans >/dev/null 2>&1 || true
+    "${candidate_compose[@]}" down --remove-orphans >/dev/null 2>&1 || true
     rsync --archive --delete "$snapshot/data/" "$root/data/"
     install -o ubuntu -g ubuntu -m 0600 "$snapshot/runtime.env" "$runtime_env"
-    install -o ubuntu -g ubuntu -m 0640 "$snapshot/compose.yml" "$runtime_compose"
+    install -o ubuntu -g ubuntu -m 0640 "$rollback_compose_file" "$runtime_compose"
     write_trusted_runtime_env "$previous_runtime_image"
-    "${compose[@]}" up --detach --no-build --force-recreate
+    "${rollback_compose[@]}" up --detach --no-build --force-recreate
   fi
   cleanup
   exit "$status"
@@ -307,7 +320,7 @@ docker rm --force "$migration_container" >/dev/null
 install -d -o ubuntu -g ubuntu -m 0700 "$snapshot/data"
 snapshot_started=true
 install -o ubuntu -g ubuntu -m 0600 "$runtime_env" "$snapshot/runtime.env"
-install -o ubuntu -g ubuntu -m 0640 "$runtime_compose" "$snapshot/compose.yml"
+install -o ubuntu -g ubuntu -m 0640 "$rollback_compose_file" "$snapshot/compose.yml"
 rsync --archive --delete --exclude='sequent.sqlite' --exclude='sequent.sqlite-wal' \
   --exclude='sequent.sqlite-shm' "$root/data/" "$snapshot/data/"
 if [[ -f "$database" ]]; then
@@ -324,7 +337,7 @@ PY
   chown "$SEQUENT_RUNTIME_UID:$SEQUENT_RUNTIME_GID" "$snapshot/data/sequent.sqlite"
 fi
 rollback_armed=true
-"${compose[@]}" down --remove-orphans
+"${candidate_compose[@]}" down --remove-orphans
 rsync --archive --delete "$root/data/" "$snapshot/data/"
 [[ -f "$database" ]] && check_database "$database"
 maintenance_marker="$root/data/.deployment-maintenance"
@@ -351,7 +364,7 @@ chmod 0600 "$runtime_env_next"
 mv "$runtime_env_next" "$runtime_env"
 write_trusted_runtime_env "$candidate_image_id"
 
-"${compose[@]}" config --quiet
+"${candidate_compose[@]}" config --quiet
 install -o root -g root -m 0755 "$repository/scripts/vps/prune-docker-images.sh" \
   "$root/runtime/prune-docker-images.sh"
 install -o root -g root -m 0644 "$repository/deploy/systemd/sequent-docker-prune.service" \
@@ -361,8 +374,8 @@ install -o root -g root -m 0644 "$repository/deploy/systemd/sequent-docker-prune
 systemctl daemon-reload
 systemctl enable --now sequent-docker-prune.timer >/dev/null
 
-"${compose[@]}" up --detach --no-build --force-recreate
-candidate_container="$("${compose[@]}" ps --quiet sequent)"
+"${candidate_compose[@]}" up --detach --no-build --force-recreate
+candidate_container="$("${candidate_compose[@]}" ps --quiet sequent)"
 for _attempt in $(seq 1 60); do
   [[ "$(docker inspect --format '{{.State.Health.Status}}' "$candidate_container")" == healthy ]] && break
   sleep 1

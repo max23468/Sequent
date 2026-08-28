@@ -30,6 +30,11 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /SEQUENT_TRUSTED_REPOSITORY/);
   assert.match(deploy, /sequent-deploy-source/);
   assert.match(deploy, /sorgente trusted del deploy non root-owned/);
+  assert.match(deploy, /mktemp \/run\/sequent-rollback-compose\./);
+  assert.match(deploy, /show "\$previous_commit:deploy\/compose\.example\.yml"/);
+  assert.match(deploy, /chown root:root "\$rollback_compose_file"/);
+  assert.match(deploy, /rollback_compose\[@\].*up --detach --no-build --force-recreate/s);
+  assert.doesNotMatch(deploy, /--file "\$runtime_compose"/);
   assert.match(deploy, /fail\(\) \{[^}]*return 1[^}]*\}/);
   assert.doesNotMatch(deploy, /fail\(\) \{[^}]*exit 1[^}]*\}/);
   assert.match(deploy, /load_runtime_env\(\)/);
