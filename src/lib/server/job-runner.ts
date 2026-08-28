@@ -3,6 +3,7 @@ import { analyzePracticeWithCodex } from "./codex-analysis.ts";
 import { getDataDirectory } from "./config.ts";
 import { processDocument } from "./document-processing.ts";
 import { verifyBlob } from "./blob-store.ts";
+import { deploymentMaintenanceActive } from "./deployment-maintenance.ts";
 import {
   cancelQueuedJob,
   claimNextJob,
@@ -74,7 +75,11 @@ async function execute(
   await verifyBlob(getDataDirectory(), document.blob_path, document.sha256);
 }
 
-export async function runJobRunnerTick(database: Database.Database): Promise<void> {
+export async function runJobRunnerTick(
+  database: Database.Database,
+  dataDirectory = getDataDirectory(),
+): Promise<void> {
+  if (deploymentMaintenanceActive(dataDirectory)) return;
   if (running) return;
   running = true;
   try {

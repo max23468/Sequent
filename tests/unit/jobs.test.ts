@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
@@ -16,6 +16,7 @@ import {
 } from "../../src/lib/server/jobs.ts";
 import { createPractice } from "../../src/lib/server/practices.ts";
 import { ingestDocument } from "../../src/lib/server/document-ingestion.ts";
+import { DEPLOYMENT_MAINTENANCE_MARKER } from "../../src/lib/server/deployment-maintenance.ts";
 
 const directories: string[] = [];
 
@@ -27,6 +28,29 @@ afterEach(() => {
 });
 
 describe("coda persistente", () => {
+  it("non reclama job finché il deploy mantiene il marker", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-job-maintenance-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const job = enqueueJob(database, "foundation.test", { input: "maintenance" });
+    const marker = join(directory, DEPLOYMENT_MAINTENANCE_MARKER);
+    writeFileSync(marker, "");
+
+    await runJobRunnerTick(database, directory);
+    expect(database.prepare("SELECT status FROM jobs WHERE id = ?").get(job.id)).toEqual({
+      status: "queued",
+    });
+
+    rmSync(marker);
+    await runJobRunnerTick(database, directory);
+    expect(
+      database.prepare("SELECT status, error_code FROM jobs WHERE id = ?").get(job.id),
+    ).toEqual({
+      status: "failed",
+      error_code: "JOB_TYPE_UNSUPPORTED",
+    });
+  });
+
   it("ritenta un job dopo una contesa SQLite senza terminare il runner", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-job-busy-"));
     directories.push(directory);

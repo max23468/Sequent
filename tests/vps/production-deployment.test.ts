@@ -55,6 +55,10 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /up --detach --no-build --force-recreate/);
   assert.match(deploy, /\.deployment-maintenance/);
   assert.match(deploy, /\$SEQUENT_ORIGIN\/api\/health/);
+  assert.match(deploy, /if ! public_identity_output=/);
+  assert.match(deploy, /health pubblico non interpretabile/);
+  assert.match(deploy, /public_identity\[@\].*-eq 2/);
+  assert.doesNotMatch(deploy, /readarray -t public_identity < <\(/);
   assert.match(deploy, /public_identity\[1\].*\$commit/);
   assert.match(deploy, /prune_old_directories "\$root\/releases"/);
   assert.match(deploy, /prune_old_directories "\$root\/snapshots"/);
