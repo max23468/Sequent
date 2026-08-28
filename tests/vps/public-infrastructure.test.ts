@@ -87,6 +87,18 @@ test("le build VPS sono confinate dal wrapper con lock, soglia disco e pulizia",
   assert.match(timer, /Persistent=true/);
 });
 
+test("le azioni cache e artifact usano linee basate su Node 24", () => {
+  const ci = read(".github/workflows/ci.yml");
+  const release = read(".github/workflows/release-candidate.yml");
+
+  assert.match(ci, /actions\/cache@[0-9a-f]{40} # v(?:[6-9]|\d{2,})\./);
+  assert.match(release, /actions\/upload-artifact@[0-9a-f]{40} # v(?:[7-9]|\d{2,})\./);
+  assert.equal(
+    release.match(/actions\/download-artifact@[0-9a-f]{40} # v(?:[8-9]|\d{2,})\./g)?.length,
+    2,
+  );
+});
+
 test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", () => {
   const compose = read("deploy/compose.example.yml");
   const dockerfile = read("Dockerfile");
