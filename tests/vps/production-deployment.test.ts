@@ -28,6 +28,12 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /hub-fatture-sequent-docker\.lock/);
   assert.match(deploy, /fail\(\) \{[^}]*return 1[^}]*\}/);
   assert.doesNotMatch(deploy, /fail\(\) \{[^}]*exit 1[^}]*\}/);
+  assert.match(deploy, /load_runtime_env\(\)/);
+  assert.match(deploy, /chiave runtime non ammessa/);
+  assert.match(deploy, /mktemp \/run\/sequent-runtime-env\./);
+  assert.match(deploy, /chown root:root "\$trusted_runtime_env"/);
+  assert.match(deploy, /--env-file "\$trusted_runtime_env"/);
+  assert.doesNotMatch(deploy, /source "\$runtime_env"/);
   assert.match(deploy, /SEQUENT_DEPLOY_MAX_DISK_PERCENT:-79/);
   assert.match(deploy, /SEQUENT_RELEASE_RETENTION_COUNT:-2/);
   assert.match(

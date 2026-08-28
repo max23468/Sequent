@@ -40,6 +40,71 @@ runtime_env="$root/runtime/runtime.env"
 runtime_compose="$root/runtime/compose.yml"
 repository="$root/repo"
 database="$root/data/sequent.sqlite"
+trusted_runtime_env=
+previous_runtime_image=
+
+load_runtime_env() {
+  local input="$1"
+  local line key value
+  local image_seen=false uid_seen=false gid_seen=false origin_seen=false
+
+  SEQUENT_IMAGE=
+  SEQUENT_RUNTIME_UID=
+  SEQUENT_RUNTIME_GID=
+  SEQUENT_ORIGIN=
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -n "$line" && "$line" == *=* ]] || fail "riga della configurazione runtime non valida"
+    key="${line%%=*}"
+    value="${line#*=}"
+    case "$key" in
+      SEQUENT_IMAGE)
+        [[ "$image_seen" == false ]] || fail "chiave runtime duplicata: $key"
+        image_seen=true
+        SEQUENT_IMAGE="$value"
+        ;;
+      SEQUENT_RUNTIME_UID)
+        [[ "$uid_seen" == false ]] || fail "chiave runtime duplicata: $key"
+        uid_seen=true
+        SEQUENT_RUNTIME_UID="$value"
+        ;;
+      SEQUENT_RUNTIME_GID)
+        [[ "$gid_seen" == false ]] || fail "chiave runtime duplicata: $key"
+        gid_seen=true
+        SEQUENT_RUNTIME_GID="$value"
+        ;;
+      SEQUENT_ORIGIN)
+        [[ "$origin_seen" == false ]] || fail "chiave runtime duplicata: $key"
+        origin_seen=true
+        SEQUENT_ORIGIN="$value"
+        ;;
+      *) fail "chiave runtime non ammessa: $key" ;;
+    esac
+  done <"$input"
+
+  [[ "$image_seen" == true && "$uid_seen" == true && "$gid_seen" == true \
+    && "$origin_seen" == true ]] || fail "configurazione runtime incompleta"
+  [[ "$SEQUENT_IMAGE" =~ ^sha256:[0-9a-f]{64}$ \
+    || "$SEQUENT_IMAGE" =~ ^sequent(-release)?:[0-9a-f]{40}$ ]] ||
+    fail "immagine runtime non valida"
+  [[ "$SEQUENT_RUNTIME_UID" =~ ^[0-9]+$ ]] || fail "UID runtime non valido"
+  [[ "$SEQUENT_RUNTIME_GID" =~ ^[0-9]+$ ]] || fail "GID runtime non valido"
+  [[ "$SEQUENT_ORIGIN" =~ ^https://[^/]+$ ]] || fail "origine runtime non valida"
+}
+
+write_trusted_runtime_env() {
+  local image="$1"
+  printf 'SEQUENT_IMAGE=%s\nSEQUENT_RUNTIME_UID=%s\nSEQUENT_RUNTIME_GID=%s\nSEQUENT_ORIGIN=%s\n' \
+    "$image" "$SEQUENT_RUNTIME_UID" "$SEQUENT_RUNTIME_GID" "$SEQUENT_ORIGIN" \
+    >"$trusted_runtime_env"
+  chown root:root "$trusted_runtime_env"
+  chmod 0600 "$trusted_runtime_env"
+}
+
+cleanup_trusted_runtime_env() {
+  if [[ "$trusted_runtime_env" == /run/sequent-runtime-env.* ]]; then
+    rm -f "$trusted_runtime_env"
+  fi
+}
 
 [[ -f "$runtime_env" && ! -L "$runtime_env" ]] || fail "configurazione runtime assente"
 [[ -f "$runtime_compose" && ! -L "$runtime_compose" ]] || fail "Compose runtime assente"
@@ -48,12 +113,11 @@ database="$root/data/sequent.sqlite"
 [[ "$(stat -c '%U:%G:%a' "$runtime_compose")" == "ubuntu:ubuntu:640" ]] ||
   fail "permessi del Compose runtime non conformi"
 
-# Il file è fidato soltanto dopo averne verificato proprietario e modalità.
-# shellcheck source=/dev/null
-source "$runtime_env"
-[[ "${SEQUENT_RUNTIME_UID:-}" =~ ^[0-9]+$ ]] || fail "UID runtime non valido"
-[[ "${SEQUENT_RUNTIME_GID:-}" =~ ^[0-9]+$ ]] || fail "GID runtime non valido"
-[[ "${SEQUENT_ORIGIN:-}" =~ ^https://[^/]+$ ]] || fail "origine runtime non valida"
+load_runtime_env "$runtime_env"
+previous_runtime_image="$SEQUENT_IMAGE"
+trusted_runtime_env="$(mktemp /run/sequent-runtime-env.XXXXXX)"
+write_trusted_runtime_env "$previous_runtime_image"
+trap cleanup_trusted_runtime_env EXIT
 
 exec 9>"$shared_lock"
 flock -n 9 || fail "una build, un deploy o una manutenzione Docker è già in corso"
@@ -75,7 +139,7 @@ git -C "$repository" diff --quiet || fail "checkout modificato"
 git -C "$repository" diff --cached --quiet || fail "index modificato"
 cd "$repository"
 
-compose=(docker compose --project-name sequent --env-file "$runtime_env" --file "$runtime_compose")
+compose=(docker compose --project-name sequent --env-file "$trusted_runtime_env" --file "$runtime_compose")
 current_container="$("${compose[@]}" ps --quiet sequent)"
 [[ -n "$current_container" ]] || fail "runtime precedente assente"
 [[ "$(docker inspect --format '{{.State.Health.Status}}' "$current_container")" == healthy ]] ||
@@ -145,6 +209,7 @@ release_was_present=false
 
 cleanup() {
   docker rm --force "$migration_container" >/dev/null 2>&1 || true
+  cleanup_trusted_runtime_env
   if [[ "$migration_copy" == "$root/tmp/migration-"* ]]; then
     rm -rf --one-file-system "$migration_copy"
   fi
@@ -167,6 +232,7 @@ rollback() {
     rsync --archive --delete "$snapshot/data/" "$root/data/"
     install -o ubuntu -g ubuntu -m 0600 "$snapshot/runtime.env" "$runtime_env"
     install -o ubuntu -g ubuntu -m 0640 "$snapshot/compose.yml" "$runtime_compose"
+    write_trusted_runtime_env "$previous_runtime_image"
     "${compose[@]}" up --detach --no-build --force-recreate
   fi
   cleanup
@@ -276,6 +342,7 @@ printf 'SEQUENT_IMAGE=%s\nSEQUENT_RUNTIME_UID=%s\nSEQUENT_RUNTIME_GID=%s\nSEQUEN
 chown ubuntu:ubuntu "$runtime_env_next"
 chmod 0600 "$runtime_env_next"
 mv "$runtime_env_next" "$runtime_env"
+write_trusted_runtime_env "$candidate_image_id"
 
 "${compose[@]}" config --quiet
 install -o root -g root -m 0755 "$repository/scripts/vps/prune-docker-images.sh" \
