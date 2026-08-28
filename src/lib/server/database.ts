@@ -606,15 +606,18 @@ function applyCalculationResultsV2Migration(database: Database.Database): void {
   })();
 }
 
-function applyCalculationRulesV3Migration(database: Database.Database): void {
+function applyCalculationRulesMigration(
+  database: Database.Database,
+  version: 9 | 10 | 11,
+  rulesetVersion: "2026.08.5" | "2026.08.6" | "2026.08.7",
+): void {
   database.transaction(() => {
     const alreadyApplied = database
-      .prepare("SELECT 1 FROM schema_migrations WHERE version = 9")
-      .get();
+      .prepare("SELECT 1 FROM schema_migrations WHERE version = ?")
+      .get(version);
     if (alreadyApplied) return;
 
-    // Il valore fiscale ufficiale e i due conteggi territoriali sono ora distinti.
-    // I risultati precedenti sono derivati: vengono eliminati per imporre un nuovo calcolo.
+    // I risultati sono derivati e riproducibili: ogni nuova versione fiscale impone il ricalcolo.
     database.exec("DELETE FROM calculation_runs");
     const declarations = database
       .prepare("SELECT id, declaration_json FROM declarations")
@@ -626,37 +629,12 @@ function applyCalculationRulesV3Migration(database: Database.Database): void {
     for (const declaration of declarations) {
       const snapshot = JSON.parse(declaration.declaration_json) as Record<string, unknown>;
       snapshot.latestCalculationRunId = null;
-      snapshot.rulesetVersion = "2026.08.5";
+      snapshot.rulesetVersion = rulesetVersion;
       updateDeclaration.run(JSON.stringify(snapshot), now, declaration.id);
     }
-    database.prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (9, ?)").run(now);
-  })();
-}
-
-function applyCalculationRulesV4Migration(database: Database.Database): void {
-  database.transaction(() => {
-    const alreadyApplied = database
-      .prepare("SELECT 1 FROM schema_migrations WHERE version = 10")
-      .get();
-    if (alreadyApplied) return;
-
-    // Le quote immobiliari con agevolazione G sono ora separate dalle quote proporzionali.
-    // I risultati derivati precedenti devono essere ricalcolati con questa regola.
-    database.exec("DELETE FROM calculation_runs");
-    const declarations = database
-      .prepare("SELECT id, declaration_json FROM declarations")
-      .all() as Array<{ id: string; declaration_json: string }>;
-    const updateDeclaration = database.prepare(
-      "UPDATE declarations SET declaration_json = ?, updated_at = ? WHERE id = ?",
-    );
-    const now = new Date().toISOString();
-    for (const declaration of declarations) {
-      const snapshot = JSON.parse(declaration.declaration_json) as Record<string, unknown>;
-      snapshot.latestCalculationRunId = null;
-      snapshot.rulesetVersion = "2026.08.6";
-      updateDeclaration.run(JSON.stringify(snapshot), now, declaration.id);
-    }
-    database.prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (10, ?)").run(now);
+    database
+      .prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)")
+      .run(version, now);
   })();
 }
 
@@ -674,8 +652,9 @@ function applyMigrations(database: Database.Database): void {
   applyDeclarationSubjectSnapshotsMigration(database);
   applyOfficialAttachmentsMigration(database);
   applyCalculationResultsV2Migration(database);
-  applyCalculationRulesV3Migration(database);
-  applyCalculationRulesV4Migration(database);
+  applyCalculationRulesMigration(database, 9, "2026.08.5");
+  applyCalculationRulesMigration(database, 10, "2026.08.6");
+  applyCalculationRulesMigration(database, 11, "2026.08.7");
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

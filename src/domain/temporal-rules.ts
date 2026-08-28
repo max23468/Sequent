@@ -1,6 +1,6 @@
 import legalTimeline from "./official-catalog/legal-timeline.json" with { type: "json" };
 
-export const TEMPORAL_RULESET_VERSION = "2026.08.6" as const;
+export const TEMPORAL_RULESET_VERSION = "2026.08.7" as const;
 
 export interface ApplicableLegalFramework {
   id: string;
@@ -215,8 +215,8 @@ export function buildSuccessionPaymentPlan(input: {
   )
     throw new Error("ACCONTO_NON_VALIDO");
   const remainingCents = totalCents - initialPaymentCents;
-  if (installments > 1 && totalCents < 100_000n) throw new Error("RATEAZIONE_NON_AMMESSA");
-  if (installments > 8 && totalCents <= 2_000_000n) throw new Error("NUMERO_RATE_NON_AMMESSO");
+  if (installments > 1 && remainingCents < 100_000n) throw new Error("RATEAZIONE_NON_AMMESSA");
+  if (installments > 8 && remainingCents <= 2_000_000n) throw new Error("NUMERO_RATE_NON_AMMESSO");
   const advanceTrustPayment = input.advanceTrustPayment ?? false;
   if (advanceTrustPayment && (input.presenterCode !== "9" || input.hasTrustBeneficiary !== true))
     throw new Error("PAGAMENTO_ANTICIPATO_TRUST_NON_AMMESSO");
