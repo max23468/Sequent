@@ -43,7 +43,8 @@ test("il runbook non include utente, hostname o endpoint amministrativi reali", 
   const runbook = read("docs/runbooks/vps.md");
 
   assert.doesNotMatch(runbook, /accesso amministrativo:[^\n]*\b(?:come|tramite)\b/);
-  assert.match(runbook, /alias SSH configurato localmente/);
+  assert.match(runbook, /comando locale `sequent-ssh`/);
+  assert.match(runbook, /\.config\/sequent\/local-vps\.env/);
   assert.match(runbook, /preflight\.env/);
 });
 

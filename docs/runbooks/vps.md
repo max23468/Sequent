@@ -3,12 +3,26 @@
 ## Target canonico
 
 - identità reale dell'host e target amministrativo: configurazione privata fuori da Git;
-- accesso amministrativo: alias SSH configurato localmente, senza utente o endpoint nel repository pubblico;
+- accesso amministrativo: comando locale `sequent-ssh`, senza utente o endpoint nel repository pubblico;
 - architettura: ARM64;
 - checkout: `/opt/sequent/repo/`;
 - hostname e servizio Sequent restano inattivi finché non esiste un'autorizzazione esplicita all'attivazione.
 
 Il preflight legge per default `/opt/sequent/private/preflight.env`, posseduto dall'utente amministrativo e con modalità `0600`. Il file definisce `SEQUENT_EXPECTED_HOST` e `SEQUENT_SHARED_INSTALLATION_MARKER`; i valori effettivi non devono essere copiati in Git, PR, issue o log condivisi. `SEQUENT_PREFLIGHT_ENV` può indicare un file privato alternativo.
+
+## Accesso amministrativo locale
+
+Il comando versionato `scripts/local/ssh-vps.sh` legge per default `~/.config/sequent/local-vps.env`, esterno a Git e mantenuto con modalità `0600`. La configurazione privata definisce `SEQUENT_SSH_HOST`, `SEQUENT_SSH_USER`, `SEQUENT_SSH_KEY_AGE` e `SEQUENT_AGE_IDENTITY`; endpoint, utente e percorsi reali non devono comparire nel repository pubblico.
+
+Sul client amministrativo, esporre il comando con un collegamento locale stabile:
+
+```bash
+mkdir -p ~/.local/bin
+install -m 0755 scripts/local/ssh-vps.sh ~/.local/bin/sequent-ssh
+sequent-ssh
+```
+
+Il wrapper decifra la chiave soltanto in streaming verso un `ssh-agent` effimero, offre esclusivamente l'identità appena caricata e distrugge agente e directory temporanea all'uscita. Non crea una copia in chiaro della chiave privata.
 
 ## Layout e proprietari
 
