@@ -60,6 +60,12 @@ test("runtime, DIZ e fonti ufficiali non possono degradare a gate rapidi", () =>
   assert.equal(original.compliance, true);
   assert.equal(original.runtime, false);
   assert.deepEqual(original.unknown, []);
+
+  const ocrManifest = classifyChangedFiles(["requirements-ocr.txt"]);
+  assert.equal(ocrManifest.arm64, true);
+  assert.equal(ocrManifest.documents, true);
+  assert.equal(ocrManifest.runArm64, true);
+  assert.deepEqual(ocrManifest.unknown, []);
 });
 
 test("governance e test non richiedono una release runtime", () => {

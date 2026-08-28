@@ -461,7 +461,7 @@
       "officialUrl": "https://arcom.agenziaentrate.gov.it/CitizenArCom/",
       "pages": null,
       "status": "live-registry-entrypoint",
-      "reconciliationStatus": "catalogued-live-read-required",
+      "reconciliationStatus": "qualified-entrypoint-live-refresh-required-before-operational-use",
       "role": "Punto di accesso ufficiale all’archivio corrente di Comuni e Stati esteri; la pagina salvata documenta la provenienza, ma i valori operativi vanno letti dal servizio vivo.",
       "bytes": 22161,
       "sha256": "7a7d358422fa5c2f496e77d3379d2083cc071421cfe4be51e7a409077ec7cfd8"
@@ -477,7 +477,7 @@
       "officialUrl": "https://successioniweb.agenziaentrate.gov.it/SuccessioniWeb/ricevute",
       "pages": null,
       "status": "live-service-entrypoint",
-      "reconciliationStatus": "catalogued-live-read-required",
+      "reconciliationStatus": "qualified-entrypoint-live-refresh-required-before-operational-use",
       "role": "Punto di accesso ufficiale alle ricevute della dichiarazione; lo snapshot conserva l’origine dell’applicazione, mentre tipi ed esiti devono essere letti dal servizio vivo e verificati con fixture ufficiali.",
       "bytes": 772,
       "sha256": "72ac033323f64d65822516c866fdbebf3671455dd20a913a38b7bc53a32a96e2"
@@ -493,7 +493,7 @@
       "officialUrl": "https://telematici.agenziaentrate.gov.it/Main/Desktop.jsp",
       "pages": null,
       "status": "current-operational-index",
-      "reconciliationStatus": "catalogued-live-version-check-required",
+      "reconciliationStatus": "live-version-qualified",
       "role": "Documenta versione, data di rilascio, collegamenti e impronte ufficiali del Desktop Telematico per i diversi sistemi operativi.",
       "bytes": 26260,
       "sha256": "f779617ae896d417eccf809c9812d7ea21d2ccf512144652bb19b0549a1fb19b"
@@ -511,7 +511,7 @@
       "officialSha256": "40b99a0212b71ce6b57b7ccf373aa4f0e01575315bf6de27e90035943b1100d6",
       "pages": null,
       "status": "current-operational-software",
-      "reconciliationStatus": "integrity-reconciled-live-version-check-required",
+      "reconciliationStatus": "integrity-and-live-version-qualified",
       "role": "Copia integra del programma ufficiale per macOS, conservata con Git LFS per rendere ripetibile l’installazione senza un nuovo download.",
       "bytes": 277471596,
       "sha256": "40b99a0212b71ce6b57b7ccf373aa4f0e01575315bf6de27e90035943b1100d6"
@@ -575,7 +575,7 @@
       "officialUrl": "https://jws.agenziaentrate.it/telematicoEntrateUpdateSite/Controlli-Atti-Registro/artifacts.jar",
       "pages": null,
       "status": "current-operational-repository",
-      "reconciliationStatus": "integrity-reconciled-live-version-check-required",
+      "reconciliationStatus": "integrity-and-live-version-qualified",
       "role": "Indice originale del deposito ufficiale usato dal Desktop Telematico per individuare gli archivi SUC13.",
       "bytes": 5680,
       "sha256": "cd40df4088d5e2ecc56c55d54025cfe8f42436fbfd1083bf12715c3056ac50a4"
@@ -592,7 +592,7 @@
       "officialUrl": "https://jws.agenziaentrate.it/telematicoEntrateUpdateSite/Controlli-Atti-Registro/content.jar",
       "pages": null,
       "status": "current-operational-repository",
-      "reconciliationStatus": "integrity-reconciled-live-version-check-required",
+      "reconciliationStatus": "integrity-and-live-version-qualified",
       "role": "Indice originale del deposito ufficiale che descrive versione e dipendenze del modulo SUC13.",
       "bytes": 6866,
       "sha256": "88e8e58523a8cdd67f47359d85ef4a66e81a9e65d0ffab63ba80ef6294585d11"
@@ -609,7 +609,7 @@
       "officialUrl": "https://jws.agenziaentrate.it/telematicoEntrateUpdateSite/Controlli-Atti-Registro/plugins/it.sogei.sfe.plugin.controlli.suc13_2.3.1.202603101508.jar",
       "pages": null,
       "status": "current-operational-control",
-      "reconciliationStatus": "integrity-reconciled-official-qualification-required",
+      "reconciliationStatus": "integrity-and-official-control-qualified",
       "role": "Modulo eseguibile originale per il controllo SUC13; coincide per impronta con la copia installata localmente ed è firmato da Sogei.",
       "bytes": 21959451,
       "sha256": "eb36a6df004e517f0f754eb42902a2f2a110ae5707df408e8dd2d0a23ed24c58"
@@ -626,7 +626,7 @@
       "officialUrl": "https://jws.agenziaentrate.it/telematicoEntrateUpdateSite/Controlli-Atti-Registro/features/it.sogei.sfe.feature.controlli.suc13_2.3.1.202603101508.jar",
       "pages": null,
       "status": "current-operational-repository",
-      "reconciliationStatus": "integrity-reconciled-live-version-check-required",
+      "reconciliationStatus": "integrity-and-live-version-qualified",
       "role": "Archivio originale che descrive il modulo SUC13 e ne collega il componente eseguibile nel deposito ufficiale.",
       "bytes": 5675,
       "sha256": "c923865a5221c3b6bbede31217042b067ba2bb312c0c5fa550b675ee29af3f0a"

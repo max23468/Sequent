@@ -52,6 +52,8 @@
     received: "Ricevuto", classifying: "Classificazione…", processing: "Elaborazione…",
     processed: "Elaborato", to_review: "Da verificare", unsupported: "Non elaborabile",
     unreadable: "Illeggibile", authoritative: "Fonte autorevole",
+    candidate_attachment: "Da preparare per l’invio",
+    included_attachment: "Allegato controllato",
   };
   const domainSections = new Set([
     "declaration", "beneficiaries", "assets", "checklist", "devolution",
@@ -191,8 +193,8 @@
       {:else}
         <nav aria-label="Quadri della dichiarazione" class="quadri-navigation">
           {#each data.quadri as quadro (quadro.id)}
-            <button type="button" class:active={data.selectedQuadro === quadro.id} data-quadro={quadro.id} aria-pressed={data.selectedQuadro === quadro.id} aria-label={`${quadro.id === "Frontespizio" ? "Frontespizio" : `Quadro ${quadro.id}`}: ${quadro.mappedFieldCount} etichette verificate su ${quadro.technicalFieldCount} campi`} title={`${quadro.mappedFieldCount} etichette verificate su ${quadro.technicalFieldCount} campi`} onclick={selectQuadro}>
-              <FileText size={18} /><span>{quadro.id === "Frontespizio" ? "Frontespizio" : `Quadro ${quadro.id}`}</span><small>{quadro.mappedFieldCount}/{quadro.technicalFieldCount}</small>
+            <button type="button" class:active={data.selectedQuadro === quadro.id} data-quadro={quadro.id} aria-pressed={data.selectedQuadro === quadro.id} aria-label={`${quadro.id === "Frontespizio" ? "Frontespizio" : `Quadro ${quadro.id}`}: ${quadro.verifiedFieldCount} etichette verificate su ${quadro.userFieldCount} campi compilabili`} title={`${quadro.verifiedFieldCount} etichette verificate su ${quadro.userFieldCount} campi compilabili`} onclick={selectQuadro}>
+              <FileText size={18} /><span>{quadro.id === "Frontespizio" ? "Frontespizio" : `Quadro ${quadro.id}`}</span><small>{quadro.verifiedFieldCount}/{quadro.userFieldCount}</small>
             </button>
           {/each}
         </nav>
@@ -290,7 +292,7 @@
       {:else if selectedSection !== "documents" && selectedSection !== "verifications"}
         <PracticeContextPanel {data} />
       {:else}
-        <DocumentSourcePanel {data} {statusLabels} {selectedSourceRef} />
+        <DocumentSourcePanel {data} {form} {statusLabels} {selectedSourceRef} />
       {/if}
     </aside>
   </div>

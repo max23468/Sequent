@@ -70,6 +70,13 @@ async function uploadFromWorkspace(
   await expect(page.getByRole("heading", { name: documentName })).toBeVisible();
 }
 
+async function confirmOfficialInstructions(button: import("@playwright/test").Locator) {
+  const confirmation = button
+    .locator("xpath=ancestor::form")
+    .getByRole("checkbox", { name: "Confermo di aver verificato queste indicazioni" });
+  if ((await confirmation.count()) > 0) await confirmation.check();
+}
+
 test("crea una pratica e usa il workspace minimo", async ({ page }) => {
   const practiceTitle = unique("Pratica workspace");
   const workspaceDocument = `workspace-${suffix}.txt`;
@@ -342,7 +349,9 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await page
     .getByRole("combobox", { name: "4 Grado di parentela", exact: true })
     .selectOption("10");
-  await page.getByRole("button", { name: "Salva questa posizione" }).click();
+  const saveBeneficiary = page.getByRole("button", { name: "Salva questa posizione" });
+  await confirmOfficialInstructions(saveBeneficiary);
+  await saveBeneficiary.click();
   await page.getByRole("button", { name: /^Frontespizio:/ }).click();
   await expect(page.getByRole("heading", { name: "Frontespizio", level: 2 })).toBeVisible();
   await expect(page.getByText(decedentName, { exact: true })).toBeVisible();
@@ -354,7 +363,9 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   ).toHaveText("0");
   const legalDevolution = page.getByRole("checkbox", { name: "Devoluzione per legge" });
   await legalDevolution.check();
-  await page.getByRole("button", { name: "Salva dati generali" }).click();
+  const saveGeneralData = page.getByRole("button", { name: "Salva dati generali" });
+  await confirmOfficialInstructions(saveGeneralData);
+  await saveGeneralData.click();
   await expect(legalDevolution).toBeChecked();
   await expect(page.getByRole("textbox", { name: "Codice fiscale del defunto" })).toHaveValue(
     decedentTaxCode,
@@ -368,9 +379,25 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   ).toHaveCount(15);
   await civilStatus.selectOption("3");
   await deathDate.fill("01012025");
-  await page.getByRole("button", { name: "Salva dati del defunto" }).click();
+  const saveDecedent = page.getByRole("button", { name: "Salva dati del defunto" });
+  await confirmOfficialInstructions(saveDecedent);
+  await saveDecedent.click();
   await expect(civilStatus).toHaveValue("3");
   await expect(deathDate).toHaveValue("01012025");
+  const quadriUrl = page.url();
+  await page.goto("/");
+  const deadlines = page.getByRole("region", { name: "Scadenze" });
+  const practiceDeadline = deadlines.getByRole("link", { name: new RegExp(practiceTitle) });
+  await expect(practiceDeadline.getByText("Presentazione della dichiarazione")).toBeVisible();
+  await expect(practiceDeadline.getByText("Scaduta da", { exact: false })).toBeVisible();
+  await expect(practiceDeadline.getByText("1 gen 2026")).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(deadlines).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(quadriUrl);
   await page.getByRole("button", { name: /^Quadro EA:/ }).click();
   await expect(
     page.locator(".official-fields").getByRole("button", { name: /^Salva/ }),
@@ -395,13 +422,14 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await page.getByRole("button", { name: /^Quadro EC:/ }).click();
   await expect(page.getByRole("heading", { name: "Quadro EC", level: 2 })).toBeVisible();
   await expect(page.getByRole("link", { name: assetName })).toHaveAttribute("aria-current", "page");
-  const officialAssetValue = page.getByRole("textbox", { name: "Valore", exact: true });
+  const officialAssetValue = page.getByRole("textbox", { name: /^\d+ Valore$/ });
   await officialAssetValue.fill("200000");
-  await page
+  const saveOfficialAsset = page
     .locator("form")
     .filter({ has: officialAssetValue })
-    .getByRole("button", { name: "Salva questo bene" })
-    .click();
+    .getByRole("button", { name: "Salva questo bene" });
+  await confirmOfficialInstructions(saveOfficialAsset);
+  await saveOfficialAsset.click();
   await expect(officialAssetValue).toHaveValue("200000");
 
   await page.getByRole("button", { name: "Vista operativa" }).click();
@@ -420,9 +448,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await expect(page.getByRole("button", { name: "Conferma il calcolo" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Documenti richiesti" }).click();
-  for (const status of await page.locator('.checklist-row select[name^="status:"]').all())
-    await status.selectOption("available");
-  await page.getByRole("button", { name: "Salva documenti richiesti" }).click();
+  await expect(page.locator(".checklist-row")).not.toHaveCount(0);
 
   await page.getByRole("button", { name: "Riepilogo ed esportazione" }).click();
   const summaryHref = await page

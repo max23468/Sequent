@@ -443,6 +443,9 @@
   .export-grid {
     grid-template-columns: 1fr;
   }
+  .calculation-summary-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 520px) {

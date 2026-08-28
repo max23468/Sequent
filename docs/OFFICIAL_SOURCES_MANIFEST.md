@@ -29,7 +29,7 @@ La copia locale non prova però che quella versione sia ancora corrente: prima d
 
 La precedenza completa delle fonti è definita nello stesso manifest. Gli overlay osservati, le anomalie documentali e i mapping irrisolti risiedono in [`delta-overlays.json`](../src/domain/official-catalog/delta-overlays.json). Un conflitto irrisolto blocca l'export interessato.
 
-`delta-overlays.json` registra anche i nuovi gruppi di fonti ancora da collegare a regole, periodi e test. Un originale acquisito e verificato non è automaticamente una regola applicata.
+`delta-overlays.json` registra anche la riconciliazione dei gruppi di fonti aggiunti per l’ambito corrente e conserva la motivazione di ogni esito. Un originale acquisito e verificato non diventa automaticamente una regola applicata: l’esito è conclusivo soltanto quando periodo, responsabilità e test sono espliciti.
 
 Il contratto applicativo è descritto in [`official-compliance.md`](contracts/official-compliance.md); il Master Plan stabilisce i criteri di prodotto senza duplicare metadati del bundle.
 

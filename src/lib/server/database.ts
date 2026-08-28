@@ -363,6 +363,27 @@ CREATE INDEX IF NOT EXISTS declaration_asset_entries_asset
   ON declaration_asset_entries(asset_id, declaration_id);
 `;
 
+const officialAttachmentsMigration = `
+CREATE TABLE IF NOT EXISTS official_attachments (
+  id TEXT PRIMARY KEY,
+  document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  original_name TEXT NOT NULL,
+  prepared_name TEXT NOT NULL,
+  format TEXT NOT NULL CHECK (format IN ('PDF/A-1b', 'TIFF-G4')),
+  byte_size INTEGER NOT NULL CHECK (byte_size BETWEEN 1 AND 5242880),
+  sha256 TEXT NOT NULL,
+  blob_path TEXT NOT NULL,
+  validation_json TEXT NOT NULL,
+  source_refs_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  UNIQUE (document_id, sha256)
+);
+
+CREATE INDEX IF NOT EXISTS official_attachments_practice
+  ON official_attachments(practice_id, document_id, created_at);
+`;
+
 function hasColumn(database: Database.Database, table: string, column: string): boolean {
   return (database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some(
     (candidate) => candidate.name === column,
@@ -548,6 +569,15 @@ function applyDeclarationSubjectSnapshotsMigration(database: Database.Database):
   })();
 }
 
+function applyOfficialAttachmentsMigration(database: Database.Database): void {
+  database.transaction(() => {
+    database.exec(officialAttachmentsMigration);
+    database
+      .prepare("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (7, ?)")
+      .run(new Date().toISOString());
+  })();
+}
+
 function applyMigrations(database: Database.Database): void {
   database.exec(foundationMigration);
   database
@@ -560,6 +590,7 @@ function applyMigrations(database: Database.Database): void {
   applyDeclarationSubjectEntriesMigration(database);
   applyDeclarationAssetEntriesMigration(database);
   applyDeclarationSubjectSnapshotsMigration(database);
+  applyOfficialAttachmentsMigration(database);
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

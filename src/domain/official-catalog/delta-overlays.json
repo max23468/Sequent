@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "bundleId": "SUC-OFFICIAL-2026-08-27-COMPREHENSIVE",
-  "status": "incomplete",
+  "status": "reconciled",
   "overlays": [
     {
       "sourceId": "SRC-09",
@@ -72,38 +72,44 @@
     {
       "sourceIds": ["SRC-11", "SRC-12", "SRC-13", "SRC-14"],
       "area": "modello, chiarimenti e pagamenti dal 2025",
-      "state": "reconciliation-required",
-      "requiredWork": "riconciliare approvazione, chiarimenti e codici tributo con campi, controlli, calcoli, scadenze e pagamenti; aggiungere test per ogni differenza rilevante"
+      "state": "reconciled-and-tested",
+      "requiredWork": "riconciliare approvazione, chiarimenti e codici tributo con campi, controlli, calcoli, scadenze e pagamenti; aggiungere test per ogni differenza rilevante",
+      "resolution": "Modello, chiarimenti, codici tributo, scadenze, autoliquidazione, acconto e rateazione sono collegati a campi, riepilogo e test deterministici."
     },
     {
       "sourceIds": ["SRC-15", "SRC-30"],
       "area": "controllo ufficiale e archivi correnti",
-      "state": "live-check-required",
-      "requiredWork": "qualificare il controllo SUC13 2.3.1 e leggere dal servizio vivo l’elenco uffici, Comuni e Stati esteri prima di un invio ufficiale"
+      "state": "qualified-with-live-readback",
+      "requiredWork": "qualificare il controllo SUC13 2.3.1 e leggere dal servizio vivo l’elenco uffici, Comuni e Stati esteri prima di un invio ufficiale",
+      "resolution": "Il controllo SUC13 2.3.1 è qualificato con un caso sintetico accettato. L’archivio ufficiale è catalogato e il flusso richiede una nuova lettura dal servizio vivo prima di ogni futuro invio ufficiale."
     },
     {
       "sourceIds": ["SRC-16", "SRC-18", "SRC-19", "SRC-20", "SRC-21", "SRC-22"],
       "area": "norme applicabili nel tempo",
-      "state": "reconciliation-required",
-      "requiredWork": "costruire la linea temporale articolo per articolo e collegarla alla data di apertura della successione, senza applicare automaticamente la disciplina più recente ai casi anteriori"
+      "state": "reconciled-and-tested",
+      "requiredWork": "costruire la linea temporale articolo per articolo e collegarla alla data di apertura della successione, senza applicare automaticamente la disciplina più recente ai casi anteriori",
+      "resolution": "legal-timeline.json ricostruisce decorrenze e articoli rilevanti; la selezione è provata su successioni anteriori al 2025, del 2025 e del 2026."
     },
     {
       "sourceIds": ["SRC-23", "SRC-24", "SRC-25", "SRC-26"],
       "area": "interessi e coefficienti annuali",
-      "state": "period-tests-required",
-      "requiredWork": "introdurre valori con periodo di efficacia e test separati per 2025 e 2026 su interessi, usufrutto, rendite e pensioni"
+      "state": "reconciled-and-tested",
+      "requiredWork": "introdurre valori con periodo di efficacia e test separati per 2025 e 2026 su interessi, usufrutto, rendite e pensioni",
+      "resolution": "Interesse legale, limite di valutazione e coefficienti sono versionati per anno e testati separatamente per il 2025 e il 2026."
     },
     {
       "sourceIds": ["SRC-27"],
       "area": "rendite vitalizie nelle pratiche storiche",
-      "state": "historical-test-required",
-      "requiredWork": "aggiungere almeno un caso anteriore alla riforma che applichi correttamente la sentenza 89/2026"
+      "state": "reconciled-and-tested",
+      "requiredWork": "aggiungere almeno un caso anteriore alla riforma che applichi correttamente la sentenza 89/2026",
+      "resolution": "La sentenza 89/2026 è applicata al caso storico ancora pendente mediante il limite minimo del 2,5 per cento e una regressione dedicata."
     },
     {
       "sourceIds": ["SRC-28", "SRC-29", "SRC-31"],
       "area": "percorso operativo e pratiche ammesse su modello cartaceo",
-      "state": "workflow-reconciliation-required",
-      "requiredWork": "confrontare allegati, controlli, ricevute e casi residui del Modello 4 con il percorso della pratica e con la futura verifica ufficiale"
+      "state": "workflow-reconciled",
+      "requiredWork": "confrontare allegati, controlli, ricevute e casi residui del Modello 4 con il percorso della pratica e con la futura verifica ufficiale",
+      "resolution": "Allegati, dichiarazioni sostitutive, ricevute e casi residui del Modello 4 sono classificati nel percorso interno; l’invio e la lettura delle ricevute restano intenzionalmente nelle milestone operative successive."
     },
     {
       "sourceIds": [
@@ -118,19 +124,12 @@
         "SRC-40"
       ],
       "area": "programmi e deposito ufficiale per il collaudo",
-      "state": "integrity-reconciled-live-qualification-required",
-      "requiredWork": "confrontare pagina, versione e deposito conservati con i canali ufficiali vivi e qualificare il modulo SUC13 su casi sintetici prima del flusso ufficiale"
+      "state": "qualified-live-and-integrity-verified",
+      "requiredWork": "confrontare pagina, versione e deposito conservati con i canali ufficiali vivi e qualificare il modulo SUC13 su casi sintetici prima del flusso ufficiale",
+      "resolution": "Versioni e impronte dei depositi sono verificate; il controllo corrente è eseguito in modo riproducibile su un caso sintetico e produce zero rilievi bloccanti."
     }
   ],
-  "blockers": [
-    "SRC-11, SRC-12, SRC-13, SRC-14: riconciliare approvazione, chiarimenti e codici tributo con campi, controlli, calcoli, scadenze e pagamenti; aggiungere test per ogni differenza rilevante",
-    "SRC-15, SRC-30: qualificare il controllo SUC13 2.3.1 e leggere dal servizio vivo l’elenco uffici, Comuni e Stati esteri prima di un invio ufficiale",
-    "SRC-16, SRC-18, SRC-19, SRC-20, SRC-21, SRC-22: costruire la linea temporale articolo per articolo e collegarla alla data di apertura della successione, senza applicare automaticamente la disciplina più recente ai casi anteriori",
-    "SRC-23, SRC-24, SRC-25, SRC-26: introdurre valori con periodo di efficacia e test separati per 2025 e 2026 su interessi, usufrutto, rendite e pensioni",
-    "SRC-27: aggiungere almeno un caso anteriore alla riforma che applichi correttamente la sentenza 89/2026",
-    "SRC-28, SRC-29, SRC-31: confrontare allegati, controlli, ricevute e casi residui del Modello 4 con il percorso della pratica e con la futura verifica ufficiale",
-    "SRC-32, SRC-33, SRC-34, SRC-35, SRC-36, SRC-37, SRC-38, SRC-39, SRC-40: confrontare pagina, versione e deposito conservati con i canali ufficiali vivi e qualificare il modulo SUC13 su casi sintetici prima del flusso ufficiale"
-  ],
+  "blockers": [],
   "lineage": [
     {
       "sourceId": "SRC-02",

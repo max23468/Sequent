@@ -3,6 +3,7 @@
   import OfficialFieldControl from "./OfficialFieldControl.svelte";
 
   type QuadroField = PageData["quadroFields"][number];
+  type OfficialInstruction = QuadroField["instructions"][number];
 
   let { data, group, actionUrl } = $props<{
     data: PageData;
@@ -40,6 +41,16 @@
     return group.fields.some((field: QuadroField) => field.entryMode !== "derived");
   }
 
+  function groupInstructions(): OfficialInstruction[] {
+    const instructions: OfficialInstruction[] = group.fields.flatMap(
+      (field: QuadroField) => field.instructions,
+    );
+    return instructions.filter(
+      (instruction: OfficialInstruction, index: number, all: OfficialInstruction[]) =>
+        all.findIndex((candidate: OfficialInstruction) => candidate.id === instruction.id) === index,
+    );
+  }
+
   function saveLabel(): string {
     if (data.selectedQuadro === "EA") return "Salva questa posizione";
     if (group.occurrenceId)
@@ -65,6 +76,13 @@
       <OfficialFieldControl {data} {field} occurrenceId={group.occurrenceId} entityMissing={entityMissing(field)} />
     {/each}
     {#if hasEditableFields()}
+      {#if groupInstructions().length > 0}
+        <details class="official-instructions">
+          <summary>Indicazioni dell’Agenzia da verificare ({groupInstructions().length})</summary>
+          <ul>{#each groupInstructions() as instruction (instruction.id)}<li>{instruction.instruction}</li>{/each}</ul>
+        </details>
+        <label class="official-confirmation"><input type="checkbox" name="confirmOfficialRules" value="yes" required /><span>Confermo di aver verificato queste indicazioni sui dati del blocco.</span></label>
+      {/if}
       <div class="official-fields-actions">
         <button class="button primary" type="submit" disabled={group.fields.some((field: QuadroField) => entityMissing(field))}>{saveLabel()}</button>
         <small>Tutti i dati di questo blocco vengono salvati insieme.</small>

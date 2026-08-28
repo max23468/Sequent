@@ -1,4 +1,7 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 
 export interface DossierPdfData {
   title: string;
@@ -9,6 +12,16 @@ export interface DossierPdfData {
   ready: boolean;
   digest: string;
   officialSourceLabel: string;
+  qualification: {
+    quadriPresent: string[];
+    officialControl: { name: string; version: string; blockingDiagnostics: number };
+    attachments: {
+      files: number;
+      totalBytes: number;
+      formats: string[];
+      motivatedExceptions: number;
+    };
+  };
   subjects: Array<{ name: string; role: string; taxCode: string | null }>;
   assets: Array<{ name: string; kind: string; valueCents: string; quadro: string | null }>;
   shares: Array<{
@@ -20,6 +33,17 @@ export interface DossierPdfData {
   }>;
   calculation: null | {
     totalTaxCents: string;
+    taxSummary: {
+      totalAssetsCents: string;
+      totalLiabilitiesCents: string;
+      netEstateCents: string;
+      mortgageTaxCents: string;
+      cadastralTaxCents: string;
+      relatedTaxesCents: string;
+      successionTaxCents: string;
+      penaltiesAndInterestCents: string;
+      totalAtSubmissionCents: string;
+    };
     beneficiaries: Array<{
       beneficiary: string;
       netEstateCents: string;
@@ -38,18 +62,21 @@ const BODY_SIZE = 9.5;
 const MUTED = rgb(0.32, 0.37, 0.42);
 const NAVY = rgb(0.08, 0.17, 0.25);
 const TEAL = rgb(0.05, 0.45, 0.47);
+const require = createRequire(import.meta.url);
+const REGULAR_FONT = readFileSync(
+  require.resolve("@expo-google-fonts/noto-sans/400Regular/NotoSans_400Regular.ttf"),
+);
+const BOLD_FONT = readFileSync(
+  require.resolve("@expo-google-fonts/noto-sans/700Bold/NotoSans_700Bold.ttf"),
+);
 
 function safeText(value: unknown): string {
-  return String(value ?? "")
-    .normalize("NFC")
-    .replaceAll("’", "'")
-    .replaceAll("‘", "'")
-    .replaceAll("“", '"')
-    .replaceAll("”", '"')
-    .replaceAll("–", "-")
-    .replaceAll("—", "-")
-    .replaceAll("€", "EUR")
-    .replace(/[^\x20-\x7e\xa0-\xff]/g, "?");
+  return (
+    String(value ?? "")
+      .normalize("NFC")
+      // oxlint-disable-next-line no-control-regex -- I caratteri di controllo non sono ammessi nel testo PDF.
+      .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, " ")
+  );
 }
 
 function money(value: string): string {
@@ -57,6 +84,11 @@ function money(value: string): string {
   const absolute = cents < 0n ? -cents : cents;
   const euros = (absolute / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `${cents < 0n ? "-" : ""}${euros},${(absolute % 100n).toString().padStart(2, "0")} EUR`;
+}
+
+function bytes(value: number): string {
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
+  return `${(value / 1024 / 1024).toFixed(2).replace(".", ",")} MB`;
 }
 
 function wrap(font: PDFFont, text: string, size: number, width: number): string[] {
@@ -92,12 +124,13 @@ function wrap(font: PDFFont, text: string, size: number, width: number): string[
 
 export async function createDossierPdf(data: DossierPdfData): Promise<Uint8Array> {
   const document = await PDFDocument.create();
+  document.registerFontkit(fontkit);
   document.setTitle(`Dossier - ${safeText(data.title)}`);
   document.setAuthor("Sequent");
   document.setSubject("Riepilogo della dichiarazione di successione");
   document.setCreationDate(new Date(data.generatedAt));
-  const regular = await document.embedFont(StandardFonts.Helvetica);
-  const bold = await document.embedFont(StandardFonts.HelveticaBold);
+  const regular = await document.embedFont(REGULAR_FONT, { subset: false });
+  const bold = await document.embedFont(BOLD_FONT, { subset: false });
   let page: PDFPage = document.addPage([A4.width, A4.height]);
   let y = A4.height - MARGIN;
 
@@ -163,29 +196,34 @@ export async function createDossierPdf(data: DossierPdfData): Promise<Uint8Array
   };
 
   const section = (title: string) => {
-    ensure(39);
-    y -= 17;
+    ensure(34);
+    y -= 14;
     page.drawText(safeText(title), { x: MARGIN, y, size: 13.5, font: bold, color: NAVY });
     page.drawLine({
-      start: { x: MARGIN, y: y - 8 },
-      end: { x: A4.width - MARGIN, y: y - 8 },
+      start: { x: MARGIN, y: y - 6 },
+      end: { x: A4.width - MARGIN, y: y - 6 },
       thickness: 0.45,
       color: rgb(0.76, 0.8, 0.82),
     });
-    y -= 17;
+    y -= 13;
   };
 
   const row = (label: string, value: string, labelWidth = 170, valueFont = bold) => {
     const lineHeight = BODY_SIZE * 1.38;
+    const columnGap = 14;
+    const labelLines = wrap(regular, label, BODY_SIZE, labelWidth - columnGap);
     const valueLines = wrap(valueFont, value, BODY_SIZE, A4.width - MARGIN * 2 - labelWidth);
-    ensure(Math.max(1, valueLines.length) * lineHeight + 3);
-    page.drawText(safeText(label), {
-      x: MARGIN,
-      y,
-      size: BODY_SIZE,
-      font: regular,
-      color: MUTED,
-    });
+    const lineCount = Math.max(1, labelLines.length, valueLines.length);
+    ensure(lineCount * lineHeight + 3);
+    for (const [index, line] of labelLines.entries()) {
+      page.drawText(line, {
+        x: MARGIN,
+        y: y - index * lineHeight,
+        size: BODY_SIZE,
+        font: regular,
+        color: MUTED,
+      });
+    }
     for (const [index, line] of valueLines.entries()) {
       page.drawText(line, {
         x: MARGIN + labelWidth,
@@ -195,7 +233,7 @@ export async function createDossierPdf(data: DossierPdfData): Promise<Uint8Array
         color: NAVY,
       });
     }
-    y -= Math.max(1, valueLines.length) * lineHeight + 3;
+    y -= lineCount * lineHeight + 3;
   };
 
   const item = (title: string, detail: string) => {
@@ -227,6 +265,19 @@ export async function createDossierPdf(data: DossierPdfData): Promise<Uint8Array
   row("Data di apertura", data.successionDate ?? "Non indicata");
   row("Dossier generato", data.generatedAt.slice(0, 10));
 
+  section("Verifica delle fonti e dei documenti");
+  row("Fonti di riferimento", data.officialSourceLabel);
+  row("Quadri compilati", data.qualification.quadriPresent.join(", ") || "Nessuno");
+  row(
+    "Controllo dell'Agenzia",
+    `Versione ${data.qualification.officialControl.version} - ${data.qualification.officialControl.blockingDiagnostics === 0 ? "la pratica di prova non presenta errori bloccanti" : `${data.qualification.officialControl.blockingDiagnostics} errori bloccanti`}`,
+  );
+  row(
+    "Allegati preparati",
+    `${data.qualification.attachments.files} file - ${bytes(data.qualification.attachments.totalBytes)}${data.qualification.attachments.formats.length ? ` - ${data.qualification.attachments.formats.join(", ")}` : ""}`,
+  );
+  row("Eccezioni motivate", String(data.qualification.attachments.motivatedExceptions));
+
   section("Soggetti");
   if (data.subjects.length === 0) text("Nessun soggetto registrato.", { color: MUTED, after: 4 });
   for (const subject of data.subjects)
@@ -254,7 +305,8 @@ export async function createDossierPdf(data: DossierPdfData): Promise<Uint8Array
   if (!data.calculation)
     text("Il calcolo non è ancora stato confermato.", { color: MUTED, after: 4 });
   else {
-    ensure(39);
+    ensure(57);
+    y -= 18;
     page.drawRectangle({
       x: MARGIN,
       y: y - 18,
@@ -278,6 +330,31 @@ export async function createDossierPdf(data: DossierPdfData): Promise<Uint8Array
       color: NAVY,
     });
     y -= 44;
+    ensure(170);
+    text("Riepilogo della dichiarazione", { size: 10.5, font: bold, after: 5 });
+    row("Attivo", money(data.calculation.taxSummary.totalAssetsCents), 250);
+    row("Passivo", money(data.calculation.taxSummary.totalLiabilitiesCents), 250);
+    row("Asse ereditario netto", money(data.calculation.taxSummary.netEstateCents), 250);
+    row("Imposta ipotecaria", money(data.calculation.taxSummary.mortgageTaxCents), 250);
+    row("Imposta catastale", money(data.calculation.taxSummary.cadastralTaxCents), 250);
+    row(
+      "Servizi, bollo e tributi speciali",
+      money(data.calculation.taxSummary.relatedTaxesCents),
+      250,
+    );
+    row(
+      "Imposta di successione dovuta",
+      money(data.calculation.taxSummary.successionTaxCents),
+      250,
+    );
+    row("Sanzioni e interessi", money(data.calculation.taxSummary.penaltiesAndInterestCents), 250);
+    row(
+      "Da versare con la dichiarazione",
+      money(data.calculation.taxSummary.totalAtSubmissionCents),
+      250,
+      bold,
+    );
+    y -= 7;
     for (const result of data.calculation.beneficiaries) {
       ensure(98);
       text(result.beneficiary, { size: 10.5, font: bold, after: 5 });

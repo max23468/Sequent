@@ -73,6 +73,32 @@ function run(command: string, args: string[]): string {
   return execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
+function commandSucceeds(command: string, args: string[]): boolean {
+  try {
+    execFileSync(command, args, { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function compileXsdWithAvailablePython(script: string, schema: string): void {
+  const python = process.env.SEQUENT_PYTHON ?? "python3";
+  if (commandSucceeds(python, ["-c", "import lxml"])) {
+    run(python, [script, schema]);
+    return;
+  }
+  if (!commandSucceeds("uv", ["--version"])) {
+    fail(
+      "lxml non disponibile: installare python3-lxml oppure uv, o indicare un Python idoneo in SEQUENT_PYTHON",
+    );
+  }
+  const requirements = readFileSync(path.join(repoRoot, "requirements-ocr.txt"), "utf8");
+  const lxmlVersion = /^lxml==([^\s]+)$/mu.exec(requirements)?.[1];
+  if (!lxmlVersion) fail("versione lxml non dichiarata in requirements-ocr.txt");
+  run("uv", ["run", "--no-project", "--with", `lxml==${lxmlVersion}`, "python", script, schema]);
+}
+
 function verifyPdfPages(filePath: string, expectedPages: number): void {
   const output = run("pdfinfo", [filePath]);
   const match = /^Pages:\s+(\d+)$/mu.exec(output);
@@ -197,10 +223,10 @@ export function verifyOfficialSources(officialRoot: string): void {
     path.join(officialRoot, archive.alias),
     xsdManifestPath,
   ]);
-  run("python3", [
+  compileXsdWithAvailablePython(
     path.join(repoRoot, "scripts/official-sources/compile-xsd.py"),
     path.join(xsdRoot, xsdManifest.mainSchema),
-  ]);
+  );
 
   console.log(`OK: ${manifest.bundleId}`);
   console.log(`  fonti: ${manifest.sources.length}`);

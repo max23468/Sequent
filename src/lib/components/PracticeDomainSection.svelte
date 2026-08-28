@@ -70,6 +70,14 @@
     return `${page.url.pathname}?${search.toString()}`;
   }
 
+  function paymentPlanText(
+    plan: NonNullable<(typeof data.calculationRuns)[number]["paymentPlan"]>,
+  ): string {
+    return plan.installments > 1
+      ? `Acconto di ${money(plan.initialPaymentCents)} e residuo di ${money(plan.remainingCents)} in ${plan.installments} rate. Scadenza ordinaria: ${formatItalianDate(plan.paymentDeadline)}.`
+      : `Imposta di successione da versare entro il ${formatItalianDate(plan.paymentDeadline)}.`;
+  }
+
   function money(value: string | bigint): string {
     const cents = BigInt(value);
     const absolute = cents < 0n ? -cents : cents;
@@ -134,7 +142,8 @@
         {#each Object.entries(assetKindLabels) as [value, label] (value)}<option {value}>{label}</option>{/each}
       </select>
       <label for="asset-name">Descrizione</label><input id="asset-name" name="displayName" maxlength="160" required />
-      <label for="asset-value">Valore</label><input id="asset-value" name="value" inputmode="decimal" placeholder="0,00" />
+      <label for="asset-value">Valore iniziale</label><input id="asset-value" name="value" inputmode="decimal" placeholder="0,00" />
+      <small class="form-help">Il valore fiscale viene verificato nel Quadro corrispondente prima della ripartizione e del calcolo.</small>
       <button class="button primary" type="submit">Aggiungi</button>
     </form>
   </div>
@@ -148,9 +157,9 @@
           <input type="hidden" name="itemId" value={item.id} />
           <PackageCheck size={19} />
           <div><strong>{item.label}</strong><small>{item.importance === "blocking" ? "Necessario" : item.importance === "conditional" ? "Da acquisire quando disponibile" : "Consigliato"}</small></div>
-          <label><span>Stato</span><select name={`status:${item.id}`}><option value="missing" selected={item.status === "missing"}>Mancante</option><option value="available" selected={item.status === "available"}>Disponibile</option><option value="overridden" selected={item.status === "overridden"}>Deroga motivata</option></select></label>
+          <label><span>Stato</span><select name={`status:${item.id}`}><option value="missing" selected={item.status === "missing"}>Mancante</option><option value="available" selected={item.status === "available"}>Disponibile</option>{#if item.importance !== "blocking"}<option value="overridden" selected={item.status === "overridden"}>Deroga motivata</option>{/if}</select></label>
           <label><span>Documento</span><select name={`documentId:${item.id}`}><option value="">Non collegato</option>{#each data.documents as sourceDocument (sourceDocument.id)}<option value={sourceDocument.id} selected={item.documentId === sourceDocument.id}>{sourceDocument.originalName}</option>{/each}</select></label>
-          <label class="checklist-note"><span>Nota</span><input name={`decisionNote:${item.id}`} value={item.decisionNote ?? ""} placeholder="Necessaria per una deroga" /></label>
+          <label class="checklist-note"><span>Nota</span><input name={`decisionNote:${item.id}`} value={item.decisionNote ?? ""} placeholder={item.importance === "blocking" ? "Il documento necessario non ammette deroga" : "Necessaria per una deroga"} /></label>
         </section>
       {/each}
     </div>
@@ -169,6 +178,29 @@
         {@const subject = data.subjects.find((candidate: { id: string }) => candidate.id === result.beneficiaryId)}
         <div class="calculation-beneficiary"><h3>{subject?.displayName ?? "Beneficiario"}</h3><dl><div><dt>Quota ereditaria</dt><dd>{money(result.qe)}</dd></div><div><dt>Denaro, gioielli e mobilia</dt><dd>{money(result.qdn)}</dd></div><div><dt>Passività</dt><dd>{money(result.qp)}</dd></div><div><dt>Attivo netto</dt><dd>{money(result.an)}</dd></div><div><dt>Franchigia</dt><dd>{money(result.fr)}</dd></div><div><dt>Presunzione</dt><dd>{money(result.pr)}</dd></div><div><dt>Imposta lorda</dt><dd>{money(result.isl)}</dd></div><div><dt>Riduzioni</dt><dd>{money(result.reductions)}</dd></div><div><dt>Imposta estera detraibile</dt><dd>{money(result.foreignTaxCredit)}</dd></div><div><dt>Imposta netta</dt><dd>{money(result.isn)}</dd></div></dl></div>
       {/each}
+      <section class="calculation-totals" aria-labelledby="calculation-totals-title">
+        <h3 id="calculation-totals-title">Riepilogo della dichiarazione</h3>
+        <div class="calculation-summary-grid">
+          <dl>
+            <div><dt>Attivo</dt><dd>{money(latestCalculation.declarationTaxes.estate.totalAssetsCents)}</dd></div>
+            <div><dt>Passivo</dt><dd>{money(latestCalculation.declarationTaxes.estate.totalLiabilitiesCents)}</dd></div>
+            <div><dt>Asse ereditario netto</dt><dd>{money(latestCalculation.declarationTaxes.estate.netEstateCents)}</dd></div>
+          </dl>
+          <dl>
+            <div><dt>Imposta ipotecaria</dt><dd>{money(latestCalculation.declarationTaxes.mortgageTax.payableCents)}</dd></div>
+            <div><dt>Imposta catastale</dt><dd>{money(latestCalculation.declarationTaxes.cadastralTax.payableCents)}</dd></div>
+            <div><dt>Servizi, bollo e tributi speciali</dt><dd>{money(latestCalculation.declarationTaxes.mortgageServicesCents + latestCalculation.declarationTaxes.stampDutyCents + latestCalculation.declarationTaxes.specialTaxesCents)}</dd></div>
+          </dl>
+          <dl>
+            <div><dt>Imposta di successione dovuta</dt><dd>{money(latestCalculation.declarationTaxes.successionTax.payableCents)}</dd></div>
+            <div><dt>Sanzioni e interessi</dt><dd>{money(latestCalculation.declarationTaxes.penaltiesCents + latestCalculation.declarationTaxes.interestCents)}</dd></div>
+            <div class="calculation-total-row"><dt>Da versare con la dichiarazione</dt><dd>{money(latestCalculation.declarationTaxes.totalAtSubmissionCents)}</dd></div>
+          </dl>
+        </div>
+        {#if latestCalculation.paymentPlan}
+          <p class="calculation-payment-note">{paymentPlanText(latestCalculation.paymentPlan)}</p>
+        {/if}
+      </section>
       {#if latestCalculation.status === "draft"}
         <form class="calculation-confirm" method="POST" action={confirmCalculationAction}><input type="hidden" name="declarationId" value={data.declaration.id} /><input type="hidden" name="expectedRevision" value={data.declaration.revision} /><input type="hidden" name="calculationId" value={latestCalculation.id} /><button class="button primary" type="submit">Conferma il calcolo</button></form>
       {/if}

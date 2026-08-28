@@ -1,7 +1,7 @@
-const CURRENT_DECLARATION_SCHEMA = 5;
-const CURRENT_CATALOG_VERSION = "2026.08.27.1";
-const CURRENT_RULESET_VERSION = "2025.01.1";
-const CURRENT_VALIDATOR_VERSION = "suc13-2025.07.15.1";
+const CURRENT_DECLARATION_SCHEMA = 7;
+const CURRENT_CATALOG_VERSION = "2026.08.27.2";
+const CURRENT_RULESET_VERSION = "2026.08.2";
+const CURRENT_VALIDATOR_VERSION = "suc13-2.3.1.202603101508";
 const OFFICIAL_SOURCE_BUNDLE_ID = "SUC-OFFICIAL-2026-08-27-COMPREHENSIVE";
 export const OFFICIAL_SOURCE_LABEL = "Fonti ufficiali acquisite al 27 agosto 2026";
 
@@ -45,6 +45,10 @@ export interface DeclarationSnapshot {
     sourceRefs: string[];
     createdAt: string;
   }>;
+  officialRuleConfirmations: Record<
+    string,
+    { ruleIds: string[]; valueJson: string; confirmedAt: string }
+  >;
   confirmedDevolutionScenarioId: string | null;
   latestCalculationRunId: string | null;
 }
@@ -62,6 +66,7 @@ export function createEmptyDeclaration(
     declarationKind: kind,
     fields: {},
     decisions: [],
+    officialRuleConfirmations: {},
     confirmedDevolutionScenarioId: null,
     latestCalculationRunId: null,
   };
@@ -78,12 +83,14 @@ export function parseDeclaration(value: unknown): DeclarationSnapshot {
       ...candidate,
       fields: (candidate.fields ?? {}) as Record<string, CanonicalFieldValue>,
       decisions: candidate.decisions ?? [],
+      officialRuleConfirmations: candidate.officialRuleConfirmations ?? {},
     };
   }
 
   const migrated = createEmptyDeclaration(candidate.declarationKind);
   migrated.successionOpenedAt = candidate.successionOpenedAt ?? null;
   migrated.decisions = candidate.decisions ?? [];
+  migrated.officialRuleConfirmations = candidate.officialRuleConfirmations ?? {};
   migrated.confirmedDevolutionScenarioId = candidate.confirmedDevolutionScenarioId ?? null;
   migrated.latestCalculationRunId = candidate.latestCalculationRunId ?? null;
   for (const [fieldId, fieldValue] of Object.entries(candidate.fields ?? {})) {

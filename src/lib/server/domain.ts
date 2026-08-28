@@ -1,12 +1,22 @@
 import { createHash, randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 import {
+  calculateDeclarationTaxSummary,
   calculateSuccessionTax,
   SUCCESSION_TAX_RULESET_VERSION,
   type BeneficiaryTaxResult,
+  type DeclarationTaxSummary,
   type SuccessionAllocation,
 } from "../../domain/calculation.ts";
 import {
+  buildSuccessionPaymentPlan,
+  ordinaryDeclarationDeadline,
+  TEMPORAL_RULESET_VERSION,
+  type SuccessionPaymentPlan,
+} from "../../domain/temporal-rules.ts";
+import controlQualification from "../../domain/official-catalog/suc13-control-qualification.json" with { type: "json" };
+import {
+  canonicalFieldKey,
   createEmptyDeclaration,
   getCanonicalField,
   parseDeclaration,
@@ -22,6 +32,7 @@ import {
   getCatalogField,
   getCatalogStatus,
   getQuadroActivationRootPath,
+  listOfficialInstructions,
   listQuadroFields,
   listQuadroTechnicalElements,
   listTechnicalEnumerationValues,
@@ -35,7 +46,8 @@ import {
   validateRepeatedEaSubjects,
   type ValidationIssue,
 } from "../../domain/validation.ts";
-import { getDeclaration, saveDeclaration } from "./practices.ts";
+import { getDeclaration, listPractices, saveDeclaration } from "./practices.ts";
+import { listOfficialAttachments } from "./official-attachments.ts";
 
 export type SubjectRole = "decedent" | "beneficiary" | "representative" | "other";
 export type AssetCategory = "property" | "financial" | "other_asset" | "liability" | "donation";
@@ -105,6 +117,17 @@ function officialAssetPreviousSuccessionField(asset: SharedAsset) {
 function wholeEurosToCents(value: string): bigint | null {
   return /^\d+$/u.test(value) ? BigInt(value) * 100n : value === "" ? 0n : null;
 }
+
+function technicalFieldValue(declaration: DeclarationSnapshot, path: string): string {
+  const value = getCanonicalField(declaration, `xsd:${path}`)?.value;
+  return value === null || value === undefined ? "" : String(value);
+}
+
+function technicalWholeEuroCents(declaration: DeclarationSnapshot, path: string): bigint | null {
+  return wholeEurosToCents(technicalFieldValue(declaration, path));
+}
+
+const EF_PATH = "/Fornitura/Dichiarazione/QuadroEF";
 
 function hasAmbiguousTaxPositions(
   declaration: DeclarationSnapshot,
@@ -242,6 +265,8 @@ export interface CalculationRun {
   status: "draft" | "blocked" | "confirmed" | "superseded";
   beneficiaries: BeneficiaryTaxResult[];
   totalTaxCents: bigint;
+  declarationTaxes: DeclarationTaxSummary;
+  paymentPlan: SuccessionPaymentPlan | null;
   issues: ValidationIssue[];
   updatedAt: string;
 }
@@ -271,6 +296,16 @@ export interface PracticeDomainSummary {
   declarationCount: number;
   label: "Da impostare" | "Da completare" | "In controllo";
   nextStep: string;
+}
+
+export interface PracticeDeadlineSummary {
+  practiceId: string;
+  practiceTitle: string;
+  label: "Presentazione della dichiarazione";
+  dueDate: string;
+  timing: "overdue" | "today" | "soon" | "upcoming";
+  timingLabel: string;
+  sourceId: "SRC-05";
 }
 
 function parseRecord(value: string): Record<string, unknown> {
@@ -839,6 +874,10 @@ export function synchronizeChecklist(
   if (!record) return [];
   const fields = Object.values(record.declaration.fields);
   const assets = listSharedAssets(database, practiceId, declarationId);
+  const latestScenario = listDevolutionScenarios(database, practiceId, declarationId).at(0);
+  const reliefCodes = new Set(
+    latestScenario?.shares.map((share) => share.reliefCode).filter(Boolean) ?? [],
+  );
   const hasValue = (fragment: string, accepted: string[] = ["1"]) =>
     fields.some(
       (field) => field.fieldId.includes(fragment) && accepted.includes(String(field.value ?? "")),
@@ -926,11 +965,149 @@ export function synchronizeChecklist(
     },
     {
       id: "family-tree",
-      requirementKind: "source",
-      importance: "recommended",
+      requirementKind: "attachment",
+      importance: "blocking",
       label: "Prospetto dei rapporti familiari",
       applicable: true,
-      sourceRefs: ["SRC-05#albero-genealogico"],
+      sourceRefs: ["SRC-05#quali-documenti-occorrono"],
+    },
+    {
+      id: "family-status-declaration",
+      requirementKind: "attachment",
+      importance: "blocking",
+      label: "Dichiarazione sostitutiva sullo stato di famiglia",
+      applicable:
+        hasValue("CodiceCarica", ["5", "6", "7"]) || hasValue("codice-carica", ["5", "6", "7"]),
+      sourceRefs: ["SRC-05#quali-documenti-occorrono"],
+    },
+    {
+      id: "relief-proof",
+      requirementKind: "attachment",
+      importance: "blocking",
+      label: "Richiesta e documenti per agevolazioni o riduzioni",
+      applicable:
+        reliefCodes.size > 0 ||
+        latestScenario?.shares.some(
+          (share) => share.reductionYears > 0 || share.previousSuccessionValueCents > 0n,
+        ) === true,
+      sourceRefs: ["SRC-05#quali-documenti-occorrono", "SRC-10#riduzioni"],
+    },
+    {
+      id: "business-continuation",
+      requirementKind: "attachment",
+      importance: "blocking",
+      label: "Impegno a proseguire l’attività o mantenere il controllo per cinque anni",
+      applicable: reliefCodes.has("A") || reliefCodes.has("N"),
+      sourceRefs: ["SRC-05#quali-documenti-occorrono"],
+    },
+    {
+      id: "company-balance-sheet",
+      requirementKind: "attachment",
+      importance: "blocking",
+      label: "Ultimo bilancio, inventario o prospetto dell’azienda",
+      applicable: assets.some((asset) => asset.kind === "company"),
+      sourceRefs: ["SRC-05#quali-documenti-occorrono"],
+    },
+    {
+      id: "trust-instrument",
+      requirementKind: "attachment",
+      importance: "blocking",
+      label: "Atto istitutivo, statuto e atto dispositivo del trust",
+      applicable:
+        hasValue("TipoSoggetto", ["5"]) ||
+        hasValue("soggetto.tipo", ["5"]) ||
+        hasValue("CodiceCarica", ["9"]) ||
+        hasValue("codice-carica", ["9"]),
+      sourceRefs: ["SRC-05#quali-documenti-occorrono", "SRC-13#trust"],
+    },
+    {
+      id: "disabled-trust-declaration",
+      requirementKind: "attachment",
+      importance: "blocking",
+      label: "Dichiarazione sui requisiti del trust in favore di persone con disabilità",
+      applicable:
+        (hasValue("TipoSoggetto", ["5"]) || hasValue("soggetto.tipo", ["5"])) &&
+        (hasValue("PortatoreHandicap") || hasValue("soggetto.disabilita")),
+      sourceRefs: ["SRC-05#quali-documenti-occorrono"],
+    },
+    {
+      id: "first-home-declaration",
+      requirementKind: "attachment",
+      importance: "blocking",
+      label: "Dichiarazione e documenti per l’agevolazione prima casa",
+      applicable: ["P", "X", "Y", "Z"].some((code) => reliefCodes.has(code)),
+      sourceRefs: ["SRC-05#quali-documenti-occorrono", "SRC-01#quadro-eh"],
+    },
+    {
+      id: "first-home-natural-event",
+      requirementKind: "attachment",
+      importance: "blocking",
+      label: "Certificazione di inagibilità dell’abitazione già agevolata",
+      applicable: hasValue("EventiEccezionali") || hasValue("eventi-eccezionali"),
+      sourceRefs: ["SRC-05#eventi-eccezionali"],
+    },
+    {
+      id: "identity-substitute-signers",
+      requirementKind: "attachment",
+      importance: "blocking",
+      label: "Documenti d’identità di chi firma dichiarazioni sostitutive allegate",
+      applicable:
+        hasValue("QuadroEH") ||
+        ["P", "X", "Y", "Z"].some((code) => reliefCodes.has(code)) ||
+        reliefCodes.size > 0,
+      sourceRefs: ["SRC-05#quali-documenti-occorrono"],
+    },
+    {
+      id: "foreign-asset-certificates",
+      requirementKind: "attachment",
+      importance: "blocking",
+      label: "Certificati dei beni registrati all’estero e attestazione di conformità",
+      applicable:
+        assets.some((asset) => ["aircraft", "vessel"].includes(asset.kind)) &&
+        (hasValue("BeneEstero") || hasValue("bene-estero")),
+      sourceRefs: ["SRC-05#quali-documenti-occorrono"],
+    },
+    {
+      id: "foreign-document-translation",
+      requirementKind: "attachment",
+      importance: "blocking",
+      label: "Traduzione asseverata dei documenti in lingua straniera",
+      applicable:
+        hasValue("StatoEstero", fields.map((field) => String(field.value ?? "")).filter(Boolean)) ||
+        hasValue("ResidenzaEstera"),
+      sourceRefs: ["SRC-05#quali-documenti-occorrono"],
+    },
+    {
+      id: "renunciation-deed",
+      requirementKind: "source",
+      importance: "recommended",
+      label: "Atto di rinuncia all’eredità o al legato",
+      applicable: hasValue("Rinuncia") || hasValue("rinuncia"),
+      sourceRefs: ["SRC-05#documenti-consigliati"],
+    },
+    {
+      id: "land-planning-declaration",
+      requirementKind: "source",
+      importance: "recommended",
+      label: "Dichiarazione sulla destinazione urbanistica dei terreni",
+      applicable: assets.some((asset) => ["land", "tavolare_land"].includes(asset.kind)),
+      sourceRefs: ["SRC-05#documenti-consigliati"],
+    },
+    {
+      id: "substitute-reference",
+      requirementKind: "source",
+      importance: "blocking",
+      label: "Estremi e copia della prima dichiarazione sostituita",
+      applicable: record.declaration.declarationKind !== "first",
+      sourceRefs: ["SRC-05#dichiarazione-sostitutiva"],
+    },
+    {
+      id: "substitute-originals",
+      requirementKind: "retain",
+      importance: "blocking",
+      label: "Originali delle dichiarazioni sostitutive e documenti d’identità",
+      applicable: true,
+      sourceRefs: ["SRC-05#documenti-da-conservare"],
     },
   ];
   const now = new Date().toISOString();
@@ -999,7 +1176,9 @@ export function updateChecklistItem(
     (candidate) => candidate.id === input.itemId,
   );
   if (!item || item.status === "not_applicable") return false;
+  if (item.importance === "blocking" && input.status === "overridden") return false;
   if (input.status === "overridden" && !input.decisionNote?.trim()) return false;
+  if (input.status === "available" && !input.documentId) return false;
   const document = input.documentId
     ? database
         .prepare("SELECT 1 FROM documents WHERE id = ? AND practice_id = ?")
@@ -1131,7 +1310,7 @@ export function saveDevolutionScenario(
     if (officialValue === null || officialValue === undefined || String(officialValue) === "")
       addIssue({
         id: "DEVOLUTION_OFFICIAL_ASSET_VALUE_MISSING",
-        message: `Completa il valore di “${asset.displayName}” nel Quadro ufficiale prima della ripartizione.`,
+        message: `Verifica il valore fiscale di “${asset.displayName}” nel Quadro ${asset.quadro} prima della ripartizione.`,
         blocking: true,
       });
     if (!input.shares.some((share) => share.assetId === asset.id))
@@ -1353,10 +1532,14 @@ export function confirmDevolutionScenario(
 function parseCalculationResult(value: string): {
   beneficiaries: BeneficiaryTaxResult[];
   totalTaxCents: bigint;
+  declarationTaxes: DeclarationTaxSummary;
+  paymentPlan: SuccessionPaymentPlan | null;
 } {
   const parsed = JSON.parse(value) as {
     beneficiaries: Array<Record<string, unknown>>;
     totalTaxCents: string;
+    declarationTaxes: Record<string, unknown>;
+    paymentPlan: Record<string, unknown> | null;
   };
   const moneyKeys = [
     "qe",
@@ -1372,6 +1555,17 @@ function parseCalculationResult(value: string): {
     "foreignTaxCredit",
     "isn",
   ];
+  const reviveBigInts = <T>(input: unknown): T => {
+    if (Array.isArray(input)) return input.map((item) => reviveBigInts(item)) as T;
+    if (input && typeof input === "object")
+      return Object.fromEntries(
+        Object.entries(input).map(([key, item]) => [
+          key,
+          key.endsWith("Cents") && typeof item === "string" ? BigInt(item) : reviveBigInts(item),
+        ]),
+      ) as T;
+    return input as T;
+  };
   return {
     beneficiaries: parsed.beneficiaries.map((beneficiary) => {
       const converted = { ...beneficiary };
@@ -1379,6 +1573,10 @@ function parseCalculationResult(value: string): {
       return converted as unknown as BeneficiaryTaxResult;
     }),
     totalTaxCents: BigInt(parsed.totalTaxCents),
+    declarationTaxes: reviveBigInts<DeclarationTaxSummary>(parsed.declarationTaxes),
+    paymentPlan: parsed.paymentPlan
+      ? reviveBigInts<SuccessionPaymentPlan>(parsed.paymentPlan)
+      : null,
   };
 }
 
@@ -1537,6 +1735,8 @@ export function runSuccessionCalculation(
   });
   const allocations: SuccessionAllocation[] = scenario.shares.map((share) => {
     const asset = assets.get(share.assetId ?? "");
+    const beneficiary = beneficiaries.find((candidate) => candidate.id === share.beneficiaryId);
+    const municipalityField = asset ? assetCatalogField(asset, "CodiceComune") : null;
     return {
       assetId: share.assetId ?? "",
       beneficiaryId: share.beneficiaryId,
@@ -1548,10 +1748,246 @@ export function runSuccessionCalculation(
         share.reductionYears === 0 ? undefined : (share.reductionYears as 1 | 2 | 3 | 4 | 5),
       previousSuccessionValueCents: share.previousSuccessionValueCents,
       foreignTaxCents: share.foreignTaxCents,
+      assetKind: asset?.kind,
+      municipalityCode:
+        asset && municipalityField
+          ? String(
+              getCanonicalField(declaration.declaration, municipalityField.canonicalId, asset.id)
+                ?.value ?? "",
+            )
+          : undefined,
+      relationshipCode: beneficiary?.relationshipCode,
+      subjectType: beneficiary?.subjectType,
+      rightCode: share.rightCode,
     };
   });
   const result = calculateSuccessionTax(beneficiaries, allocations);
-  const inputJson = serializeBigInts({ beneficiaries, allocations, scenarioId: scenario.id });
+  const jurisdictionText = technicalFieldValue(
+    declaration.declaration,
+    `${EF_PATH}/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero`,
+  );
+  const jurisdictionCount = /^\d+$/u.test(jurisdictionText) ? Number(jurisdictionText) : 0;
+  const hasOrdinaryProperty = allocations.some(
+    (allocation) => allocation.assetKind === "land" || allocation.assetKind === "building",
+  );
+  if (hasOrdinaryProperty && jurisdictionText === "")
+    issues.push({
+      id: "CALCULATION_JURISDICTIONS_MISSING",
+      level: "blocking",
+      fieldId: `xsd:${EF_PATH}/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero`,
+      message: "Indica nel Quadro EF il numero delle circoscrizioni immobiliari interessate.",
+      sourceId: "SRC-08",
+      sourcePointer: "Quadro EF, rigo EF15",
+    });
+  const centsAt = (path: string) =>
+    technicalWholeEuroCents(declaration.declaration, `${EF_PATH}/${path}`) ?? 0n;
+  const paymentTimingText = technicalFieldValue(
+    declaration.declaration,
+    `${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/TempisticaPagamento`,
+  );
+  const paymentTiming = paymentTimingText === "2" ? 2 : 1;
+  const installmentText = technicalFieldValue(
+    declaration.declaration,
+    `${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/PagamentoRateale`,
+  );
+  const installmentCount = /^\d+$/u.test(installmentText) ? Number(installmentText) : 1;
+  const initialPaymentText = technicalFieldValue(
+    declaration.declaration,
+    `${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/Acconto`,
+  );
+  const initialPaymentCents = wholeEurosToCents(initialPaymentText);
+  const openingDateForCalculation =
+    declaration.declaration.successionOpenedAt &&
+    declaration.declaration.successionOpenedAt >= "2006-10-03" &&
+    declaration.declaration.successionOpenedAt <= "2026-12-31"
+      ? declaration.declaration.successionOpenedAt
+      : "2026-08-27";
+  let declarationTaxes = calculateDeclarationTaxSummary(allocations, result.totalTaxCents, {
+    openingDate: openingDateForCalculation,
+    jurisdictionCount,
+    automaticLandRegistry:
+      technicalFieldValue(
+        declaration.declaration,
+        "/Fornitura/Dichiarazione/Frontespizio/CasiParticolari/CasiParticolari",
+      ) !== "1",
+    copyRequested:
+      technicalFieldValue(
+        declaration.declaration,
+        "/Fornitura/Dichiarazione/Frontespizio/CasiParticolari/CopiaConforme",
+      ) === "1",
+    paymentTiming,
+    mortgageAlreadyPaidCents: centsAt("SezioneI_ImpostaIpotecaria/ImpostaIpotecariaVersata"),
+    mortgageCreditCents: centsAt("SezioneI_ImpostaIpotecaria/CreditoImposta"),
+    cadastralAlreadyPaidCents: centsAt("SezioneII_ImpostaCatastale/ImpostaCatastaleVersata"),
+    cadastralCreditCents: centsAt("SezioneII_ImpostaCatastale/CreditoImposta"),
+    successionAlreadyPaidCents: centsAt(
+      "SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/ImpostaVersata",
+    ),
+    successionCreditCents: centsAt(
+      "SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/CreditoImposta",
+    ),
+    penaltiesCents: [
+      "ImpostaIpotecaria",
+      "ImpostaCatastale",
+      "TassaIpotecaria",
+      "ImpostaBollo",
+      "ImpostaSuccessione",
+    ].map((section) => centsAt(`SezioneVI_SanzioniInteressi/${section}/${section}_Sanzioni`)),
+    interestCents: [
+      "ImpostaIpotecaria",
+      "ImpostaCatastale",
+      "TassaIpotecaria",
+      "ImpostaBollo",
+      "ImpostaSuccessione",
+    ].map((section) => centsAt(`SezioneVI_SanzioniInteressi/${section}/${section}_Interessi`)),
+  });
+  if (declarationTaxes.successionTax.payableCents > 0n && paymentTimingText === "")
+    issues.push({
+      id: "CALCULATION_PAYMENT_TIMING_MISSING",
+      level: "blocking",
+      fieldId: `xsd:${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/TempisticaPagamento`,
+      message: "Indica nel Quadro EF quando sarà versata l’imposta di successione.",
+      sourceId: "SRC-08",
+      sourcePointer: "Quadro EF, rigo EF18-ter",
+    });
+  if (initialPaymentText !== "" && installmentText === "")
+    issues.push({
+      id: "CALCULATION_INITIAL_PAYMENT_WITHOUT_INSTALLMENTS",
+      level: "blocking",
+      fieldId: `xsd:${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/Acconto`,
+      message: "L’acconto può essere indicato soltanto insieme al pagamento rateale.",
+      sourceId: "SRC-08",
+      sourcePointer: "Quadro EF, rigo EF18-ter",
+    });
+  let paymentPlan: SuccessionPaymentPlan | null = null;
+  if (declarationTaxes.successionTax.payableCents > 0n) {
+    try {
+      paymentPlan = buildSuccessionPaymentPlan({
+        totalCents: declarationTaxes.successionTax.payableCents,
+        openingDate: declaration.declaration.successionOpenedAt ?? "2025-01-01",
+        installments: installmentCount,
+        initialPaymentCents:
+          installmentText === "" ? undefined : (initialPaymentCents ?? undefined),
+      });
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "PIANO_NON_VALIDO";
+      const messages: Record<string, string> = {
+        NUMERO_RATE_NON_VALIDO: "Il numero di rate indicato non è ammesso.",
+        RATEAZIONE_NON_AMMESSA:
+          "Il debito residuo è inferiore a 1.000 euro e non può essere rateizzato.",
+        NUMERO_RATE_NON_AMMESSO:
+          "Con un debito residuo non superiore a 20.000 euro sono ammesse al massimo otto rate.",
+        ACCONTO_NON_VALIDO:
+          "L’acconto deve essere compreso tra il 20% dell’imposta dovuta e l’intero importo.",
+      };
+      issues.push({
+        id: `CALCULATION_PAYMENT_PLAN_${code}`,
+        level: "blocking",
+        fieldId: `xsd:${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/PagamentoRateale`,
+        message: messages[code] ?? "Il piano di pagamento indicato non è valido.",
+        sourceId: "SRC-13",
+        sourcePointer: "Pagamento dell’imposta di successione e rateazione",
+      });
+    }
+  }
+  declarationTaxes = calculateDeclarationTaxSummary(allocations, result.totalTaxCents, {
+    openingDate: openingDateForCalculation,
+    jurisdictionCount,
+    automaticLandRegistry:
+      technicalFieldValue(
+        declaration.declaration,
+        "/Fornitura/Dichiarazione/Frontespizio/CasiParticolari/CasiParticolari",
+      ) !== "1",
+    copyRequested:
+      technicalFieldValue(
+        declaration.declaration,
+        "/Fornitura/Dichiarazione/Frontespizio/CasiParticolari/CopiaConforme",
+      ) === "1",
+    paymentTiming,
+    initialSuccessionPaymentCents: paymentPlan?.initialPaymentCents,
+    mortgageAlreadyPaidCents: declarationTaxes.mortgageTax.alreadyPaidCents,
+    mortgageCreditCents: declarationTaxes.mortgageTax.creditCents,
+    cadastralAlreadyPaidCents: declarationTaxes.cadastralTax.alreadyPaidCents,
+    cadastralCreditCents: declarationTaxes.cadastralTax.creditCents,
+    successionAlreadyPaidCents: declarationTaxes.successionTax.alreadyPaidCents,
+    successionCreditCents: declarationTaxes.successionTax.creditCents,
+    penaltiesCents: [declarationTaxes.penaltiesCents],
+    interestCents: [declarationTaxes.interestCents],
+  });
+  const compareDeclaredEuro = (
+    path: string,
+    expectedCents: bigint,
+    label: string,
+    sourceId: string,
+  ) => {
+    const entered = technicalFieldValue(declaration.declaration, path);
+    if (entered === "") return;
+    const enteredCents = wholeEurosToCents(entered);
+    if (enteredCents === expectedCents) return;
+    issues.push({
+      id: `CALCULATION_DECLARED_DIVERGENCE:${path}`,
+      level: "blocking",
+      fieldId: `xsd:${path}`,
+      message: `${label}: il valore indicato non coincide con il calcolo della pratica.`,
+      sourceId,
+      sourcePointer: path,
+    });
+  };
+  compareDeclaredEuro(
+    "/Fornitura/Dichiarazione/QuadroEE/TotaleValoreImmobili",
+    declarationTaxes.estate.propertyCents,
+    "Totale immobili",
+    "SRC-08",
+  );
+  compareDeclaredEuro(
+    "/Fornitura/Dichiarazione/QuadroEE/TotaleAttivo",
+    declarationTaxes.estate.totalAssetsCents,
+    "Totale attivo",
+    "SRC-08",
+  );
+  compareDeclaredEuro(
+    "/Fornitura/Dichiarazione/QuadroEE/TotalePassivo",
+    declarationTaxes.estate.totalLiabilitiesCents,
+    "Totale passivo",
+    "SRC-08",
+  );
+  compareDeclaredEuro(
+    `${EF_PATH}/SezioneI_ImpostaIpotecaria/ImpostaIpotecariaDaVersare`,
+    declarationTaxes.mortgageTax.payableCents,
+    "Imposta ipotecaria da versare",
+    "SRC-08",
+  );
+  compareDeclaredEuro(
+    `${EF_PATH}/SezioneII_ImpostaCatastale/ImpostaCatastaleDaVersare`,
+    declarationTaxes.cadastralTax.payableCents,
+    "Imposta catastale da versare",
+    "SRC-08",
+  );
+  compareDeclaredEuro(
+    `${EF_PATH}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/ImpostaDaVersare`,
+    declarationTaxes.successionTax.payableCents,
+    "Imposta di successione da versare",
+    "SRC-08",
+  );
+  compareDeclaredEuro(
+    `${EF_PATH}/TotaleDaVersare`,
+    declarationTaxes.totalAtSubmissionCents,
+    "Totale da versare",
+    "SRC-08",
+  );
+  const inputJson = serializeBigInts({
+    beneficiaries,
+    allocations,
+    scenarioId: scenario.id,
+    calculationContext: {
+      successionOpenedAt: declaration.declaration.successionOpenedAt,
+      evaluationDate: localTodayIso(),
+      catalogStatus,
+      issues,
+      declarationTaxes,
+      paymentPlan,
+    },
+  });
   const inputHash = createHash("sha256").update(inputJson).digest("hex");
   const existing = database
     .prepare(
@@ -1581,7 +2017,7 @@ export function runSuccessionCalculation(
       SUCCESSION_TAX_RULESET_VERSION,
       inputHash,
       inputJson,
-      serializeBigInts(result),
+      serializeBigInts({ ...result, declarationTaxes, paymentPlan }),
       JSON.stringify(issues),
       issues.length > 0 ? "blocked" : "draft",
       now,
@@ -1689,6 +2125,7 @@ export function saveCanonicalField(
     entityId: input.entityId,
     occurrenceId: input.occurrenceId,
     fields: [{ fieldId: input.fieldId, value: input.value }],
+    confirmOfficialRules: true,
   });
 }
 
@@ -1701,6 +2138,7 @@ export function saveCanonicalFields(
     fields: Array<{ fieldId: string; value: string }>;
     entityId?: string | null;
     occurrenceId?: string | null;
+    confirmOfficialRules?: boolean;
   },
 ): { revision: number; issues: ValidationIssue[] } {
   const record = getDeclaration(database, input.declarationId, input.practiceId);
@@ -1711,6 +2149,24 @@ export function saveCanonicalFields(
     (field, index, all) =>
       all.findIndex((candidate) => candidate.fieldId === field.fieldId) === index,
   );
+  const technicalField = fields.find(
+    (field) => getCatalogField(field.fieldId)?.presentation === "technical-only",
+  );
+  if (technicalField)
+    return {
+      revision: record.revision,
+      issues: [
+        {
+          id: "TECHNICAL_FIELD_NOT_EDITABLE",
+          level: "blocking",
+          fieldId: technicalField.fieldId,
+          message:
+            "Questo dato tecnico viene preparato automaticamente dal documento allegato e non può essere modificato a mano.",
+          sourceId: "SRC-08",
+          sourcePointer: "Proprietà tecnica degli allegati",
+        },
+      ],
+    };
   const targetKinds = new Set(
     fields.map((field) => {
       return getCatalogField(field.fieldId)?.entityScope ?? "declaration";
@@ -1865,6 +2321,23 @@ export function saveCanonicalFields(
   const issues = fields.flatMap((field) =>
     field.value === "" ? [] : validateFieldValue(field.fieldId, field.value),
   );
+  const fieldsWithInstructions = fields
+    .map((field) => ({ ...field, instructions: listOfficialInstructions(field.fieldId) }))
+    .filter((field) => field.instructions.length > 0);
+  const officialRulesConfirmed = input.confirmOfficialRules !== false;
+  if (fieldsWithInstructions.length > 0 && !officialRulesConfirmed)
+    issues.push({
+      id: "OFFICIAL_INSTRUCTIONS_NOT_CONFIRMED",
+      level: "blocking",
+      fieldId: fieldsWithInstructions[0]?.fieldId ?? null,
+      entityId,
+      occurrenceId,
+      message:
+        "Conferma di aver verificato le indicazioni ministeriali mostrate per questo blocco.",
+      sourceId: fieldsWithInstructions[0]?.instructions[0]?.sourceIds[0] ?? "SRC-07",
+      sourcePointer:
+        fieldsWithInstructions[0]?.instructions[0]?.sourcePointer ?? "Controlli ministeriali",
+    });
   const valueField = asset ? officialAssetValueField(asset) : null;
   const officialValue = valueField
     ? fields.find((field) => field.fieldId === valueField.canonicalId)
@@ -1892,7 +2365,33 @@ export function saveCanonicalFields(
         )?.value ?? "",
       ) !== field.value,
   );
-  if (changedFields.length === 0) return { revision: record.revision, issues: [] };
+  const confirmations = { ...record.declaration.officialRuleConfirmations };
+  const now = new Date().toISOString();
+  let confirmationsChanged = false;
+  if (officialRulesConfirmed) {
+    for (const field of fieldsWithInstructions) {
+      const key = canonicalFieldKey(
+        field.fieldId,
+        requiresOccurrence ? null : entityId,
+        requiresOccurrence ? occurrenceId : null,
+      );
+      const nextConfirmation = {
+        ruleIds: field.instructions.map((instruction) => instruction.id).sort(),
+        valueJson: JSON.stringify(field.value),
+        confirmedAt: now,
+      };
+      const previous = confirmations[key];
+      if (
+        previous?.valueJson !== nextConfirmation.valueJson ||
+        JSON.stringify([...previous.ruleIds].sort()) !== JSON.stringify(nextConfirmation.ruleIds)
+      ) {
+        confirmations[key] = nextConfirmation;
+        confirmationsChanged = true;
+      }
+    }
+  }
+  if (changedFields.length === 0 && !confirmationsChanged)
+    return { revision: record.revision, issues: [] };
   let declaration = record.declaration;
   for (const field of changedFields) {
     declaration = setCanonicalField(
@@ -1930,6 +2429,7 @@ export function saveCanonicalFields(
   }
   declaration = {
     ...declaration,
+    officialRuleConfirmations: confirmations,
     confirmedDevolutionScenarioId: null,
     latestCalculationRunId: null,
   };
@@ -2095,6 +2595,52 @@ export function listPracticeDomainSummaries(database: Database.Database): Practi
       nextStep: "Completa i controlli della dichiarazione",
     };
   });
+}
+
+export function listPracticeDeadlines(
+  database: Database.Database,
+  today = localTodayIso(),
+): PracticeDeadlineSummary[] {
+  const dayInMilliseconds = 86_400_000;
+  const todayTimestamp = new Date(`${today}T00:00:00Z`).valueOf();
+  if (Number.isNaN(todayTimestamp)) throw new Error("DATA_NON_VALIDA");
+
+  return listPractices(database)
+    .flatMap((practice): PracticeDeadlineSummary[] => {
+      const declaration = getDeclaration(database, practice.declarationId, practice.id);
+      const openingDate = declaration?.declaration.successionOpenedAt;
+      if (!openingDate) return [];
+
+      let dueDate: string;
+      try {
+        dueDate = ordinaryDeclarationDeadline(openingDate);
+      } catch {
+        return [];
+      }
+      const days = Math.round(
+        (new Date(`${dueDate}T00:00:00Z`).valueOf() - todayTimestamp) / dayInMilliseconds,
+      );
+      const absoluteDays = Math.abs(days);
+      const timing = days < 0 ? "overdue" : days === 0 ? "today" : days <= 30 ? "soon" : "upcoming";
+      const timingLabel =
+        days < 0
+          ? `Scaduta da ${absoluteDays} ${absoluteDays === 1 ? "giorno" : "giorni"}`
+          : days === 0
+            ? "Scade oggi"
+            : `Scade tra ${days} ${days === 1 ? "giorno" : "giorni"}`;
+      return [
+        {
+          practiceId: practice.id,
+          practiceTitle: practice.title,
+          label: "Presentazione della dichiarazione",
+          dueDate,
+          timing,
+          timingLabel,
+          sourceId: "SRC-05",
+        },
+      ];
+    })
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate));
 }
 
 type QuadroField = ReturnType<typeof listQuadroFields>[number];
@@ -2418,6 +2964,26 @@ export function buildComplianceReport(
   declaration: DeclarationSnapshot;
   issues: ValidationIssue[];
   checklist: ChecklistItem[];
+  qualification: {
+    sourceBundleId: string;
+    catalogVersion: string;
+    calculationRulesVersion: string;
+    temporalRulesVersion: string;
+    validatorVersion: string;
+    quadriPresent: string[];
+    officialControl: {
+      name: string;
+      version: string;
+      status: string;
+      blockingDiagnostics: number;
+    };
+    attachments: {
+      files: number;
+      totalBytes: number;
+      formats: string[];
+      motivatedExceptions: number;
+    };
+  };
   ready: boolean;
   digest: string;
 } {
@@ -2472,6 +3038,26 @@ export function buildComplianceReport(
       sourcePointer: "checklist_items",
     });
   }
+  const officialAttachments = listOfficialAttachments(database, practiceId);
+  const preparedDocumentIds = new Set(
+    officialAttachments.map((attachment) => attachment.documentId),
+  );
+  const unpreparedAttachments = checklist.filter(
+    (item) =>
+      item.requirementKind === "attachment" &&
+      item.status === "available" &&
+      (!item.documentId || !preparedDocumentIds.has(item.documentId)),
+  );
+  if (unpreparedAttachments.length > 0)
+    issues.push({
+      id: "OFFICIAL_ATTACHMENTS_NOT_PREPARED",
+      level: "blocking",
+      fieldId: null,
+      message:
+        "Almeno un documento da allegare non è ancora stato trasformato e controllato come PDF/A-1b o TIFF.",
+      sourceId: "SRC-07/SRC-08/SRC-09",
+      sourcePointer: "allegati PDF/A-1b o TIFF, 5 MB per file e 40 MB complessivi",
+    });
   if (assets.length > 0 && !declaration.confirmedDevolutionScenarioId)
     issues.push({
       id: "DEVOLUTION_CONFIRMATION_REQUIRED",
@@ -2503,11 +3089,52 @@ export function buildComplianceReport(
       ]),
     ).values(),
   ];
-  const canonical = JSON.stringify({ declaration, issues: uniqueIssues, checklist });
+  const quadriPresent = [
+    ...new Set(
+      Object.values(declaration.fields)
+        .filter(
+          (field) =>
+            field.state !== "not_applicable" &&
+            field.value !== null &&
+            field.value !== undefined &&
+            field.value !== "",
+        )
+        .map((field) => getCatalogField(field.fieldId)?.quadro)
+        .filter((quadro): quadro is string => Boolean(quadro)),
+    ),
+  ].sort((left, right) => QUADRI.indexOf(left as QuadroId) - QUADRI.indexOf(right as QuadroId));
+  const qualification = {
+    sourceBundleId: declaration.officialSourceBundleId,
+    catalogVersion: declaration.catalogVersion,
+    calculationRulesVersion: SUCCESSION_TAX_RULESET_VERSION,
+    temporalRulesVersion: TEMPORAL_RULESET_VERSION,
+    validatorVersion: declaration.validatorVersion,
+    quadriPresent,
+    officialControl: {
+      name: controlQualification.control.name,
+      version: controlQualification.control.version,
+      status: controlQualification.status,
+      blockingDiagnostics: controlQualification.result.blockingDiagnostics.length,
+    },
+    attachments: {
+      files: officialAttachments.length,
+      totalBytes: officialAttachments.reduce((sum, attachment) => sum + attachment.byteSize, 0),
+      formats: [...new Set(officialAttachments.map((attachment) => attachment.format))].sort(),
+      motivatedExceptions: checklist.filter((item) => item.status === "overridden").length,
+    },
+  };
+  const canonical = JSON.stringify({
+    declaration,
+    issues: uniqueIssues,
+    checklist,
+    preparedAttachments: [...preparedDocumentIds].sort(),
+    qualification,
+  });
   return {
     declaration: parseDeclaration(declaration),
     issues: uniqueIssues,
     checklist,
+    qualification,
     ready: !uniqueIssues.some((issue) => issue.level === "blocking"),
     digest: createHash("sha256").update(canonical).digest("hex"),
   };

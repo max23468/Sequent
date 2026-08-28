@@ -14,6 +14,9 @@ const manifest = JSON.parse(
 const officialCatalog = JSON.parse(
   readFileSync("src/domain/official-catalog/official-catalog.json", "utf8"),
 );
+const legalTimeline = JSON.parse(
+  readFileSync("src/domain/official-catalog/legal-timeline.json", "utf8"),
+);
 
 const normalized = (value: string) =>
   value
@@ -60,10 +63,10 @@ test("le correzioni SRC-09 sono presenti nello schema corrente", () => {
   assert.doesNotMatch(disability, /deve essere uguale a 1 se esiste almeno un altro rigo/);
 });
 
-test("le nuove fonti restano catalogate e bloccanti finché non sono riconciliate", () => {
+test("le nuove fonti sono tutte catalogate e riconciliate con esito conclusivo", () => {
   assert.equal(manifest.sources.length, 40);
   assert.equal(officialCatalog.coverage.sourceArtifacts, manifest.sources.length);
-  assert.equal(overlays.status, "incomplete");
+  assert.equal(overlays.status, "reconciled");
 
   const coveredByUpdate = new Set(
     overlays.sourceUpdates.flatMap((entry: { sourceIds: string[] }) => entry.sourceIds),
@@ -97,11 +100,17 @@ test("le nuove fonti restano catalogate e bloccanti finché non sono riconciliat
     assert.equal(source.officialSha256, source.sha256);
   }
 
+  assert.equal(legalTimeline.status, "qualified");
+  assert.equal(legalTimeline.articles.length, 6);
+  assert.deepEqual(legalTimeline.blockers, []);
   assert.ok(
-    officialCatalog.blockers.some((blocker: string) =>
-      blocker.includes("linea temporale articolo per articolo"),
+    overlays.sourceUpdates.every(
+      (entry: { state: string }) => entry.state !== "reconciliation-required",
     ),
   );
+  assert.equal(officialCatalog.status, "qualified");
+  assert.equal(officialCatalog.releaseEligible, true);
+  assert.deepEqual(officialCatalog.blockers, []);
 });
 
 test("tipo Provincia e successione delle fonti restano espliciti", () => {

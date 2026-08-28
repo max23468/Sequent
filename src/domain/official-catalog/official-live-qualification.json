@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "SUC-OFFICIAL-2026-08-27-COMPREHENSIVE",
+  "status": "qualified",
+  "observedAt": "2026-08-27",
+  "channels": [
+    {
+      "id": "suc13-notice",
+      "sourceIds": ["SRC-15"],
+      "officialUrl": "https://telematici.agenziaentrate.gov.it/Main/Avviso?id=20260311121001",
+      "observed": "SUC13 2.3.1 dell’11 marzo 2026",
+      "localMatch": true
+    },
+    {
+      "id": "desktop-telematico",
+      "sourceIds": ["SRC-32", "SRC-33", "SRC-34", "SRC-35", "SRC-36"],
+      "officialUrl": "https://telematici.agenziaentrate.gov.it/Main/Desktop.jsp",
+      "observed": "Desktop Telematico 1.4.0 del 4 giugno 2026",
+      "localMatch": true,
+      "officialSha256Match": true
+    },
+    {
+      "id": "suc13-update-site",
+      "sourceIds": ["SRC-37", "SRC-38", "SRC-39", "SRC-40"],
+      "officialUrl": "https://jws.agenziaentrate.it/telematicoEntrateUpdateSite/Controlli-Atti-Registro/",
+      "observed": "SUC13 2.3.1.202603101508",
+      "localMatch": true
+    },
+    {
+      "id": "territorial-registry",
+      "sourceIds": ["SRC-30"],
+      "officialUrl": "https://arcom.agenziaentrate.gov.it/CitizenArCom/",
+      "observed": "punto di accesso ufficiale raggiungibile",
+      "localMatch": true,
+      "refreshBeforeOperationalUse": true
+    },
+    {
+      "id": "receipts",
+      "sourceIds": ["SRC-31"],
+      "officialUrl": "https://successioniweb.agenziaentrate.gov.it/SuccessioniWeb/ricevute",
+      "observed": "punto di accesso ufficiale raggiungibile",
+      "localMatch": true,
+      "refreshBeforeOperationalUse": true
+    }
+  ],
+  "qualificationBoundary": "Il confronto prova versione, integrità e disponibilità dei canali pubblici. Prima di un futuro invio ufficiale si leggono nuovamente i dati territoriali vivi; dopo l’invio si acquisiscono le ricevute effettive. Nessuna pratica reale o credenziale è stata usata nella qualificazione.",
+  "blockers": []
+}

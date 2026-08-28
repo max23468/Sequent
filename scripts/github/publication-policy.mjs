@@ -26,6 +26,7 @@ const BROWSER = [
 
 const ARM64 = [
   /^Dockerfile$/,
+  /^requirements-ocr\.txt$/,
   /^deploy\//,
   /^scripts\/vps\//,
   /^(?:package|package-lock)\.json$/,
@@ -59,6 +60,7 @@ const SECURITY = [
   /^SECURITY\.md$/,
 ];
 const DOCUMENTS = [
+  /^requirements-ocr\.txt$/,
   /^src\/lib\/server\/(?:document-ingestion|launchers)\.ts$/,
   /^src\/routes\/documenti\//,
   /^tests\/(?:integration\/document-ingestion|unit\/launchers)\.test\.ts$/,
@@ -75,6 +77,7 @@ const TEST_ONLY = [/^tests\//, /(?:^|\.)test\.[cm]?[jt]sx?$/, /^playwright\.conf
 
 const RUNTIME = [
   /^Dockerfile$/,
+  /^requirements-ocr\.txt$/,
   /^deploy\//,
   /^package(?:-lock)?\.json$/,
   /^src\//,

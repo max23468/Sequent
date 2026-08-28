@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "SUC-OFFICIAL-2026-08-27-COMPREHENSIVE",
+  "status": "qualified",
+  "qualifiedAsOf": "2026-08-27",
+  "selectionBasis": "La disciplina sostanziale è scelta in base alla data di apertura della successione. Le norme che regolano un adempimento successivo sono applicate soltanto dalla loro decorrenza espressa e non modificano retroattivamente aliquote, franchigie o criteri di valore.",
+  "periods": [
+    {
+      "id": "pre-2025",
+      "openingFrom": "2006-10-03",
+      "openingTo": "2024-12-31",
+      "assessmentMode": "office-assessment",
+      "sourceIds": ["SRC-16", "SRC-17", "SRC-27"],
+      "notes": [
+        "L’imposta di successione non è autoliquidata dal dichiarante.",
+        "Per le rendite vitalizie anteriori alla riforma ancora pendenti si applica il limite minimo del 2,5 per cento risultante dalla sentenza 89/2026.",
+        "Interessi e coefficienti annuali diversi dal 2025 e 2026 richiedono la fonte del singolo periodo e non sono dedotti per analogia."
+      ]
+    },
+    {
+      "id": "reform-2025",
+      "openingFrom": "2025-01-01",
+      "openingTo": "2025-12-31",
+      "assessmentMode": "self-assessment",
+      "sourceIds": ["SRC-16", "SRC-18", "SRC-20", "SRC-23", "SRC-24"],
+      "notes": [
+        "Il D.Lgs. 139/2024 si applica alle successioni aperte dal 1° gennaio 2025 e introduce l’autoliquidazione dell’imposta.",
+        "Il saggio legale e i coefficienti annuali del 2025 sono selezionati esclusivamente per le successioni aperte in tale anno."
+      ]
+    },
+    {
+      "id": "current-2026",
+      "openingFrom": "2026-01-01",
+      "openingTo": "2026-12-31",
+      "assessmentMode": "self-assessment",
+      "sourceIds": ["SRC-16", "SRC-18", "SRC-19", "SRC-20", "SRC-22", "SRC-25", "SRC-26"],
+      "notes": [
+        "Dal 1° gennaio 2026 il Testo unico degli altri tributi indiretti coordina imposte ipotecaria e catastale, bollo e servizi con la dichiarazione di successione.",
+        "Il saggio legale e i coefficienti annuali del 2026 sono selezionati esclusivamente per le successioni aperte in tale anno.",
+        "Il D.Lgs. 148/2026 è considerato per gli adempimenti compiuti dal 12 agosto 2026; non modifica retroattivamente il periodo sostanziale della successione."
+      ]
+    }
+  ],
+  "articles": [
+    {
+      "article": "TUS 7",
+      "subject": "aliquote e franchigie",
+      "sourceIds": ["SRC-16", "SRC-18"],
+      "effectiveFrom": "2025-01-01",
+      "selection": "opening-date"
+    },
+    {
+      "article": "TUS 17",
+      "subject": "valore di rendite e pensioni",
+      "sourceIds": ["SRC-16", "SRC-18", "SRC-20", "SRC-27"],
+      "effectiveFrom": "2025-01-01",
+      "selection": "opening-date-with-historical-court-rule"
+    },
+    {
+      "article": "TUS 27 e 33",
+      "subject": "liquidazione dell’imposta e controllo dell’autoliquidazione",
+      "sourceIds": ["SRC-16", "SRC-18", "SRC-19", "SRC-21"],
+      "effectiveFrom": "2025-01-01",
+      "selection": "opening-date"
+    },
+    {
+      "article": "TUS 28 e 31",
+      "subject": "obbligo e termine della dichiarazione",
+      "sourceIds": ["SRC-16", "SRC-18", "SRC-19", "SRC-21"],
+      "effectiveFrom": "2025-01-01",
+      "selection": "opening-date"
+    },
+    {
+      "article": "TUS 34 e 37",
+      "subject": "pagamento, rateazione e interessi",
+      "sourceIds": ["SRC-16", "SRC-18", "SRC-19", "SRC-21", "SRC-22"],
+      "effectiveFrom": "2025-01-01",
+      "selection": "opening-date-and-payment-date"
+    },
+    {
+      "article": "TUS 48",
+      "subject": "svincolo dei beni e prova della dichiarazione",
+      "sourceIds": ["SRC-16", "SRC-19", "SRC-20", "SRC-21"],
+      "effectiveFrom": null,
+      "selection": "applicable-law-at-release-date"
+    }
+  ],
+  "sourceTransitions": [
+    {
+      "sourceId": "SRC-18",
+      "publishedOn": "2024-10-02",
+      "effectiveFrom": "2025-01-01",
+      "effect": "riforma sostanziale applicabile alle successioni aperte dalla decorrenza"
+    },
+    {
+      "sourceId": "SRC-19",
+      "publishedOn": "2025-08-12",
+      "effectiveFrom": "2026-01-01",
+      "effect": "testo unico di registro e altri tributi indiretti"
+    },
+    {
+      "sourceId": "SRC-20",
+      "publishedOn": "2025-12-19",
+      "effectiveFrom": "2025-12-20",
+      "effect": "correzioni e coordinamento della riforma"
+    },
+    {
+      "sourceId": "SRC-21",
+      "publishedOn": "2026-08-06",
+      "effectiveFrom": "2027-01-01",
+      "effect": "testo unico degli adempimenti e dell’accertamento; catalogato ma non applicato ai periodi già qualificati"
+    },
+    {
+      "sourceId": "SRC-22",
+      "publishedOn": "2026-08-11",
+      "effectiveFrom": "2026-08-12",
+      "effect": "correzioni vigenti dalla pubblicazione, con selezione separata per data dell’adempimento"
+    }
+  ],
+  "blockers": []
+}

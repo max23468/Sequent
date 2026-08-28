@@ -27,7 +27,7 @@ export function getLauncherCapabilities(): LauncherCapability[] {
       state: successioniUrl ? "available" : "unknown",
       url: successioniUrl,
       instructions:
-        "Apri il file SUC13.jnlp con OpenWebStart. Il collegamento diretto resta disabilitato finché il browser non è qualificato.",
+        "Apri il collegamento con OpenWebStart. L’avvio diretto resta disabilitato finché il collegamento non è stato verificato.",
     },
   ];
 }

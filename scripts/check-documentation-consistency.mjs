@@ -41,7 +41,7 @@ const satelliteExceptions = new Set(["CHANGELOG.md", "docs/MASTER_PLAN.md"]);
 const generatedImplementationExceptions = new Set([
   "src/domain/official-catalog/technical-schema.json",
 ]);
-const milestoneIdentifierPattern = /(?<!AR)M\d+|(?:^|[^a-z])m\d+/u;
+const milestoneIdentifierPattern = /(?<![A-Za-z])M\d+\b|(?:^|[^a-z])m\d+\b/u;
 const sourceManifest = JSON.parse(
   readFileSync("src/domain/official-catalog/source-manifest.json", "utf8"),
 );

@@ -13,6 +13,7 @@ import {
 } from "../../src/lib/server/resumable-uploads.ts";
 
 const directories: string[] = [];
+const abundantCapacity = { availableBytes: async () => 2n * 1024n * 1024n * 1024n };
 afterEach(() => {
   for (const directory of directories.splice(0)) {
     closeDatabase(directory);
@@ -26,18 +27,48 @@ describe("caricamento riprendibile", () => {
     directories.push(directory);
     const database = openDatabase(directory);
     const practice = createPractice(database, "Pratica upload");
-    const session = await createUploadSession(database, directory, {
-      practiceId: practice.id,
-      originalName: "documento.txt",
-      mediaType: "text/plain",
-      totalSize: 11,
-    });
-
-    expect(await appendUploadChunk(database, session.id, 0, Buffer.from("prima "))).toBe(6);
-    await expect(appendUploadChunk(database, session.id, 0, Buffer.from("errore"))).rejects.toThrow(
-      "UPLOAD_OFFSET_MISMATCH",
+    const session = await createUploadSession(
+      database,
+      directory,
+      {
+        practiceId: practice.id,
+        originalName: "documento.txt",
+        mediaType: "text/plain",
+        totalSize: 11,
+      },
+      abundantCapacity,
     );
-    expect(await appendUploadChunk(database, session.id, 6, Buffer.from("parte"))).toBe(11);
+
+    expect(
+      await appendUploadChunk(
+        database,
+        session.id,
+        0,
+        Buffer.from("prima "),
+        directory,
+        abundantCapacity,
+      ),
+    ).toBe(6);
+    await expect(
+      appendUploadChunk(
+        database,
+        session.id,
+        0,
+        Buffer.from("errore"),
+        directory,
+        abundantCapacity,
+      ),
+    ).rejects.toThrow("UPLOAD_OFFSET_MISMATCH");
+    expect(
+      await appendUploadChunk(
+        database,
+        session.id,
+        6,
+        Buffer.from("parte"),
+        directory,
+        abundantCapacity,
+      ),
+    ).toBe(11);
     expect(getUploadSession(database, session.id)?.receivedSize).toBe(11);
 
     const document = await completeUploadSession(database, directory, session.id);
@@ -63,13 +94,25 @@ describe("caricamento riprendibile", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-resumable-restart-"));
     directories.push(directory);
     const database = openDatabase(directory);
-    const session = await createUploadSession(database, directory, {
-      newPracticeTitle: "Pratica dopo riavvio",
-      originalName: "documento.txt",
-      mediaType: "text/plain",
-      totalSize: 8,
-    });
-    await appendUploadChunk(database, session.id, 0, Buffer.from("completo"));
+    const session = await createUploadSession(
+      database,
+      directory,
+      {
+        newPracticeTitle: "Pratica dopo riavvio",
+        originalName: "documento.txt",
+        mediaType: "text/plain",
+        totalSize: 8,
+      },
+      abundantCapacity,
+    );
+    await appendUploadChunk(
+      database,
+      session.id,
+      0,
+      Buffer.from("completo"),
+      directory,
+      abundantCapacity,
+    );
     database
       .prepare("UPDATE upload_sessions SET status = 'completing' WHERE id = ?")
       .run(session.id);
@@ -89,13 +132,25 @@ describe("caricamento riprendibile", () => {
     directories.push(directory);
     const database = openDatabase(directory);
     const practice = createPractice(database, "Pratica upload parziale");
-    const session = await createUploadSession(database, directory, {
-      practiceId: practice.id,
-      originalName: "documento.txt",
-      mediaType: "text/plain",
-      totalSize: 8,
-    });
-    await appendUploadChunk(database, session.id, 0, Buffer.from("parz"));
+    const session = await createUploadSession(
+      database,
+      directory,
+      {
+        practiceId: practice.id,
+        originalName: "documento.txt",
+        mediaType: "text/plain",
+        totalSize: 8,
+      },
+      abundantCapacity,
+    );
+    await appendUploadChunk(
+      database,
+      session.id,
+      0,
+      Buffer.from("parz"),
+      directory,
+      abundantCapacity,
+    );
     await expect(completeUploadSession(database, directory, session.id)).rejects.toThrow(
       "UPLOAD_INCOMPLETE",
     );
