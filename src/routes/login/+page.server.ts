@@ -18,14 +18,13 @@ export const load: PageServerLoad = ({ locals }) => {
 
 export const actions = {
   default: async ({ request, cookies, getClientAddress }) => {
-    const parsed = z
-      .string()
-      .min(1)
-      .max(128)
-      .safeParse((await request.formData()).get("password"));
-    if (!parsed.success) return fail(400, { error: "Credenziali non valide." });
+    const formData = await request.formData();
+    const username = z.string().trim().min(1).max(64).safeParse(formData.get("username"));
+    const password = z.string().min(1).max(128).safeParse(formData.get("password"));
+    if (!username.success || !password.success)
+      return fail(400, { error: "Credenziali non valide." });
     const database = openDatabase();
-    const ownerId = await authenticate(database, parsed.data, getClientAddress());
+    const ownerId = await authenticate(database, username.data, password.data, getClientAddress());
     if (!ownerId) return fail(400, { error: "Credenziali non valide." });
     const session = issueSession(database, ownerId);
     cookies.set(SESSION_COOKIE, session.token, {

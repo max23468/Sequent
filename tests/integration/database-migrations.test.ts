@@ -17,6 +17,41 @@ afterEach(() => {
 });
 
 describe("migrazioni della pipeline documentale", () => {
+  it("aggiunge lo username dopo tutte le migrazioni di dominio precedenti", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-owner-username-migration-"));
+    directories.push(directory);
+    const path = join(directory, "sequent.sqlite");
+    const previous = new Database(path);
+    previous.exec(`
+      CREATE TABLE schema_migrations (
+        version INTEGER PRIMARY KEY,
+        applied_at TEXT NOT NULL
+      );
+      CREATE TABLE owner (
+        id TEXT PRIMARY KEY,
+        password_hash TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        password_changed_at TEXT NOT NULL
+      );
+      INSERT INTO owner(id, password_hash, created_at, password_changed_at)
+      VALUES ('owner-precedente', 'hash-sintetico', '2026-08-25T00:00:00.000Z', '2026-08-25T00:00:00.000Z');
+      INSERT INTO schema_migrations(version, applied_at)
+      VALUES (8, '2026-08-27T00:00:00.000Z'),
+             (16, '2026-08-28T00:00:00.000Z');
+    `);
+    previous.close();
+
+    const migrated = openDatabase(directory);
+    expect(
+      migrated
+        .prepare("SELECT username, username_normalized FROM owner WHERE id = ?")
+        .get("owner-precedente"),
+    ).toEqual({ username: "Proprietario", username_normalized: "proprietario" });
+    expect(
+      migrated.prepare("SELECT version FROM schema_migrations WHERE version = 17").get(),
+    ).toEqual({ version: 17 });
+  });
+
   it("verifica ed elabora una sola volta i documenti presenti prima della pipeline documentale", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-document-pipeline-migration-"));
     directories.push(directory);

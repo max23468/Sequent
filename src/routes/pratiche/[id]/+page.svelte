@@ -235,8 +235,8 @@
         <div class="workspace-panel-heading"><h2>Da verificare</h2><span>{data.reviewItems.length}</span></div>
         <div class="analysis-toolbar">
           <div><Bot size={20} /><span><strong>Analisi assistita</strong><small>Codex propone; la decisione resta tua.</small></span></div>
-          <form method="POST" action={formAction("analyze", "verifications")}><button class="button secondary" type="submit" disabled={data.activeJobs.some((job: { type: string }) => job.type === "codex.analyze_practice")}>
-            {#if data.activeJobs.some((job: { type: string }) => job.type === "codex.analyze_practice")}<LoaderCircle class="spinning" size={17} />Analisi in corso{:else}<Bot size={17} />{data.codexRuns.length > 0 ? "Rianalizza con Codex" : "Analizza con Codex"}{/if}
+          <form method="POST" action={formAction("analyze", "verifications")}><button class="button secondary" type="submit" disabled={!data.codexEnabled || data.activeJobs.some((job: { type: string }) => job.type === "codex.analyze_practice")}>
+            {#if !data.codexEnabled}<Bot size={17} />Codex non attivo{:else if data.activeJobs.some((job: { type: string }) => job.type === "codex.analyze_practice")}<LoaderCircle class="spinning" size={17} />Analisi in corso{:else}<Bot size={17} />{data.codexRuns.length > 0 ? "Rianalizza con Codex" : "Analizza con Codex"}{/if}
           </button></form>
         </div>
         {#if data.codexRuns.length > 0}

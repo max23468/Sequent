@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Actions, PageServerLoad } from "./$types";
 import { openDatabase } from "$lib/server/database";
+import { isCodexEnabled } from "$lib/server/config";
 import { describeDocumentIngestionFailure, ingestDocument } from "$lib/server/document-ingestion";
 import { decideReviewItem, getDocumentText, listReviewItems } from "$lib/server/documents";
 import {
@@ -171,6 +172,7 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     newOccurrenceIds,
     declarationIssues: complianceReport.issues,
     declarationReady: complianceReport.ready,
+    codexEnabled: isCodexEnabled(),
   };
 };
 
@@ -194,6 +196,8 @@ export const actions = {
   },
   analyze: ({ locals, params }) => {
     if (!locals.ownerId) redirect(303, "/login");
+    if (!isCodexEnabled())
+      return fail(403, { analyzeError: "L’analisi Codex è disattivata in questo ambiente." });
     const database = openDatabase();
     if (!getPractice(database, params.id)) error(404, "Pratica non trovata");
     const documents = listPracticeDocuments(database, params.id);

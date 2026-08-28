@@ -12,7 +12,7 @@ import {
 } from "@openai/codex-sdk";
 import { z } from "zod";
 import { resolveBlobPath } from "./blob-store.ts";
-import { getCodexHome, getCodexModel, getDataDirectory } from "./config.ts";
+import { getCodexHome, getCodexModel, getDataDirectory, isCodexEnabled } from "./config.ts";
 import { createReviewItem, getDocumentText } from "./documents.ts";
 
 const CODEX_PROMPT_VERSION = "practice-analysis-v3";
@@ -453,6 +453,7 @@ export async function analyzePracticeWithCodex(
     onProgress?: (progress: number) => void;
   } = {},
 ): Promise<{ runId: string; proposals: number; conflicts: number }> {
+  if (!isCodexEnabled()) throw new Error("CODEX_DISABLED");
   const documents = getPracticeSnapshot(database, practiceId);
   if (options.signal?.aborted) throw new Error("TOOL_CANCELLED");
   if (documents.length === 0) throw new Error("CODEX_NO_DOCUMENTS");

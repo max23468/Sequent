@@ -3,6 +3,7 @@ declare global {
     interface Locals {
       ownerId: string | null;
       sessionId: string | null;
+      username: string | null;
     }
   }
 }

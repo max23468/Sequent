@@ -1,8 +1,9 @@
 import { resolve } from "node:path";
+import { isCodexEnabled } from "./config.ts";
 import { runCommand, type CommandRunner } from "./process-tools.ts";
 
 export interface CodexCapability {
-  state: "authenticated" | "signed_out" | "api_key_disallowed" | "unavailable";
+  state: "authenticated" | "signed_out" | "api_key_disallowed" | "unavailable" | "disabled";
   label: string;
   instructions: string;
 }
@@ -10,6 +11,13 @@ export interface CodexCapability {
 export async function getCodexCapability(
   runner: CommandRunner = runCommand,
 ): Promise<CodexCapability> {
+  if (!isCodexEnabled()) {
+    return {
+      state: "disabled",
+      label: "Non attivo",
+      instructions: "L’analisi Codex è disattivata in questo ambiente.",
+    };
+  }
   const cliPath = resolve("node_modules", "@openai", "codex", "bin", "codex.js");
   try {
     const result = await runner(process.execPath, [cliPath, "login", "status"], {

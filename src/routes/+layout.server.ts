@@ -5,4 +5,5 @@ import { openDatabase } from "$lib/server/database";
 export const load: LayoutServerLoad = ({ locals }) => ({
   authenticated: Boolean(locals.ownerId),
   needsSetup: !hasOwner(openDatabase()),
+  username: locals.username,
 });

@@ -29,6 +29,7 @@
     name="description"
     content="Assistente operativo privato per dichiarazioni di successione"
   />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
 </svelte:head>
 
 {#if data.authenticated}
@@ -49,7 +50,7 @@
         <details class="account-menu">
           <summary aria-label="Apri menu utente">
             <span class="account-avatar"><UserRound size={19} aria-hidden="true" /></span>
-            <span class="account-label">Utente</span>
+            <span class="account-label">{data.username ?? "Utente"}</span>
             <ChevronDown class="account-chevron" size={16} aria-hidden="true" />
             <Menu class="account-mobile-menu" size={18} aria-hidden="true" />
           </summary>

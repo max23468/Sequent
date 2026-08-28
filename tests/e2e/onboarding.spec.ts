@@ -7,6 +7,7 @@ import { join } from "node:path";
 test.describe.configure({ mode: "serial" });
 
 const password = "SequentSviluppoSicuro2026";
+const username = "Sviluppo";
 const suffix = `${process.pid}-${Date.now()}`;
 
 function unique(label: string) {
@@ -30,10 +31,12 @@ test.afterEach(() => {
 async function authenticate(page: import("@playwright/test").Page) {
   await page.goto("/");
   if (page.url().endsWith("/setup")) {
+    await page.getByLabel("Nome utente").fill(username);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByLabel("Ripeti la password").fill(password);
     await page.getByRole("button", { name: "Crea account" }).click();
   } else if (page.url().endsWith("/login")) {
+    await page.getByLabel("Nome utente").fill(username.toUpperCase());
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Accedi" }).click();
   }
@@ -81,6 +84,12 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
   const practiceTitle = unique("Pratica workspace");
   const workspaceDocument = `workspace-${suffix}.txt`;
   await authenticate(page);
+  const protectedResponse = await page.reload();
+  expect(protectedResponse?.headers()["x-robots-tag"]).toBe("noindex, nofollow, noarchive");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    "noindex, nofollow, noarchive",
+  );
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Da verificare" })).toBeVisible();
   await expect(page.locator(".topbar-divider")).toBeVisible();
@@ -158,7 +167,7 @@ test("esercita tutte le azioni desktop e i due percorsi di upload", async ({ pag
 
   await page.getByRole("button", { name: "SuccessioniOnLine" }).click();
   await expect(page.getByRole("heading", { name: "SuccessioniOnLine" })).toBeVisible();
-  await expect(page.getByText(/OpenWebStart/)).toBeVisible();
+  await expect(page.getByText(/DIZ è disattivata/)).toBeVisible();
   await page.getByRole("button", { name: "Chiudi" }).click();
 
   await page.getByRole("button", { name: "Carica documenti" }).click();
@@ -579,6 +588,7 @@ test("chiude la sessione e consente un nuovo accesso", async ({ page }) => {
   await openAccountMenu(page);
   await page.getByRole("button", { name: "Esci" }).click();
   await expect(page).toHaveURL(/\/login$/);
+  await page.getByLabel("Nome utente").fill(username.toUpperCase());
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Accedi" }).click();
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();

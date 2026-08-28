@@ -10,6 +10,8 @@ Il piano canonico e la sequenza di implementazione sono in [`docs/MASTER_PLAN.md
 
 La configurazione del repository e i required checks sono descritti nel [`runbook GitHub`](docs/runbooks/github.md).
 
+Backup, ripristino e preparazione applicativa della prima attivazione sono descritti nei runbook [`backup e restore`](docs/runbooks/backup-restore.md) e [`prima attivazione`](docs/runbooks/initial-activation.md).
+
 Il preflight proporzionato di una pubblicazione GitHub si avvia con `npm run publication:github`. Senza l'opzione esplicita di esecuzione il comando non esegue push, non apre PR e non effettua merge.
 
 ## Verifiche fondamentali
@@ -35,7 +37,7 @@ npm ci
 npm run dev
 ```
 
-In `vite dev` Sequent crea, se necessario, un owner sintetico e apre automaticamente una sessione di sviluppo per le sole richieste provenienti dal loopback locale. Non serve quindi inserire la password durante il normale lavoro. Il fallback locale è `SequentSviluppoSicuro2026` e può essere sostituito con `SEQUENT_DEV_PASSWORD`; l’auto-login è escluso dalle build preview e di produzione. Per collaudare manualmente setup e login durante lo sviluppo si può avviare con `SEQUENT_DEV_AUTO_LOGIN=false`.
+In `vite dev` Sequent crea, se necessario, un owner sintetico e apre automaticamente una sessione di sviluppo per le sole richieste provenienti dal loopback locale. Non serve quindi inserire le credenziali durante il normale lavoro. I fallback locali sono username `Sviluppo` e password `SequentSviluppoSicuro2026`; possono essere sostituiti con `SEQUENT_DEV_USERNAME` e `SEQUENT_DEV_PASSWORD`. L’auto-login è escluso dalle build preview e di produzione. Per collaudare manualmente setup e login durante lo sviluppo si può avviare con `SEQUENT_DEV_AUTO_LOGIN=false`.
 
 `SEQUENT_DATA_DIR` seleziona una directory isolata. Non deve puntare ai dati operativi dal checkout. `verify:rapid` copre il preflight documentale, `verify:public` i gate applicativi senza duplicare Svelte Doctor e `verify:publication` aggiunge Doctor ed E2E browser.
 

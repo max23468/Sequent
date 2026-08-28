@@ -8,9 +8,15 @@ import {
   createOwnerSession,
   ensureDevelopmentOwner,
   issueSession,
+  normalizeUsername,
   readSession,
+  resetOwnerCredentials,
 } from "../../src/lib/server/auth.ts";
-import { getDevelopmentPassword, useDevelopmentAutoLogin } from "../../src/lib/server/config.ts";
+import {
+  getDevelopmentPassword,
+  getDevelopmentUsername,
+  useDevelopmentAutoLogin,
+} from "../../src/lib/server/config.ts";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
 
 const directories: string[] = [];
@@ -18,6 +24,7 @@ const directories: string[] = [];
 afterEach(() => {
   delete process.env.SEQUENT_DEV_AUTO_LOGIN;
   delete process.env.SEQUENT_DEV_PASSWORD;
+  delete process.env.SEQUENT_DEV_USERNAME;
   for (const directory of directories.splice(0)) {
     closeDatabase(directory);
     rmSync(directory, { recursive: true, force: true });
@@ -31,11 +38,13 @@ describe("difesa del login", () => {
     const database = openDatabase(directory);
 
     const [firstOwnerId, secondOwnerId] = await Promise.all([
-      ensureDevelopmentOwner(database, "PasswordDevSintetica2026"),
-      ensureDevelopmentOwner(database, "PasswordDevSintetica2026"),
+      ensureDevelopmentOwner(database, "Sviluppo", "PasswordDevSintetica2026"),
+      ensureDevelopmentOwner(database, "Sviluppo", "PasswordDevSintetica2026"),
     ]);
     expect(secondOwnerId).toBe(firstOwnerId);
-    expect(await ensureDevelopmentOwner(database, "PasswordDevSintetica2026")).toBe(firstOwnerId);
+    expect(await ensureDevelopmentOwner(database, "Sviluppo", "PasswordDevSintetica2026")).toBe(
+      firstOwnerId,
+    );
     expect(database.prepare("SELECT count(*) AS count FROM owner").get()).toMatchObject({
       count: 1,
     });
@@ -49,8 +58,11 @@ describe("difesa del login", () => {
     process.env.SEQUENT_DEV_AUTO_LOGIN = "false";
     expect(useDevelopmentAutoLogin(true, "127.0.0.1")).toBe(false);
     expect(getDevelopmentPassword()).toBe("SequentSviluppoSicuro2026");
+    expect(getDevelopmentUsername()).toBe("Sviluppo");
     process.env.SEQUENT_DEV_PASSWORD = "OverrideDevSintetico2026";
+    process.env.SEQUENT_DEV_USERNAME = "Operatore dev";
     expect(getDevelopmentPassword()).toBe("OverrideDevSintetico2026");
+    expect(getDevelopmentUsername()).toBe("Operatore dev");
   });
 
   it("non lascia un owner incompleto se la creazione della sessione iniziale fallisce", async () => {
@@ -65,9 +77,9 @@ describe("difesa del login", () => {
       END;
     `);
 
-    await expect(createOwnerSession(database, "SequentSviluppoSicuro2026")).rejects.toThrow(
-      "sessione sintetica rifiutata",
-    );
+    await expect(
+      createOwnerSession(database, "Sviluppo", "SequentSviluppoSicuro2026"),
+    ).rejects.toThrow("sessione sintetica rifiutata");
     expect(database.prepare("SELECT count(*) AS count FROM owner").get()).toMatchObject({
       count: 0,
     });
@@ -77,12 +89,12 @@ describe("difesa del login", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-auth-concurrent-"));
     directories.push(directory);
     const database = openDatabase(directory);
-    await createOwner(database, "SequentSviluppoSicuro2026");
+    await createOwner(database, "Sviluppo", "SequentSviluppoSicuro2026");
     const start = new Date("2026-08-24T10:00:00.000Z");
 
     await Promise.all(
       Array.from({ length: 5 }, () =>
-        authenticate(database, "errata", "client-concorrente", start),
+        authenticate(database, "Sviluppo", "errata", "client-concorrente", start),
       ),
     );
 
@@ -99,16 +111,17 @@ describe("difesa del login", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-auth-"));
     directories.push(directory);
     const database = openDatabase(directory);
-    await createOwner(database, "SequentSviluppoSicuro2026");
+    await createOwner(database, "Sviluppo", "SequentSviluppoSicuro2026");
     const start = new Date("2026-08-24T10:00:00.000Z");
-    await authenticate(database, "errata", "client-sintetico", start);
-    await authenticate(database, "errata", "client-sintetico", start);
-    await authenticate(database, "errata", "client-sintetico", start);
+    await authenticate(database, "sviluppo", "errata", "client-sintetico", start);
+    await authenticate(database, "SVILUPPO", "errata", "client-sintetico", start);
+    await authenticate(database, "Sviluppo", "errata", "client-sintetico", start);
     await expect(
-      authenticate(database, "SequentSviluppoSicuro2026", "client-sintetico", start),
+      authenticate(database, "sviluppo", "SequentSviluppoSicuro2026", "client-sintetico", start),
     ).resolves.toBeNull();
     const ownerId = await authenticate(
       database,
+      "SVILUPPO",
       "SequentSviluppoSicuro2026",
       "client-sintetico",
       new Date(start.getTime() + 1_001),
@@ -124,12 +137,13 @@ describe("difesa del login", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-auth-renewal-"));
     directories.push(directory);
     const database = openDatabase(directory);
-    const ownerId = await createOwner(database, "SequentSviluppoSicuro2026");
+    const ownerId = await createOwner(database, "Sviluppo", "SequentSviluppoSicuro2026");
     const start = new Date("2026-08-24T10:00:00.000Z");
     const session = issueSession(database, ownerId, start);
 
     expect(readSession(database, session.token, new Date(start.getTime() + 60_000))).toMatchObject({
       id: session.id,
+      username: "Sviluppo",
       renewed: false,
     });
     const renewal = new Date(start.getTime() + 25 * 60 * 60 * 1_000);
@@ -145,5 +159,39 @@ describe("difesa del login", () => {
       last_seen_at: renewal.toISOString(),
       expires_at: new Date(renewal.getTime() + 365 * 86_400_000).toISOString(),
     });
+  });
+
+  it("normalizza lo username senza distinzione fra maiuscole, compatibilità e spazi", () => {
+    expect(normalizeUsername("  ROBERTO  ")).toBe("roberto");
+    expect(normalizeUsername("Ｒｏｂｅｒｔｏ")).toBe("roberto");
+  });
+
+  it("reimposta le credenziali, revoca le sessioni e può ricreare l'owner", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-auth-reset-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const ownerId = await createOwner(database, "Prima identità", "PasswordIniziale2026");
+    issueSession(database, ownerId);
+    database
+      .prepare(
+        `INSERT INTO login_attempts(client_key, failed_count, blocked_until, updated_at)
+         VALUES ('client-reset', 2, NULL, ?)`,
+      )
+      .run(new Date().toISOString());
+
+    expect(await resetOwnerCredentials(database, "Nuova identità", "PasswordNuova2026")).toBe(
+      ownerId,
+    );
+    expect(database.prepare("SELECT username, username_normalized FROM owner").get()).toEqual({
+      username: "Nuova identità",
+      username_normalized: "nuova identità",
+    });
+    expect(database.prepare("SELECT count(*) AS count FROM sessions").get()).toEqual({ count: 0 });
+    expect(database.prepare("SELECT count(*) AS count FROM login_attempts").get()).toEqual({
+      count: 0,
+    });
+    await expect(
+      authenticate(database, "NUOVA IDENTITÀ", "PasswordNuova2026", "client-dopo-reset"),
+    ).resolves.toBe(ownerId);
   });
 });

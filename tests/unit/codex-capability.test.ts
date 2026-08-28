@@ -1,7 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { getCodexCapability } from "../../src/lib/server/codex-capability.ts";
 
 describe("capacità Codex", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("resta spenta per default in produzione senza invocare la CLI", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const runner = vi.fn();
+    await expect(getCodexCapability(runner)).resolves.toMatchObject({ state: "disabled" });
+    expect(runner).not.toHaveBeenCalled();
+  });
+
   it("accetta soltanto una sessione ChatGPT", async () => {
     await expect(
       getCodexCapability(async () => ({ stdout: "Logged in using ChatGPT", stderr: "" })),

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, type Stats } from "node:fs";
-import { cp, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { isAbsolute, join, relative } from "node:path";
+import { cp, lstat, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type Database from "better-sqlite3";
 import Sqlite from "better-sqlite3";
 
@@ -22,7 +22,8 @@ async function inventory(root: string, current = root): Promise<BackupEntry[]> {
   for (const name of await readdir(current)) {
     if (name === "manifest.json") continue;
     const absolutePath = join(current, name);
-    const metadata = await stat(absolutePath);
+    const metadata = await lstat(absolutePath);
+    if (metadata.isSymbolicLink()) throw new Error("BACKUP_SYMLINK_INVALID");
     if (metadata.isDirectory()) entries.push(...(await inventory(root, absolutePath)));
     if (metadata.isFile()) {
       entries.push({
@@ -52,6 +53,7 @@ export async function createBaseBackup(
     await database.backup(databaseBackupPath);
     const sanitizedDatabase = new Sqlite(databaseBackupPath);
     try {
+      sanitizedDatabase.pragma("journal_mode = DELETE");
       sanitizedDatabase.exec(
         "DELETE FROM sessions; DELETE FROM owner; DELETE FROM login_attempts; VACUUM;",
       );
@@ -85,6 +87,7 @@ export async function createBaseBackup(
 }
 
 export async function verifyBaseBackup(backupPath: string): Promise<void> {
+  if ((await lstat(backupPath)).isSymbolicLink()) throw new Error("BACKUP_SYMLINK_INVALID");
   const manifest = JSON.parse(await readFile(join(backupPath, "manifest.json"), "utf8")) as {
     format: string;
     version: number;
@@ -119,6 +122,12 @@ export async function verifyBaseBackup(backupPath: string): Promise<void> {
   try {
     if (database.pragma("quick_check", { simple: true }) !== "ok")
       throw new Error("BACKUP_DATABASE_INVALID");
+    for (const table of ["owner", "sessions", "login_attempts"] as const) {
+      const row = database.prepare(`SELECT count(*) AS count FROM ${table}`).get() as {
+        count: number;
+      };
+      if (row.count !== 0) throw new Error("BACKUP_CREDENTIALS_PRESENT");
+    }
     const documents = database
       .prepare("SELECT blob_path, byte_size, sha256 FROM documents")
       .all() as Array<{ blob_path: string; byte_size: number; sha256: string }>;
@@ -149,5 +158,75 @@ export async function verifyBaseBackup(backupPath: string): Promise<void> {
     }
   } finally {
     database.close();
+  }
+}
+
+export async function restoreBaseBackup(
+  backupPath: string,
+  dataDirectory: string,
+  options: { replace?: boolean } = {},
+): Promise<{ dataDirectory: string; previousDataDirectory: string | null }> {
+  const source = resolve(backupPath);
+  const target = resolve(dataDirectory);
+  if (
+    source === target ||
+    source.startsWith(`${target}${sep}`) ||
+    target.startsWith(`${source}${sep}`)
+  )
+    throw new Error("BACKUP_TARGET_OVERLAP");
+  await verifyBaseBackup(source);
+
+  const parent = dirname(target);
+  await mkdir(parent, { recursive: true, mode: 0o700 });
+  const temporary = join(parent, `.sequent-restore-${randomUUID()}`);
+  const previous = join(parent, `.sequent-before-restore-${randomUUID()}`);
+  await mkdir(temporary, { mode: 0o700 });
+  try {
+    await cp(join(source, "sequent.sqlite"), join(temporary, "sequent.sqlite"), {
+      errorOnExist: true,
+    });
+    try {
+      await cp(join(source, "blobs"), join(temporary, "blobs"), {
+        recursive: true,
+        errorOnExist: true,
+      });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    const restoredDatabase = new Sqlite(join(temporary, "sequent.sqlite"), {
+      readonly: true,
+      fileMustExist: true,
+    });
+    try {
+      if (restoredDatabase.pragma("quick_check", { simple: true }) !== "ok")
+        throw new Error("RESTORE_DATABASE_INVALID");
+    } finally {
+      restoredDatabase.close();
+    }
+
+    let targetExists = true;
+    try {
+      await stat(target);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      targetExists = false;
+    }
+    if (targetExists && !options.replace) throw new Error("RESTORE_TARGET_EXISTS");
+    if (!targetExists) {
+      await rename(temporary, target);
+      return { dataDirectory: target, previousDataDirectory: null };
+    }
+
+    await rename(target, previous);
+    try {
+      await rename(temporary, target);
+    } catch (error) {
+      await rename(previous, target);
+      throw error;
+    }
+    return { dataDirectory: target, previousDataDirectory: previous };
+  } catch (error) {
+    await rm(temporary, { recursive: true, force: true });
+    throw error;
   }
 }
