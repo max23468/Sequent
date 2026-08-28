@@ -9,6 +9,8 @@
     key: string;
     label: string;
     fields: QuadroField[];
+    occurrenceId: string | null;
+    isNewOccurrence: boolean;
   }
 
   let { data, form, actionUrl, duplicateActionUrl } = $props<{
@@ -60,17 +62,51 @@
           key: "dati-del-soggetto:subject",
           label: "Dati del soggetto",
           fields: fieldsForCurrentDeclaration(),
+          occurrenceId: null,
+          isNewOccurrence: false,
         },
       ];
     const groups = new Map<string, FieldGroup>();
     for (const field of fieldsForCurrentDeclaration()) {
       const label = field.saveGroup ?? field.section ?? (data.selectedQuadro === "EA" ? "Dati del soggetto" : `Quadro ${data.selectedQuadro}`);
-      const key = `${label}:${field.entityScope ?? "declaration"}`;
-      const group = groups.get(key) ?? { key, label, fields: [] };
+      const key = `${label}:${field.entityScope ?? "declaration"}:${field.occurrenceGroup ?? "single"}`;
+      const group = groups.get(key) ?? { key, label, fields: [], occurrenceId: null, isNewOccurrence: false };
       group.fields.push(field);
       groups.set(key, group);
     }
-    return [...groups.values()];
+    return [...groups.values()].flatMap((group) => {
+      const occurrenceGroup = group.fields[0]?.occurrenceGroup;
+      if (!occurrenceGroup) return [group];
+      const fieldIds = new Set(
+        fieldsForCurrentDeclaration()
+          .filter((field) => field.occurrenceGroup === occurrenceGroup)
+          .map((field) => field.canonicalId),
+      );
+      const occurrenceIds = [...new Set(
+        (Object.values(data.declaration.declaration.fields) as Array<{
+          fieldId: string;
+          occurrenceId?: string | null;
+        }>)
+          .filter((field) => fieldIds.has(field.fieldId) && field.occurrenceId)
+          .map((field) => field.occurrenceId as string),
+      )];
+      const existing = occurrenceIds.map((occurrenceId, index) => ({
+        ...group,
+        key: `${group.key}:${occurrenceId}`,
+        label: `${group.label} · posizione ${index + 1}`,
+        occurrenceId,
+      }));
+      return [
+        ...existing,
+        {
+          ...group,
+          key: `${group.key}:new`,
+          label: `${group.label} · nuova posizione`,
+          occurrenceId: data.newOccurrenceIds[occurrenceGroup] ?? null,
+          isNewOccurrence: true,
+        },
+      ];
+    });
   }
 
 </script>

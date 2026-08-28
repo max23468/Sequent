@@ -14,7 +14,7 @@ import { validateDeclaration, validateFieldValue } from "../../src/domain/valida
 describe("modello canonico della dichiarazione", () => {
   it("migra un valore precedente senza dichiararlo confermato", () => {
     const declaration = parseDeclaration({ schemaVersion: 1, fields: { legacy: "dato" } });
-    expect(declaration.schemaVersion).toBe(4);
+    expect(declaration.schemaVersion).toBe(5);
     expect(declaration.fields.legacy).toMatchObject({ value: "dato", state: "to_review" });
   });
 
@@ -60,6 +60,18 @@ describe("modello canonico della dichiarazione", () => {
     expect(validateFieldValue(fieldId, "h501").map(({ id }) => id)).toContain(
       "XSD_PATTERN_MISMATCH",
     );
+  });
+
+  it("valida il contenuto Base64 e riconosce i gruppi ufficiali ripetibili", () => {
+    const fieldId = "xsd:/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoAll/ImageData";
+    expect(validateFieldValue(fieldId, "SGVsbG8=")).toEqual([]);
+    expect(validateFieldValue(fieldId, "%%%non-base64%%%").map(({ id }) => id)).toContain(
+      "XSD_PRIMITIVE_TYPE_MISMATCH",
+    );
+    expect(listQuadroFields("EG").find((field) => field.canonicalId === fieldId)).toMatchObject({
+      entityScope: "occurrence",
+      occurrenceGroup: "/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoAll",
+    });
   });
 
   it("blocca la chiusura finché la copertura semantica non è dimostrata", () => {

@@ -4,9 +4,10 @@
 
   type QuadroField = PageData["quadroFields"][number];
 
-  let { data, field, entityMissing } = $props<{
+  let { data, field, occurrenceId, entityMissing } = $props<{
     data: PageData;
     field: QuadroField;
+    occurrenceId: string | null;
     entityMissing: boolean;
   }>();
 
@@ -39,7 +40,11 @@
         }) ?? ""
       );
     const entityId = fieldEntityId();
-    const key = entityId ? `${field.canonicalId}::${entityId}` : field.canonicalId;
+    const key = entityId
+      ? `${field.canonicalId}::${entityId}`
+      : occurrenceId
+        ? `${field.canonicalId}::occurrence:${occurrenceId}`
+        : field.canonicalId;
     const value = data.declaration.declaration.fields[key]?.value;
     return value === null || value === undefined ? "" : String(value);
   }
@@ -51,26 +56,29 @@
   }
 
   const largeOptionList = $derived(field.options.length > 80);
+  const controlId = $derived(
+    `field-${field.canonicalId}${occurrenceId ? `-${occurrenceId}` : ""}`,
+  );
 </script>
 
 <div class="official-field">
   {#if field.entryMode !== "derived"}<input type="hidden" name="fieldId" value={field.canonicalId} />{/if}
-  <label for={`field-${field.canonicalId}`}>{#if field.visibleNumber}<span>{field.visibleNumber}</span>{/if}{field.label}</label>
+  <label for={controlId}>{#if field.visibleNumber}<span>{field.visibleNumber}</span>{/if}{field.label}</label>
   <div>
     {#if field.entryMode === "derived"}
-      <output class="official-derived-value" id={`field-${field.canonicalId}`}>{displayedFieldValue()}</output>
+      <output class="official-derived-value" id={controlId}>{displayedFieldValue()}</output>
     {:else if field.control === "checkbox"}
-      <div class="official-checkbox-control"><input id={`field-${field.canonicalId}`} type="checkbox" name={`value:${field.canonicalId}`} value="1" checked={fieldValue() === "1"} disabled={entityMissing} /><span>Sì</span></div>
+      <div class="official-checkbox-control"><input id={controlId} type="checkbox" name={`value:${field.canonicalId}`} value="1" checked={fieldValue() === "1"} disabled={entityMissing} /><span>Sì</span></div>
     {:else if largeOptionList}
-      <input id={`field-${field.canonicalId}`} name={`value:${field.canonicalId}`} list={`options-${field.canonicalId}`} value={fieldValue()} autocomplete="off" disabled={entityMissing} />
-      <datalist id={`options-${field.canonicalId}`}>{#each field.options as option (option.value)}<option value={option.value}>{option.label}</option>{/each}</datalist>
+      <input id={controlId} name={`value:${field.canonicalId}`} list={`options-${controlId}`} value={fieldValue()} autocomplete="off" disabled={entityMissing} />
+      <datalist id={`options-${controlId}`}>{#each field.options as option (option.value)}<option value={option.value}>{option.label}</option>{/each}</datalist>
     {:else if field.options.length > 0}
-      <select id={`field-${field.canonicalId}`} name={`value:${field.canonicalId}`} disabled={entityMissing}>
+      <select id={controlId} name={`value:${field.canonicalId}`} disabled={entityMissing}>
         <option value="" selected={fieldValue() === ""}>Non indicato</option>
         {#each field.options as option (option.value)}<option value={option.value} selected={fieldValue() === option.value}>{option.label}</option>{/each}
       </select>
     {:else}
-      <input id={`field-${field.canonicalId}`} name={`value:${field.canonicalId}`} value={fieldValue()} placeholder={field.type.endsWith("DatoDT_Type") ? "GGMMAAAA" : ""} disabled={entityMissing} />
+      <input id={controlId} name={`value:${field.canonicalId}`} value={fieldValue()} placeholder={field.type.endsWith("DatoDT_Type") ? "GGMMAAAA" : ""} disabled={entityMissing} />
     {/if}
   </div>
 </div>

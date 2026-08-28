@@ -35,7 +35,8 @@ export interface CatalogField {
   visibleNumber?: string;
   section?: string;
   saveGroup?: string;
-  entityScope?: "decedent" | "subject" | "asset" | "declaration";
+  entityScope?: "decedent" | "subject" | "asset" | "occurrence" | "declaration";
+  occurrenceGroup?: string;
   entryMode?: "editable" | "derived";
   derivedFrom?: string;
   control?: "checkbox";
@@ -48,6 +49,9 @@ export interface CatalogField {
 }
 
 const technicalElements = (technicalSchema.elements ?? []) as TechnicalElement[];
+const technicalElementsByPath = new Map(
+  technicalElements.map((element) => [element.path, element]),
+);
 const technicalTypes = (technicalSchema.types ?? []) as Array<{
   name: string;
   constraints?: {
@@ -137,7 +141,22 @@ function fieldScope(element: TechnicalElement, quadro: QuadroId): CatalogField["
     return "decedent";
   if (quadro === "EA") return "subject";
   if (ASSET_QUADRI.has(quadro)) return "asset";
+  if (repeatableAncestorPath(element)) return "occurrence";
   return "declaration";
+}
+
+function parentTechnicalPath(path: string): string {
+  return path.slice(0, path.lastIndexOf("/"));
+}
+
+function repeatableAncestorPath(element: TechnicalElement): string | null {
+  let path = parentTechnicalPath(element.path);
+  while (path) {
+    const container = technicalElementsByPath.get(path);
+    if (container?.maxOccurs === "unbounded" || (container?.maxOccurs ?? 0) > 1) return path;
+    path = parentTechnicalPath(path);
+  }
+  return null;
 }
 
 function fieldSection(element: TechnicalElement, quadro: QuadroId): string {
@@ -165,6 +184,7 @@ function technicalOptions(element: TechnicalElement): Array<{ value: string; lab
 function catalogFieldFor(element: TechnicalElement, quadro: QuadroId): CatalogField {
   const curated = fieldsByPath.get(element.path);
   const section = curated?.section ?? fieldSection(element, quadro);
+  const entityScope = curated?.entityScope ?? fieldScope(element, quadro);
   return {
     id: curated?.id ?? element.id,
     quadro,
@@ -173,7 +193,11 @@ function catalogFieldFor(element: TechnicalElement, quadro: QuadroId): CatalogFi
     visibleNumber: curated?.visibleNumber,
     section,
     saveGroup: curated?.saveGroup ?? section,
-    entityScope: curated?.entityScope ?? fieldScope(element, quadro),
+    entityScope,
+    occurrenceGroup:
+      entityScope === "occurrence"
+        ? (curated?.occurrenceGroup ?? repeatableAncestorPath(element) ?? undefined)
+        : undefined,
     entryMode: curated?.entryMode ?? "editable",
     derivedFrom: curated?.derivedFrom,
     control: curated?.control ?? (element.type.includes("DatoCB_Type") ? "checkbox" : undefined),
@@ -245,6 +269,7 @@ export function listQuadroFields(quadro: QuadroId): Array<
     section: string | null;
     saveGroup: string | null;
     entityScope: CatalogField["entityScope"];
+    occurrenceGroup: string | null;
     entryMode: NonNullable<CatalogField["entryMode"]>;
     derivedFrom: string | null;
     control: CatalogField["control"] | null;
@@ -270,6 +295,7 @@ export function listQuadroFields(quadro: QuadroId): Array<
         section: field.section ?? null,
         saveGroup: field.saveGroup ?? null,
         entityScope: field.entityScope ?? "declaration",
+        occurrenceGroup: field.occurrenceGroup ?? null,
         entryMode: field.entryMode ?? "editable",
         derivedFrom: field.derivedFrom ?? null,
         control: field.control ?? null,
@@ -386,6 +412,29 @@ export function getResolvedTechnicalFacetAlternatives(fieldId: string): Record<s
   if (field.constraints.base && field.constraints.base !== field.type)
     alternatives = combineFacetAlternatives(alternatives, resolveType(field.constraints.base));
   return alternatives.map((facets) => mergeFacets(facets, field.constraints.facets));
+}
+
+export function getResolvedTechnicalPrimitiveTypes(fieldId: string): string[] {
+  const field = getTechnicalField(fieldId);
+  if (!field) return [];
+  const typesByName = new Map(technicalTypes.map((type) => [type.name, type]));
+  const primitives = new Set<string>();
+  const visited = new Set<string>();
+  const visit = (name: string | undefined) => {
+    if (!name || visited.has(name)) return;
+    visited.add(name);
+    const type = typesByName.get(name);
+    if (!type) {
+      if (name.startsWith("xs:")) primitives.add(name);
+      return;
+    }
+    visit(type.constraints?.base);
+    for (const member of type.constraints?.unionMemberTypes ?? []) visit(member);
+  };
+  visit(field.type);
+  visit(field.constraints.base);
+  for (const member of field.constraints.unionMemberTypes ?? []) visit(member);
+  return [...primitives];
 }
 
 export function getCatalogStatus() {

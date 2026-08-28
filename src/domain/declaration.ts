@@ -1,4 +1,4 @@
-const CURRENT_DECLARATION_SCHEMA = 4;
+const CURRENT_DECLARATION_SCHEMA = 5;
 const CURRENT_CATALOG_VERSION = "2026.08.27.1";
 const CURRENT_RULESET_VERSION = "2025.01.1";
 const CURRENT_VALIDATOR_VERSION = "suc13-2025.07.15.1";
@@ -21,6 +21,7 @@ export type FieldState =
 export interface CanonicalFieldValue {
   fieldId: string;
   entityId: string | null;
+  occurrenceId: string | null;
   value: unknown;
   state: FieldState;
   sourceRefs: string[];
@@ -92,9 +93,11 @@ export function parseDeclaration(value: unknown): DeclarationSnapshot {
         : null;
     const canonicalFieldId = previous?.fieldId ?? fieldId;
     const entityId = previous?.entityId ?? null;
-    migrated.fields[canonicalFieldKey(canonicalFieldId, entityId)] = {
+    const occurrenceId = previous?.occurrenceId ?? null;
+    migrated.fields[canonicalFieldKey(canonicalFieldId, entityId, occurrenceId)] = {
       fieldId: canonicalFieldId,
       entityId,
+      occurrenceId,
       value: previous && "value" in previous ? previous.value : fieldValue,
       state: "to_review",
       sourceRefs: previous?.sourceRefs ?? [],
@@ -104,16 +107,23 @@ export function parseDeclaration(value: unknown): DeclarationSnapshot {
   return migrated;
 }
 
-export function canonicalFieldKey(fieldId: string, entityId: string | null = null): string {
-  return entityId ? `${fieldId}::${entityId}` : fieldId;
+export function canonicalFieldKey(
+  fieldId: string,
+  entityId: string | null = null,
+  occurrenceId: string | null = null,
+): string {
+  if (entityId) return `${fieldId}::${entityId}`;
+  if (occurrenceId) return `${fieldId}::occurrence:${occurrenceId}`;
+  return fieldId;
 }
 
 export function getCanonicalField(
   declaration: DeclarationSnapshot,
   fieldId: string,
   entityId: string | null = null,
+  occurrenceId: string | null = null,
 ): CanonicalFieldValue | undefined {
-  return declaration.fields[canonicalFieldKey(fieldId, entityId)];
+  return declaration.fields[canonicalFieldKey(fieldId, entityId, occurrenceId)];
 }
 
 export function setCanonicalField(
@@ -123,9 +133,10 @@ export function setCanonicalField(
   state: FieldState,
   sourceRefs: string[] = [],
   entityId: string | null = null,
+  occurrenceId: string | null = null,
 ): DeclarationSnapshot {
   const now = new Date().toISOString();
-  const key = canonicalFieldKey(fieldId, entityId);
+  const key = canonicalFieldKey(fieldId, entityId, occurrenceId);
   return {
     ...declaration,
     fields: {
@@ -133,6 +144,7 @@ export function setCanonicalField(
       [key]: {
         fieldId,
         entityId,
+        occurrenceId,
         value,
         state,
         sourceRefs: [...new Set(sourceRefs)],

@@ -6,7 +6,13 @@
 
   let { data, group, actionUrl } = $props<{
     data: PageData;
-    group: { key: string; label: string; fields: QuadroField[] };
+    group: {
+      key: string;
+      label: string;
+      fields: QuadroField[];
+      occurrenceId: string | null;
+      isNewOccurrence: boolean;
+    };
     actionUrl: string;
   }>();
 
@@ -36,6 +42,8 @@
 
   function saveLabel(): string {
     if (data.selectedQuadro === "EA") return "Salva questa posizione";
+    if (group.occurrenceId)
+      return group.isNewOccurrence ? "Aggiungi questa posizione" : "Salva questa posizione";
     if (group.fields.some((field: QuadroField) => field.entityScope === "asset"))
       return "Salva questo bene";
     if (group.label === "Dati generali") return "Salva dati generali";
@@ -51,9 +59,10 @@
     <input type="hidden" name="declarationId" value={data.declaration.id} />
     <input type="hidden" name="expectedRevision" value={data.declaration.revision} />
     <input type="hidden" name="entityId" value={groupEntityId() ?? ""} />
+    <input type="hidden" name="occurrenceId" value={group.occurrenceId ?? ""} />
     <input type="hidden" name="quadro" value={data.selectedQuadro} />
     {#each group.fields as field (field.canonicalId)}
-      <OfficialFieldControl {data} {field} entityMissing={entityMissing(field)} />
+      <OfficialFieldControl {data} {field} occurrenceId={group.occurrenceId} entityMissing={entityMissing(field)} />
     {/each}
     {#if hasEditableFields()}
       <div class="official-fields-actions">

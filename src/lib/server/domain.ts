@@ -292,6 +292,13 @@ function officialDateToIso(value: string): string | null {
   return Number.isNaN(date.valueOf()) || date.toISOString().slice(0, 10) !== iso ? null : iso;
 }
 
+function localTodayIso(now = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function recordAuditEvent(
   database: Database.Database,
   practiceId: string,
@@ -1423,12 +1430,32 @@ export function runSuccessionCalculation(
   const issues: ValidationIssue[] = [];
   const openingDateIssue = successionOpeningDateDivergenceIssue(declaration.declaration);
   if (openingDateIssue) issues.push(openingDateIssue);
+  const catalogStatus = getCatalogStatus();
+  if (catalogStatus.status !== "qualified")
+    issues.push({
+      id: "CALCULATION_RULES_INCOMPLETE",
+      level: "blocking",
+      fieldId: null,
+      message:
+        "Il calcolo resta provvisorio finché tutte le regole fiscali applicabili non sono state verificate.",
+      sourceId: "SRC-10",
+      sourcePointer: "Catalogo delle regole di calcolo e relativi limiti di copertura",
+    });
   if (!declaration.declaration.successionOpenedAt)
     issues.push({
       id: "CALCULATION_OPENING_DATE_MISSING",
       level: "blocking",
       fieldId: "frontespizio.defunto.data-decesso",
       message: "Indica la data del decesso prima di confermare il calcolo.",
+      sourceId: "SRC-03",
+      sourcePointer: "Frontespizio — data del decesso",
+    });
+  else if (declaration.declaration.successionOpenedAt > localTodayIso())
+    issues.push({
+      id: "CALCULATION_OPENING_DATE_FUTURE",
+      level: "blocking",
+      fieldId: SUCCESSION_OPENING_DATE_FIELD_ID,
+      message: "La data del decesso non può essere successiva alla data odierna.",
       sourceId: "SRC-03",
       sourcePointer: "Frontespizio — data del decesso",
     });
@@ -1588,7 +1615,12 @@ export function confirmCalculationRun(
   const calculation = listCalculationRuns(database, input.practiceId, input.declarationId).find(
     (candidate) => candidate.id === input.calculationId,
   );
-  if (!calculation || calculation.status !== "draft" || calculation.issues.length > 0)
+  if (
+    !calculation ||
+    calculation.status !== "draft" ||
+    calculation.issues.length > 0 ||
+    getCatalogStatus().status !== "qualified"
+  )
     throw new Error("CALCULATION_NOT_CONFIRMABLE");
   const now = new Date().toISOString();
   const nextDeclaration: DeclarationSnapshot = {
@@ -1646,6 +1678,7 @@ export function saveCanonicalField(
     fieldId: string;
     value: string;
     entityId?: string | null;
+    occurrenceId?: string | null;
   },
 ): { revision: number; issues: ValidationIssue[] } {
   return saveCanonicalFields(database, {
@@ -1653,6 +1686,7 @@ export function saveCanonicalField(
     declarationId: input.declarationId,
     expectedRevision: input.expectedRevision,
     entityId: input.entityId,
+    occurrenceId: input.occurrenceId,
     fields: [{ fieldId: input.fieldId, value: input.value }],
   });
 }
@@ -1665,11 +1699,13 @@ export function saveCanonicalFields(
     expectedRevision: number;
     fields: Array<{ fieldId: string; value: string }>;
     entityId?: string | null;
+    occurrenceId?: string | null;
   },
 ): { revision: number; issues: ValidationIssue[] } {
   const record = getDeclaration(database, input.declarationId, input.practiceId);
   if (!record) throw new Error("DECLARATION_NOT_FOUND");
   const entityId = input.entityId ?? null;
+  const occurrenceId = input.occurrenceId ?? null;
   const fields = input.fields.filter(
     (field, index, all) =>
       all.findIndex((candidate) => candidate.fieldId === field.fieldId) === index,
@@ -1704,6 +1740,30 @@ export function saveCanonicalFields(
   const requiresAsset = fields.some(
     (field) => getCatalogField(field.fieldId)?.entityScope === "asset",
   );
+  const requiresOccurrence = fields.some(
+    (field) => getCatalogField(field.fieldId)?.entityScope === "occurrence",
+  );
+  const occurrenceGroups = new Set(
+    fields
+      .map((field) => getCatalogField(field.fieldId)?.occurrenceGroup)
+      .filter((group): group is string => Boolean(group)),
+  );
+  if (requiresOccurrence && (!occurrenceId || occurrenceGroups.size !== 1)) {
+    return {
+      revision: record.revision,
+      issues: [
+        {
+          id: "OCCURRENCE_REQUIRED",
+          level: "blocking",
+          fieldId: fields[0]?.fieldId ?? null,
+          occurrenceId,
+          message: "Non è stato possibile identificare questa posizione del Quadro.",
+          sourceId: "SRC-08",
+          sourcePointer: "Struttura ripetibile del Quadro ufficiale",
+        },
+      ],
+    };
+  }
   if (requiresEaSubject && !entityId) {
     return {
       revision: record.revision,
@@ -1822,8 +1882,14 @@ export function saveCanonicalFields(
     return { revision: record.revision, issues };
   const changedFields = fields.filter(
     (field) =>
-      String(getCanonicalField(record.declaration, field.fieldId, entityId)?.value ?? "") !==
-      field.value,
+      String(
+        getCanonicalField(
+          record.declaration,
+          field.fieldId,
+          requiresOccurrence ? null : entityId,
+          requiresOccurrence ? occurrenceId : null,
+        )?.value ?? "",
+      ) !== field.value,
   );
   if (changedFields.length === 0) return { revision: record.revision, issues: [] };
   let declaration = record.declaration;
@@ -1834,7 +1900,8 @@ export function saveCanonicalFields(
       field.value,
       field.value === "" ? "missing" : "manually_corrected",
       ["manual-entry"],
-      entityId,
+      requiresOccurrence ? null : entityId,
+      requiresOccurrence ? occurrenceId : null,
     );
     if (field.fieldId === SUCCESSION_OPENING_DATE_FIELD_ID)
       declaration = {
@@ -1946,7 +2013,12 @@ export function saveCanonicalFields(
       changedFields.length === 1
         ? "Aggiornato un dato della dichiarazione."
         : "Aggiornato un gruppo di dati della dichiarazione.",
-      { fieldIds: changedFields.map((field) => field.fieldId), entityId, revision: nextRevision },
+      {
+        fieldIds: changedFields.map((field) => field.fieldId),
+        entityId,
+        occurrenceId,
+        revision: nextRevision,
+      },
     );
     return nextRevision;
   })();

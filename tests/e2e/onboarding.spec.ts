@@ -416,8 +416,8 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await page.getByRole("button", { name: "Calcoli" }).click();
   await page.getByRole("button", { name: "Esegui il calcolo" }).click();
   await expect(page.getByText(/Imposta complessiva:/)).toBeVisible();
-  await page.getByRole("button", { name: "Conferma il calcolo" }).click();
-  await expect(page.getByText("Calcolo confermato")).toBeVisible();
+  await expect(page.getByText("Dati da completare")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Conferma il calcolo" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Documenti richiesti" }).click();
   for (const status of await page.locator('.checklist-row select[name^="status:"]').all())

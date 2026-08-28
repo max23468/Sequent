@@ -1,4 +1,5 @@
 import { error, fail, redirect } from "@sveltejs/kit";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Actions, PageServerLoad } from "./$types";
 import { openDatabase } from "$lib/server/database";
@@ -125,6 +126,12 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     quadroAssets.at(0) ??
     null;
   const complianceReport = buildComplianceReport(database, params.id, declaration.id);
+  const quadroFields = listQuadroFields(selectedQuadro);
+  const newOccurrenceIds = Object.fromEntries(
+    [...new Set(quadroFields.map((field) => field.occurrenceGroup).filter(Boolean))].map(
+      (group) => [group, randomUUID()],
+    ),
+  );
   return {
     practice,
     documents,
@@ -153,7 +160,8 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     catalogStatus: getCatalogStatus(),
     quadri: listQuadroSummaries(),
     selectedQuadro,
-    quadroFields: listQuadroFields(selectedQuadro),
+    quadroFields,
+    newOccurrenceIds,
     declarationIssues: complianceReport.issues,
     declarationReady: complianceReport.ready,
   };
@@ -337,11 +345,16 @@ export const actions = {
     const declarationId = String(formData.get("declarationId") ?? "");
     const fieldIds = formData.getAll("fieldId").map(String);
     const entityId = String(formData.get("entityId") ?? "") || null;
+    const occurrenceIdValue = String(formData.get("occurrenceId") ?? "") || null;
+    const occurrenceId = occurrenceIdValue
+      ? z.string().uuid().safeParse(occurrenceIdValue).data
+      : null;
     const expectedRevision = Number(formData.get("expectedRevision"));
     if (
       !declarationId ||
       fieldIds.length === 0 ||
       fieldIds.length > 100 ||
+      (occurrenceIdValue !== null && occurrenceId === undefined) ||
       !Number.isSafeInteger(expectedRevision)
     )
       return fail(400, {
@@ -353,6 +366,7 @@ export const actions = {
         declarationId,
         expectedRevision,
         entityId,
+        occurrenceId,
         fields: fieldIds.map((fieldId) => ({
           fieldId,
           value: String(formData.get(`value:${fieldId}`) ?? "").trim(),

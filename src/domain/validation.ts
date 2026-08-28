@@ -1,6 +1,7 @@
 import {
   getCatalogField,
   getResolvedTechnicalFacetAlternatives,
+  getResolvedTechnicalPrimitiveTypes,
   getTechnicalField,
 } from "./official-catalog/catalog.ts";
 import { getCanonicalField, type DeclarationSnapshot } from "./declaration.ts";
@@ -10,6 +11,7 @@ export interface ValidationIssue {
   level: "blocking" | "warning";
   fieldId: string | null;
   entityId?: string | null;
+  occurrenceId?: string | null;
   message: string;
   sourceId: string;
   sourcePointer: string;
@@ -54,6 +56,54 @@ function matchesFacets(text: string, facets: Record<string, string[]>): boolean 
   return !(Number.isFinite(fractionDigits) && digits.fraction > fractionDigits);
 }
 
+function matchesPrimitiveType(text: string, type: string): boolean {
+  const collapsed = text
+    .replaceAll("\t", "")
+    .replaceAll("\n", "")
+    .replaceAll("\r", "")
+    .replaceAll(" ", "");
+  switch (type) {
+    case "xs:base64Binary":
+      return (
+        collapsed.length % 4 === 0 &&
+        /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(collapsed)
+      );
+    case "xs:hexBinary":
+      return collapsed.length % 2 === 0 && /^[0-9A-Fa-f]*$/u.test(collapsed);
+    case "xs:boolean":
+      return /^(?:true|false|0|1)$/u.test(text);
+    case "xs:decimal":
+      return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/u.test(text);
+    case "xs:float":
+    case "xs:double":
+      return /^(?:[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?|INF|-INF|NaN)$/u.test(text);
+    case "xs:byte": {
+      if (!/^[+-]?\d+$/u.test(text)) return false;
+      const value = BigInt(text);
+      return value >= -128n && value <= 127n;
+    }
+    case "xs:integer":
+    case "xs:long":
+    case "xs:int":
+    case "xs:short":
+    case "xs:nonPositiveInteger":
+    case "xs:negativeInteger":
+    case "xs:nonNegativeInteger":
+    case "xs:positiveInteger":
+    case "xs:unsignedLong":
+    case "xs:unsignedInt":
+    case "xs:unsignedShort":
+    case "xs:unsignedByte":
+      return /^[+-]?\d+$/u.test(text);
+    case "xs:normalizedString":
+      return !/[\r\n\t]/u.test(text);
+    case "xs:token":
+      return text.trim() === text && !/\s{2,}/u.test(text) && !/[\r\n\t]/u.test(text);
+    default:
+      return true;
+  }
+}
+
 export function validateFieldValue(fieldId: string, value: unknown): ValidationIssue[] {
   const field = getTechnicalField(fieldId);
   if (!field) {
@@ -70,6 +120,16 @@ export function validateFieldValue(fieldId: string, value: unknown): ValidationI
   }
   const text = typeof value === "string" ? value : String(value ?? "");
   const issues: ValidationIssue[] = [];
+  const primitiveTypes = getResolvedTechnicalPrimitiveTypes(fieldId);
+  if (primitiveTypes.length > 0 && !primitiveTypes.some((type) => matchesPrimitiveType(text, type)))
+    issues.push({
+      id: "XSD_PRIMITIVE_TYPE_MISMATCH",
+      level: "blocking",
+      fieldId,
+      message: "Il valore non rispetta il formato tecnico previsto per questo dato.",
+      sourceId: field.sourceId,
+      sourcePointer: field.sourcePointer,
+    });
   const alternatives = getResolvedTechnicalFacetAlternatives(fieldId);
   if (alternatives.length > 1) {
     if (alternatives.some((facets) => matchesFacets(text, facets))) return [];
@@ -184,6 +244,7 @@ export function validateDeclaration(declaration: DeclarationSnapshot): Validatio
           ...issue,
           id: `${issue.id}:${key}`,
           entityId: field.entityId,
+          occurrenceId: field.occurrenceId,
         })),
   );
   for (const [key, field] of Object.entries(declaration.fields)) {
@@ -195,6 +256,7 @@ export function validateDeclaration(declaration: DeclarationSnapshot): Validatio
         level: "blocking",
         fieldId: field.fieldId,
         entityId: field.entityId,
+        occurrenceId: field.occurrenceId,
         message: `Conferma professionalmente “${label}” prima dei documenti finali.`,
         sourceId: technical?.sourceId ?? "SRC-08",
         sourcePointer: technical?.sourcePointer ?? "technical-schema.json",
