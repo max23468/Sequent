@@ -36,7 +36,7 @@ Il wrapper decifra la chiave soltanto in streaming verso un `ssh-agent` effimero
 | ------------------------ | --------------------------------- | -------: | ------------------------------------------- |
 | `/opt/sequent`           | `root:root`                       |   `0755` | radice non sostituibile dall’account SSH    |
 | `/opt/sequent/repo`      | `ubuntu:ubuntu`                   |   `0750` | checkout Git                                |
-| `/opt/sequent/runtime`   | `ubuntu:ubuntu`                   |   `0750` | toolchain e runtime futuro                  |
+| `/opt/sequent/runtime`   | `root:ubuntu`                     |   `0750` | runtime non sostituibile; toolchain leggibile |
 | `/opt/sequent/data`      | `sequent-runtime:sequent-runtime` |   `0700` | dati operativi, non scrivibili dal checkout |
 | `/opt/sequent/private`   | `ubuntu:ubuntu`                   |   `0700` | corpus reale, dati operativi e segreti      |
 | `/opt/sequent/releases`  | `root:root`                       |   `0750` | release approvate future                    |

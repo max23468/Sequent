@@ -39,6 +39,9 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /sorgente trusted del deploy non root-owned/);
   assert.match(deploy, /artefatto fuori dalla sorgente trusted/);
   assert.match(deploy, /root:root:600/);
+  assert.match(deploy, /chown root:ubuntu "\$root\/runtime"/);
+  assert.match(deploy, /directory runtime non protetta/);
+  assert.match(deploy, /root:ubuntu:750/);
   assert.ok(
     deploy.indexOf('repository="${SEQUENT_TRUSTED_REPOSITORY:-}"') <
       deploy.indexOf('for input in "$archive" "$manifest"'),

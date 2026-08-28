@@ -139,6 +139,14 @@ cleanup_trusted_runtime_env() {
   fail "permessi del registro release non conformi"
 [[ "$(stat -c '%U:%G:%a' "$root/snapshots")" == "root:root:700" ]] ||
   fail "permessi degli snapshot non conformi"
+[[ -d "$root/runtime" && ! -L "$root/runtime" ]] || fail "directory runtime non conforme"
+runtime_layout="$(stat -c '%U:%G:%a' "$root/runtime")"
+[[ "$runtime_layout" == ubuntu:ubuntu:750 || "$runtime_layout" == root:ubuntu:750 ]] ||
+  fail "permessi della directory runtime non conformi"
+chown root:ubuntu "$root/runtime"
+chmod 0750 "$root/runtime"
+[[ "$(stat -c '%U:%G:%a' "$root/runtime")" == root:ubuntu:750 ]] ||
+  fail "directory runtime non protetta"
 [[ "$(stat -c '%U:%G:%a' "$runtime_env")" == "ubuntu:ubuntu:600" ]] ||
   fail "permessi della configurazione runtime non conformi"
 [[ "$(stat -c '%U:%G:%a' "$runtime_compose")" == "ubuntu:ubuntu:640" ]] ||

@@ -53,7 +53,7 @@ done
 [[ ! -w "$expected_root/data" ]] || fail "il checkout può scrivere nei dati operativi"
 assert_layout . root:root:755
 assert_layout repo ubuntu:ubuntu:750
-assert_layout runtime ubuntu:ubuntu:750
+assert_layout runtime root:ubuntu:750
 assert_layout data sequent-runtime:sequent-runtime:700
 assert_layout private ubuntu:ubuntu:700
 assert_layout releases root:root:750
