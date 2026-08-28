@@ -515,11 +515,74 @@ describe("persistenza del procedimento", () => {
     const report = buildComplianceReport(database, practice.id, practice.declarationId);
     expect(new Set(report.issues.map((issue) => issue.message)).size).toBe(report.issues.length);
     expect(report.qualification).toMatchObject({
-      calculationRulesVersion: "2026.08.3",
-      temporalRulesVersion: "2026.08.3",
+      calculationRulesVersion: "2026.08.4",
+      temporalRulesVersion: "2026.08.4",
       officialControl: { name: "SUC13", version: "2.3.1", blockingDiagnostics: 0 },
       attachments: { files: 0, totalBytes: 0, motivatedExceptions: 0 },
     });
+  });
+
+  it("mantiene la checklist legata alla devoluzione confermata", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-confirmed-checklist-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento con devoluzione confermata");
+    const beneficiary = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Beneficiario",
+    });
+    const building = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Abitazione",
+      valueCents: 20_000_000n,
+    });
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      fieldId: BUILDING_VALUE_FIELD_ID,
+      value: "200000",
+      entityId: building.id,
+    });
+    const confirmed = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 2,
+      shares: [
+        {
+          assetId: building.id,
+          beneficiaryId: beneficiary.id,
+          numerator: 1n,
+          denominator: 1n,
+          rightCode: "1",
+          reliefCode: "P",
+        },
+      ],
+    });
+    expect(confirmed.status).toBe("draft");
+    confirmDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      scenarioId: confirmed.id,
+      expectedRevision: 2,
+    });
+    const laterBlocked = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 3,
+      shares: [],
+    });
+    expect(laterBlocked.status).toBe("blocked");
+    database
+      .prepare("UPDATE devolution_scenarios SET updated_at = ? WHERE id = ?")
+      .run("2099-01-01T00:00:00.000Z", laterBlocked.id);
+
+    const checklist = synchronizeChecklist(database, practice.id, practice.declarationId);
+    expect(
+      checklist.some(
+        (item) => item.label === "Dichiarazione e documenti per l’agevolazione prima casa",
+      ),
+    ).toBe(true);
   });
 
   it("richiede i riferimenti alla dichiarazione precedente soltanto nelle sostitutive", () => {

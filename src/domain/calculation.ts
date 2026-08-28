@@ -4,7 +4,7 @@ import {
   usufructCoefficientForAge,
 } from "./temporal-rules.ts";
 
-export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.3" as const;
+export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.4" as const;
 
 export interface BeneficiaryTaxInput {
   beneficiaryId: string;
@@ -61,6 +61,9 @@ export interface SuccessionAllocation {
     | "liability"
     | "donation";
   municipalityCode?: string;
+  provinceCode?: string;
+  habitationRightCode?: string;
+  landTypeCode?: string;
   relationshipCode?: string;
   subjectType?: string;
   rightCode?: string;
@@ -417,6 +420,15 @@ const PROPERTY_KINDS = new Set<SuccessionAllocation["assetKind"]>([
   "tavolare_land",
   "tavolare_building",
 ]);
+const BUILDING_KINDS = new Set<SuccessionAllocation["assetKind"]>([
+  "building",
+  "tavolare_building",
+]);
+const LAND_KINDS = new Set<SuccessionAllocation["assetKind"]>(["land", "tavolare_land"]);
+const FIRST_HOME_EXCLUDED_RELATIONSHIPS = new Set(["36", "37", "38", "39"]);
+const FIRST_HOME_HABITATION_RIGHTS = new Set(["1", "2", "3", "5", "6", "7"]);
+const PRIMARY_HOME_HABITATION_RIGHTS = new Set(["1", "5"]);
+const ALTERNATIVE_HOME_HABITATION_RIGHTS = new Set(["2", "6"]);
 const PROPORTIONAL_PROPERTY_RELIEFS = new Set(["", "A", "L", "R", "F", "N", "Q"]);
 
 function groupAllocationsByAsset(
@@ -472,33 +484,101 @@ export function calculateDeclarationTaxSummary(
     new Set(group.allocations.map((allocation) => allocation.reliefCode?.toUpperCase() ?? ""));
   const hasTrustBeneficiary = (group: (typeof assetGroups)[number]) =>
     group.allocations.some((allocation) => allocation.subjectType === "5");
+  const habitationRight = (group: (typeof assetGroups)[number]) =>
+    group.allocations.find((allocation) => allocation.habitationRightCode)?.habitationRightCode ??
+    "";
   const taxablePropertyCents = propertyGroups.reduce((sum, group) => {
     const reliefs = groupReliefs(group);
     const onlyProportional = [...reliefs].every((code) => PROPORTIONAL_PROPERTY_RELIEFS.has(code));
-    return onlyProportional && !hasTrustBeneficiary(group) ? sum + group.valueCents : sum;
+    const firstHomeHabitation = FIRST_HOME_HABITATION_RIGHTS.has(habitationRight(group));
+    return onlyProportional && !firstHomeHabitation && !hasTrustBeneficiary(group)
+      ? sum + group.valueCents
+      : sum;
   }, 0n);
   const fixedG = propertyGroups.some((group) => hasRelief(group, "G")) ? 20_000 : 0;
   const fixedM = propertyGroups.some((group) => hasRelief(group, "M")) ? 20_000 : 0;
   const fixedTrust = propertyGroups.some(hasTrustBeneficiary) ? 20_000 : 0;
-  const firstHomeCount = propertyGroups.filter((group) =>
-    ["P", "Y", "Z"].some((code) => hasRelief(group, code)),
-  ).length;
+  const eligibleFirstHomeAllocations = (group: (typeof assetGroups)[number]) =>
+    group.allocations.filter(
+      (allocation) =>
+        allocation.provinceCode?.toUpperCase() !== "EE" &&
+        !FIRST_HOME_EXCLUDED_RELATIONSHIPS.has(allocation.relationshipCode ?? ""),
+    );
+  const firstHomeUnits = new Set<string>();
+  const beneficiariesWithPrimaryHome = new Set<string>();
+  for (const group of propertyGroups.filter((candidate) =>
+    BUILDING_KINDS.has(groupKind(candidate)),
+  )) {
+    const eligible = eligibleFirstHomeAllocations(group);
+    const primary =
+      eligible.length > 0 &&
+      (eligible.some((allocation) => allocation.reliefCode?.toUpperCase() === "P") ||
+        PRIMARY_HOME_HABITATION_RIGHTS.has(habitationRight(group)));
+    if (!primary) continue;
+    firstHomeUnits.add(group.assetId);
+    for (const allocation of eligible) beneficiariesWithPrimaryHome.add(allocation.beneficiaryId);
+  }
+  const beneficiariesWithAlternativeHome = new Set<string>();
+  for (const group of propertyGroups.filter((candidate) =>
+    BUILDING_KINDS.has(groupKind(candidate)),
+  )) {
+    const eligible = eligibleFirstHomeAllocations(group).filter(
+      (allocation) =>
+        ["Y", "Z"].includes(allocation.reliefCode?.toUpperCase() ?? "") ||
+        ALTERNATIVE_HOME_HABITATION_RIGHTS.has(habitationRight(group)),
+    );
+    const unrepresented = eligible.filter(
+      (allocation) =>
+        !beneficiariesWithPrimaryHome.has(allocation.beneficiaryId) &&
+        !beneficiariesWithAlternativeHome.has(allocation.beneficiaryId),
+    );
+    if (unrepresented.length === 0) continue;
+    firstHomeUnits.add(group.assetId);
+    for (const allocation of eligible)
+      beneficiariesWithAlternativeHome.add(allocation.beneficiaryId);
+  }
+  const firstHomeCount = firstHomeUnits.size;
   const firstHomeFixed = firstHomeCount * 20_000;
-  const proportionalMortgage = roundToWholeEuro((taxablePropertyCents * 2n) / 100n);
-  const proportionalCadastral = roundToWholeEuro(taxablePropertyCents / 100n);
+  let proportionalMortgage = roundToWholeEuro((taxablePropertyCents * 2n) / 100n);
+  let proportionalCadastral = roundToWholeEuro(taxablePropertyCents / 100n);
+  const onlyNonBuildingLandWithoutRelief =
+    propertyGroups.length > 0 &&
+    propertyGroups.every(
+      (group) =>
+        LAND_KINDS.has(groupKind(group)) &&
+        group.allocations.every(
+          (allocation) =>
+            allocation.landTypeCode === "3" && (allocation.reliefCode?.trim() ?? "") === "",
+        ),
+    );
+  if (onlyNonBuildingLandWithoutRelief) {
+    const mortgageWithMinimum = proportionalMortgage < 20_000n ? 20_000n : proportionalMortgage;
+    const cadastralWithMinimum = proportionalCadastral < 20_000n ? 20_000n : proportionalCadastral;
+    if (taxablePropertyCents < mortgageWithMinimum + cadastralWithMinimum) {
+      proportionalMortgage = roundToWholeEuro((taxablePropertyCents * 2n) / 3n);
+      proportionalCadastral = taxablePropertyCents - proportionalMortgage;
+    } else {
+      proportionalMortgage = mortgageWithMinimum;
+      proportionalCadastral = cadastralWithMinimum;
+    }
+  }
   const mortgageDue =
     taxablePropertyCents > 0n
-      ? [
-          proportionalMortgage + BigInt(fixedG + fixedM + fixedTrust + firstHomeFixed),
-          20_000n,
-        ].reduce((maximum, value) => (value > maximum ? value : maximum), 0n)
+      ? onlyNonBuildingLandWithoutRelief
+        ? proportionalMortgage
+        : [
+            proportionalMortgage + BigInt(fixedG + fixedM + fixedTrust + firstHomeFixed),
+            20_000n,
+          ].reduce((maximum, value) => (value > maximum ? value : maximum), 0n)
       : BigInt(fixedG + fixedM + fixedTrust + firstHomeFixed);
   const cadastralDue =
     taxablePropertyCents > 0n
-      ? [proportionalCadastral + BigInt(fixedTrust + firstHomeFixed), 20_000n].reduce(
-          (maximum, value) => (value > maximum ? value : maximum),
-          0n,
-        )
+      ? onlyNonBuildingLandWithoutRelief
+        ? proportionalCadastral
+        : [proportionalCadastral + BigInt(fixedTrust + firstHomeFixed), 20_000n].reduce(
+            (maximum, value) => (value > maximum ? value : maximum),
+            0n,
+          )
       : BigInt(fixedTrust + firstHomeFixed);
   const mortgageAlreadyPaid = options.mortgageAlreadyPaidCents ?? 0n;
   const mortgageCredit = options.mortgageCreditCents ?? 0n;

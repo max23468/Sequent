@@ -874,9 +874,12 @@ export function synchronizeChecklist(
   if (!record) return [];
   const fields = Object.values(record.declaration.fields);
   const assets = listSharedAssets(database, practiceId, declarationId);
-  const latestScenario = listDevolutionScenarios(database, practiceId, declarationId).at(0);
+  const scenarios = listDevolutionScenarios(database, practiceId, declarationId);
+  const checklistScenario = record.declaration.confirmedDevolutionScenarioId
+    ? scenarios.find((scenario) => scenario.id === record.declaration.confirmedDevolutionScenarioId)
+    : scenarios.at(0);
   const reliefCodes = new Set(
-    latestScenario?.shares.map((share) => share.reliefCode).filter(Boolean) ?? [],
+    checklistScenario?.shares.map((share) => share.reliefCode).filter(Boolean) ?? [],
   );
   const hasValue = (fragment: string, accepted: string[] = ["1"]) =>
     fields.some(
@@ -987,7 +990,7 @@ export function synchronizeChecklist(
       label: "Richiesta e documenti per agevolazioni o riduzioni",
       applicable:
         reliefCodes.size > 0 ||
-        latestScenario?.shares.some(
+        checklistScenario?.shares.some(
           (share) => share.reductionYears > 0 || share.previousSuccessionValueCents > 0n,
         ) === true,
       sourceRefs: ["SRC-05#quali-documenti-occorrono", "SRC-10#riduzioni"],
@@ -1737,6 +1740,15 @@ export function runSuccessionCalculation(
     const asset = assets.get(share.assetId ?? "");
     const beneficiary = beneficiaries.find((candidate) => candidate.id === share.beneficiaryId);
     const municipalityField = asset ? assetCatalogField(asset, "CodiceComune") : null;
+    const provinceField = asset ? assetCatalogField(asset, "Provincia") : null;
+    const habitationRightField = asset ? assetCatalogField(asset, "DirittoAbitazione") : null;
+    const landTypeField = asset ? assetCatalogField(asset, "TipologiaTerreno") : null;
+    const canonicalAssetValue = (field: ReturnType<typeof assetCatalogField>) =>
+      asset && field
+        ? String(
+            getCanonicalField(declaration.declaration, field.canonicalId, asset.id)?.value ?? "",
+          )
+        : undefined;
     return {
       assetId: share.assetId ?? "",
       beneficiaryId: share.beneficiaryId,
@@ -1749,13 +1761,10 @@ export function runSuccessionCalculation(
       previousSuccessionValueCents: share.previousSuccessionValueCents,
       foreignTaxCents: share.foreignTaxCents,
       assetKind: asset?.kind,
-      municipalityCode:
-        asset && municipalityField
-          ? String(
-              getCanonicalField(declaration.declaration, municipalityField.canonicalId, asset.id)
-                ?.value ?? "",
-            )
-          : undefined,
+      municipalityCode: canonicalAssetValue(municipalityField),
+      provinceCode: canonicalAssetValue(provinceField),
+      habitationRightCode: canonicalAssetValue(habitationRightField),
+      landTypeCode: canonicalAssetValue(landTypeField),
       relationshipCode: beneficiary?.relationshipCode,
       subjectType: beneficiary?.subjectType,
       rightCode: share.rightCode,

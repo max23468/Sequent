@@ -1,6 +1,6 @@
 import legalTimeline from "./official-catalog/legal-timeline.json" with { type: "json" };
 
-export const TEMPORAL_RULESET_VERSION = "2026.08.3" as const;
+export const TEMPORAL_RULESET_VERSION = "2026.08.4" as const;
 
 export interface ApplicableLegalFramework {
   id: string;

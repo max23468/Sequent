@@ -10,6 +10,7 @@ import {
   calculateRealRightValueCents,
   calculateSplitRealRightValues,
   calculateSuccessionTax,
+  type SuccessionAllocation,
 } from "../../src/domain/calculation.ts";
 import { deriveOfficialFieldValue } from "../../src/domain/derived-fields.ts";
 import {
@@ -396,6 +397,80 @@ describe("motori deterministici", () => {
       specialTaxesCents: 1_600n,
       totalAtSubmissionCents: 785_800n,
     });
+  });
+
+  it("conta una sola imposta fissa per abitazione, pertinenze e immobili contigui", () => {
+    const property = (
+      assetId: string,
+      beneficiaryId: string,
+      reliefCode: string,
+      additions: Partial<SuccessionAllocation> = {},
+    ): SuccessionAllocation => ({
+      assetId,
+      beneficiaryId,
+      treatment: "estate",
+      valueCents: 1_000_000n,
+      assetValueCents: 1_000_000n,
+      assetKind: "building",
+      provinceCode: "RM",
+      relationshipCode: "01",
+      reliefCode,
+      ...additions,
+    });
+    const summary = calculateDeclarationTaxSummary(
+      [
+        property("abitazione-principale", "beneficiario-a", "P"),
+        property("pertinenza", "beneficiario-a", "X"),
+        property("contiguo", "beneficiario-a", "Z"),
+        property("pertinenza-senza-casa-1", "beneficiario-b", "Y"),
+        property("pertinenza-senza-casa-2", "beneficiario-b", "Y"),
+        property("diritto-abitazione", "beneficiario-c", "", { habitationRightCode: "1" }),
+        property("immobile-estero", "beneficiario-d", "P", {
+          provinceCode: "EE",
+          habitationRightCode: "1",
+        }),
+        property("soggetto-escluso", "beneficiario-e", "P", { relationshipCode: "36" }),
+      ],
+      0n,
+      {
+        openingDate: "2025-10-22",
+        jurisdictionCount: 0,
+        automaticLandRegistry: true,
+        copyRequested: false,
+        paymentTiming: 1,
+      },
+    );
+
+    expect(summary.mortgageTax).toMatchObject({ taxableCents: 0n, dueCents: 60_000n });
+    expect(summary.cadastralTax).toMatchObject({ taxableCents: 0n, dueCents: 60_000n });
+  });
+
+  it("limita le imposte al valore dei soli terreni non edificabili sotto soglia", () => {
+    const summary = calculateDeclarationTaxSummary(
+      [
+        {
+          assetId: "terreno-non-edificabile",
+          beneficiaryId: "beneficiario",
+          treatment: "estate",
+          valueCents: 30_000n,
+          assetValueCents: 30_000n,
+          assetKind: "land",
+          landTypeCode: "3",
+          reliefCode: "",
+        },
+      ],
+      0n,
+      {
+        openingDate: "2025-10-22",
+        jurisdictionCount: 1,
+        automaticLandRegistry: true,
+        copyRequested: false,
+        paymentTiming: 1,
+      },
+    );
+
+    expect(summary.mortgageTax).toMatchObject({ taxableCents: 30_000n, dueCents: 20_000n });
+    expect(summary.cadastralTax).toMatchObject({ taxableCents: 30_000n, dueCents: 10_000n });
   });
 
   it("riproduce gli esempi ministeriali su nuda proprietà e diritti divisi", () => {
