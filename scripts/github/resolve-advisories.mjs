@@ -14,8 +14,17 @@ function json(command, args) {
   return JSON.parse(output(command, args));
 }
 
+export function decodePagedRecords(encoded) {
+  if (!encoded) return [];
+  return encoded
+    .split("\n")
+    .map((record) => JSON.parse(Buffer.from(record, "base64").toString("utf8")));
+}
+
 function paged(path, projection) {
-  return json("gh", ["api", "--paginate", "--slurp", path, "--jq", `[.[][] | ${projection}]`]);
+  return decodePagedRecords(
+    output("gh", ["api", "--paginate", path, "--jq", `.[] | (${projection}) | @base64`]),
+  );
 }
 
 export function recordedAdvisoryThreadIds({ headSha, issueComments, reviewComments, threads }) {
