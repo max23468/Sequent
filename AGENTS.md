@@ -19,7 +19,7 @@ Regole inderogabili:
 
 ## Significato di `Pubblica`
 
-Quando il proprietario, riferendosi alla repository o alla modifica corrente, dice `Pubblica` o chiede in modo affermativo e inequivocabile di pubblicare, autorizza l'intero ciclo tecnico applicabile. Domande, ipotesi, pianificazioni e negazioni non costituiscono autorizzazione. L'agente non si ferma a stati intermedi e completa preparazione e verifiche, branch e commit, versione e changelog quando richiesti, push, pull request, gate bloccanti, review Codex exact-HEAD, squash merge, candidata di release, tag e GitHub Release quando previsti, deploy tecnico e verifica live quando applicabili, pulizia e rilettura finale.
+Quando il proprietario, riferendosi alla repository o alla modifica corrente, dice `Pubblica` o chiede in modo affermativo e inequivocabile di pubblicare, autorizza l'intero ciclo tecnico applicabile. Domande, ipotesi, pianificazioni e negazioni non costituiscono autorizzazione. L'agente non si ferma a stati intermedi e completa preparazione e verifiche, branch e commit, versione e changelog quando richiesti, push, pull request, gate bloccanti, squash merge, candidata di release, tag e GitHub Release quando previsti, deploy tecnico e verifica live quando applicabili, pulizia e rilettura finale.
 
 `main` resta permanente e protetto. Prima della pull request l'HEAD deve essere coerente e avere superato i gate locali proporzionati. L'impatto operativo si valuta sul diff cumulativo fra l'ultima release distribuita con successo e il candidato finale, non sulla sola ultima pull request. Modifiche esclusivamente documentali, di test o di governance non richiedono immagine, release o deploy; più modifiche runtime già assorbite in `main` vengono qualificate e distribuite una sola volta sul candidato finale.
 
@@ -33,12 +33,6 @@ La pulizia finale rimuove soltanto branch e worktree temporanei creati nel ciclo
 
 ## Gate dei commenti Codex
 
-- La prima review è richiesta automaticamente quando una pull request viene aperta o resa pronta. Dopo ogni nuovo commit sull'HEAD, attendi che i gate locali siano verdi e pubblica un singolo commento top-level contenente esclusivamente `@codex review`.
-- Il comando è valido soltanto se esatto e inviato da owner, member o collaborator. Non aggiungere testo, Markdown o spiegazioni nello stesso commento.
-- Ogni nuovo commit invalida tutte le evidenze precedenti. Prima del merge verifica che il gate `codex-review` sia verde e che marker, review o commenti inline del bot si riferiscano all'HEAD corrente.
-- P0 e P1 bloccano il merge: correggi la causa, aggiungi la regressione minima pertinente, pubblica il nuovo HEAD e richiedi una nuova review.
-- P2 e P3 sono advisory soltanto dopo il completamento della review e il periodo di assestamento del gate. Non implementarli senza una richiesta esplicita del proprietario; registrali nel riepilogo finale.
-- Limiti d'uso, `could not complete`, `unknown error` e altri errori operativi non sono approvazioni né finding sul codice. Quando il servizio torna disponibile, ripeti il commento esatto sullo stesso HEAD.
 - Non eseguire il merge finché tutti i required checks non sono verdi e tutte le conversazioni non sono risolte. Dopo il merge rileggi `main`, elimina il branch temporaneo e verifica che checkout e VPS canonica siano puliti, quando la VPS rientra nello scope.
 
 Decidi autonomamente naming, formattazione e default tecnici reversibili. Fermati soltanto per azioni distruttive, prima attivazione, deploy o release non già autorizzati da `Pubblica`, o letture materialmente diverse della richiesta.

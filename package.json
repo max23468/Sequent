@@ -21,7 +21,7 @@
     "shell:check": "bash -n scripts/local/*.sh scripts/vps/*.sh",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "test": "node --test tests/diz/*.test.ts tests/local/*.test.ts tests/official-sources/*.test.ts tests/vps/*.test.ts && npm run test:unit",
-    "test:github": "node --test scripts/codex-review-gate.test.mjs scripts/github/*.test.mjs",
+    "test:github": "node --test scripts/github/*.test.mjs",
     "verify:boundary": "node scripts/check-public-boundary.mjs",
     "verify:rapid": "npm run docs:check && npm run format:check && npm run test:github && npm run verify:boundary",
     "verify:application": "npm run lint && npm run shell:check && npm run check && npm run typecheck && npm run check:tsgo && npm test && npm run build",

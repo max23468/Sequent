@@ -10,7 +10,6 @@ import {
   publicationScope,
   remoteDeletionFailed,
   selectWorkflowRun,
-  shouldRequestCodex,
   waitForPrHead,
 } from "./publish.mjs";
 
@@ -93,26 +92,6 @@ test("attende tutti i check preliminari e fallisce presto sui rossi", () => {
   assert.deepEqual(failed.failed, [PRE_REVIEW_CHECKS[0]]);
 });
 
-test("non duplica l'invocazione Codex per lo stesso reset dell'HEAD", () => {
-  const resetAt = "2026-08-27T10:00:00Z";
-  assert.equal(
-    shouldRequestCodex({
-      resetAt,
-      statusState: "pending",
-      comments: [
-        {
-          author_association: "OWNER",
-          body: "@codex review",
-          created_at: "2026-08-27T10:00:01Z",
-        },
-      ],
-    }),
-    false,
-  );
-  assert.equal(shouldRequestCodex({ resetAt, statusState: "success", comments: [] }), false);
-  assert.equal(shouldRequestCodex({ resetAt, statusState: "pending", comments: [] }), true);
-});
-
 test("attende che GitHub esponga il nuovo HEAD della PR", async () => {
   const snapshots = [
     { number: 17, headRefOid: "old" },
@@ -127,13 +106,6 @@ test("attende che GitHub esponga il nuovo HEAD della PR", async () => {
 
   assert.equal(pr.headRefOid, "new");
   assert.deepEqual(pauses, [10]);
-});
-
-test("invia l'invocazione Codex esatta come campo raw", async () => {
-  const source = await readFile(new URL("./publish.mjs", import.meta.url), "utf8");
-  assert.match(source, /"--raw-field",\s*"body=@codex review"/);
-  assert.doesNotMatch(source, /"--field",\s*"body=@codex review"/);
-  assert.match(source, /scripts\/github\/resolve-advisories\.mjs/);
 });
 
 test("considera riuscita la cancellazione concorrente del branch remoto", () => {

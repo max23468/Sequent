@@ -66,12 +66,7 @@ const DOCUMENTS = [
   /^tests\/(?:integration\/document-ingestion|unit\/launchers)\.test\.ts$/,
   /^scripts\/benchmark\//,
 ];
-const GOVERNANCE = [
-  /^\.github\/workflows\//,
-  /^scripts\/github\//,
-  /^scripts\/codex-review-gate(?:\.test)?\.mjs$/,
-  /^package(?:-lock)?\.json$/,
-];
+const GOVERNANCE = [/^\.github\/workflows\//, /^scripts\/github\//, /^package(?:-lock)?\.json$/];
 
 const TEST_ONLY = [/^tests\//, /(?:^|\.)test\.[cm]?[jt]sx?$/, /^playwright\.config\.ts$/];
 

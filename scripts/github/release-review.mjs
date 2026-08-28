@@ -17,7 +17,6 @@ export function validateReleaseReview({
   pulls,
   reviewedHead,
   reviewedTree,
-  statuses,
 }) {
   const associated = pulls.filter(
     (pull) => pull.merged_at && pull.merge_commit_sha === candidateCommit,
@@ -31,15 +30,6 @@ export function validateReleaseReview({
   if (reviewedTree !== candidateTree) {
     throw new Error("L'albero della candidata diverge dall'HEAD approvato");
   }
-
-  const codexStatus = statuses
-    .filter((status) => status.context === "codex-review")
-    .sort(
-      (left, right) =>
-        new Date(right.updated_at ?? right.created_at).getTime() -
-        new Date(left.updated_at ?? left.created_at).getTime(),
-    )[0];
-  if (codexStatus?.state !== "success") throw new Error("Gate codex-review exact-HEAD non verde");
 
   return { pullRequest: pull.number, reviewedHead, candidateCommit, candidateTree };
 }
@@ -76,11 +66,6 @@ function main() {
     throw new Error("Il ref della pull request diverge dall'HEAD approvato");
   }
   const reviewedTree = output("git", ["rev-parse", "FETCH_HEAD^{tree}"]);
-  const statuses = json("gh", [
-    "api",
-    `repos/${repository}/commits/${reviewedHead}/status`,
-  ]).statuses;
-
   process.stdout.write(
     `${JSON.stringify(
       validateReleaseReview({
@@ -89,7 +74,6 @@ function main() {
         pulls,
         reviewedHead,
         reviewedTree,
-        statuses,
       }),
       null,
       2,

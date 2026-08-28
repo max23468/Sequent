@@ -2581,7 +2581,7 @@ L'elenco definitivo nasce dallo scaffolding; `package.json`, lockfile, Dockerfil
 I finding di Svelte Doctor seguono questa policy:
 
 - ogni finding non soppresso rende rosso il check `svelte-doctor` e blocca il merge, indipendentemente dalla categoria; metriche e punteggio privi di finding non bloccano;
-- non ricevono automaticamente le priorità P0–P3 del gate Codex e non producono modifiche automatiche;
+- non ricevono automaticamente priorità esterne e non producono modifiche automatiche;
 - un finding reale viene corretto prima del merge, con una regressione mirata quando riguarda sicurezza, correttezza, perdita dati o comportamento osservabile;
 - un falso positivo può essere soppresso soltanto con eccezione minima, motivazione versionata e review nella stessa PR; non sono ammessi bypass temporanei, `continue-on-error`, riduzioni globali delle soglie o baseline che nascondano finding nuovi o esistenti;
 - errori operativi, crash o output non interpretabili del tool mantengono il check rosso e richiedono diagnosi o retry, non un bypass;
@@ -2901,13 +2901,7 @@ Un check aggregatore sempre presente verifica che tutti e soltanto i job richies
 
 Svelte Doctor gira una sola volta nelle PR ordinarie e sensibili. Browser e immagine ARM64 sono obbligatori quando la diff tocca i relativi confini; la release esegue sempre entrambi. Prima della release resta obbligatoria la suite completa.
 
-## 46.4 Review Codex exact-HEAD
-
-La review deve riferirsi all'HEAD esatto approvato. Una modifica successiva invalida il gate e imposta subito lo stato pending senza avviare un polling duplicato; il polling riparte soltanto con il primo giro automatico o con un'invocazione esatta autorizzata. La frequenza è breve durante la normale finestra di risposta e rallenta in seguito.
-
-P0 e P1 bloccano. I P2 e P3 vengono registrati in un commento stabile legato all'HEAD e restano advisory. Soltanto i thread automatici P2/P3 privi di una risposta umana vengono risolti dopo la registrazione; un thread con P0/P1 o con intervento umano resta aperto. La protezione generale che richiede la risoluzione delle conversazioni rimane attiva per non nascondere discussioni reali.
-
-## 46.5 Release e attivazione
+## 46.4 Release e attivazione
 
 Il merge su `main` da solo non modifica il servizio attivo. Una richiesta affermativa `Pubblica` approva però l'intero ciclo tecnico applicabile: per sole modifiche documentali, di test o di governance termina dopo merge e pulizia; per una modifica runtime include candidata completa e, quando esiste già una release attiva e il workflow Production è qualificato, deploy, readback live e GitHub Release senza una seconda conferma.
 
@@ -3083,7 +3077,7 @@ Golden file, modifiche one-field, round-trip semantico, unknown blocks, allegati
 
 ## 48.9 Gate CI
 
-Ogni PR e ogni release mantengono il livello di controllo definito in «Repository e workflow Git» e «Versioning, release e aggiornamenti», inclusi Oxfmt, Oxlint, Svelte check, test, build, E2E pertinenti, browser matrix di release, benchmark e review Codex exact-HEAD. Non esiste un gate separato di tracciabilità documentale.
+Ogni PR e ogni release mantengono il livello di controllo definito in «Repository e workflow Git» e «Versioning, release e aggiornamenti», inclusi Oxfmt, Oxlint, Svelte check, test, build, E2E pertinenti, browser matrix di release e benchmark. Non esiste un gate separato di tracciabilità documentale.
 
 Dallo scaffolding SvelteKit, Svelte Doctor gira in CI sulle PR ordinarie e sensibili e nella matrice completa di release. Il suo risultato confluisce nel check aggregatore required. Qualunque finding, errore operativo o output non interpretabile rende rosso il check; soltanto una soppressione stretta e motivata di un falso positivo può ripristinarlo. Il job non applica fix e non carica sorgenti, prompt o risultati verso servizi AI esterni.
 
@@ -3271,7 +3265,7 @@ Le release seguono `MAJOR.MINOR.PATCH`: major per cambiamenti incompatibili deli
 
 Il checkout `/opt/sequent/repo/` può contenere branch e modifiche in corso senza influire sul servizio. Una candidata nasce dopo merge su `main`, supera i gate e diventa la release attiva soltanto dentro un ciclo tecnico approvato dall'owner. La richiesta affermativa `Pubblica` costituisce tale approvazione per gli aggiornamenti di un runtime già attivo; la prima attivazione richiede invece un'autorizzazione esplicita separata.
 
-La pubblicazione può essere orchestrata da un comando unico che verifica branch, working tree, classificazione, preflight locale, PR, required checks, review exact-HEAD, squash merge, identità dell'albero Git, eliminazione del branch e rilettura finale. Il comando resta in dry-run senza l'opzione esplicita di esecuzione. Con `--execute`, usato soltanto dopo `Pubblica`, completa anche la candidata per le modifiche runtime e il deploy/readback quando rileva una Production già attiva e il relativo workflow qualificato. Modifiche esclusivamente documentali, di test o di governance non producono immagini, release o deploy.
+La pubblicazione può essere orchestrata da un comando unico che verifica branch, working tree, classificazione, preflight locale, PR, required checks, squash merge, identità dell'albero Git, eliminazione del branch e rilettura finale. Il comando resta in dry-run senza l'opzione esplicita di esecuzione. Con `--execute`, usato soltanto dopo `Pubblica`, completa anche la candidata per le modifiche runtime e il deploy/readback quando rileva una Production già attiva e il relativo workflow qualificato. Modifiche esclusivamente documentali, di test o di governance non producono immagini, release o deploy.
 
 L'impatto runtime viene valutato in modo conservativo. Un percorso sconosciuto presume impatto runtime; il diff operativo della distribuzione parte dall'ultima release attiva verificata, così più merge runtime correlati vengono distribuiti insieme una sola volta. Versione e changelog, quando richiesti, sono completati nella stessa pull request della modifica runtime.
 
@@ -3292,7 +3286,6 @@ Restano confermati i gate rigorosi già scelti:
 - benchmark OCR/Codex;
 - build ARM64 e scansione dipendenze/immagine; errori dello scanner e vulnerabilità con fix disponibile bloccano la candidata, indipendentemente dalla severità. Le vulnerabilità senza fix distribuibile, incluse quelle Critical, restano advisory accettate e tracciate: conteggi, severità e identificativi devono rimanere visibili fino all'aggiornamento della base o dei converter;
 - browser matrix;
-- review Codex exact-HEAD;
 - nessun blocker aperto;
 - rollback verificabile;
 - chiusura dei Technical Gate pertinenti, incluso `TG-COMPLIANCE`;
@@ -3717,7 +3710,7 @@ Dopo il completamento dello sviluppo, se un ambiente Windows è già disponibile
 | SEQ-S05 | Logging ordinario e diagnostica opt-in temporanea                                                                                    |
 | SEQ-E01 | SvelteKit/Node/TypeScript, processo unico, SQLite e filesystem                                                                       |
 | SEQ-E02 | Oxfmt/Oxlint senza Prettier/ESLint diretti                                                                                           |
-| SEQ-E03 | Unica istanza VPS; checkout separato dal runtime; CI, review Codex exact-HEAD, release approvata e deploy automatico in manutenzione |
+| SEQ-E03 | Unica istanza VPS; checkout separato dal runtime; CI, release approvata e deploy automatico in manutenzione |
 | SEQ-E04 | Dependabot settimanale secondo la policy confermata                                                                                  |
 | SEQ-E05 | Semantic Versioning, rollback e compatibilità SuccessioniOnLine versionata                                                           |
 

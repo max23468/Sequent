@@ -18,13 +18,6 @@ const evidence = {
       head: { sha: reviewedHead },
     },
   ],
-  statuses: [
-    {
-      context: "codex-review",
-      state: "success",
-      updated_at: "2026-08-27T08:00:00Z",
-    },
-  ],
 };
 
 test("lega la candidata squash all'albero dell'HEAD approvato", () => {
@@ -36,17 +29,9 @@ test("lega la candidata squash all'albero dell'HEAD approvato", () => {
   });
 });
 
-test("blocca albero divergente o gate exact-HEAD rosso", () => {
+test("blocca un albero divergente", () => {
   assert.throws(
     () => validateReleaseReview({ ...evidence, reviewedTree: "d".repeat(40) }),
     /albero della candidata diverge/,
-  );
-  assert.throws(
-    () =>
-      validateReleaseReview({
-        ...evidence,
-        statuses: [{ context: "codex-review", state: "failure" }],
-      }),
-    /non verde/,
   );
 });
