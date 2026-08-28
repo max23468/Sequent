@@ -30,6 +30,11 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.doesNotMatch(deploy, /fail\(\) \{[^}]*exit 1[^}]*\}/);
   assert.match(deploy, /SEQUENT_DEPLOY_MAX_DISK_PERCENT:-79/);
   assert.match(deploy, /SEQUENT_RELEASE_RETENTION_COUNT:-2/);
+  assert.match(
+    deploy,
+    /required_bytes=\$\(\(2 \* archive_bytes \+ 2 \* data_bytes \+ safety_bytes\)\)/,
+  );
+  assert.match(deploy, /available_bytes >= required_bytes/);
   assert.match(deploy, /release-artifact\.mjs" verify/);
   assert.match(deploy, /migration-\$commit/);
   assert.match(deploy, /source\.backup\(destination\)/);
@@ -37,6 +42,10 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /PRAGMA foreign_key_check/);
   assert.match(deploy, /status IN \('queued', 'running'\)/);
   assert.match(deploy, /rsync --archive --delete "\$snapshot\/data\/" "\$root\/data\/"/);
+  assert.match(deploy, /trap 'handle_signal 129' HUP/);
+  assert.match(deploy, /trap 'handle_signal 130' INT/);
+  assert.match(deploy, /trap 'handle_signal 143' TERM/);
+  assert.match(deploy, /snapshot_started.*rm -rf --one-file-system "\$snapshot"/s);
   assert.match(deploy, /up --detach --no-build --force-recreate/);
   assert.match(deploy, /\.deployment-maintenance/);
   assert.match(deploy, /\$SEQUENT_ORIGIN\/api\/health/);

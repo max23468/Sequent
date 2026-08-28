@@ -61,6 +61,14 @@ flock -n 9 || fail "una build, un deploy o una manutenzione Docker è già in co
 disk_percent="$(df -P "$root" | awk 'NR == 2 { gsub(/%/, "", $5); print $5 }')"
 [[ "$disk_percent" =~ ^[0-9]+$ ]] || fail "utilizzo disco non interpretabile"
 ((disk_percent <= max_disk_percent)) || fail "utilizzo disco oltre la soglia di sicurezza"
+available_bytes="$(df --output=avail --block-size=1 "$root" | awk 'NR == 2 { print $1 }')"
+archive_bytes="$(stat -c '%s' "$archive")"
+data_bytes="$(du --summarize --block-size=1 "$root/data" | awk '{ print $1 }')"
+[[ "$available_bytes" =~ ^[0-9]+$ && "$archive_bytes" =~ ^[0-9]+$ && "$data_bytes" =~ ^[0-9]+$ ]] ||
+  fail "stima dello spazio non interpretabile"
+safety_bytes=$((2 * 1024 * 1024 * 1024))
+required_bytes=$((2 * archive_bytes + 2 * data_bytes + safety_bytes))
+((available_bytes >= required_bytes)) || fail "spazio insufficiente per artefatto, prove e rollback"
 
 [[ "$(git -C "$repository" rev-parse HEAD)" == "$commit" ]] || fail "checkout non exact-commit"
 git -C "$repository" diff --quiet || fail "checkout modificato"
@@ -131,17 +139,28 @@ migration_container="sequent-migration-$commit-$$"
 snapshot="$root/snapshots/$deployment_stamp-$previous_commit"
 release_dir="$root/releases/$commit"
 rollback_armed=false
+snapshot_started=false
+transaction_complete=false
+release_was_present=false
 
 cleanup() {
   docker rm --force "$migration_container" >/dev/null 2>&1 || true
   if [[ "$migration_copy" == "$root/tmp/migration-"* ]]; then
     rm -rf --one-file-system "$migration_copy"
   fi
+  if [[ "$transaction_complete" == false && "$snapshot_started" == true \
+    && "$rollback_armed" == false && "$snapshot" == "$root/snapshots/"* ]]; then
+    rm -rf --one-file-system "$snapshot"
+  fi
+  if [[ "$transaction_complete" == false && "$release_was_present" == false \
+    && "$release_dir" == "$root/releases/"* ]]; then
+    rm -rf --one-file-system "$release_dir"
+  fi
 }
 
 rollback() {
-  status=$?
-  trap - ERR
+  status="${1:-$?}"
+  trap - ERR HUP INT TERM
   if [[ "$rollback_armed" == true ]]; then
     echo "Deploy fallito: ripristino automatico dell'immagine precedente" >&2
     "${compose[@]}" down --remove-orphans >/dev/null 2>&1 || true
@@ -152,6 +171,10 @@ rollback() {
   fi
   cleanup
   exit "$status"
+}
+
+handle_signal() {
+  rollback "$1"
 }
 
 prune_old_directories() {
@@ -170,6 +193,9 @@ prune_old_directories() {
     sort -rn | cut -d' ' -f2-)
 }
 trap rollback ERR
+trap 'handle_signal 129' HUP
+trap 'handle_signal 130' INT
+trap 'handle_signal 143' TERM
 trap cleanup EXIT
 
 install -d -o sequent-runtime -g sequent-runtime -m 0700 "$migration_copy"
@@ -206,6 +232,7 @@ docker rm --force "$migration_container" >/dev/null
 [[ -f "$migration_copy/sequent.sqlite" ]] && check_database "$migration_copy/sequent.sqlite"
 
 install -d -o ubuntu -g ubuntu -m 0700 "$snapshot/data"
+snapshot_started=true
 install -o ubuntu -g ubuntu -m 0600 "$runtime_env" "$snapshot/runtime.env"
 install -o ubuntu -g ubuntu -m 0640 "$runtime_compose" "$snapshot/compose.yml"
 rsync --archive --delete --exclude='sequent.sqlite' --exclude='sequent.sqlite-wal' \
@@ -231,6 +258,7 @@ maintenance_marker="$root/data/.deployment-maintenance"
 install -o "$SEQUENT_RUNTIME_UID" -g "$SEQUENT_RUNTIME_GID" -m 0600 /dev/null \
   "$maintenance_marker"
 
+[[ ! -e "$release_dir" ]] || release_was_present=true
 install -d -o ubuntu -g ubuntu -m 0750 "$release_dir"
 install -o ubuntu -g ubuntu -m 0640 "$manifest" "$release_dir/release-manifest.json"
 install -o ubuntu -g ubuntu -m 0640 "$archive" "$release_dir/sequent-release-arm64.tar"
@@ -309,7 +337,8 @@ chown ubuntu:ubuntu "$release_dir/deployment.json"
 
 rm "$maintenance_marker"
 rollback_armed=false
-trap - ERR
+transaction_complete=true
+trap - ERR HUP INT TERM
 prune_old_directories "$root/releases" '^[0-9a-f]{40}$' ||
   echo "Avviso: retention delle release non completata" >&2
 prune_old_directories "$root/snapshots" '^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{40}$' ||
