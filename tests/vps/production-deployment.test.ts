@@ -65,6 +65,7 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   );
   assert.match(deploy, /available_bytes >= required_bytes/);
   assert.match(deploy, /release-artifact\.mjs" verify/);
+  assert.match(deploy, /--commit "\$commit" --tree "\$candidate_tree"/);
   assert.match(deploy, /migration-\$commit/);
   assert.match(deploy, /source\.backup\(destination\)/);
   assert.match(deploy, /PRAGMA quick_check/);
@@ -98,6 +99,20 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /sequent-production-deployment\/v1/);
   assert.match(deploy, /sequent-docker-prune\.timer/);
   assert.doesNotMatch(deploy, /docker (?:image )?prune|docker build|\bcaddy\b|\bdynu\b|\bufw\b/i);
+
+  const previousImage = deploy.indexOf(
+    'previous_image_id="$(docker inspect --format \'{{.Image}}\' "$current_container")"',
+  );
+  const immutableRollbackEnv = deploy.indexOf(
+    'write_trusted_runtime_env "$previous_runtime_image"',
+    previousImage,
+  );
+  const artifactLoad = deploy.indexOf('release-artifact.mjs" verify', immutableRollbackEnv);
+  assert.ok(
+    previousImage >= 0 &&
+      previousImage < immutableRollbackEnv &&
+      immutableRollbackEnv < artifactLoad,
+  );
 
   const maintenance = deploy.indexOf(
     'install -o "$runtime_uid" -g "$runtime_gid" -m 0600 /dev/null "$maintenance_marker"',
@@ -155,6 +170,11 @@ test("il deploy trusted non esegue Git come root", () => {
   assert.match(deploy, /git_as_checkout_owner rev-parse 'HEAD\^\{tree\}'/);
   assert.equal(deploy.match(/\/usr\/bin\/git -C/g)?.length, 1);
   assert.doesNotMatch(deploy, /^\s*git -C/m);
+  const artifact = read("scripts/github/release-artifact.mjs");
+  const verify = artifact.slice(artifact.indexOf("async function verify"));
+  assert.match(verify, /commit: value\(args, "--commit"\)/);
+  assert.match(verify, /tree: value\(args, "--tree"\)/);
+  assert.doesNotMatch(verify, /output\("git"/);
 });
 
 test("la manutenzione Docker protegge anche un runtime selezionato per image ID", () => {

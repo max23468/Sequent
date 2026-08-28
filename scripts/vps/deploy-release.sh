@@ -171,6 +171,8 @@ required_bytes=$((2 * archive_bytes + 2 * data_bytes + safety_bytes))
   fail "checkout non exact-commit"
 git_as_checkout_owner diff --quiet || fail "checkout modificato"
 git_as_checkout_owner diff --cached --quiet || fail "index modificato"
+candidate_tree="$(git_as_checkout_owner rev-parse 'HEAD^{tree}')"
+[[ "$candidate_tree" =~ ^[0-9a-f]{40}$ ]] || fail "tree candidato non leggibile"
 cd "$checkout_repository"
 
 candidate_compose=(docker compose --project-name sequent --env-file "$trusted_runtime_env" \
@@ -182,6 +184,8 @@ current_container="$("${candidate_compose[@]}" ps --quiet sequent)"
 previous_image_id="$(docker inspect --format '{{.Image}}' "$current_container")"
 previous_commit="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$previous_image_id")"
 [[ "$previous_commit" =~ ^[0-9a-f]{40}$ ]] || fail "commit precedente non leggibile"
+previous_runtime_image="$previous_image_id"
+write_trusted_runtime_env "$previous_runtime_image"
 rollback_compose_file="$(mktemp /run/sequent-rollback-compose.XXXXXX)"
 git_as_checkout_owner show "$previous_commit:deploy/compose.example.yml" \
   >"$rollback_compose_file" || fail "Compose del rollback non ricostruibile dal commit precedente"
@@ -213,7 +217,7 @@ PY
 
 SEQUENT_NODE_SLOT=current "$repository/scripts/vps/with-node.sh" node \
   "$repository/scripts/github/release-artifact.mjs" verify \
-  --archive "$archive" --manifest "$manifest"
+  --archive "$archive" --manifest "$manifest" --commit "$commit" --tree "$candidate_tree"
 
 readarray -t artifact_identity < <(SEQUENT_NODE_SLOT=current "$repository/scripts/vps/with-node.sh" node - "$manifest" <<'NODE'
 const manifest = require(process.argv[2]);
@@ -225,7 +229,7 @@ NODE
 )
 [[ "${artifact_identity[0]}" == "sequent-release-artifact/v1" ]] || fail "schema manifest non valido"
 [[ "${artifact_identity[1]}" == "$commit" ]] || fail "commit manifest divergente"
-[[ "${artifact_identity[2]}" == "$(git_as_checkout_owner rev-parse 'HEAD^{tree}')" ]] ||
+[[ "${artifact_identity[2]}" == "$candidate_tree" ]] ||
   fail "tree manifest divergente"
 [[ "${artifact_identity[3]}" == "linux/arm64" ]] || fail "piattaforma manifest divergente"
 [[ "${artifact_identity[4]}" == "sequent-release:$commit" ]] || fail "tag manifest divergente"
