@@ -196,7 +196,11 @@
                   <strong>{deadline.label}</strong>
                   <small>{deadline.practiceTitle} · {deadline.timingLabel}</small>
                 </span>
-                <time datetime={deadline.dueDate}>{formatItalianDate(deadline.dueDate)}</time>
+                {#if deadline.dueDate}
+                  <time datetime={deadline.dueDate}>{formatItalianDate(deadline.dueDate)}</time>
+                {:else}
+                  <span class="deadline-to-check">Da verificare</span>
+                {/if}
                 <ChevronRight size={19} aria-hidden="true" />
               </a>
             </li>

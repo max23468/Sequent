@@ -137,8 +137,16 @@ export function createSuccessiveDeclaration(
   if (!source) throw new Error("DECLARATION_NOT_FOUND");
   const id = randomUUID();
   const now = new Date().toISOString();
+  const copiedFields = Object.fromEntries(
+    Object.entries(structuredClone(source.declaration.fields)).filter(
+      ([, field]) =>
+        field.fieldId !==
+        "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/DecorrenzaTerminePresentazione",
+    ),
+  );
   const snapshot: DeclarationSnapshot = {
     ...structuredClone(source.declaration),
+    fields: copiedFields,
     declarationKind: kind,
     confirmedDevolutionScenarioId: null,
     latestCalculationRunId: null,

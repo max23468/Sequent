@@ -606,6 +606,33 @@ function applyCalculationResultsV2Migration(database: Database.Database): void {
   })();
 }
 
+function applyCalculationRulesV3Migration(database: Database.Database): void {
+  database.transaction(() => {
+    const alreadyApplied = database
+      .prepare("SELECT 1 FROM schema_migrations WHERE version = 9")
+      .get();
+    if (alreadyApplied) return;
+
+    // Il valore fiscale ufficiale e i due conteggi territoriali sono ora distinti.
+    // I risultati precedenti sono derivati: vengono eliminati per imporre un nuovo calcolo.
+    database.exec("DELETE FROM calculation_runs");
+    const declarations = database
+      .prepare("SELECT id, declaration_json FROM declarations")
+      .all() as Array<{ id: string; declaration_json: string }>;
+    const updateDeclaration = database.prepare(
+      "UPDATE declarations SET declaration_json = ?, updated_at = ? WHERE id = ?",
+    );
+    const now = new Date().toISOString();
+    for (const declaration of declarations) {
+      const snapshot = JSON.parse(declaration.declaration_json) as Record<string, unknown>;
+      snapshot.latestCalculationRunId = null;
+      snapshot.rulesetVersion = "2026.08.5";
+      updateDeclaration.run(JSON.stringify(snapshot), now, declaration.id);
+    }
+    database.prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (9, ?)").run(now);
+  })();
+}
+
 function applyMigrations(database: Database.Database): void {
   database.exec(foundationMigration);
   database
@@ -620,6 +647,7 @@ function applyMigrations(database: Database.Database): void {
   applyDeclarationSubjectSnapshotsMigration(database);
   applyOfficialAttachmentsMigration(database);
   applyCalculationResultsV2Migration(database);
+  applyCalculationRulesV3Migration(database);
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

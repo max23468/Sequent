@@ -145,7 +145,7 @@ describe("persistenza del procedimento", () => {
     const asset = createSharedAsset(database, practice.id, {
       kind: "building",
       displayName: "Fabbricato sintetico",
-      valueCents: 20_000_000n,
+      valueCents: 10_000_000n,
     });
     saveCanonicalField(database, {
       practiceId: practice.id,
@@ -220,7 +220,12 @@ describe("persistenza del procedimento", () => {
     });
     expect(calculation).toMatchObject({ status: "blocked", totalTaxCents: 660_000n });
     expect(calculation.issues.map(({ id }) => id)).not.toContain("CALCULATION_RULES_INCOMPLETE");
-    expect(calculation.issues.map(({ id }) => id)).toContain("CALCULATION_JURISDICTIONS_MISSING");
+    expect(calculation.issues.map(({ id }) => id)).toEqual(
+      expect.arrayContaining([
+        "CALCULATION_MORTGAGE_JURISDICTIONS_MISSING",
+        "CALCULATION_STAMP_DUTY_JURISDICTIONS_MISSING",
+      ]),
+    );
     expect(() =>
       confirmCalculationRun(database, {
         practiceId: practice.id,
@@ -515,8 +520,8 @@ describe("persistenza del procedimento", () => {
     const report = buildComplianceReport(database, practice.id, practice.declarationId);
     expect(new Set(report.issues.map((issue) => issue.message)).size).toBe(report.issues.length);
     expect(report.qualification).toMatchObject({
-      calculationRulesVersion: "2026.08.4",
-      temporalRulesVersion: "2026.08.4",
+      calculationRulesVersion: "2026.08.5",
+      temporalRulesVersion: "2026.08.5",
       officialControl: { name: "SUC13", version: "2.3.1", blockingDiagnostics: 0 },
       attachments: { files: 0, totalBytes: 0, motivatedExceptions: 0 },
     });
@@ -693,6 +698,43 @@ describe("persistenza del procedimento", () => {
       expect.objectContaining({
         timing: "overdue",
         timingLabel: "Scaduta da 1 giorno",
+      }),
+    );
+
+    saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 2,
+      fieldId:
+        "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/DecorrenzaTerminePresentazione",
+      value: "01092025",
+    });
+    expect(listPracticeDeadlines(database, "2026-08-10")[0]).toEqual(
+      expect.objectContaining({
+        dueDate: "2026-09-01",
+        timing: "soon",
+        timingLabel: "Scade tra 22 giorni",
+      }),
+    );
+
+    const substitute = createSuccessiveDeclaration(
+      database,
+      practice.id,
+      practice.declarationId,
+      "substitute-1",
+    );
+    expect(
+      getCanonicalField(
+        substitute.declaration,
+        "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/DecorrenzaTerminePresentazione",
+      ),
+    ).toBeUndefined();
+    expect(listPracticeDeadlines(database, "2026-08-10")[0]).toEqual(
+      expect.objectContaining({
+        dueDate: null,
+        timing: "unqualified",
+        timingLabel:
+          "Decorrenza particolare: indica la data da cui parte il termine di dodici mesi",
       }),
     );
   });

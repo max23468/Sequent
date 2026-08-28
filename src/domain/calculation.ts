@@ -4,7 +4,7 @@ import {
   usufructCoefficientForAge,
 } from "./temporal-rules.ts";
 
-export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.4" as const;
+export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.5" as const;
 
 export interface BeneficiaryTaxInput {
   beneficiaryId: string;
@@ -337,7 +337,8 @@ export function calculateDeductibleRecentMaintenanceDebtCents(input: {
 
 export interface DeclarationTaxOptions {
   openingDate: string;
-  jurisdictionCount: number;
+  mortgageJurisdictionCount: number;
+  stampDutyJurisdictionCount: number;
   automaticLandRegistry: boolean;
   copyRequested: boolean;
   paymentTiming: 1 | 2;
@@ -440,11 +441,17 @@ function groupAllocationsByAsset(
     group.push(allocation);
     groups.set(allocation.assetId, group);
   }
-  return [...groups.entries()].map(([assetId, groupedAllocations]) => ({
-    assetId,
-    allocations: groupedAllocations,
-    valueCents: groupedAllocations.reduce((sum, allocation) => sum + allocation.valueCents, 0n),
-  }));
+  return [...groups.entries()].map(([assetId, groupedAllocations]) => {
+    const officialValues = new Set(
+      groupedAllocations.map(({ assetValueCents }) => assetValueCents),
+    );
+    if (officialValues.size !== 1) throw new Error("VALORE_FISCALE_BENE_NON_COHERENTE");
+    return {
+      assetId,
+      allocations: groupedAllocations,
+      valueCents: groupedAllocations[0]?.assetValueCents ?? 0n,
+    };
+  });
 }
 
 export function calculateDeclarationTaxSummary(
@@ -452,7 +459,12 @@ export function calculateDeclarationTaxSummary(
   successionTaxCents: bigint,
   options: DeclarationTaxOptions,
 ): DeclarationTaxSummary {
-  if (!Number.isInteger(options.jurisdictionCount) || options.jurisdictionCount < 0)
+  if (
+    !Number.isInteger(options.mortgageJurisdictionCount) ||
+    options.mortgageJurisdictionCount < 0 ||
+    !Number.isInteger(options.stampDutyJurisdictionCount) ||
+    options.stampDutyJurisdictionCount < 0
+  )
     throw new Error("NUMERO_CIRCOSCRIZIONI_NON_VALIDO");
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(options.openingDate)) throw new Error("DATA_NON_VALIDA");
   const assessmentMode = applicableLegalFramework(options.openingDate).assessmentMode;
@@ -599,9 +611,10 @@ export function calculateDeclarationTaxSummary(
   );
   const successionPayable = successionDifference <= 1_000n ? 0n : successionDifference;
   const mortgageServicesCents =
-    BigInt(options.jurisdictionCount) * BigInt(options.automaticLandRegistry ? 12_000 : 6_500);
+    BigInt(options.mortgageJurisdictionCount) *
+    BigInt(options.automaticLandRegistry ? 12_000 : 6_500);
   const stampDutyCents =
-    BigInt(options.jurisdictionCount) * 8_500n + (options.copyRequested ? 3_200n : 0n);
+    BigInt(options.stampDutyJurisdictionCount) * 8_500n + (options.copyRequested ? 3_200n : 0n);
   const specialTaxesCents = options.copyRequested ? 1_600n : 0n;
   const penaltiesCents = (options.penaltiesCents ?? []).reduce((sum, value) => sum + value, 0n);
   const interestCents = (options.interestCents ?? []).reduce((sum, value) => sum + value, 0n);

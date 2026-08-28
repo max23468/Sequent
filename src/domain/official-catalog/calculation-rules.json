@@ -231,7 +231,7 @@
     "PAGAMENTO-RATEAZIONE",
     "SELEZIONE-TEMPORALE"
   ],
-  "rulesetVersion": "2026.08.4",
+  "rulesetVersion": "2026.08.5",
   "goldenExamples": [
     {
       "id": "SRC10-fratelli-esempio-completo",

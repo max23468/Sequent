@@ -302,8 +302,8 @@ export interface PracticeDeadlineSummary {
   practiceId: string;
   practiceTitle: string;
   label: "Presentazione della dichiarazione";
-  dueDate: string;
-  timing: "overdue" | "today" | "soon" | "upcoming";
+  dueDate: string | null;
+  timing: "overdue" | "today" | "soon" | "upcoming" | "unqualified";
   timingLabel: string;
   sourceId: "SRC-05";
 }
@@ -1736,7 +1736,31 @@ export function runSuccessionCalculation(
       });
     return { id: beneficiaryId, relationshipCode, subjectType, disabled };
   });
-  const allocations: SuccessionAllocation[] = scenario.shares.map((share) => {
+  const currentShareValues = new Map<number, bigint>();
+  for (const asset of assets.values()) {
+    const assetShares = scenario.shares.flatMap((share, index) =>
+      share.assetId === asset.id
+        ? [{ index, numerator: share.numerator, denominator: share.denominator }]
+        : [],
+    );
+    if (assetShares.length === 0) continue;
+    const allocated = allocateConservedCents(BigInt(asset.valueCents), assetShares);
+    if (!allocated) {
+      issues.push({
+        id: "CALCULATION_OFFICIAL_VALUE_ALLOCATION_INVALID",
+        level: "blocking",
+        fieldId: null,
+        entityId: asset.id,
+        message:
+          "Le quote del bene non consentono di ripartire correttamente il valore fiscale indicato nel Quadro.",
+        sourceId: "SRC-10",
+        sourcePointer: "Valore fiscale e devoluzione del bene",
+      });
+      continue;
+    }
+    for (const [index, value] of allocated) currentShareValues.set(index, value);
+  }
+  const allocations: SuccessionAllocation[] = scenario.shares.map((share, index) => {
     const asset = assets.get(share.assetId ?? "");
     const beneficiary = beneficiaries.find((candidate) => candidate.id === share.beneficiaryId);
     const municipalityField = asset ? assetCatalogField(asset, "CodiceComune") : null;
@@ -1753,7 +1777,7 @@ export function runSuccessionCalculation(
       assetId: share.assetId ?? "",
       beneficiaryId: share.beneficiaryId,
       treatment: asset?.treatment ?? "estate",
-      valueCents: share.valueCents,
+      valueCents: currentShareValues.get(index) ?? 0n,
       assetValueCents: BigInt(asset?.valueCents ?? 0),
       reliefCode: share.reliefCode,
       reductionYears:
@@ -1771,23 +1795,52 @@ export function runSuccessionCalculation(
     };
   });
   const result = calculateSuccessionTax(beneficiaries, allocations);
-  const jurisdictionText = technicalFieldValue(
+  const mortgageJurisdictionText = technicalFieldValue(
     declaration.declaration,
     `${EF_PATH}/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero`,
   );
-  const jurisdictionCount = /^\d+$/u.test(jurisdictionText) ? Number(jurisdictionText) : 0;
+  const stampDutyJurisdictionText = technicalFieldValue(
+    declaration.declaration,
+    `${EF_PATH}/SezioneIV_ImpostaBollo/Circoscrizioni_Numero`,
+  );
+  const mortgageJurisdictionCount = /^\d+$/u.test(mortgageJurisdictionText)
+    ? Number(mortgageJurisdictionText)
+    : 0;
+  const stampDutyJurisdictionCount = /^\d+$/u.test(stampDutyJurisdictionText)
+    ? Number(stampDutyJurisdictionText)
+    : 0;
   const hasOrdinaryProperty = allocations.some(
     (allocation) => allocation.assetKind === "land" || allocation.assetKind === "building",
   );
-  if (hasOrdinaryProperty && jurisdictionText === "")
-    issues.push({
-      id: "CALCULATION_JURISDICTIONS_MISSING",
-      level: "blocking",
-      fieldId: `xsd:${EF_PATH}/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero`,
-      message: "Indica nel Quadro EF il numero delle circoscrizioni immobiliari interessate.",
-      sourceId: "SRC-08",
-      sourcePointer: "Quadro EF, rigo EF15",
-    });
+  if (hasOrdinaryProperty) {
+    const requiredJurisdictionFields = [
+      {
+        kind: "MORTGAGE",
+        text: mortgageJurisdictionText,
+        fieldId: `xsd:${EF_PATH}/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero`,
+        row: "EF15",
+        taxLabel: "tassa ipotecaria",
+      },
+      {
+        kind: "STAMP_DUTY",
+        text: stampDutyJurisdictionText,
+        fieldId: `xsd:${EF_PATH}/SezioneIV_ImpostaBollo/Circoscrizioni_Numero`,
+        row: "EF16",
+        taxLabel: "imposta di bollo",
+      },
+    ] as const;
+    for (const field of requiredJurisdictionFields) {
+      if (field.text !== "") continue;
+      issues.push({
+        id: `CALCULATION_${field.kind}_JURISDICTIONS_MISSING`,
+        level: "blocking",
+        fieldId: field.fieldId,
+        message: `Indica nel Quadro EF il numero di circoscrizioni per la ${field.taxLabel}.`,
+        sourceId: "SRC-08",
+        sourcePointer: `Quadro EF, rigo ${field.row}`,
+      });
+    }
+  }
   const centsAt = (path: string) =>
     technicalWholeEuroCents(declaration.declaration, `${EF_PATH}/${path}`) ?? 0n;
   const paymentTimingText = technicalFieldValue(
@@ -1813,7 +1866,8 @@ export function runSuccessionCalculation(
       : "2026-08-27";
   let declarationTaxes = calculateDeclarationTaxSummary(allocations, result.totalTaxCents, {
     openingDate: openingDateForCalculation,
-    jurisdictionCount,
+    mortgageJurisdictionCount,
+    stampDutyJurisdictionCount,
     automaticLandRegistry:
       technicalFieldValue(
         declaration.declaration,
@@ -1901,7 +1955,8 @@ export function runSuccessionCalculation(
   }
   declarationTaxes = calculateDeclarationTaxSummary(allocations, result.totalTaxCents, {
     openingDate: openingDateForCalculation,
-    jurisdictionCount,
+    mortgageJurisdictionCount,
+    stampDutyJurisdictionCount,
     automaticLandRegistry:
       technicalFieldValue(
         declaration.declaration,
@@ -2618,11 +2673,50 @@ export function listPracticeDeadlines(
     .flatMap((practice): PracticeDeadlineSummary[] => {
       const declaration = getDeclaration(database, practice.declarationId, practice.id);
       const openingDate = declaration?.declaration.successionOpenedAt;
-      if (!openingDate) return [];
+      if (!declaration || !openingDate) return [];
+
+      const alternativeStartText = technicalFieldValue(
+        declaration.declaration,
+        "/Fornitura/Dichiarazione/Frontespizio/Presentatore/DecorrenzaTerminePresentazione",
+      );
+      const alternativeStart = officialDateToIso(alternativeStartText);
+      const presenterRole = technicalFieldValue(
+        declaration.declaration,
+        "/Fornitura/Dichiarazione/Frontespizio/Presentatore/CodiceCarica",
+      );
+      const hasAlternativeEvent =
+        declaration.declaration.declarationKind !== "first" ||
+        ["3", "4", "5", "6", "7", "8", "9"].includes(presenterRole) ||
+        technicalFieldValue(
+          declaration.declaration,
+          "/Fornitura/Dichiarazione/Frontespizio/Beneficiari/AccettazioneConBeneficioInventario",
+        ) === "1" ||
+        Object.values(declaration.declaration.fields).some(
+          (field) =>
+            (field.fieldId === "quadro-ea.soggetto.rinuncia" && String(field.value) === "1") ||
+            (field.fieldId ===
+              "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/MortePresunta/DataDeposito" &&
+              field.value !== "" &&
+              field.value !== null),
+        );
+
+      if (hasAlternativeEvent && !alternativeStart)
+        return [
+          {
+            practiceId: practice.id,
+            practiceTitle: practice.title,
+            label: "Presentazione della dichiarazione",
+            dueDate: null,
+            timing: "unqualified",
+            timingLabel:
+              "Decorrenza particolare: indica la data da cui parte il termine di dodici mesi",
+            sourceId: "SRC-05",
+          },
+        ];
 
       let dueDate: string;
       try {
-        dueDate = ordinaryDeclarationDeadline(openingDate);
+        dueDate = ordinaryDeclarationDeadline(alternativeStart ?? openingDate);
       } catch {
         return [];
       }
@@ -2649,7 +2743,11 @@ export function listPracticeDeadlines(
         },
       ];
     })
-    .sort((left, right) => left.dueDate.localeCompare(right.dueDate));
+    .sort((left, right) => {
+      if (left.dueDate === null) return right.dueDate === null ? 0 : 1;
+      if (right.dueDate === null) return -1;
+      return left.dueDate.localeCompare(right.dueDate);
+    });
 }
 
 type QuadroField = ReturnType<typeof listQuadroFields>[number];

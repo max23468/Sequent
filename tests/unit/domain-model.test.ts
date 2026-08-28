@@ -328,7 +328,7 @@ describe("motori deterministici", () => {
           assetId: "fabbricato-ordinario",
           beneficiaryId: "beneficiario",
           treatment: "estate",
-          valueCents: 20_000_000n,
+          valueCents: 15_000_000n,
           assetValueCents: 20_000_000n,
           assetKind: "building",
           municipalityCode: "H501",
@@ -363,7 +363,8 @@ describe("motori deterministici", () => {
       500_000n,
       {
         openingDate: "2025-10-22",
-        jurisdictionCount: 2,
+        mortgageJurisdictionCount: 2,
+        stampDutyJurisdictionCount: 1,
         automaticLandRegistry: true,
         copyRequested: true,
         paymentTiming: 2,
@@ -393,9 +394,9 @@ describe("motori deterministici", () => {
     expect(summary).toMatchObject({
       assessmentMode: "self-assessment",
       mortgageServicesCents: 24_000n,
-      stampDutyCents: 20_200n,
+      stampDutyCents: 11_700n,
       specialTaxesCents: 1_600n,
-      totalAtSubmissionCents: 785_800n,
+      totalAtSubmissionCents: 777_300n,
     });
   });
 
@@ -434,7 +435,8 @@ describe("motori deterministici", () => {
       0n,
       {
         openingDate: "2025-10-22",
-        jurisdictionCount: 0,
+        mortgageJurisdictionCount: 0,
+        stampDutyJurisdictionCount: 0,
         automaticLandRegistry: true,
         copyRequested: false,
         paymentTiming: 1,
@@ -462,7 +464,8 @@ describe("motori deterministici", () => {
       0n,
       {
         openingDate: "2025-10-22",
-        jurisdictionCount: 1,
+        mortgageJurisdictionCount: 1,
+        stampDutyJurisdictionCount: 1,
         automaticLandRegistry: true,
         copyRequested: false,
         paymentTiming: 1,
@@ -584,7 +587,8 @@ describe("motori deterministici", () => {
   it("mantiene fuori dall’autoliquidazione le successioni anteriori al 2025", () => {
     const summary = calculateDeclarationTaxSummary([], 500_000n, {
       openingDate: "2024-12-31",
-      jurisdictionCount: 0,
+      mortgageJurisdictionCount: 0,
+      stampDutyJurisdictionCount: 0,
       automaticLandRegistry: false,
       copyRequested: false,
       paymentTiming: 2,
