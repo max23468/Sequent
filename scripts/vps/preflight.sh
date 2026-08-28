@@ -51,13 +51,13 @@ for directory in repo runtime data private releases snapshots tmp; do
 done
 
 [[ ! -w "$expected_root/data" ]] || fail "il checkout può scrivere nei dati operativi"
-assert_layout . ubuntu:ubuntu:750
+assert_layout . root:root:755
 assert_layout repo ubuntu:ubuntu:750
 assert_layout runtime ubuntu:ubuntu:750
 assert_layout data sequent-runtime:sequent-runtime:700
 assert_layout private ubuntu:ubuntu:700
-assert_layout releases ubuntu:ubuntu:750
-assert_layout snapshots ubuntu:ubuntu:700
+assert_layout releases root:root:750
+assert_layout snapshots root:root:700
 assert_layout tmp ubuntu:ubuntu:700
 
 SEQUENT_NODE_SLOT=current "$expected_root/repo/scripts/vps/with-node.sh" node --version

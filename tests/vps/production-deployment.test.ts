@@ -17,6 +17,10 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /actions\/download-artifact@[0-9a-f]{40} # v8\.0\.1/);
   assert.match(workflow, /run-id: \$\{\{ inputs\.release_run \}\}/);
   assert.match(workflow, /release-artifact\.mjs verify/);
+  assert.match(workflow, /archive_sha256=.*sha256sum/);
+  assert.match(workflow, /manifest_sha256=.*sha256sum/);
+  assert.match(workflow, /--archive-sha256 '\$archive_sha256'/);
+  assert.match(workflow, /--manifest-sha256 '\$manifest_sha256'/);
   assert.match(workflow, /task: "sequent-production"/);
   assert.match(workflow, /sudo \/usr\/local\/sbin\/sequent-run-trusted-deploy --commit/);
   assert.doesNotMatch(workflow, /sudo \/opt\/sequent\/repo\/scripts/);
@@ -30,6 +34,8 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /SEQUENT_TRUSTED_REPOSITORY/);
   assert.match(deploy, /sequent-deploy-source/);
   assert.match(deploy, /sorgente trusted del deploy non root-owned/);
+  assert.match(deploy, /artefatto fuori dalla sorgente trusted/);
+  assert.match(deploy, /root:root:600/);
   assert.match(deploy, /mktemp \/run\/sequent-rollback-compose\./);
   assert.match(deploy, /show "\$previous_commit:deploy\/compose\.example\.yml"/);
   assert.match(deploy, /chown root:root "\$rollback_compose_file"/);
@@ -39,6 +45,10 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.doesNotMatch(deploy, /fail\(\) \{[^}]*exit 1[^}]*\}/);
   assert.match(deploy, /load_runtime_env\(\)/);
   assert.match(deploy, /chiave runtime non ammessa/);
+  assert.match(deploy, /id -u sequent-runtime/);
+  assert.match(deploy, /id -g sequent-runtime/);
+  assert.match(deploy, /SEQUENT_RUNTIME_UID.*runtime_uid/);
+  assert.match(deploy, /SEQUENT_RUNTIME_GID.*runtime_gid/);
   assert.match(deploy, /mktemp \/run\/sequent-runtime-env\./);
   assert.match(deploy, /chown root:root "\$trusted_runtime_env"/);
   assert.match(deploy, /--env-file "\$trusted_runtime_env"/);
@@ -61,10 +71,20 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /trap 'handle_signal 130' INT/);
   assert.match(deploy, /trap 'handle_signal 143' TERM/);
   assert.match(deploy, /snapshot_started.*rm -rf --one-file-system "\$snapshot"/s);
+  assert.match(deploy, /mktemp -d "\$root\/snapshots\/\.migration-\$commit\.XXXXXX"/);
+  assert.match(
+    deploy,
+    /mktemp -d "\$root\/snapshots\/\$deployment_stamp-\$previous_commit\.XXXXXX"/,
+  );
+  assert.doesNotMatch(deploy, /\$root\/tmp\/migration-/);
+  assert.match(deploy, /stat -c '%U:%G:%a' "\$root\/releases".*root:root:750/s);
+  assert.match(deploy, /stat -c '%U:%G:%a' "\$root\/snapshots".*root:root:700/s);
+  assert.match(deploy, /install -d -o root -g root -m 0750 "\$release_dir"/);
   assert.match(deploy, /up --detach --no-build --force-recreate/);
   assert.match(deploy, /\.deployment-maintenance/);
   assert.match(deploy, /\$SEQUENT_ORIGIN\/api\/health/);
   assert.match(deploy, /if ! public_identity_output=/);
+  assert.match(deploy, /rollback non healthy; manutenzione mantenuta/);
   assert.match(deploy, /health pubblico non interpretabile/);
   assert.match(deploy, /public_identity\[@\].*-eq 2/);
   assert.doesNotMatch(deploy, /readarray -t public_identity < <\(/);
@@ -74,6 +94,13 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /sequent-production-deployment\/v1/);
   assert.match(deploy, /sequent-docker-prune\.timer/);
   assert.doesNotMatch(deploy, /docker (?:image )?prune|docker build|\bcaddy\b|\bdynu\b|\bufw\b/i);
+
+  const maintenance = deploy.indexOf(
+    'install -o "$runtime_uid" -g "$runtime_gid" -m 0600 /dev/null "$maintenance_marker"',
+  );
+  const shutdown = deploy.indexOf('"${candidate_compose[@]}" down --remove-orphans', maintenance);
+  const snapshot = deploy.indexOf('snapshot="$(mktemp -d', shutdown);
+  assert.ok(maintenance >= 0 && maintenance < shutdown && shutdown < snapshot);
 });
 
 test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {
@@ -88,9 +115,29 @@ test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {
   assert.match(launcher, /git_as_checkout_owner archive --format=tar "\$commit"/);
   assert.equal(launcher.match(/\/usr\/bin\/git -C/g)?.length, 1);
   assert.match(launcher, /mktemp -d \/run\/sequent-deploy-source\./);
+  assert.match(launcher, /--archive-sha256/);
+  assert.match(launcher, /--manifest-sha256/);
+  assert.match(launcher, /sha256sum "\$trusted_archive"/);
+  assert.match(launcher, /sha256sum "\$trusted_manifest"/);
+  assert.match(launcher, /install -o root -g root -m 0600 "\$archive" "\$trusted_archive"/);
   assert.match(launcher, /chown -R root:root "\$trusted_source"/);
   assert.match(launcher, /SEQUENT_TRUSTED_REPOSITORY="\$trusted_source"/);
   assert.doesNotMatch(launcher, /source |eval |docker build/);
+});
+
+test("il deploy trusted non esegue Git come root", () => {
+  const deploy = read("scripts/vps/deploy-release.sh");
+
+  assert.match(deploy, /\/usr\/sbin\/runuser --user ubuntu -- \/usr\/bin\/env -i/);
+  assert.match(deploy, /git_as_checkout_owner rev-parse HEAD/);
+  assert.match(deploy, /git_as_checkout_owner diff --quiet/);
+  assert.match(
+    deploy,
+    /git_as_checkout_owner show "\$previous_commit:deploy\/compose\.example\.yml"/,
+  );
+  assert.match(deploy, /git_as_checkout_owner rev-parse 'HEAD\^\{tree\}'/);
+  assert.equal(deploy.match(/\/usr\/bin\/git -C/g)?.length, 1);
+  assert.doesNotMatch(deploy, /^\s*git -C/m);
 });
 
 test("la manutenzione Docker protegge anche un runtime selezionato per image ID", () => {

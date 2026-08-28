@@ -120,10 +120,13 @@ jobs:
             "cd /opt/sequent/repo && git diff --quiet && git diff --cached --quiet && git fetch origin main && git checkout main && git merge --ff-only origin/main && test \"\$(git rev-parse HEAD)\" = '$CANDIDATE_COMMIT' && install -d -m 0700 '$incoming'"
           scp "${ssh_options[@]}" release-artifact/sequent-release-arm64.tar \
             release-artifact/release-manifest.json "$SSH_USER@$SSH_HOST:$incoming/"
+          archive_sha256="$(sha256sum release-artifact/sequent-release-arm64.tar | cut -d' ' -f1)"
+          manifest_sha256="$(sha256sum release-artifact/release-manifest.json | cut -d' ' -f1)"
+          [[ "$archive_sha256" =~ ^[0-9a-f]{64}$ && "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]]
           # Percorsi e SHA sono stati validati prima del trasferimento.
           # shellcheck disable=SC2029
           ssh "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" \
-            "sudo /usr/local/sbin/sequent-run-trusted-deploy --commit '$CANDIDATE_COMMIT' --archive '$incoming/sequent-release-arm64.tar' --manifest '$incoming/release-manifest.json'"
+            "sudo /usr/local/sbin/sequent-run-trusted-deploy --commit '$CANDIDATE_COMMIT' --archive '$incoming/sequent-release-arm64.tar' --archive-sha256 '$archive_sha256' --manifest '$incoming/release-manifest.json' --manifest-sha256 '$manifest_sha256'"
 
           deployment_status success
           trap - ERR
