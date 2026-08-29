@@ -8,13 +8,29 @@ import {
   PRE_REVIEW_CHECKS,
   prBody,
   publicationScope,
+  productionRunCommit,
   remoteDeletionFailed,
   selectWorkflowRun,
+  shouldWaitForActiveProduction,
   waitForPrHead,
 } from "./publish.mjs";
 
 test("il preflight rapido non esegue suite applicative complete", () => {
   assert.deepEqual(localGateCommands({ level: "rapid" }), [["npm", ["run", "verify:rapid"]]]);
+});
+
+test("attende una Production concorrente quando sopra restano solo cambi non runtime", () => {
+  const activeCommit = "a".repeat(40);
+  const activeRun = { displayTitle: `Production ${activeCommit}` };
+  assert.equal(productionRunCommit(activeRun), activeCommit);
+  assert.equal(
+    shouldWaitForActiveProduction(activeRun, "b".repeat(40), () => ["docs/runbooks/github.md"]),
+    true,
+  );
+  assert.equal(
+    shouldWaitForActiveProduction(activeRun, "b".repeat(40), () => ["src/lib/format.ts"]),
+    false,
+  );
 });
 
 test("il preflight sensibile aggiunge browser soltanto quando richiesto", () => {

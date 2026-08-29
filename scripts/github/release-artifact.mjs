@@ -1,81 +1,87 @@
 #!/usr/bin/env node
 
-import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { createReadStream } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
-import { basename } from "node:path";
 import { pathToFileURL } from "node:url";
 
-async function sha256(file) {
-  const hash = createHash("sha256");
-  for await (const chunk of createReadStream(file)) hash.update(chunk);
-  return hash.digest("hex");
-}
-
 const output = (command, args) => execFileSync(command, args, { encoding: "utf8" }).trim();
+const DIGEST_REFERENCE = /^ghcr\.io\/[a-z0-9._/-]+@sha256:[0-9a-f]{64}$/;
 
-export function validateManifest(manifest, { archiveName, archiveSha256, commit, imageId, tree }) {
+export function validateManifest(manifest, { commit, tree, reference = manifest.reference }) {
   const failures = [];
-  if (manifest.schema !== "sequent-release-artifact/v1") failures.push("schema non supportato");
+  if (manifest.schema !== "sequent-release-image/v2") failures.push("schema non supportato");
   if (manifest.commit !== commit) failures.push("commit divergente");
   if (manifest.tree !== tree) failures.push("tree Git divergente");
-  if (manifest.imageId !== imageId) failures.push("image ID divergente");
-  if (manifest.archive.name !== archiveName) failures.push("nome archivio divergente");
-  if (manifest.archive.sha256 !== archiveSha256) failures.push("SHA-256 archivio divergente");
+  if (manifest.reference !== reference) failures.push("riferimento immagine divergente");
+  if (!DIGEST_REFERENCE.test(manifest.reference ?? "")) failures.push("digest GHCR non valido");
+  if (manifest.digest !== manifest.reference?.split("@")[1]) failures.push("digest divergente");
   if (manifest.platform !== "linux/arm64") failures.push("piattaforma non ARM64");
+  if (!/^\d+\.\d+\.\d+$/.test(manifest.version ?? "")) failures.push("versione non valida");
   return failures;
 }
 
 async function create(args) {
-  const archive = value(args, "--archive");
-  const imageTag = value(args, "--image");
+  const reference = value(args, "--reference");
   const destination = value(args, "--output");
   execFileSync("git", ["diff", "--quiet"]);
   execFileSync("git", ["diff", "--cached", "--quiet"]);
+  const commit = output("git", ["rev-parse", "HEAD"]);
+  const tree = output("git", ["rev-parse", "HEAD^{tree}"]);
   const manifest = {
-    schema: "sequent-release-artifact/v1",
-    commit: output("git", ["rev-parse", "HEAD"]),
-    tree: output("git", ["rev-parse", "HEAD^{tree}"]),
+    schema: "sequent-release-image/v2",
+    commit,
+    tree,
     platform: "linux/arm64",
-    imageTag,
-    imageId: output("docker", ["image", "inspect", "--format", "{{.Id}}", imageTag]),
-    archive: { name: basename(archive), sha256: await sha256(archive) },
+    version: JSON.parse(await readFile("package.json", "utf8")).version,
+    reference,
+    digest: reference.split("@")[1],
   };
+  const failures = validateManifest(manifest, { commit, tree, reference });
+  if (failures.length) throw new Error(`Manifest release non valido: ${failures.join(", ")}`);
   await writeFile(destination, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
   console.log(JSON.stringify(manifest, null, 2));
 }
 
 async function verify(args) {
-  const archive = value(args, "--archive");
   const manifest = JSON.parse(await readFile(value(args, "--manifest"), "utf8"));
   const expected = {
-    archiveName: basename(archive),
-    archiveSha256: await sha256(archive),
     commit: value(args, "--commit"),
     tree: value(args, "--tree"),
+    reference: argument(args, "--reference") ?? manifest.reference,
   };
-  const preflightFailures = validateManifest(manifest, {
-    ...expected,
-    imageId: manifest.imageId,
-  });
-  if (preflightFailures.length) {
-    throw new Error(`Artefatto release non valido: ${preflightFailures.join(", ")}`);
+  const failures = validateManifest(manifest, expected);
+  if (failures.length) throw new Error(`Manifest release non valido: ${failures.join(", ")}`);
+  if (args.includes("--pull")) {
+    output("docker", ["pull", "--platform", "linux/arm64", manifest.reference]);
+    const architecture = output("docker", [
+      "image",
+      "inspect",
+      "--format",
+      "{{.Architecture}}",
+      manifest.reference,
+    ]);
+    const revision = output("docker", [
+      "image",
+      "inspect",
+      "--format",
+      '{{index .Config.Labels "org.opencontainers.image.revision"}}',
+      manifest.reference,
+    ]);
+    if (architecture !== "arm64" || revision !== manifest.commit)
+      throw new Error("Readback immagine GHCR divergente");
   }
+  console.log(`Manifest release verificato: ${manifest.reference}`);
+}
 
-  output("docker", ["load", "--input", archive]);
-  const failures = validateManifest(manifest, {
-    ...expected,
-    imageId: output("docker", ["image", "inspect", "--format", "{{.Id}}", manifest.imageTag]),
-  });
-  if (failures.length) throw new Error(`Artefatto release non valido: ${failures.join(", ")}`);
-  console.log(`Artefatto release verificato: ${manifest.imageId}`);
+function argument(args, flag) {
+  const index = args.indexOf(flag);
+  return index >= 0 ? args[index + 1] : undefined;
 }
 
 function value(args, flag) {
-  const index = args.indexOf(flag);
-  if (index < 0 || !args[index + 1]) throw new Error(`Argomento richiesto: ${flag}`);
-  return args[index + 1];
+  const found = argument(args, flag);
+  if (!found) throw new Error(`Argomento richiesto: ${flag}`);
+  return found;
 }
 
 async function main() {

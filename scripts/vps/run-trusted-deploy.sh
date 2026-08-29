@@ -6,8 +6,8 @@ export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 root="${SEQUENT_ROOT:-/opt/sequent}"
 repository="$root/repo"
 commit=
-archive=
-archive_sha256=
+image_ref=
+docker_config=
 manifest=
 manifest_sha256=
 verification_git=
@@ -60,8 +60,8 @@ git_as_tree_verifier() {
 while (($#)); do
   case "$1" in
     --commit) shift; commit="${1:-}" ;;
-    --archive) shift; archive="${1:-}" ;;
-    --archive-sha256) shift; archive_sha256="${1:-}" ;;
+    --image-ref) shift; image_ref="${1:-}" ;;
+    --docker-config) shift; docker_config="${1:-}" ;;
     --manifest) shift; manifest="${1:-}" ;;
     --manifest-sha256) shift; manifest_sha256="${1:-}" ;;
     *) echo "ERRORE: argomento non ammesso" >&2; exit 2 ;;
@@ -84,14 +84,28 @@ IFS=: read -r _ _ verification_uid _ _ verification_home verification_shell <<<"
   exit 1
 }
 [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || { echo "ERRORE: commit non valido" >&2; exit 1; }
-[[ "$archive_sha256" =~ ^[0-9a-f]{64}$ ]] || { echo "ERRORE: SHA archivio non valido" >&2; exit 1; }
+[[ "$image_ref" =~ ^ghcr\.io/[a-z0-9._/-]+@sha256:[0-9a-f]{64}$ ]] || {
+  echo "ERRORE: riferimento immagine non valido" >&2
+  exit 1
+}
 [[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]] || { echo "ERRORE: SHA manifest non valido" >&2; exit 1; }
-for input in "$archive" "$manifest"; do
-  [[ "$input" == "$root/tmp/"* && -f "$input" && ! -L "$input" ]] || {
-    echo "ERRORE: artefatto di ingresso non valido" >&2
-    exit 1
-  }
-done
+[[ "$manifest" == "$root/tmp/"* && -f "$manifest" && ! -L "$manifest" ]] || {
+  echo "ERRORE: artefatto di ingresso non valido" >&2
+  exit 1
+}
+[[ "$docker_config" == /run/sequent-ghcr-* && -d "$docker_config" && ! -L "$docker_config" ]] || {
+  echo "ERRORE: configurazione registry non valida" >&2
+  exit 1
+}
+[[ "$(/usr/bin/stat -c '%U:%G:%a' "$docker_config")" == root:root:700 ]] || {
+  echo "ERRORE: permessi configurazione registry non conformi" >&2
+  exit 1
+}
+[[ -f "$docker_config/config.json" && ! -L "$docker_config/config.json" \
+  && "$(/usr/bin/stat -c '%U:%G:%a' "$docker_config/config.json")" == root:root:600 ]] || {
+  echo "ERRORE: credenziale registry non conforme" >&2
+  exit 1
+}
 migrate_layout_directory "$root" 750 755
 migrate_layout_directory "$root/releases" 750 750
 migrate_layout_directory "$root/snapshots" 700 700
@@ -129,6 +143,9 @@ cleanup() {
   if [[ "$verification_git" == /run/sequent-deploy-verification.* ]]; then
     rm -rf --one-file-system "$verification_git"
   fi
+  if [[ "$docker_config" == /run/sequent-ghcr-* ]]; then
+    rm -rf --one-file-system "$docker_config"
+  fi
 }
 trap cleanup EXIT HUP INT TERM
 
@@ -147,14 +164,8 @@ extracted_tree="$(git_as_tree_verifier write-tree)"
   echo "ERRORE: tree estratto divergente dal commit" >&2
   exit 1
 }
-trusted_archive="$trusted_source/sequent-release-arm64.tar"
 trusted_manifest="$trusted_source/release-manifest.json"
-/usr/bin/install -o root -g root -m 0600 "$archive" "$trusted_archive"
 /usr/bin/install -o root -g root -m 0600 "$manifest" "$trusted_manifest"
-[[ "$(/usr/bin/sha256sum "$trusted_archive" | /usr/bin/cut -d' ' -f1)" == "$archive_sha256" ]] || {
-  echo "ERRORE: SHA archivio divergente" >&2
-  exit 1
-}
 [[ "$(/usr/bin/sha256sum "$trusted_manifest" | /usr/bin/cut -d' ' -f1)" == "$manifest_sha256" ]] || {
   echo "ERRORE: SHA manifest divergente" >&2
   exit 1
@@ -178,4 +189,5 @@ deploy_mode="$(git_as_checkout_owner ls-tree "$commit" -- scripts/vps/deploy-rel
 
 SEQUENT_TRUSTED_REPOSITORY="$trusted_source" \
   SEQUENT_CHECKOUT_REPOSITORY="$repository" \
-  /bin/bash "$deploy_script" --commit "$commit" --archive "$trusted_archive" --manifest "$trusted_manifest"
+  DOCKER_CONFIG="$docker_config" \
+  /bin/bash "$deploy_script" --commit "$commit" --image-ref "$image_ref" --manifest "$trusted_manifest"

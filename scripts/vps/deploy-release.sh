@@ -6,15 +6,15 @@ shared_lock="${SHARED_DOCKER_LOCK:-/run/lock/hub-fatture-sequent-docker.lock}"
 max_disk_percent="${SEQUENT_DEPLOY_MAX_DISK_PERCENT:-79}"
 retention_count="${SEQUENT_RELEASE_RETENTION_COUNT:-2}"
 commit=
-archive=
+image_ref=
 manifest=
 
 while (($#)); do
   case "$1" in
     --commit) shift; commit="${1:-}" ;;
-    --archive) shift; archive="${1:-}" ;;
+    --image-ref) shift; image_ref="${1:-}" ;;
     --manifest) shift; manifest="${1:-}" ;;
-    *) echo "Uso: deploy-release.sh --commit SHA --archive FILE --manifest FILE" >&2; exit 2 ;;
+    *) echo "Uso: deploy-release.sh --commit SHA --image-ref DIGEST --manifest FILE" >&2; exit 2 ;;
   esac
   shift
 done
@@ -26,6 +26,8 @@ fail() {
 
 [[ "$(id -u)" -eq 0 ]] || fail "il deploy richiede privilegi amministrativi"
 [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || fail "commit non valido"
+[[ "$image_ref" =~ ^ghcr\.io/[a-z0-9._/-]+@sha256:[0-9a-f]{64}$ ]] ||
+  fail "riferimento immagine non valido"
 [[ "$max_disk_percent" =~ ^[0-9]+$ ]] || fail "soglia disco non valida"
 ((max_disk_percent < 100)) || fail "soglia disco non valida"
 [[ "$retention_count" =~ ^[0-9]+$ ]] || fail "retention release non valida"
@@ -41,13 +43,16 @@ rollback_compose_file=
 previous_runtime_image=
 runtime_uid=
 runtime_gid=
+registry_config="${DOCKER_CONFIG:-}"
 
-for input in "$archive" "$manifest"; do
-  [[ "$input" == "$repository/"* ]] || fail "artefatto fuori dalla sorgente trusted"
-  [[ -f "$input" && ! -L "$input" ]] || fail "artefatto assente o non regolare"
-  [[ "$(stat -c '%U:%G:%a' "$input")" == "root:root:600" ]] ||
-    fail "permessi dell'artefatto trusted non conformi"
-done
+[[ "$manifest" == "$repository/"* ]] || fail "artefatto fuori dalla sorgente trusted"
+[[ -f "$manifest" && ! -L "$manifest" ]] || fail "artefatto assente o non regolare"
+[[ "$(stat -c '%U:%G:%a' "$manifest")" == "root:root:600" ]] ||
+  fail "permessi dell'artefatto trusted non conformi"
+[[ "$registry_config" == /run/sequent-ghcr-* && -d "$registry_config" && ! -L "$registry_config" ]] ||
+  fail "configurazione registry non valida"
+[[ "$(stat -c '%U:%G:%a' "$registry_config")" == root:root:700 ]] ||
+  fail "permessi configurazione registry non conformi"
 
 git_as_checkout_owner() {
   /usr/sbin/runuser --user ubuntu -- /usr/bin/env -i \
@@ -168,13 +173,12 @@ disk_percent="$(df -P "$root" | awk 'NR == 2 { gsub(/%/, "", $5); print $5 }')"
 [[ "$disk_percent" =~ ^[0-9]+$ ]] || fail "utilizzo disco non interpretabile"
 ((disk_percent <= max_disk_percent)) || fail "utilizzo disco oltre la soglia di sicurezza"
 available_bytes="$(df --output=avail --block-size=1 "$root" | awk 'NR == 2 { print $1 }')"
-archive_bytes="$(stat -c '%s' "$archive")"
 data_bytes="$(du --summarize --block-size=1 "$root/data" | awk '{ print $1 }')"
-[[ "$available_bytes" =~ ^[0-9]+$ && "$archive_bytes" =~ ^[0-9]+$ && "$data_bytes" =~ ^[0-9]+$ ]] ||
+[[ "$available_bytes" =~ ^[0-9]+$ && "$data_bytes" =~ ^[0-9]+$ ]] ||
   fail "stima dello spazio non interpretabile"
 safety_bytes=$((2 * 1024 * 1024 * 1024))
-required_bytes=$((2 * archive_bytes + 2 * data_bytes + safety_bytes))
-((available_bytes >= required_bytes)) || fail "spazio insufficiente per artefatto, prove e rollback"
+required_bytes=$((2 * data_bytes + safety_bytes))
+((available_bytes >= required_bytes)) || fail "spazio insufficiente per prove e rollback"
 
 [[ "$(git_as_checkout_owner rev-parse HEAD)" == "$commit" ]] ||
   fail "checkout non exact-commit"
@@ -244,18 +248,14 @@ import sys
 
 with open(sys.argv[1], encoding="utf-8") as source:
     manifest = json.load(source)
-archive = manifest.get("archive")
-if not isinstance(archive, dict):
-    raise SystemExit("archive manifest non valido")
 for value in (
     manifest.get("schema"),
     manifest.get("commit"),
     manifest.get("tree"),
     manifest.get("platform"),
-    manifest.get("imageTag"),
-    manifest.get("imageId"),
-    archive.get("name"),
-    archive.get("sha256"),
+    manifest.get("version"),
+    manifest.get("reference"),
+    manifest.get("digest"),
 ):
     if not isinstance(value, str) or "\n" in value or "\r" in value:
         raise SystemExit("identità manifest non valida")
@@ -265,27 +265,20 @@ PY
   fail "manifest release non interpretabile"
 fi
 readarray -t artifact_identity <<<"$artifact_identity_output"
-[[ "${#artifact_identity[@]}" -eq 8 ]] || fail "identità manifest non conforme"
-[[ "${artifact_identity[0]}" == "sequent-release-artifact/v1" ]] || fail "schema manifest non valido"
+[[ "${#artifact_identity[@]}" -eq 7 ]] || fail "identità manifest non conforme"
+[[ "${artifact_identity[0]}" == "sequent-release-image/v2" ]] || fail "schema manifest non valido"
 [[ "${artifact_identity[1]}" == "$commit" ]] || fail "commit manifest divergente"
 [[ "${artifact_identity[2]}" == "$candidate_tree" ]] ||
   fail "tree manifest divergente"
 [[ "${artifact_identity[3]}" == "linux/arm64" ]] || fail "piattaforma manifest divergente"
-candidate_tag="${artifact_identity[4]}"
-[[ "$candidate_tag" == "sequent-release:$commit" ]] || fail "tag manifest divergente"
-artifact_image_id="${artifact_identity[5]}"
-[[ "$artifact_image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "image ID artefatto non valido"
-[[ "${artifact_identity[6]}" == "$(basename "$archive")" ]] || fail "nome archivio divergente"
-[[ "${artifact_identity[7]}" =~ ^[0-9a-f]{64}$ ]] || fail "SHA archivio manifest non valido"
-[[ "$(sha256sum "$archive" | cut -d' ' -f1)" == "${artifact_identity[7]}" ]] ||
-  fail "SHA archivio divergente"
-[[ -z "$(docker ps --all --quiet --filter "ancestor=$candidate_tag")" ]] ||
-  fail "tag candidato già referenziato da un container"
-if docker image inspect "$candidate_tag" >/dev/null 2>&1; then
-  docker image rm "$candidate_tag" >/dev/null || fail "tag candidato stale non rimovibile"
-fi
-docker load --input "$archive" >/dev/null
-candidate_image_id="$(docker image inspect --format '{{.Id}}' "$candidate_tag")"
+candidate_version="${artifact_identity[4]}"
+[[ "$candidate_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "versione manifest non valida"
+[[ "${artifact_identity[5]}" == "$image_ref" ]] || fail "riferimento manifest divergente"
+[[ "${artifact_identity[6]}" == "${image_ref##*@}" ]] || fail "digest manifest divergente"
+docker pull --platform linux/arm64 "$image_ref" >/dev/null
+rm -rf --one-file-system "$registry_config"
+unset DOCKER_CONFIG
+candidate_image_id="$(docker image inspect --format '{{.Id}}' "$image_ref")"
 [[ "$candidate_image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "image ID runtime candidato non valido"
 [[ "$(docker image inspect --format '{{.Id}}' "$candidate_image_id")" == "$candidate_image_id" ]] ||
   fail "immagine candidata assente"
@@ -464,7 +457,9 @@ else
   install -d -o root -g root -m 0750 "$release_dir"
 fi
 install -o root -g root -m 0640 "$manifest" "$release_dir/release-manifest.json"
-install -o root -g root -m 0640 "$archive" "$release_dir/sequent-release-arm64.tar"
+printf '%s\n' "$image_ref" >"$release_dir/image-reference"
+chown root:root "$release_dir/image-reference"
+chmod 0640 "$release_dir/image-reference"
 if [[ -e "$previous_release_dir" ]]; then
   [[ -d "$previous_release_dir" && ! -L "$previous_release_dir" \
     && "$(stat -c '%U:%G:%a' "$previous_release_dir")" == "root:root:750" ]] ||

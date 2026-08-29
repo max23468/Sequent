@@ -2,8 +2,6 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches: [main]
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -93,11 +91,16 @@ jobs:
       - run: npm run doctor
 
   browser-gates:
-    name: Gate browser
+    name: Gate browser (${{ matrix.browser }})
     if: needs.classify.outputs.browser == 'true'
     needs: classify
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 12
+    container: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -107,18 +110,7 @@ jobs:
           node-version: 26.7.0
           cache: npm
       - run: npm ci
-      - name: Ripristina i browser Playwright
-        id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - name: Installa dipendenze di sistema Playwright
-        run: npx playwright install-deps chromium webkit
-      - name: Installa i browser Playwright se assenti dalla cache
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install chromium webkit
-      - run: npm run test:e2e
+      - run: npm run test:e2e -- --project "${{ matrix.browser }}"
 
   arm64-image:
     name: Immagine ARM64

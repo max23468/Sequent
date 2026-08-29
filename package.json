@@ -1,6 +1,6 @@
 {
   "name": "sequent",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "type": "module",
   "scripts": {
@@ -29,7 +29,7 @@
     "verify:rapid": "npm run docs:check && npm run format:check && npm run test:github && npm run verify:boundary",
     "verify:application": "npm run lint && npm run shell:check && npm run check && npm run typecheck && npm run check:tsgo && npm test && npm run build",
     "verify:public": "npm run verify:rapid && npm run verify:application",
-    "verify:publication": "npm run verify:public && npm run doctor && npm run test:e2e",
+    "verify:publication": "node scripts/github/verify-publication.mjs",
     "publication:classify": "node scripts/github/publication-policy.mjs",
     "publication:github": "node scripts/github/publish.mjs",
     "verify:sources": "node scripts/official-sources/verify.ts",

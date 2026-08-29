@@ -3,7 +3,12 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { classifyChangedFiles, changedFiles } from "./publication-policy.mjs";
+import {
+  classifyRevisionRange,
+  classifyChangedFiles,
+  changedFiles,
+} from "./publication-policy.mjs";
+import { readValidReceipt, writeReceipt } from "./publication-receipt.mjs";
 
 export const PRE_REVIEW_CHECKS = [
   "Foundation",
@@ -49,9 +54,24 @@ export function operationalClassification(
   candidate = "HEAD",
   readChangedFiles = changedFiles,
 ) {
-  return deployedBase
-    ? classifyChangedFiles(readChangedFiles(deployedBase, candidate))
-    : prClassification;
+  if (!deployedBase) return prClassification;
+  if (readChangedFiles === changedFiles) return classifyRevisionRange(deployedBase, candidate);
+  return classifyChangedFiles(readChangedFiles(deployedBase, candidate));
+}
+
+export function productionRunCommit(run) {
+  const match = /^Production ([0-9a-f]{40})$/.exec(run?.displayTitle ?? "");
+  return match?.[1] ?? null;
+}
+
+export function shouldWaitForActiveProduction(
+  activeRun,
+  candidate,
+  readChangedFiles = changedFiles,
+) {
+  const activeCommit = productionRunCommit(activeRun);
+  if (!activeCommit || activeCommit === candidate) return false;
+  return !classifyChangedFiles(readChangedFiles(activeCommit, candidate)).runtime;
 }
 
 function remoteBranchExists(branch) {
@@ -179,6 +199,27 @@ function latestSuccessfulProductionDeployment(repository) {
   });
 }
 
+function latestActiveProductionRun() {
+  const fields = "databaseId,displayTitle,createdAt,status,conclusion,url";
+  const runs = ["queued", "in_progress"].flatMap((status) =>
+    json("gh", [
+      "run",
+      "list",
+      "--workflow",
+      "production.yml",
+      "--status",
+      status,
+      "--limit",
+      "10",
+      "--json",
+      fields,
+    ]),
+  );
+  return (
+    runs.sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt))[0] ?? null
+  );
+}
+
 function ensureLocalPreconditions(branch) {
   if (branch === "main") throw new Error("La pubblicazione richiede un branch breve, non main");
   if (output("git", ["status", "--porcelain"])) throw new Error("Working tree non pulita");
@@ -223,10 +264,18 @@ async function main() {
   ensureLocalPreconditions(branch);
   const headSha = output("git", ["rev-parse", "HEAD"]);
   const headTree = output("git", ["rev-parse", "HEAD^{tree}"]);
-  const prClassification = classifyChangedFiles(changedFiles("origin/main", "HEAD"));
+  const prClassification = classifyRevisionRange("origin/main", "HEAD");
   console.log(JSON.stringify(prClassification, null, 2));
 
-  for (const [command, args] of localGateCommands(prClassification)) run(command, args);
+  const gateCommands = localGateCommands(prClassification);
+  const receiptCommands = gateCommands.map(([command, args]) => [command, ...args]);
+  const receipt = readValidReceipt(receiptCommands);
+  if (receipt) {
+    console.log(`Preflight exact-HEAD riusato dalla ricevuta ${receipt.createdAt}`);
+  } else {
+    for (const [command, args] of gateCommands) run(command, args);
+    writeReceipt(receiptCommands);
+  }
   if (!execute) {
     console.log("Preflight completato. Usa --execute soltanto con autorizzazione a pubblicare.");
     return;
@@ -247,6 +296,7 @@ async function main() {
   if (scope.runtime && productionActive && !productionWorkflowAvailable) {
     throw new Error("Runtime attivo ma workflow Production assente: pubblicazione incompleta");
   }
+  if (scope.runtime) run("node", ["scripts/github/release.mjs", "--check", "--commit", headSha]);
 
   run("git", ["push", "--set-upstream", "origin", branch]);
   let pr;
@@ -299,19 +349,47 @@ async function main() {
   run("node", ["scripts/github/reconcile-ruleset.mjs", "--apply"]);
   let releaseCandidateRun = null;
   let productionRun = null;
-  if (scope.releaseCandidate) {
+  const activeProduction = latestActiveProductionRun();
+  if (shouldWaitForActiveProduction(activeProduction, mergeCommit)) {
+    console.log(
+      `Attendo la Production ${productionRunCommit(activeProduction)} per rivalutare il diff operativo`,
+    );
+    run("gh", ["run", "watch", String(activeProduction.databaseId), "--exit-status"]);
+  }
+  let currentDeployment = latestSuccessfulProductionDeployment(repository);
+  let finalClassification = operationalClassification(
+    prClassification,
+    currentDeployment?.sha ?? null,
+    mergeCommit,
+  );
+  let finalScope = publicationScope(finalClassification, {
+    productionActive: Boolean(currentDeployment),
+    productionWorkflowAvailable,
+  });
+  if (finalScope.releaseCandidate) {
+    run("node", ["scripts/github/release.mjs", "--check", "--commit", mergeCommit]);
     releaseCandidateRun = await dispatchAndWait(
       "release-candidate.yml",
       `Release candidate ${mergeCommit}`,
       { commit: mergeCommit },
     );
   }
-  if (scope.deploy) {
+  currentDeployment = latestSuccessfulProductionDeployment(repository);
+  finalClassification = operationalClassification(
+    prClassification,
+    currentDeployment?.sha ?? null,
+    mergeCommit,
+  );
+  finalScope = publicationScope(finalClassification, {
+    productionActive: Boolean(currentDeployment),
+    productionWorkflowAvailable,
+  });
+  if (finalScope.deploy) {
     productionRun = await dispatchAndWait("production.yml", `Production ${mergeCommit}`, {
       commit: mergeCommit,
       release_run: releaseCandidateRun.databaseId,
     });
-  } else if (scope.firstActivationRequired) {
+  } else if (finalScope.firstActivationRequired) {
     console.log(
       "Deploy non eseguito: la prima attivazione Production richiede autorizzazione separata.",
     );
@@ -324,6 +402,7 @@ async function main() {
         mainTree,
         releaseCandidateRun: releaseCandidateRun?.databaseId ?? null,
         productionRun: productionRun?.databaseId ?? null,
+        githubRelease: Boolean(productionRun),
       },
       null,
       2,

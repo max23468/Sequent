@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { validateReleaseReview } from "./release-review.mjs";
+import { REUSED_PR_CHECKS, validateReleaseReview } from "./release-review.mjs";
 
 const candidateCommit = "a".repeat(40);
 const candidateTree = "b".repeat(40);
@@ -10,6 +10,7 @@ const evidence = {
   candidateTree,
   reviewedHead,
   reviewedTree: candidateTree,
+  statusCheckRollup: REUSED_PR_CHECKS.map((name) => ({ name, conclusion: "SUCCESS" })),
   pulls: [
     {
       number: 17,
@@ -22,11 +23,20 @@ const evidence = {
 
 test("lega la candidata squash all'albero dell'HEAD approvato", () => {
   assert.deepEqual(validateReleaseReview(evidence), {
+    schema: "sequent-release-review/v1",
     pullRequest: 17,
     reviewedHead,
     candidateCommit,
     candidateTree,
+    reusedChecks: REUSED_PR_CHECKS,
   });
+});
+
+test("blocca il riuso se un gate PR non è verde", () => {
+  assert.throws(
+    () => validateReleaseReview({ ...evidence, statusCheckRollup: [] }),
+    /Evidenza PR assente/,
+  );
 });
 
 test("blocca un albero divergente", () => {

@@ -11,6 +11,7 @@ import {
   githubOutputs,
   LEVELS,
   parseChangedPaths,
+  packageChangesAreVersionOnly,
 } from "./publication-policy.mjs";
 
 test("classifica come rapide soltanto modifiche documentali", () => {
@@ -112,6 +113,24 @@ test("una diff vuota usa il fallback conservativo e la release forza la matrice 
   assert.equal(release.level, "release");
   assert.equal(release.runArm64, true);
   assert.equal(release.runBrowser, true);
+});
+
+test("un bump di versione non richiede ARM64 senza altre modifiche materiali", () => {
+  const values = {
+    "base:package.json": '{"name":"sequent","version":"0.1.0","dependencies":{"x":"1"}}',
+    "head:package.json": '{"name":"sequent","version":"0.1.1","dependencies":{"x":"1"}}',
+    "base:package-lock.json": '{"version":"0.1.0","packages":{"":{"version":"0.1.0"}}}',
+    "head:package-lock.json": '{"version":"0.1.1","packages":{"":{"version":"0.1.1"}}}',
+  };
+  assert.equal(
+    packageChangesAreVersionOnly("base", "head", (revision, file) => values[`${revision}:${file}`]),
+    true,
+  );
+  const result = classifyChangedFiles(["package.json", "package-lock.json"], {
+    packageMetadataOnly: true,
+  });
+  assert.equal(result.runtime, false);
+  assert.equal(result.runArm64, false);
 });
 
 test("include le eliminazioni nella classificazione della diff", async () => {
@@ -227,23 +246,22 @@ test("la CI aggrega i job pertinenti senza duplicare Doctor", async () => {
   assert.match(workflow, /npm run verify:sources/);
 });
 
-test("la candidata rilegge lo stesso artefatto ARM64 senza deploy", async () => {
+test("la candidata riusa i gate PR e pubblica un digest ARM64 senza tar inter-job", async () => {
   const workflow = await readFile(
     new URL("../../.github/workflows/release-candidate.yml", import.meta.url),
     "utf8",
   );
   assert.match(workflow, /workflow_dispatch:/);
-  const publicSuiteJob = workflow.match(/  public-suite:\n(?<job>[\s\S]*?)\n  scan-dependencies:/)
-    ?.groups?.job;
-  assert.ok(publicSuiteJob, "job public-suite assente");
-  assert.match(publicSuiteJob, /ghostscript icc-profiles-free imagemagick poppler-utils qpdf/);
-  assert.match(workflow, /docker save --output sequent-release-arm64\.tar/);
+  assert.doesNotMatch(workflow, /  public-suite:/);
+  assert.match(workflow, /riusa i gate PR/);
+  assert.match(workflow, /docker save --output "\$RUNNER_TEMP\/sequent-release-arm64\.tar"/);
+  assert.match(workflow, /rm "\$RUNNER_TEMP\/sequent-release-arm64\.tar"/);
+  assert.match(workflow, /docker push "\$IMAGE_TAG"/);
   assert.match(workflow, /actions\/upload-artifact@[0-9a-f]{40}/);
-  assert.match(workflow, /actions\/download-artifact@[0-9a-f]{40}/);
-  assert.match(workflow, /release-artifact\.mjs verify/);
-  assert.match(workflow, /candidate_tree=.*git rev-parse.*CANDIDATE_COMMIT.*\^\{tree\}/);
+  assert.doesNotMatch(workflow, /actions\/download-artifact@/);
+  assert.match(workflow, /release-artifact\.mjs verify.*--manifest/s);
   assert.match(workflow, /--commit "\$CANDIDATE_COMMIT"/);
-  assert.match(workflow, /--tree "\$candidate_tree"/);
+  assert.match(workflow, /--tree "\$\{\{ needs\.qualify\.outputs\.tree \}\}" --pull/);
   assert.match(
     workflow,
     /npm run benchmark:extraction-safety -- --dataset tests\/fixtures\/extraction-safety-benchmark\.synthetic\.json/,
@@ -252,13 +270,7 @@ test("la candidata rilegge lo stesso artefatto ARM64 senza deploy", async () => 
   assert.match(workflow, /name: Scansione dipendenze release/);
   assert.match(workflow, /scan source --format vertical --lockfile package-lock\.json/);
   assert.match(workflow, /osv-vulnerability-gate\.mjs dependency-vulnerability-report\.txt/);
-  assert.match(workflow, /name: Scansione immagine ARM64 release/);
-  const imageScanJob = workflow.match(/  scan-image:\n(?<job>[\s\S]*?)\n  release-candidate-gate:/)
-    ?.groups?.job;
-  assert.ok(imageScanJob, "job scan-image assente");
-  assert.match(imageScanJob, /actions\/checkout@[0-9a-f]{40}/);
-  assert.match(imageScanJob, /ref: \$\{\{ inputs\.commit \}\}/);
-  assert.match(imageScanJob, /persist-credentials: false/);
+  assert.match(workflow, /name: Costruisce, scansiona e pubblica ARM64/);
   assert.match(
     workflow,
     /scan image --format vertical --archive \/scan\/sequent-release-arm64\.tar/,
@@ -267,6 +279,8 @@ test("la candidata rilegge lo stesso artefatto ARM64 senza deploy", async () => 
   assert.equal(workflow.match(/osv-vulnerability-gate\.mjs/g)?.length, 2);
   assert.equal(workflow.match(/ghcr\.io\/google\/osv-scanner@sha256:[0-9a-f]{64}/g)?.length, 2);
   assert.match(workflow, /needs\.scan-dependencies\.result/);
-  assert.match(workflow, /needs\.scan-image\.result/);
+  assert.doesNotMatch(workflow, /needs\.scan-image\.result/);
+  assert.match(workflow, /matrix:\n\s+browser: \[chromium, webkit\]/);
+  assert.match(workflow, /mcr\.microsoft\.com\/playwright:v1\.62\.1-noble@sha256:[0-9a-f]{64}/);
   assert.doesNotMatch(workflow, /\bssh\b|deploy/i);
 });
