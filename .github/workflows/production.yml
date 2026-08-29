@@ -122,7 +122,7 @@ jobs:
           # Le sole espansioni client sono valori validati e necessari al comando remoto.
           # shellcheck disable=SC2029
           ssh "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" \
-            "cd /opt/sequent/repo && git diff --quiet && git diff --cached --quiet && git fetch origin main && git checkout main && git merge --ff-only origin/main && test \"\$(git rev-parse HEAD)\" = '$CANDIDATE_COMMIT' && install -d -m 0700 '$incoming'"
+            "set -eu; cd /opt/sequent/repo; git diff --quiet; git diff --cached --quiet; git fetch origin main; git checkout main; git merge --ff-only origin/main; test \"\$(git rev-parse HEAD)\" = '$CANDIDATE_COMMIT'; if [ -e /usr/local/sbin/sequent-prune-docker-images ]; then test \"\$(stat -c '%U:%G:%a' /usr/local/sbin/sequent-prune-docker-images)\" = root:root:755; sudo /usr/local/sbin/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0; fi; install -d -m 0700 '$incoming'"
           scp "${ssh_options[@]}" release-artifact/sequent-release-arm64.tar \
             release-artifact/release-manifest.json scripts/vps/run-trusted-deploy.sh \
             "$SSH_USER@$SSH_HOST:$incoming/"
