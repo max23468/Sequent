@@ -1,6 +1,8 @@
 # Sequent — Versioning
 
-Questo documento applica la policy SemVer definita nel capitolo 52 del Master Plan alla sequenza di milestone M0–M7. Il Master Plan resta canonico per scope, prerequisiti, gate e criteri di uscita delle milestone; questo documento è la fonte operativa per l'assegnazione dei numeri di versione fino alla `1.0.0`.
+Questo documento applica la policy SemVer definita nel capitolo dedicato a versioning, release e aggiornamenti del Master Plan alle fasi canoniche del piano. Il Master Plan resta canonico per scope, prerequisiti, gate e criteri di uscita; questo documento è la fonte operativa unica per l'assegnazione dei numeri di versione fino alla `1.0.0`.
+
+Le denominazioni delle fasi sono riportate senza duplicarne gli identificatori numerici, che restano definiti esclusivamente nel capitolo canonico del Master Plan.
 
 ## Principio
 
@@ -17,16 +19,16 @@ Prima della `1.0.0`:
 
 ## Mappa fino alla 1.0
 
-| Versione | Milestone / stato | Condizione |
+| Versione | Fase / stato | Condizione |
 | --- | --- | --- |
-| `0.1.0` | baseline M0–M2 | fondazioni infrastrutturali e applicative già consolidate nella prima release numerata |
-| `0.2.0` | M3 — Documenti, OCR e Codex | criteri di uscita M3 soddisfatti |
-| `0.3.0` | M4 — Dominio, UX e output | criteri di uscita M4 soddisfatti |
-| `0.4.0` | M5 — Offline selettivo | criteri di uscita M5 soddisfatti |
-| `0.5.0` | M6 — Flusso ufficiale e operations | criteri di uscita M6 soddisfatti |
-| `0.6.0` | linea di validazione M7 | M6 chiusa e avvio della validazione finale M7 su una baseline numerata |
-| `0.6.x` | M7 — Validazione e go-live | sole correzioni e hardening emersi durante la validazione finale |
-| `1.0.0` | M7 chiusa / go-live | `TG-GOLIVE` chiuso e approvazione finale dell'owner |
+| `0.1.0` | baseline già consolidata | Bootstrap VPS, repository, source bundle e DIZ Lab; Interoperabilità DIZ; Fondazioni applicative e istanza unica già assorbite nella prima release numerata |
+| `0.2.0` | Documenti, OCR e Codex | criteri di uscita della fase soddisfatti |
+| `0.3.0` | Dominio, UX e output | criteri di uscita della fase soddisfatti |
+| `0.4.0` | Offline selettivo | criteri di uscita della fase soddisfatti |
+| `0.5.0` | Flusso ufficiale e operations | criteri di uscita della fase soddisfatti |
+| `0.6.0` | ingresso nella validazione finale | fase Flusso ufficiale e operations chiusa e avvio della validazione finale su una baseline numerata |
+| `0.6.x` | Validazione e go-live in corso | sole correzioni e hardening emersi durante la validazione finale |
+| `1.0.0` | Validazione e go-live chiusa | `TG-GOLIVE` chiuso e approvazione finale dell'owner |
 
 Il passaggio da `0.6.x` a `1.0.0` è intenzionale: non sono previste linee `0.7`, `0.8` o `0.9` solo per riempire la numerazione.
 
@@ -34,7 +36,7 @@ Il passaggio da `0.6.x` a `1.0.0` è intenzionale: non sono previste linee `0.7`
 
 La versione dichiarata in `package.json` identifica l'ultima release numerata pubblicata, non ogni stato intermedio della working tree.
 
-Durante il lavoro su una milestone:
+Durante il lavoro su una fase:
 
 1. le modifiche confluiscono sotto `Unreleased` nel changelog;
 2. PR e commit identificano gli stati intermedi senza incrementare automaticamente la versione;
@@ -42,7 +44,7 @@ Durante il lavoro su una milestone:
 4. una patch viene emessa solo quando serve pubblicare una correzione o un miglioramento compatibile della linea corrente;
 5. modifiche esclusivamente documentali, di test o di governance non richiedono da sole un incremento di versione né una release runtime.
 
-Esempio durante M3: la release attiva può restare `0.1.0`; eventuali fix pubblicati possono produrre `0.1.1`, `0.1.2`, ecc.; la chiusura di M3 produce `0.2.0`.
+Esempio durante Documenti, OCR e Codex: la release attiva può restare `0.1.0`; eventuali fix pubblicati possono produrre `0.1.1`, `0.1.2`, ecc.; la chiusura della fase produce `0.2.0`.
 
 ## Identità di release
 
