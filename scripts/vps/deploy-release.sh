@@ -258,16 +258,22 @@ readarray -t artifact_identity <<<"$artifact_identity_output"
 [[ "${artifact_identity[2]}" == "$candidate_tree" ]] ||
   fail "tree manifest divergente"
 [[ "${artifact_identity[3]}" == "linux/arm64" ]] || fail "piattaforma manifest divergente"
-[[ "${artifact_identity[4]}" == "sequent-release:$commit" ]] || fail "tag manifest divergente"
-candidate_image_id="${artifact_identity[5]}"
-[[ "$candidate_image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "image ID candidato non valido"
+candidate_tag="${artifact_identity[4]}"
+[[ "$candidate_tag" == "sequent-release:$commit" ]] || fail "tag manifest divergente"
+artifact_image_id="${artifact_identity[5]}"
+[[ "$artifact_image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "image ID artefatto non valido"
 [[ "${artifact_identity[6]}" == "$(basename "$archive")" ]] || fail "nome archivio divergente"
 [[ "${artifact_identity[7]}" =~ ^[0-9a-f]{64}$ ]] || fail "SHA archivio manifest non valido"
 [[ "$(sha256sum "$archive" | cut -d' ' -f1)" == "${artifact_identity[7]}" ]] ||
   fail "SHA archivio divergente"
+[[ -z "$(docker ps --all --quiet --filter "ancestor=$candidate_tag")" ]] ||
+  fail "tag candidato già referenziato da un container"
+if docker image inspect "$candidate_tag" >/dev/null 2>&1; then
+  docker image rm "$candidate_tag" >/dev/null || fail "tag candidato stale non rimovibile"
+fi
 docker load --input "$archive" >/dev/null
-[[ "$(docker image inspect --format '{{.Id}}' "${artifact_identity[4]}")" == "$candidate_image_id" ]] ||
-  fail "image ID del tag candidato divergente"
+candidate_image_id="$(docker image inspect --format '{{.Id}}' "$candidate_tag")"
+[[ "$candidate_image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "image ID runtime candidato non valido"
 [[ "$(docker image inspect --format '{{.Id}}' "$candidate_image_id")" == "$candidate_image_id" ]] ||
   fail "immagine candidata assente"
 [[ "$(docker image inspect --format '{{.Architecture}}' "$candidate_image_id")" == arm64 ]] ||

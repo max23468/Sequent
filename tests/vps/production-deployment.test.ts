@@ -83,7 +83,16 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /schema manifest non valido/);
   assert.match(deploy, /commit manifest divergente/);
   assert.match(deploy, /tree manifest divergente/);
-  assert.match(deploy, /image ID del tag candidato divergente/);
+  assert.match(deploy, /artifact_image_id=.*artifact_identity\[5\]/);
+  assert.match(deploy, /image ID artefatto non valido/);
+  assert.match(deploy, /docker ps --all --quiet --filter "ancestor=\$candidate_tag"/);
+  assert.match(deploy, /docker image rm "\$candidate_tag"/);
+  assert.match(deploy, /candidate_image_id=.*docker image inspect.*\$candidate_tag/s);
+  assert.match(deploy, /image ID runtime candidato non valido/);
+  assert.ok(
+    deploy.indexOf('docker image rm "$candidate_tag"') <
+      deploy.indexOf('docker load --input "$archive"'),
+  );
   assert.match(deploy, /migration-\$commit/);
   assert.match(deploy, /source\.backup\(destination\)/);
   assert.match(deploy, /PRAGMA quick_check/);
