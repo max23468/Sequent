@@ -4,6 +4,7 @@ import semanticRules from "./semantic-rules.json" with { type: "json" };
 import calculationRules from "./calculation-rules.json" with { type: "json" };
 import deltaOverlays from "./delta-overlays.json" with { type: "json" };
 import officialCatalog from "./official-catalog.json" with { type: "json" };
+import { normalizeItalianTypography } from "../italian-typography.ts";
 
 export interface TechnicalElement {
   id: string;
@@ -198,16 +199,16 @@ function technicalOptions(element: TechnicalElement): Array<{ value: string; lab
 
 function catalogFieldFor(element: TechnicalElement, quadro: QuadroId): CatalogField {
   const curated = fieldsByPath.get(element.path);
-  const section = curated?.section ?? fieldSection(element, quadro);
+  const section = normalizeItalianTypography(curated?.section ?? fieldSection(element, quadro));
   const entityScope = curated?.entityScope ?? fieldScope(element, quadro);
   return {
     id: curated?.id ?? element.id,
     quadro,
-    label: curated?.label ?? humanize(element.name),
+    label: normalizeItalianTypography(curated?.label ?? humanize(element.name)),
     page: curated?.page ?? QUADRO_PAGES[quadro],
     visibleNumber: curated?.visibleNumber,
     section,
-    saveGroup: curated?.saveGroup ?? section,
+    saveGroup: normalizeItalianTypography(curated?.saveGroup ?? section),
     entityScope,
     occurrenceGroup:
       entityScope === "occurrence"
@@ -217,7 +218,10 @@ function catalogFieldFor(element: TechnicalElement, quadro: QuadroId): CatalogFi
     derivedFrom: curated?.derivedFrom,
     control: curated?.control ?? (element.type.includes("DatoCB_Type") ? "checkbox" : undefined),
     appliesToDeclarationKinds: curated?.appliesToDeclarationKinds ?? [],
-    options: curated?.options ?? technicalOptions(element),
+    options: (curated?.options ?? technicalOptions(element)).map((option) => ({
+      ...option,
+      label: normalizeItalianTypography(option.label),
+    })),
     technicalPath: element.path,
     technicalType: element.type,
     presentation: curated?.presentation,
@@ -366,12 +370,17 @@ export function getTechnicalField(fieldId: string): TechnicalElement | null {
 export function listOfficialInstructions(fieldId: string): OfficialInstruction[] {
   const technical = getTechnicalField(fieldId);
   if (!technical) return [];
-  return (semanticRules.rules as OfficialInstruction[]).filter(
-    (rule) =>
-      rule.targetFieldId === technical.id &&
-      rule.scope === "official-cross-field-instruction" &&
-      Boolean(rule.instruction),
-  );
+  return (semanticRules.rules as OfficialInstruction[])
+    .filter(
+      (rule) =>
+        rule.targetFieldId === technical.id &&
+        rule.scope === "official-cross-field-instruction" &&
+        Boolean(rule.instruction),
+    )
+    .map((rule) => ({
+      ...rule,
+      instruction: normalizeItalianTypography(rule.instruction),
+    }));
 }
 
 export function listTechnicalEnumerationValues(fieldId: string): string[] {

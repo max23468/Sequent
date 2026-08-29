@@ -269,7 +269,7 @@ export async function createDossierPdf(data: DossierPdfData): Promise<Uint8Array
   row("Fonti di riferimento", data.officialSourceLabel);
   row("Quadri compilati", data.qualification.quadriPresent.join(", ") || "Nessuno");
   row(
-    "Controllo dell'Agenzia",
+    "Controllo dell’Agenzia",
     `Versione ${data.qualification.officialControl.version} - ${data.qualification.officialControl.blockingDiagnostics === 0 ? "la pratica di prova non presenta errori bloccanti" : `${data.qualification.officialControl.blockingDiagnostics} errori bloccanti`}`,
   );
   row(
@@ -301,7 +301,7 @@ export async function createDossierPdf(data: DossierPdfData): Promise<Uint8Array
       `${share.beneficiary} · quota ${share.numerator}/${share.denominator} · ${money(share.valueCents)}`,
     );
 
-  section("Calcolo dell'imposta");
+  section("Calcolo dell’imposta");
   if (!data.calculation)
     text("Il calcolo non è ancora stato confermato.", { color: MUTED, after: 4 });
   else {

@@ -4,8 +4,6 @@
 
   type QuadroNavigationItem = {
     id: string;
-    verifiedFieldCount: number;
-    userFieldCount: number;
   };
 
   let {
@@ -79,8 +77,8 @@
   {:else}
     <nav id="workspace-sections-navigation" class:mobile-open={mobileNavigationOpen} aria-label="Quadri della dichiarazione" class="quadri-navigation">
       {#each quadri as quadro (quadro.id)}
-        <button type="button" class:active={selectedQuadro === quadro.id} data-quadro={quadro.id} aria-pressed={selectedQuadro === quadro.id} aria-label={`${quadro.id === "Frontespizio" ? "Frontespizio" : `Quadro ${quadro.id}`}: ${quadro.verifiedFieldCount} etichette verificate su ${quadro.userFieldCount} campi compilabili`} title={`${quadro.verifiedFieldCount} etichette verificate su ${quadro.userFieldCount} campi compilabili`} onclick={selectQuadro}>
-          <FileText size={18} /><span>{quadro.id === "Frontespizio" ? "Frontespizio" : `Quadro ${quadro.id}`}</span><small>{quadro.verifiedFieldCount}/{quadro.userFieldCount}</small>
+        <button type="button" class:active={selectedQuadro === quadro.id} data-quadro={quadro.id} aria-pressed={selectedQuadro === quadro.id} onclick={selectQuadro}>
+          <FileText size={18} /><span>{quadro.id === "Frontespizio" ? "Frontespizio" : `Quadro ${quadro.id}`}</span>
         </button>
       {/each}
     </nav>

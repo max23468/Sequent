@@ -260,7 +260,7 @@ export function parseDizArchive(input: Uint8Array): DizArchive {
       throw new Error(`DIZ ZIP non valido: decompressione fallita`);
     }
     if (content.length !== entry.uncompressedSize || crc32(content) !== entry.crc32) {
-      throw new Error("DIZ ZIP non valido: CRC o dimensione dell'entry incoerenti");
+      throw new Error("DIZ ZIP non valido: CRC o dimensione dell’entry incoerenti");
     }
     return {
       name: entry.name,

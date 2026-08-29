@@ -429,6 +429,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
 
   await page.getByRole("button", { name: "Vista Quadri" }).click();
   await expect(page.getByRole("heading", { name: "Quadro EA", level: 2 })).toBeVisible();
+  await expect(page.locator(".quadri-navigation")).not.toContainText(/\d+\/\d+/);
   await expect(page.getByRole("link", { name: beneficiaryName })).toHaveAttribute(
     "aria-current",
     "page",
@@ -445,8 +446,9 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   const saveOfficialSubject = page.getByRole("button", { name: "Salva questa posizione" });
   await confirmOfficialInstructions(saveOfficialSubject);
   await saveOfficialSubject.click();
-  await page.getByRole("button", { name: /^Frontespizio:/ }).click();
+  await page.getByRole("button", { name: "Frontespizio", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Frontespizio", level: 2 })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /Località di residenza estera$/ })).toBeVisible();
   await expect(page.getByText(decedentName, { exact: true })).toBeVisible();
   await expect(page.locator('output[id="field-frontespizio.beneficiari.numero-eredi"]')).toHaveText(
     "1",
@@ -503,7 +505,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   );
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(quadriUrl);
-  await page.getByRole("button", { name: /^Quadro EA:/ }).click();
+  await page.getByRole("button", { name: "Quadro EA", exact: true }).click();
   await expect(
     page.locator(".official-fields").getByRole("button", { name: /^Salva/ }),
   ).toHaveCount(1);
@@ -524,7 +526,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   );
   await page.setViewportSize({ width: 1440, height: 1000 });
 
-  await page.getByRole("button", { name: /^Quadro EC:/ }).click();
+  await page.getByRole("button", { name: "Quadro EC", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Quadro EC", level: 2 })).toBeVisible();
   await expect(page.getByRole("link", { name: assetName })).toHaveAttribute("aria-current", "page");
   const officialAssetValue = page.getByRole("textbox", { name: /^\d+ Valore$/ });

@@ -4,6 +4,17 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.1.7
+
+### Changed
+
+- navigazione della Vista Quadri semplificata rimuovendo i rapporti tecnici fra etichette verificate e campi compilabili;
+- testi del catalogo mostrati con accenti e apostrofi italiani corretti, senza alterare valori tecnici o fonti ufficiali grezze.
+
+### Fixed
+
+- matrice versionata di parità operativa riallineata alla generazione deterministica corrente per i campi EF6 ed EF12.
+
 ## 0.1.6
 
 ### Added

@@ -13,6 +13,7 @@ import {
   type SuccessionAllocation,
 } from "../../src/domain/calculation.ts";
 import { deriveOfficialFieldValue } from "../../src/domain/derived-fields.ts";
+import { normalizeItalianTypography } from "../../src/domain/italian-typography.ts";
 import {
   canonicalFieldKey,
   createEmptyDeclaration,
@@ -21,6 +22,7 @@ import {
 } from "../../src/domain/declaration.ts";
 import { validateDevolutionScenario } from "../../src/domain/devolution.ts";
 import {
+  QUADRI,
   getCatalogStatus,
   listOfficialInstructions,
   listQuadroFields,
@@ -147,6 +149,30 @@ describe("modello canonico della dichiarazione", () => {
       userFieldCount: 11,
       verifiedFieldCount: 11,
     });
+  });
+
+  it("presenta etichette e indicazioni ufficiali con gli accenti italiani", () => {
+    const frontFields = listQuadroFields("Frontespizio");
+    expect(frontFields.some((field) => field.label === "Località di residenza estera")).toBe(true);
+    expect(normalizeItalianTypography("FORLI'")).toBe("FORLÌ");
+
+    const visibleText = [
+      ...QUADRI.flatMap((quadro) =>
+        listQuadroFields(quadro).flatMap((field) => [
+          field.label,
+          field.section ?? "",
+          ...field.options.map((option) => option.label),
+        ]),
+      ),
+      ...QUADRI.flatMap((quadro) =>
+        listQuadroFields(quadro).flatMap((field) =>
+          field.instructions.map((instruction) => instruction.instruction),
+        ),
+      ),
+    ].join("\n");
+    expect(visibleText).not.toMatch(
+      /\b(?:attivita|disabilita|dovra|gia|identita|localita|nazionalita|passivita|pubblicita|puo|quantita|societa|unita|volonta)'?\b/iu,
+    );
   });
 
   it("collega i dati verificati del Frontespizio al defunto del procedimento", () => {

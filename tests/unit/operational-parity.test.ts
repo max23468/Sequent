@@ -68,7 +68,7 @@ describe("mappatura della parità informativa", () => {
       derivato: 5,
       "gestito-automaticamente": 39,
     });
-    expect(reviewCounts).toEqual({ qualificata: 458, candidata: 223, irrisolta: 34 });
+    expect(reviewCounts).toEqual({ qualificata: 460, candidata: 221, irrisolta: 34 });
     expect(
       checkedInMap
         .filter((row) => row.semanticReview.status === "irrisolta")
@@ -184,7 +184,7 @@ describe("mappatura della parità informativa", () => {
         checkedInMap.filter((row) => row.currentCoverage === status).length,
       ]),
     );
-    expect(counts).toEqual({ coperto: 419, parziale: 291, mancante: 5 });
+    expect(counts).toEqual({ coperto: 421, parziale: 289, mancante: 5 });
     expect(
       checkedInMap
         .filter((row) => row.currentCoverage === "coperto")
@@ -235,6 +235,6 @@ describe("mappatura della parità informativa", () => {
     ).toBe(true);
     expect(
       exposed.filter((field) => isOperationalParityEditable(field.operationalParity)),
-    ).toHaveLength(414);
+    ).toHaveLength(416);
   });
 });
