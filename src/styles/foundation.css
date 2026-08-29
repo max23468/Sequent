@@ -7,6 +7,7 @@
     sans-serif;
   color: #1f2933;
   background: #fff;
+  color-scheme: light;
   font-synthesis: none;
   --navy: #001e42;
   --text: #1f2933;
@@ -34,6 +35,7 @@
 :root[data-theme="dark"] {
   color: #f4f5f7;
   background: #0f1214;
+  color-scheme: dark;
   --navy: #f4f5f7;
   --text: #e7ebef;
   --teal: #41c4c9;
@@ -60,6 +62,7 @@
   :root:not([data-theme="light"]) {
     color: #f4f5f7;
     background: #0f1214;
+    color-scheme: dark;
     --navy: #f4f5f7;
     --text: #e7ebef;
     --teal: #41c4c9;
