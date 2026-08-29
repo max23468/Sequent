@@ -11,12 +11,16 @@
     fields: QuadroField[];
     occurrenceId: string | null;
     isNewOccurrence: boolean;
+    occurrenceGroup: string | null;
+    occurrenceIndex: number | null;
+    occurrenceCount: number;
   }
 
-  let { data, form, actionUrl, duplicateActionUrl } = $props<{
+  let { data, form, actionUrl, occurrenceActionUrl, duplicateActionUrl } = $props<{
     data: PageData;
     form: ActionData | null;
     actionUrl: string;
+    occurrenceActionUrl: string;
     duplicateActionUrl: string;
   }>();
 
@@ -64,37 +68,31 @@
           fields: fieldsForCurrentDeclaration(),
           occurrenceId: null,
           isNewOccurrence: false,
+          occurrenceGroup: null,
+          occurrenceIndex: null,
+          occurrenceCount: 0,
         },
       ];
     const groups = new Map<string, FieldGroup>();
     for (const field of fieldsForCurrentDeclaration()) {
       const label = field.saveGroup ?? field.section ?? (data.selectedQuadro === "EA" ? "Dati del soggetto" : `Quadro ${data.selectedQuadro}`);
       const key = `${label}:${field.entityScope ?? "declaration"}:${field.occurrenceGroup ?? "single"}`;
-      const group = groups.get(key) ?? { key, label, fields: [], occurrenceId: null, isNewOccurrence: false };
+      const group = groups.get(key) ?? { key, label, fields: [], occurrenceId: null, isNewOccurrence: false, occurrenceGroup: field.occurrenceGroup, occurrenceIndex: null, occurrenceCount: 0 };
       group.fields.push(field);
       groups.set(key, group);
     }
     return [...groups.values()].flatMap((group) => {
       const occurrenceGroup = group.fields[0]?.occurrenceGroup;
       if (!occurrenceGroup) return [group];
-      const fieldIds = new Set(
-        fieldsForCurrentDeclaration()
-          .filter((field) => field.occurrenceGroup === occurrenceGroup)
-          .map((field) => field.canonicalId),
-      );
-      const occurrenceIds = [...new Set(
-        (Object.values(data.declaration.declaration.fields) as Array<{
-          fieldId: string;
-          occurrenceId?: string | null;
-        }>)
-          .filter((field) => fieldIds.has(field.fieldId) && field.occurrenceId)
-          .map((field) => field.occurrenceId as string),
-      )];
+      const occurrenceIds = (data.occurrenceOrders[occurrenceGroup] ?? []) as string[];
       const existing = occurrenceIds.map((occurrenceId, index) => ({
         ...group,
         key: `${group.key}:${occurrenceId}`,
         label: `${group.label} · posizione ${index + 1}`,
         occurrenceId,
+        occurrenceGroup,
+        occurrenceIndex: index,
+        occurrenceCount: occurrenceIds.length,
       }));
       return [
         ...existing,
@@ -104,6 +102,9 @@
           label: `${group.label} · nuova posizione`,
           occurrenceId: data.newOccurrenceIds[occurrenceGroup] ?? null,
           isNewOccurrence: true,
+          occurrenceGroup,
+          occurrenceIndex: null,
+          occurrenceCount: occurrenceIds.length,
         },
       ];
     });
@@ -165,10 +166,11 @@
 {:else}
   <div class="official-fields">
     {#each fieldGroups() as group (group.key)}
-      <OfficialFieldGroup {data} {group} {actionUrl} />
+      <OfficialFieldGroup {data} {group} {actionUrl} {occurrenceActionUrl} />
     {/each}
   </div>
 {/if}
 
 {#if form?.fieldError}<p class="workspace-form-error" role="alert">{form.fieldError}</p>{/if}
+{#if form?.occurrenceError}<p class="workspace-form-error" role="alert">{form.occurrenceError}</p>{/if}
 {#if form?.duplicateError}<p class="workspace-form-error" role="alert">{form.duplicateError}</p>{/if}

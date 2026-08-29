@@ -29,15 +29,16 @@ import {
   createDeclarationSubjectEntry,
   createSharedAsset,
   createSharedSubject,
+  getAutomaticOfficialFieldValues,
   listCalculationRuns,
   listDevolutionScenarios,
   listDomainAuditEvents,
+  listCanonicalOccurrenceIds,
   listDeclarationSubjectEntries,
   listSharedAssets,
   listSharedSubjects,
   runSuccessionCalculation,
   saveCanonicalField,
-  saveCanonicalFields,
   saveDevolutionScenario,
   synchronizeChecklist,
   updateChecklistItem,
@@ -52,11 +53,16 @@ import {
 } from "../../../domain/official-catalog/catalog.ts";
 import {
   OPERATIONAL_SECTION_AREAS,
+  buildOperationalParityMap,
   isOperationalSectionId,
-  isOperationalParityEditable,
   listOperationalAreaFields,
   type OperationalSectionId,
 } from "../../../domain/operational-parity.ts";
+import {
+  removeCanonicalOccurrenceFromView,
+  reorderCanonicalOccurrencesFromView,
+  saveCanonicalFieldsFromView,
+} from "$lib/server/canonical-field-views";
 import { validateFieldValue } from "../../../domain/validation.ts";
 import {
   listOfficialAttachments,
@@ -166,22 +172,41 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     quadroAssets.at(0) ??
     null;
   const complianceReport = buildComplianceReport(database, params.id, declaration.id);
-  const quadroFields = listQuadroFields(selectedQuadro).filter(
-    (field) => field.visibleFieldId !== null,
+  const parityByFieldId = new Map(
+    buildOperationalParityMap().map((row) => [row.fieldId, row] as const),
   );
+  const quadroFields = listQuadroFields(selectedQuadro)
+    .filter((field) => field.visibleFieldId !== null)
+    .map((field) => ({
+      ...field,
+      operationalParity: parityByFieldId.get(field.canonicalId)!,
+    }));
   const requestedSection = url.searchParams.get("sezione") ?? "overview";
   const operationalArea = isOperationalSectionId(requestedSection)
     ? OPERATIONAL_SECTION_AREAS[requestedSection]
     : null;
   const operationalFields = operationalArea ? listOperationalAreaFields(operationalArea) : [];
-  const newOccurrenceIds = Object.fromEntries(
-    [
-      ...new Set(
-        [...quadroFields, ...operationalFields]
-          .map((field) => field.occurrenceGroup)
-          .filter(Boolean),
-      ),
-    ].map((group) => [group, randomUUID()]),
+  const occurrenceGroups = [
+    ...new Set(
+      [...quadroFields, ...operationalFields]
+        .map((field) => field.occurrenceGroup)
+        .filter((group): group is string => Boolean(group)),
+    ),
+  ];
+  const newOccurrenceIds: Record<string, string> = Object.fromEntries(
+    occurrenceGroups.map((group) => [group, randomUUID()]),
+  );
+  const occurrenceOrders: Record<string, string[]> = Object.fromEntries(
+    occurrenceGroups.map((group) => [
+      group,
+      listCanonicalOccurrenceIds(declaration.declaration, group),
+    ]),
+  );
+  const calculationRuns = listCalculationRuns(database, params.id, declaration.id);
+  const automaticOfficialFields = getAutomaticOfficialFieldValues(
+    database,
+    params.id,
+    declaration.id,
   );
   return {
     practice,
@@ -207,7 +232,8 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     selectedAsset,
     checklist: synchronizeChecklist(database, params.id, declaration.id),
     devolutionScenarios: listDevolutionScenarios(database, params.id, declaration.id),
-    calculationRuns: listCalculationRuns(database, params.id, declaration.id),
+    calculationRuns,
+    automaticFieldValues: automaticOfficialFields?.values ?? {},
     auditEvents: listDomainAuditEvents(database, params.id),
     catalogStatus: getCatalogStatus(),
     quadri: listQuadroSummaries(),
@@ -216,6 +242,7 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     operationalArea,
     operationalFields,
     newOccurrenceIds,
+    occurrenceOrders,
     declarationIssues: complianceReport.issues.map((issue) => ({
       ...issue,
       operationalSection: issueOperationalSection(issue),
@@ -471,24 +498,22 @@ export const actions = {
       return fail(400, {
         fieldError: "Non è stato possibile identificare i dati da salvare.",
       });
-    if (isOperationalSectionId(returnSection)) {
-      const editableFieldIds = new Set(
-        listOperationalAreaFields(OPERATIONAL_SECTION_AREAS[returnSection])
-          .filter((field) => isOperationalParityEditable(field.operationalParity))
-          .map((field) => field.canonicalId),
-      );
-      const unsupportedField = fieldIds.find((fieldId) => !editableFieldIds.has(fieldId));
-      if (unsupportedField)
-        return fail(400, {
-          fieldError:
-            "Questo dato non è modificabile dalla Vista operativa finché la sua modalità di compilazione non viene qualificata.",
-        });
-    }
     try {
-      const result = saveCanonicalFields(openDatabase(), {
+      const quadro = String(formData.get("quadro") ?? "EA");
+      const view = isOperationalSectionId(returnSection)
+        ? ({ kind: "operational", section: returnSection } as const)
+        : QUADRI.includes(quadro as QuadroId)
+          ? ({ kind: "quadri", quadro: quadro as QuadroId } as const)
+          : null;
+      if (!view)
+        return fail(400, {
+          fieldError: "Non è stato possibile identificare la vista di provenienza dei dati.",
+        });
+      const result = saveCanonicalFieldsFromView(openDatabase(), {
         practiceId: params.id,
         declarationId,
         expectedRevision,
+        view,
         entityId,
         occurrenceId,
         confirmOfficialRules: formData.get("confirmOfficialRules") === "yes",
@@ -523,6 +548,109 @@ export const actions = {
     redirect(
       303,
       `/pratiche/${params.id}?sezione=quadri&vista=quadri&quadro=${encodeURIComponent(quadro)}&dichiarazione=${declarationId}${subjectQuery}${assetQuery}`,
+    );
+  },
+  manageOccurrence: async ({ locals, params, request }) => {
+    if (!locals.ownerId) redirect(303, "/login");
+    const formData = await request.formData();
+    const parsed = z
+      .object({
+        declarationId: z.string().uuid(),
+        expectedRevision: z.coerce.number().int().nonnegative(),
+        occurrenceGroup: z.string().trim().min(1).max(200),
+        occurrenceId: z.string().uuid(),
+        operation: z.enum(["move-up", "move-down", "remove"]),
+        quadro: z.string().trim().min(1).max(32),
+        returnSection: z.string().trim().max(32),
+      })
+      .safeParse({
+        declarationId: formData.get("declarationId"),
+        expectedRevision: formData.get("expectedRevision"),
+        occurrenceGroup: formData.get("occurrenceGroup"),
+        occurrenceId: formData.get("occurrenceId"),
+        operation: formData.get("operation"),
+        quadro: formData.get("quadro"),
+        returnSection: formData.get("returnSection") ?? "",
+      });
+    if (!parsed.success)
+      return fail(400, {
+        occurrenceError: "Non è stato possibile identificare la posizione da aggiornare.",
+      });
+
+    const { declarationId, expectedRevision, occurrenceGroup, occurrenceId, operation } =
+      parsed.data;
+    const view = isOperationalSectionId(parsed.data.returnSection)
+      ? ({ kind: "operational", section: parsed.data.returnSection } as const)
+      : QUADRI.includes(parsed.data.quadro as QuadroId)
+        ? ({ kind: "quadri", quadro: parsed.data.quadro as QuadroId } as const)
+        : null;
+    if (!view)
+      return fail(400, {
+        occurrenceError: "Non è stato possibile identificare la vista di provenienza.",
+      });
+
+    try {
+      const database = openDatabase();
+      const declaration = getDeclaration(database, declarationId, params.id);
+      if (!declaration) error(404, "Dichiarazione non trovata");
+      if (operation === "remove") {
+        removeCanonicalOccurrenceFromView(database, {
+          practiceId: params.id,
+          declarationId,
+          expectedRevision,
+          view,
+          occurrenceGroup,
+          occurrenceId,
+        });
+      } else {
+        const occurrenceIds = listCanonicalOccurrenceIds(declaration.declaration, occurrenceGroup);
+        const currentIndex = occurrenceIds.indexOf(occurrenceId);
+        const targetIndex = operation === "move-up" ? currentIndex - 1 : currentIndex + 1;
+        if (currentIndex < 0 || targetIndex < 0 || targetIndex >= occurrenceIds.length)
+          return fail(400, {
+            occurrenceError: "La posizione non può essere spostata ulteriormente.",
+          });
+        [occurrenceIds[currentIndex], occurrenceIds[targetIndex]] = [
+          occurrenceIds[targetIndex]!,
+          occurrenceIds[currentIndex]!,
+        ];
+        reorderCanonicalOccurrencesFromView(database, {
+          practiceId: params.id,
+          declarationId,
+          expectedRevision,
+          view,
+          occurrenceGroup,
+          occurrenceIds,
+        });
+      }
+    } catch (occurrenceError) {
+      if (occurrenceError instanceof Error && occurrenceError.message === "REVISION_CONFLICT")
+        return fail(409, {
+          occurrenceError:
+            "La dichiarazione è stata aggiornata altrove. Ricarica la pagina e riprova.",
+        });
+      if (
+        occurrenceError instanceof Error &&
+        [
+          "OCCURRENCE_NOT_FOUND",
+          "OCCURRENCE_ORDER_INVALID",
+          "OCCURRENCE_GROUP_NOT_VISIBLE_FROM_VIEW",
+        ].includes(occurrenceError.message)
+      )
+        return fail(400, {
+          occurrenceError: "La posizione non è più disponibile nella vista corrente.",
+        });
+      throw occurrenceError;
+    }
+
+    if (view.kind === "operational")
+      redirect(
+        303,
+        `/pratiche/${params.id}?sezione=${view.section}&vista=operational&dichiarazione=${declarationId}`,
+      );
+    redirect(
+      303,
+      `/pratiche/${params.id}?sezione=quadri&vista=quadri&quadro=${encodeURIComponent(view.quadro)}&dichiarazione=${declarationId}`,
     );
   },
   updateChecklist: async ({ locals, params, request }) => {

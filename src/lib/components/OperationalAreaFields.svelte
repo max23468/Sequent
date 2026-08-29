@@ -16,11 +16,15 @@
     isNewOccurrence: boolean;
     initiallyOpen: boolean;
     anchorId: string | null;
+    occurrenceGroup: string | null;
+    occurrenceIndex: number | null;
+    occurrenceCount: number;
   }
 
-  let { data, actionUrl, returnSection } = $props<{
+  let { data, actionUrl, occurrenceActionUrl, returnSection } = $props<{
     data: PageData;
     actionUrl: string;
+    occurrenceActionUrl: string;
     returnSection: string;
   }>();
 
@@ -33,24 +37,10 @@
     );
   }
 
-  function existingOccurrenceIds(fields: OperationalField[]): string[] {
-    const fieldIds = new Set(fields.map((field) => field.canonicalId));
-    return [
-      ...new Set(
-        (Object.values(data.declaration.declaration.fields) as Array<{
-          fieldId: string;
-          occurrenceId?: string | null;
-        }>)
-          .filter((field) => fieldIds.has(field.fieldId) && field.occurrenceId)
-          .map((field) => field.occurrenceId as string),
-      ),
-    ];
-  }
-
-  function baseGroups(): Array<Omit<FieldGroup, "label" | "entityId" | "entityMissing" | "occurrenceId" | "isNewOccurrence" | "initiallyOpen" | "anchorId">> {
+  function baseGroups(): Array<Omit<FieldGroup, "label" | "entityId" | "entityMissing" | "occurrenceId" | "isNewOccurrence" | "initiallyOpen" | "anchorId" | "occurrenceGroup" | "occurrenceIndex" | "occurrenceCount">> {
     const groups = new Map<
       string,
-      Omit<FieldGroup, "label" | "entityId" | "entityMissing" | "occurrenceId" | "isNewOccurrence" | "initiallyOpen" | "anchorId">
+      Omit<FieldGroup, "label" | "entityId" | "entityMissing" | "occurrenceId" | "isNewOccurrence" | "initiallyOpen" | "anchorId" | "occurrenceGroup" | "occurrenceIndex" | "occurrenceCount">
     >();
     for (const field of applicableFields()) {
       const parity = field.operationalParity;
@@ -84,6 +74,9 @@
           isNewOccurrence: false,
           initiallyOpen: false,
           anchorId: null,
+          occurrenceGroup: null,
+          occurrenceIndex: null,
+          occurrenceCount: 0,
         }));
       }
       if (scope === "asset") {
@@ -101,6 +94,9 @@
           isNewOccurrence: false,
           initiallyOpen: false,
           anchorId: null,
+          occurrenceGroup: null,
+          occurrenceIndex: null,
+          occurrenceCount: 0,
         }));
       }
       if (scope === "decedent" && !data.selectedDecedent) return [];
@@ -114,10 +110,14 @@
           isNewOccurrence: false,
           initiallyOpen: false,
           anchorId: null,
+          occurrenceGroup: null,
+          occurrenceIndex: null,
+          occurrenceCount: 0,
         }];
       if (scope === "occurrence") {
-        const occurrenceGroup = group.fields[0]?.occurrenceGroup;
-        const existing = existingOccurrenceIds(group.fields).map((occurrenceId, index) => ({
+        const occurrenceGroup = group.fields[0]?.occurrenceGroup ?? null;
+        const occurrenceIds = (data.occurrenceOrders[occurrenceGroup ?? ""] ?? []) as string[];
+        const existing = occurrenceIds.map((occurrenceId, index) => ({
           ...group,
           key: `${group.key}:${occurrenceId}`,
           label: `${group.context} · posizione ${index + 1}`,
@@ -127,6 +127,9 @@
           isNewOccurrence: false,
           initiallyOpen: false,
           anchorId: null,
+          occurrenceGroup,
+          occurrenceIndex: index,
+          occurrenceCount: occurrenceIds.length,
         }));
         const newOccurrenceId = occurrenceGroup
           ? (data.newOccurrenceIds[occurrenceGroup] ?? null)
@@ -143,6 +146,9 @@
             isNewOccurrence: true,
             initiallyOpen: false,
             anchorId: null,
+            occurrenceGroup: occurrenceGroup ?? null,
+            occurrenceIndex: null,
+            occurrenceCount: occurrenceIds.length,
           },
         ];
       }
@@ -155,6 +161,9 @@
         isNewOccurrence: false,
         initiallyOpen: false,
         anchorId: null,
+        occurrenceGroup: null,
+        occurrenceIndex: null,
+        occurrenceCount: 0,
       }];
     });
     const anchoredEntities = new Set<string>();
@@ -191,7 +200,7 @@
     </div>
     <div class="official-fields">
       {#each fieldGroups() as group (group.key)}
-        <OperationalFieldGroup {data} {group} {actionUrl} {returnSection} />
+        <OperationalFieldGroup {data} {group} {actionUrl} {occurrenceActionUrl} {returnSection} />
       {/each}
     </div>
   </section>

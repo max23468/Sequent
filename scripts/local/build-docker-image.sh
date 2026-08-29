@@ -4,7 +4,7 @@ set -euo pipefail
 repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 canonical_image=sequent:local
 retention_label=io.sequent.local.retention
-maximum_disk_percent="${SEQUENT_LOCAL_BUILD_MAX_DISK_PERCENT:-85}"
+maximum_disk_percent="${SEQUENT_LOCAL_BUILD_MAX_DISK_PERCENT:-90}"
 
 [[ "$maximum_disk_percent" =~ ^[0-9]+$ && "$maximum_disk_percent" -ge 1 \
   && "$maximum_disk_percent" -le 99 ]] \

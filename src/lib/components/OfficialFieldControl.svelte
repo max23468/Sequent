@@ -1,5 +1,6 @@
 <script lang="ts">
   import { deriveOfficialFieldValue } from "../../domain/derived-fields";
+  import { isOperationalParityAutomatic } from "../../domain/operational-parity";
   import type { PageData } from "../../routes/pratiche/[id]/$types";
 
   type QuadroField = PageData["quadroFields"][number];
@@ -44,6 +45,13 @@
   }
 
   function fieldValue(): string {
+    if (
+      isOperationalParityAutomatic(
+        field.operationalParity,
+        data.declaration.declaration.declarationKind,
+      )
+    )
+      return data.automaticFieldValues[field.canonicalId] ?? "";
     if (field.entryMode === "derived")
       return (
         deriveOfficialFieldValue(field.derivedFrom, {

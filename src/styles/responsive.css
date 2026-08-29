@@ -641,8 +641,17 @@
   }
   .official-field > div,
   .official-fields-actions,
+  .official-occurrence-actions,
   .qualification-notice {
     flex-direction: column;
+  }
+  .official-occurrence-actions {
+    align-items: stretch;
+  }
+  .official-occurrence-actions .button,
+  .official-occurrence-actions .button.text {
+    width: 100%;
+    margin-left: 0;
   }
   .checklist-form > .official-fields-actions,
   .devolution-form > .official-fields-actions {

@@ -1,11 +1,16 @@
 <script lang="ts">
   import type { PageData } from "../../routes/pratiche/[id]/$types";
+  import {
+    isOperationalParityAutomatic,
+    isOperationalParityEditable,
+    isOperationalParityOfficeReserved,
+  } from "../../domain/operational-parity";
   import OfficialFieldControl from "./OfficialFieldControl.svelte";
 
   type QuadroField = PageData["quadroFields"][number];
   type OfficialInstruction = QuadroField["instructions"][number];
 
-  let { data, group, actionUrl } = $props<{
+  let { data, group, actionUrl, occurrenceActionUrl } = $props<{
     data: PageData;
     group: {
       key: string;
@@ -13,8 +18,12 @@
       fields: QuadroField[];
       occurrenceId: string | null;
       isNewOccurrence: boolean;
+      occurrenceGroup: string | null;
+      occurrenceIndex: number | null;
+      occurrenceCount: number;
     };
     actionUrl: string;
+    occurrenceActionUrl: string;
   }>();
 
   function fieldEntityId(field: QuadroField): string | null {
@@ -38,13 +47,34 @@
   }
 
   function hasEditableFields(): boolean {
-    return group.fields.some((field: QuadroField) => field.entryMode !== "derived");
+    return group.fields.some(isEditable);
+  }
+
+  function isEditable(field: QuadroField): boolean {
+    return isOperationalParityEditable(
+      field.operationalParity,
+      data.declaration.declaration.declarationKind,
+    );
+  }
+
+  function isAutomatic(field: QuadroField): boolean {
+    return isOperationalParityAutomatic(
+      field.operationalParity,
+      data.declaration.declaration.declarationKind,
+    );
+  }
+
+  function isOfficeReserved(field: QuadroField): boolean {
+    return isOperationalParityOfficeReserved(
+      field.operationalParity,
+      data.declaration.declaration.declarationKind,
+    );
   }
 
   function groupInstructions(): OfficialInstruction[] {
-    const instructions: OfficialInstruction[] = group.fields.flatMap(
-      (field: QuadroField) => field.instructions,
-    );
+    const instructions: OfficialInstruction[] = group.fields
+      .filter(isEditable)
+      .flatMap((field: QuadroField) => field.instructions);
     return instructions.filter(
       (instruction: OfficialInstruction, index: number, all: OfficialInstruction[]) =>
         all.findIndex((candidate: OfficialInstruction) => candidate.id === instruction.id) === index,
@@ -73,7 +103,18 @@
     <input type="hidden" name="occurrenceId" value={group.occurrenceId ?? ""} />
     <input type="hidden" name="quadro" value={data.selectedQuadro} />
     {#each group.fields as field (field.canonicalId)}
-      <OfficialFieldControl {data} {field} occurrenceId={group.occurrenceId} entityMissing={entityMissing(field)} />
+      <OfficialFieldControl
+        {data}
+        {field}
+        occurrenceId={group.occurrenceId}
+        entityMissing={entityMissing(field)}
+        readOnly={!isEditable(field)}
+        readOnlyReason={isAutomatic(field)
+          ? "Valore prodotto automaticamente dall’elaborazione ufficiale confermata."
+          : isOfficeReserved(field)
+            ? "Campo riservato all’ufficio: Sequent lo conserva in sola lettura e non lo produce."
+            : "Valore derivato dagli altri dati della dichiarazione."}
+      />
     {/each}
     {#if hasEditableFields()}
       {#if groupInstructions().length > 0}
@@ -89,4 +130,17 @@
       </div>
     {/if}
   </form>
+  {#if group.occurrenceId && group.occurrenceGroup && !group.isNewOccurrence && group.occurrenceIndex !== null}
+    <form class="official-occurrence-actions" method="POST" action={occurrenceActionUrl}>
+      <input type="hidden" name="declarationId" value={data.declaration.id} />
+      <input type="hidden" name="expectedRevision" value={data.declaration.revision} />
+      <input type="hidden" name="occurrenceGroup" value={group.occurrenceGroup} />
+      <input type="hidden" name="occurrenceId" value={group.occurrenceId} />
+      <input type="hidden" name="quadro" value={data.selectedQuadro} />
+      <input type="hidden" name="returnSection" value="" />
+      <button class="button secondary" type="submit" name="operation" value="move-up" disabled={group.occurrenceIndex === 0}>Sposta prima</button>
+      <button class="button secondary" type="submit" name="operation" value="move-down" disabled={group.occurrenceIndex === group.occurrenceCount - 1}>Sposta dopo</button>
+      <button class="button text" type="submit" name="operation" value="remove">Rimuovi posizione</button>
+    </form>
+  {/if}
 </section>

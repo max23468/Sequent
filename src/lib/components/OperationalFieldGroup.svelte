@@ -1,12 +1,15 @@
 <script lang="ts">
   import type { PageData } from "../../routes/pratiche/[id]/$types";
-  import { isOperationalParityEditable } from "../../domain/operational-parity";
+  import {
+    isOperationalParityEditable,
+    operationalParityHandlingForDeclaration,
+  } from "../../domain/operational-parity";
   import OfficialFieldControl from "./OfficialFieldControl.svelte";
 
   type OperationalField = PageData["operationalFields"][number];
   type OfficialInstruction = OperationalField["instructions"][number];
 
-  let { data, group, actionUrl, returnSection } = $props<{
+  let { data, group, actionUrl, occurrenceActionUrl, returnSection } = $props<{
     data: PageData;
     group: {
       key: string;
@@ -20,13 +23,20 @@
       isNewOccurrence: boolean;
       initiallyOpen: boolean;
       anchorId: string | null;
+      occurrenceGroup: string | null;
+      occurrenceIndex: number | null;
+      occurrenceCount: number;
     };
     actionUrl: string;
+    occurrenceActionUrl: string;
     returnSection: string;
   }>();
 
   function isEditable(field: OperationalField): boolean {
-    return isOperationalParityEditable(field.operationalParity);
+    return isOperationalParityEditable(
+      field.operationalParity,
+      data.declaration.declaration.declarationKind,
+    );
   }
 
   function readOnlyReason(field: OperationalField): string {
@@ -34,10 +44,17 @@
     if (review.status === "irrisolta") return review.blocker ?? review.reason;
     if (review.status === "candidata")
       return "Consultabile qui; la modalità di compilazione è ancora da qualificare sulle fonti ufficiali.";
-    if (field.operationalParity.handling === "gestito-automaticamente")
+    if (
+      operationalParityHandlingForDeclaration(
+        field.operationalParity,
+        data.declaration.declaration.declarationKind,
+      ) === "gestito-automaticamente"
+    )
       return "Valore gestito automaticamente dalle regole ufficiali.";
     if (field.operationalParity.handling === "derivato")
       return "Valore derivato dagli altri dati della dichiarazione.";
+    if (field.operationalParity.handling === "riservato-ufficio")
+      return "Campo riservato all’ufficio: Sequent lo conserva in sola lettura e non lo produce.";
     return "Valore disponibile in sola lettura.";
   }
 
@@ -101,4 +118,17 @@
       </div>
     {/if}
   </form>
+  {#if group.occurrenceId && group.occurrenceGroup && !group.isNewOccurrence && group.occurrenceIndex !== null}
+    <form class="official-occurrence-actions" method="POST" action={occurrenceActionUrl}>
+      <input type="hidden" name="declarationId" value={data.declaration.id} />
+      <input type="hidden" name="expectedRevision" value={data.declaration.revision} />
+      <input type="hidden" name="occurrenceGroup" value={group.occurrenceGroup} />
+      <input type="hidden" name="occurrenceId" value={group.occurrenceId} />
+      <input type="hidden" name="quadro" value={group.quadro} />
+      <input type="hidden" name="returnSection" value={returnSection} />
+      <button class="button secondary" type="submit" name="operation" value="move-up" disabled={group.occurrenceIndex === 0}>Sposta prima</button>
+      <button class="button secondary" type="submit" name="operation" value="move-down" disabled={group.occurrenceIndex === group.occurrenceCount - 1}>Sposta dopo</button>
+      <button class="button text" type="submit" name="operation" value="remove">Rimuovi posizione</button>
+    </form>
+  {/if}
 </details>

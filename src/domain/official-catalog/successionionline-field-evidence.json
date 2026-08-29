@@ -1,0 +1,1825 @@
+{
+  "schemaVersion": 1,
+  "application": {
+    "name": "SuccessioniOnLine",
+    "model": "SUC13",
+    "jnlpUrl": "https://jws.agenziaentrate.it/jws/registro/2013/SUC13/SUC13.jnlp",
+    "sources": [
+      {
+        "file": "SUC13_ResSUC13.jar",
+        "sha256": "2332c71fb3f6db61ed7fe68e7f2f56c18e85015c96aea3c7df905d58dfaf24b5"
+      },
+      {
+        "file": "XMLConverter_PropertiesREG2013.jar",
+        "sha256": "e396845477cbc0b7628d75d46782748ec5d1452380e21a59af810ed95709f712"
+      }
+    ]
+  },
+  "counts": {
+    "reviewedFields": 257,
+    "professionista": 230,
+    "automatico": 19,
+    "riservato-ufficio": 8
+  },
+  "fields": [
+    {
+      "fieldId": "frontespizio.beneficiari.beneficio-inventario",
+      "recordCode": "B23",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "frontespizio.data-opzione-24-bis",
+      "recordCode": "B103",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "frontespizio.devoluzione.legge-estera",
+      "recordCode": "B104",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "frontespizio.devoluzione.per-legge",
+      "recordCode": "B16",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "frontespizio.devoluzione.per-testamento",
+      "recordCode": "B17",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "frontespizio.dichiarazione-precedente.anno",
+      "recordCode": "B18",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "frontespizio.dichiarazione-precedente.numero",
+      "recordCode": "B20",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "frontespizio.dichiarazione-precedente.volume",
+      "recordCode": "B19",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "frontespizio.eventi-eccezionali",
+      "recordCode": "B15",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "quadro-ea.soggetto.disabilita",
+      "recordCode": "EA003004",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "quadro-ea.soggetto.rinuncia",
+      "recordCode": "EA003020",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/CampiServizio/Data",
+      "recordCode": "B96",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "riservato-ufficio",
+      "producerBasis": "sezione-riservata-all-ufficio"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/CampiServizio/Flag",
+      "recordCode": "B95",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "riservato-ufficio",
+      "producerBasis": "sezione-riservata-all-ufficio"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/CampiServizio/Flag2",
+      "recordCode": "B97",
+      "uiControls": [],
+      "reviewedProducer": "riservato-ufficio",
+      "producerBasis": "sezione-riservata-all-ufficio"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/CampiServizio/Flag3",
+      "recordCode": "B98",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "riservato-ufficio",
+      "producerBasis": "sezione-riservata-all-ufficio"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/CasiParticolari/CasiParticolari",
+      "recordCode": "B77",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/CasiParticolari/CopiaConforme",
+      "recordCode": "B101",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/F24/CodiceComune",
+      "recordCode": "B92",
+      "uiControls": [],
+      "reviewedProducer": "riservato-ufficio",
+      "producerBasis": "sezione-riservata-all-ufficio"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/F24/Comune",
+      "recordCode": "B91",
+      "uiControls": [],
+      "reviewedProducer": "riservato-ufficio",
+      "producerBasis": "sezione-riservata-all-ufficio"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/F24/Indirizzo",
+      "recordCode": "B93",
+      "uiControls": [],
+      "reviewedProducer": "riservato-ufficio",
+      "producerBasis": "sezione-riservata-all-ufficio"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/F24/Provincia",
+      "recordCode": "B90",
+      "uiControls": [],
+      "reviewedProducer": "riservato-ufficio",
+      "producerBasis": "sezione-riservata-all-ufficio"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEA",
+      "recordCode": "B59",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEB",
+      "recordCode": "B60",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEC",
+      "recordCode": "B61",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaED",
+      "recordCode": "B62",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEE",
+      "recordCode": "B63",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEF",
+      "recordCode": "B64",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEG",
+      "recordCode": "B65",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEH",
+      "recordCode": "B66",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEI",
+      "recordCode": "B67",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEL",
+      "recordCode": "B68",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEM",
+      "recordCode": "B69",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEN",
+      "recordCode": "B70",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEO",
+      "recordCode": "B71",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEP",
+      "recordCode": "B72",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaEQ",
+      "recordCode": "B73",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/FirmaModello/CasellaER",
+      "recordCode": "B74",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/IdentificativoProdSoftware",
+      "recordCode": "B8",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "identificativo-generato-dal-software"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/ImpegnoATrasmettere/CFintermediario",
+      "recordCode": "B79",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/ImpegnoATrasmettere/DataImpegno",
+      "recordCode": "B82",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/ImpegnoATrasmettere/ImpegnoATrasmettere",
+      "recordCode": "B81",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/ImportoDaVersare",
+      "recordCode": "B94",
+      "uiControls": [],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Lingua",
+      "recordCode": "B106",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/CodiceCarica",
+      "recordCode": "B43",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/CodiceFiscale",
+      "recordCode": "B42",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/CodiceFiscaleRappresentato",
+      "recordCode": "B53",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/DatiAnagrafici/Cognome",
+      "recordCode": "B45",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/DatiAnagrafici/ComuneNascita",
+      "recordCode": "B50",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/DatiAnagrafici/DataNascita",
+      "recordCode": "B48",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/DatiAnagrafici/Nome",
+      "recordCode": "B46",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/DatiAnagrafici/ProvinciaNascita",
+      "recordCode": "B49",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/DatiAnagrafici/Sesso",
+      "recordCode": "B47",
+      "uiControls": ["RadioPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/DecorrenzaTerminePresentazione",
+      "recordCode": "B44",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/Email",
+      "recordCode": "B52",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/ResidenteEstero/CodiceStatoEstero",
+      "recordCode": "B54",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/ResidenteEstero/IndirizzoEstero",
+      "recordCode": "B57",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/ResidenteEstero/LocalitaEstero",
+      "recordCode": "B56",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/ResidenteEstero/StatoEstero",
+      "recordCode": "B105",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/ResidenteEstero/StatoFederato",
+      "recordCode": "B55",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Presentatore/Telefono",
+      "recordCode": "B51",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/TipoDichiarazione/Devoluzione/Testamento/Pubblicazione/DataPubblicazioneTestamento",
+      "recordCode": "B36",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/TipoDichiarazione/Devoluzione/Testamento/Pubblicazione/PubblicoUfficiale",
+      "recordCode": "B35",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/TipoDichiarazione/Devoluzione/Testamento/Registrazione/DataRegistrazione",
+      "recordCode": "B41",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/TipoDichiarazione/Devoluzione/Testamento/Registrazione/NumeroRegistrazione",
+      "recordCode": "B39",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/TipoDichiarazione/Devoluzione/Testamento/Registrazione/Serie",
+      "recordCode": "B38",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/TipoDichiarazione/Devoluzione/Testamento/Registrazione/SottonumeroRegistrazione",
+      "recordCode": "B40",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/TipoDichiarazione/Devoluzione/Testamento/Registrazione/UfficioDiRegistrazione",
+      "recordCode": "B37",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/TipoDichiarazione/Devoluzione/Testamento/TestamentoEstero",
+      "recordCode": "B34",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Versamento/CodiceFiscaleTitolareCC",
+      "recordCode": "B88",
+      "uiControls": [],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/Frontespizio/Versamento/IBAN",
+      "recordCode": "B89",
+      "uiControls": [],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEB/Modulo/Terreni/BeneAziendale",
+      "recordCode": "EB002016",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEB/Modulo/Terreni/DevoluzioneEB/Continuazione",
+      "recordCode": "EB002035",
+      "uiControls": ["CampiStampa"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEB/Modulo/Terreni/DiscordanzaDatiIntestatario",
+      "recordCode": "EB002024",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEB/Modulo/Terreni/PassaggiSenzaAttiLegali",
+      "recordCode": "EB002025",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/BeneAziendale",
+      "recordCode": "EC002022",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/DevoluzioneEC/Continuazione",
+      "recordCode": "EC002053",
+      "uiControls": ["CampiStampa"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/DiscordanzaDatiIntestatario",
+      "recordCode": "EC002026",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/Graffati/ContinuazioneGraffati",
+      "recordCode": "EC002044",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/PassaggiSenzaAttiLegali",
+      "recordCode": "EC002027",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroED/Modulo/Passivita/RipartizioneED/Continuazione",
+      "recordCode": "ED003017",
+      "uiControls": ["CampiStampa"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneI_ImpostaIpotecaria/CreditoImposta",
+      "recordCode": "EF007003",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneI_ImpostaIpotecaria/ImpostaIpotecariaVersata",
+      "recordCode": "EF006003",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneII_ImpostaCatastale/ImpostaCatastaleVersata",
+      "recordCode": "EF012003",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/Acconto",
+      "recordCode": "EF218003",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/Imposta",
+      "recordCode": "EF118002",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "automatico",
+      "producerBasis": "calcolo-ufficiale"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/TempisticaPagamento",
+      "recordCode": "EF218001",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVBis_ImpostaSuccessione/PagamentoAnticipatoTrust",
+      "recordCode": "EF218004",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVI_SanzioniInteressi/ImpostaBollo/ImpostaBollo_Interessi",
+      "recordCode": "EF023002",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVI_SanzioniInteressi/ImpostaBollo/ImpostaBollo_Sanzioni",
+      "recordCode": "EF023001",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVI_SanzioniInteressi/ImpostaCatastale/ImpostaCatastale_Interessi",
+      "recordCode": "EF021002",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVI_SanzioniInteressi/ImpostaCatastale/ImpostaCatastale_Sanzioni",
+      "recordCode": "EF021001",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVI_SanzioniInteressi/ImpostaIpotecaria/ImpostaIpotecaria_Interessi",
+      "recordCode": "EF020002",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVI_SanzioniInteressi/ImpostaIpotecaria/ImpostaIpotecaria_Sanzioni",
+      "recordCode": "EF020001",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVI_SanzioniInteressi/ImpostaSuccessione/ImpostaSuccessione_Interessi",
+      "recordCode": "EF123002",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVI_SanzioniInteressi/ImpostaSuccessione/ImpostaSuccessione_Sanzioni",
+      "recordCode": "EF123001",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVI_SanzioniInteressi/TassaIpotecaria/TassaIpotecaria_Interessi",
+      "recordCode": "EF022002",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVI_SanzioniInteressi/TassaIpotecaria/TassaIpotecaria_Sanzioni",
+      "recordCode": "EF022001",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Aeromobili/AnnoImmatricolazione",
+      "recordCode": "EH011002",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Aeromobili/FlagAeromobili",
+      "recordCode": "EH000031",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Aeromobili/Nazionalita",
+      "recordCode": "EH011001",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Aeromobili/NumeroImmatricolazione",
+      "recordCode": "EH011003",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Aziende/CameraCommercio",
+      "recordCode": "EH009002",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Aziende/DataDeposito",
+      "recordCode": "EH009001",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Aziende/FlagAzienda",
+      "recordCode": "EH000029",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/DatiAnagrafici/Cognome",
+      "recordCode": "EH000008",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/DatiAnagrafici/ComuneNascita",
+      "recordCode": "EH000012",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/DatiAnagrafici/DataNascita",
+      "recordCode": "EH000011",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/DatiAnagrafici/Nome",
+      "recordCode": "EH000009",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/DatiAnagrafici/ProvinciaNascita",
+      "recordCode": "EH000013",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/DatiAnagrafici/Sesso",
+      "recordCode": "EH000010",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/Decesso/Comune",
+      "recordCode": "EH000016",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/Decesso/DataDecesso",
+      "recordCode": "EH000015",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/Decesso/FlagDeceduto",
+      "recordCode": "EH000014",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/Decesso/Provincia",
+      "recordCode": "EH000017",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/MortePresunta/DataDeposito",
+      "recordCode": "EH000020",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/MortePresunta/FlagAssenza",
+      "recordCode": "EH000018",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/MortePresunta/Sentenza",
+      "recordCode": "EH000077",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/DatiDefunto/MortePresunta/Tribunale",
+      "recordCode": "EH000019",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Dichiarante/FlagAssenzaDichiarante",
+      "recordCode": "EH000071",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Dichiarante/PresenzaDichiarante",
+      "recordCode": "EH000070",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/FlagInventari",
+      "recordCode": "EH000075",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/FlagNoScioglimentoUnioneCivile",
+      "recordCode": "EH000078",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/FlagPassivita",
+      "recordCode": "EH000076",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/FlagProspetto",
+      "recordCode": "EH000074",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Interdetti/FlagAssenzaInterdetti",
+      "recordCode": "EH000023",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Interdetti/PresenzaInterdetti/Certificatore",
+      "recordCode": "EH007003",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Interdetti/PresenzaInterdetti/FlagInterdetti",
+      "recordCode": "EH000024",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Interdetti/PresenzaInterdetti/IdentificazioneSoggetto/Modulo",
+      "recordCode": "EH007002",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Interdetti/PresenzaInterdetti/IdentificazioneSoggetto/Rigo",
+      "recordCode": "EH007001",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Navi/AnnoIscrizione",
+      "recordCode": "EH010002",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Navi/FlagNavi",
+      "recordCode": "EH000030",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Navi/NumeroIscrizione",
+      "recordCode": "EH010003",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Navi/SiglaUfficioIscrizione",
+      "recordCode": "EH010001",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/CodiceCarica",
+      "recordCode": "EH000085",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/CodiceFiscale",
+      "recordCode": "EH000007",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/CodiceFiscaleRappresentato",
+      "recordCode": "EH000086",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/Cognome",
+      "recordCode": "EH000001",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/ComuneNascita",
+      "recordCode": "EH000005",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/DataNascita",
+      "recordCode": "EH000004",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/Nome",
+      "recordCode": "EH000002",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/ProvinciaNascita",
+      "recordCode": "EH000006",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Presentatore/Sesso",
+      "recordCode": "EH000003",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/ReintegroDiritti/FlagReintegro",
+      "recordCode": "EH006001",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/ReintegroDiritti/RegistrazioneReintegroDiritti/DataRegistrazione",
+      "recordCode": "EH006006",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/ReintegroDiritti/RegistrazioneReintegroDiritti/NumeroRegistrazione",
+      "recordCode": "EH006004",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/ReintegroDiritti/RegistrazioneReintegroDiritti/Serie",
+      "recordCode": "EH006003",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/ReintegroDiritti/RegistrazioneReintegroDiritti/SottonumeroRegistrazione",
+      "recordCode": "EH006005",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/ReintegroDiritti/RegistrazioneReintegroDiritti/UfficioDiRegistrazione",
+      "recordCode": "EH006002",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Rinuncia/FlagAssenzaRinuncia",
+      "recordCode": "EH000025",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Rinuncia/PresenzaRinuncia/FlagRinuncia",
+      "recordCode": "EH000026",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Rinuncia/PresenzaRinuncia/IdentificazioneSoggetto/Modulo",
+      "recordCode": "EH008002",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Rinuncia/PresenzaRinuncia/IdentificazioneSoggetto/Rigo",
+      "recordCode": "EH008001",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Rinuncia/PresenzaRinuncia/RegistrazioneRinuncia/DataRegistrazione",
+      "recordCode": "EH008007",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Rinuncia/PresenzaRinuncia/RegistrazioneRinuncia/NumeroRegistrazione",
+      "recordCode": "EH008005",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Rinuncia/PresenzaRinuncia/RegistrazioneRinuncia/Serie",
+      "recordCode": "EH008004",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Rinuncia/PresenzaRinuncia/RegistrazioneRinuncia/SottonumeroRegistrazione",
+      "recordCode": "EH008006",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Rinuncia/PresenzaRinuncia/RegistrazioneRinuncia/UfficioDiRegistrazione",
+      "recordCode": "EH008003",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Separazione/FlagAssenzaSeparazione",
+      "recordCode": "EH000027",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Separazione/FlagSeparazione",
+      "recordCode": "EH000028",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Testamento/FlagAssenzaTestamento",
+      "recordCode": "EH000021",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneI_DichSost/Testamento/PresenzaTestamento/FlagTestamento",
+      "recordCode": "EH000022",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/AltraCasa/FlagNessunaAltraCasa",
+      "recordCode": "EH000072",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/AltraCasa/FlagVenditaAltraCasa",
+      "recordCode": "EH000073",
+      "uiControls": ["SingleRadio"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/FlagContigui",
+      "recordCode": "EH000079",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/FlagNessunaAltraCasaComune",
+      "recordCode": "EH000080",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/FlagResidenteEstero2",
+      "recordCode": "EH000037",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/FlagSedeLavoro",
+      "recordCode": "EH000088",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/FlagTrasferimentoPrima",
+      "recordCode": "EH000087",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobileContiguo/DatiCatastali/Foglio",
+      "recordCode": "EH018006",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobileContiguo/DatiCatastali/Particella",
+      "recordCode": "EH018007",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobileContiguo/DatiCatastali/Subalterno",
+      "recordCode": "EH018008",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobileContiguo/Luogo/CodiceComune",
+      "recordCode": "EH018003",
+      "uiControls": [],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobileContiguo/Luogo/Comune",
+      "recordCode": "EH018002",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobileContiguo/Luogo/Indirizzo",
+      "recordCode": "EH018004",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobileContiguo/Luogo/Provincia",
+      "recordCode": "EH018001",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobileContiguo/SezioneUrbana",
+      "recordCode": "EH018005",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobilePrincipale/DatiCatastali/Foglio",
+      "recordCode": "EH012006",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobilePrincipale/DatiCatastali/Particella",
+      "recordCode": "EH012007",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobilePrincipale/DatiCatastali/Subalterno",
+      "recordCode": "EH012008",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobilePrincipale/Luogo/CodiceComune",
+      "recordCode": "EH012003",
+      "uiControls": [],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobilePrincipale/Luogo/Comune",
+      "recordCode": "EH012002",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobilePrincipale/Luogo/Indirizzo",
+      "recordCode": "EH012004",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobilePrincipale/Luogo/Provincia",
+      "recordCode": "EH012001",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/ImmobilePrincipale/SezioneUrbana",
+      "recordCode": "EH012005",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/Opzioni/FlagCambioResidenza",
+      "recordCode": "EH000035",
+      "uiControls": ["SingleRadioGroup"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/Opzioni/FlagComuneAttivita",
+      "recordCode": "EH000034",
+      "uiControls": ["SingleRadioGroup"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/Opzioni/FlagComuneResidenza",
+      "recordCode": "EH000033",
+      "uiControls": ["SingleRadioGroup"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/Opzioni/FlagForzeArmate",
+      "recordCode": "EH000038",
+      "uiControls": ["SingleRadioGroup"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneII_AgevPrimaCasa/Opzioni/FlagTrasferitoEstero",
+      "recordCode": "EH000036",
+      "uiControls": ["SingleRadioGroup"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIII_CreditoImposta/Imposta",
+      "recordCode": "EH000041",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIII_CreditoImposta/RegistrazioneAcquisto/DataRegistrazione",
+      "recordCode": "EH000046",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIII_CreditoImposta/RegistrazioneAcquisto/NumeroRegistrazione",
+      "recordCode": "EH000044",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIII_CreditoImposta/RegistrazioneAcquisto/Serie",
+      "recordCode": "EH000043",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIII_CreditoImposta/RegistrazioneAcquisto/SottonumeroRegistrazione",
+      "recordCode": "EH000045",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIII_CreditoImposta/RegistrazioneAcquisto/UfficioDiRegistrazione",
+      "recordCode": "EH000042",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIII_CreditoImposta/RegistrazioneVendita/DataRegistrazione",
+      "recordCode": "EH000051",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIII_CreditoImposta/RegistrazioneVendita/NumeroRegistrazione",
+      "recordCode": "EH000049",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIII_CreditoImposta/RegistrazioneVendita/Serie",
+      "recordCode": "EH000048",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIII_CreditoImposta/RegistrazioneVendita/SottonumeroRegistrazione",
+      "recordCode": "EH000050",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIII_CreditoImposta/RegistrazioneVendita/UfficioDiRegistrazione",
+      "recordCode": "EH000047",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIII_CreditoImposta/TipologiaImposta",
+      "recordCode": "EH000040",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/Agevolazioni/FlagC",
+      "recordCode": "EH000060",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/Agevolazioni/FlagD",
+      "recordCode": "EH000061",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/Agevolazioni/FlagE",
+      "recordCode": "EH000062",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/Agevolazioni/FlagQ",
+      "recordCode": "EH000063",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/EsenzioneImpostaSuccessione/AgevolazTipoA/Data",
+      "recordCode": "EH000055",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/EsenzioneImpostaSuccessione/AgevolazTipoA/FlagA",
+      "recordCode": "EH000053",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/EsenzioneImpostaSuccessione/AgevolazTipoA/NumProtocollo",
+      "recordCode": "EH000054",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/EsenzioneImpostaSuccessione/AgevolazTipoL/Data",
+      "recordCode": "EH000058",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/EsenzioneImpostaSuccessione/AgevolazTipoL/FlagL",
+      "recordCode": "EH000056",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/EsenzioneImpostaSuccessione/AgevolazTipoL/NumProtocollo",
+      "recordCode": "EH000057",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/Riduzioni/EstremiDichiarazionePrecedente/Anno",
+      "recordCode": "EH000066",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/Riduzioni/EstremiDichiarazionePrecedente/Numero",
+      "recordCode": "EH000068",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/Riduzioni/EstremiDichiarazionePrecedente/Volume",
+      "recordCode": "EH000067",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/Riduzioni/EstremiDonazionePrecedente/NumeroRegistrazione",
+      "recordCode": "EH000083",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/Riduzioni/EstremiDonazionePrecedente/Serie",
+      "recordCode": "EH000082",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/Riduzioni/EstremiDonazionePrecedente/SottonumeroRegistrazione",
+      "recordCode": "EH000084",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/Riduzioni/EstremiDonazionePrecedente/UfficioDiRegistrazione",
+      "recordCode": "EH000081",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEH/PrimoModulo/SezioneIV_AltreAgevRiduz/Riduzioni/UfficioTerritoriale",
+      "recordCode": "EH000065",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/Modulo/SezioneII_DatiIntestatario/Continuazione",
+      "recordCode": "EI002701",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/Presentatore/CodiceCarica",
+      "recordCode": "EI000008",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/Presentatore/CodiceFiscale",
+      "recordCode": "EI000007",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/Presentatore/CodiceFiscaleRappresentato",
+      "recordCode": "EI000009",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/Presentatore/Cognome",
+      "recordCode": "EI000001",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/Presentatore/ComuneNascita",
+      "recordCode": "EI000005",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/Presentatore/DataNascita",
+      "recordCode": "EI000004",
+      "uiControls": ["CampoData"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/Presentatore/Nome",
+      "recordCode": "EI000002",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/Presentatore/ProvinciaNascita",
+      "recordCode": "EI000006",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/Presentatore/Sesso",
+      "recordCode": "EI000003",
+      "uiControls": ["CampoOutput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/SezioneI_AttiLegali/FlagAttiLegali",
+      "recordCode": "EI001101",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/SezioneII_DatiIntestatario/Continuazione",
+      "recordCode": "EI002701",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/SezioneII_DatiIntestatario/Immobile/DatiCatastali/Foglio",
+      "recordCode": "EI002006",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/SezioneII_DatiIntestatario/Immobile/DatiCatastali/Particella",
+      "recordCode": "EI002007",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/SezioneII_DatiIntestatario/Immobile/DatiCatastali/Subalterno",
+      "recordCode": "EI002008",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/SezioneII_DatiIntestatario/Immobile/Luogo/CodiceComune",
+      "recordCode": "EI002005",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/SezioneII_DatiIntestatario/Immobile/Luogo/CodiceComuneAmministrativo",
+      "recordCode": "EI002004",
+      "uiControls": [],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/SezioneII_DatiIntestatario/Immobile/Luogo/ComuneAmministrativo",
+      "recordCode": "EI002003",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/SezioneII_DatiIntestatario/Immobile/Luogo/Provincia",
+      "recordCode": "EI002002",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/SezioneII_DatiIntestatario/Immobile/SezioneUrbana",
+      "recordCode": "EI002009",
+      "uiControls": ["CampoInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEI_new/PrimoModulo/SezioneII_DatiIntestatario/Immobile/TipoCatasto",
+      "recordCode": "EI002001",
+      "uiControls": ["ComboInput"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEL/Modulo/TerreniTavolare/BeneAziendale",
+      "recordCode": "EL002019",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEL/Modulo/TerreniTavolare/DevoluzioneEL/Continuazione",
+      "recordCode": "EL002034",
+      "uiControls": ["CampiStampa"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEM/Modulo/FabbricatiTavolare/BeneAziendale",
+      "recordCode": "EM001023",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEM/Modulo/FabbricatiTavolare/DevoluzioneEM/Continuazione",
+      "recordCode": "EM001057",
+      "uiControls": ["CampiStampa"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEM/Modulo/FabbricatiTavolare/Graffati/ContinuazioneGraffati",
+      "recordCode": "EM001048",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEN/Modulo/Aziende/BeniEsteri/BeneSitoEstero",
+      "recordCode": "EN002009",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEN/Modulo/Aziende/ContinuazioneImmobiliAziendali",
+      "recordCode": "EN002038",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEN/Modulo/Aziende/DevoluzioneEN/Continuazione",
+      "recordCode": "EN002047",
+      "uiControls": ["CampiStampa"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEN/Modulo/Aziende/Inventario/Inventario",
+      "recordCode": "EN002003",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEO/Modulo/Titoli/BeniEsteri/BeneSitoEstero",
+      "recordCode": "EO003012",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEO/Modulo/Titoli/DevoluzioneEO/Continuazione",
+      "recordCode": "EO003022",
+      "uiControls": ["CampiStampa"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEP/Modulo/Aeromobili/BeniEsteri/BeneSitoEstero",
+      "recordCode": "EP001009",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEP/Modulo/Aeromobili/DevoluzioneEP/Continuazione",
+      "recordCode": "EP001020",
+      "uiControls": ["CampiStampa"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEQ/Modulo/Navi/BeniEsteri/BeneSitoEstero",
+      "recordCode": "EQ002012",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEQ/Modulo/Navi/DevoluzioneEQ/Continuazione",
+      "recordCode": "EQ002023",
+      "uiControls": ["CampiStampa"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroER/Modulo/Rendite/BeniEsteri/BeneSitoEstero",
+      "recordCode": "ER004006",
+      "uiControls": ["CheckPannello"],
+      "reviewedProducer": "professionista",
+      "producerBasis": "controllo-input-diretto"
+    },
+    {
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroER/Modulo/Rendite/DevoluzioneER/Continuazione",
+      "recordCode": "ER004017",
+      "uiControls": [],
+      "reviewedProducer": "professionista",
+      "producerBasis": "flusso-professionale-wizard-o-specializzato"
+    }
+  ]
+}

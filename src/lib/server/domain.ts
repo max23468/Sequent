@@ -8,6 +8,8 @@ import {
   type DeclarationTaxSummary,
   type SuccessionAllocation,
 } from "../../domain/calculation.ts";
+import { addSnapshotAutomaticOfficialFieldValues } from "../../domain/automatic-official-fields.ts";
+import { calculateOfficialJurisdictionCounts } from "../../domain/municipality-conservatory.ts";
 import {
   buildSuccessionPaymentPlan,
   ordinaryDeclarationDeadline,
@@ -1605,6 +1607,26 @@ export function listCalculationRuns(
   }));
 }
 
+export function getAutomaticOfficialFieldValues(
+  database: Database.Database,
+  practiceId: string,
+  declarationId: string,
+): { values: Record<string, string>; updatedAt: string; calculationId: string } | null {
+  const declaration = getDeclaration(database, declarationId, practiceId);
+  if (!declaration?.declaration.latestCalculationRunId) return null;
+  const calculation = listCalculationRuns(database, practiceId, declarationId).find(
+    (candidate) =>
+      candidate.id === declaration.declaration.latestCalculationRunId &&
+      candidate.status === "confirmed",
+  );
+  if (!calculation) return null;
+  return {
+    values: calculation.declarationTaxes.officialFieldValues,
+    updatedAt: calculation.updatedAt,
+    calculationId: calculation.id,
+  };
+}
+
 export function runSuccessionCalculation(
   database: Database.Database,
   input: { practiceId: string; declarationId: string },
@@ -1763,7 +1785,7 @@ export function runSuccessionCalculation(
   const allocations: SuccessionAllocation[] = scenario.shares.map((share, index) => {
     const asset = assets.get(share.assetId ?? "");
     const beneficiary = beneficiaries.find((candidate) => candidate.id === share.beneficiaryId);
-    const municipalityField = asset ? assetCatalogField(asset, "CodiceComune") : null;
+    const municipalityField = asset ? assetCatalogField(asset, "CodiceComuneAmministrativo") : null;
     const provinceField = asset ? assetCatalogField(asset, "Provincia") : null;
     const habitationRightField = asset ? assetCatalogField(asset, "DirittoAbitazione") : null;
     const landTypeField = asset ? assetCatalogField(asset, "TipologiaTerreno") : null;
@@ -1807,44 +1829,12 @@ export function runSuccessionCalculation(
     declaration.declaration,
     `${EF_PATH}/SezioneIV_ImpostaBollo/Circoscrizioni_Numero`,
   );
-  const mortgageJurisdictionCount = /^\d+$/u.test(mortgageJurisdictionText)
-    ? Number(mortgageJurisdictionText)
-    : 0;
-  const stampDutyJurisdictionCount = /^\d+$/u.test(stampDutyJurisdictionText)
-    ? Number(stampDutyJurisdictionText)
-    : 0;
-  const hasOrdinaryProperty = allocations.some(
-    (allocation) => allocation.assetKind === "land" || allocation.assetKind === "building",
-  );
-  if (hasOrdinaryProperty) {
-    const requiredJurisdictionFields = [
-      {
-        kind: "MORTGAGE",
-        text: mortgageJurisdictionText,
-        fieldId: `xsd:${EF_PATH}/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero`,
-        row: "EF15",
-        taxLabel: "tassa ipotecaria",
-      },
-      {
-        kind: "STAMP_DUTY",
-        text: stampDutyJurisdictionText,
-        fieldId: `xsd:${EF_PATH}/SezioneIV_ImpostaBollo/Circoscrizioni_Numero`,
-        row: "EF16",
-        taxLabel: "imposta di bollo",
-      },
-    ] as const;
-    for (const field of requiredJurisdictionFields) {
-      if (field.text !== "") continue;
-      issues.push({
-        id: `CALCULATION_${field.kind}_JURISDICTIONS_MISSING`,
-        level: "blocking",
-        fieldId: field.fieldId,
-        message: `Indica nel Quadro EF il numero di circoscrizioni per la ${field.taxLabel}.`,
-        sourceId: "SRC-08",
-        sourcePointer: `Quadro EF, rigo ${field.row}`,
-      });
-    }
-  }
+  const parseDeclaredJurisdictionCount = (value: string): number | undefined =>
+    value === "" ? undefined : /^\d+$/u.test(value) ? Number(value) : Number.NaN;
+  const declaredMortgageJurisdictionCount =
+    parseDeclaredJurisdictionCount(mortgageJurisdictionText);
+  const declaredStampDutyJurisdictionCount =
+    parseDeclaredJurisdictionCount(stampDutyJurisdictionText);
   const centsAt = (path: string) =>
     technicalWholeEuroCents(declaration.declaration, `${EF_PATH}/${path}`) ?? 0n;
   const paymentTimingText = technicalFieldValue(
@@ -1872,13 +1862,67 @@ export function runSuccessionCalculation(
     declaration.declaration,
     "/Fornitura/Dichiarazione/Frontespizio/Presentatore/CodiceCarica",
   );
-  const substituteTypeText = technicalFieldValue(
-    declaration.declaration,
-    "/Fornitura/Dichiarazione/Frontespizio/TipoDichiarazione/DichiarazioneSostitutiva",
+  const substituteType =
+    declaration.declaration.declarationKind === "first"
+      ? undefined
+      : (declaration.declaration.declarationKind.slice(-1) as "1" | "2" | "3");
+  const jurisdictionCounts = calculateOfficialJurisdictionCounts(
+    allocations,
+    declaration.declaration.declarationKind,
+    {
+      mortgage: declaredMortgageJurisdictionCount,
+      stampDuty: declaredStampDutyJurisdictionCount,
+    },
   );
-  const substituteType = ["1", "2", "3"].includes(substituteTypeText)
-    ? (substituteTypeText as "1" | "2" | "3")
-    : undefined;
+  for (const municipalityCode of jurisdictionCounts.unresolvedMunicipalityCodes)
+    issues.push({
+      id: "CALCULATION_CONSERVATORY_NOT_FOUND",
+      level: "blocking",
+      fieldId: null,
+      message: municipalityCode
+        ? `Il Comune amministrativo ${municipalityCode} non è presente nella mappa ufficiale delle conservatorie.`
+        : "Indica il Comune amministrativo per ogni immobile soggetto a pubblicità immobiliare.",
+      sourceId: "SRC-39",
+      sourcePointer:
+        "it/finanze/entrate/sco/resources/comuni_conservatorie.res e regole SUC13 TassaIpotecaria/ImpostaDiBollo",
+    });
+  if (jurisdictionCounts.mode === "professional-input") {
+    const jurisdictionFields = [
+      {
+        kind: "MORTGAGE",
+        status: jurisdictionCounts.declaredCountStatus.mortgage,
+        fieldId: `xsd:${EF_PATH}/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero`,
+        row: "EF15",
+        taxLabel: "tassa ipotecaria",
+        maximum: jurisdictionCounts.mortgageMaximum,
+      },
+      {
+        kind: "STAMP_DUTY",
+        status: jurisdictionCounts.declaredCountStatus.stampDuty,
+        fieldId: `xsd:${EF_PATH}/SezioneIV_ImpostaBollo/Circoscrizioni_Numero`,
+        row: "EF16",
+        taxLabel: "imposta di bollo",
+        maximum: jurisdictionCounts.stampDutyMaximum,
+      },
+    ] as const;
+    for (const field of jurisdictionFields) {
+      if (field.status === "valid") continue;
+      const message =
+        field.status === "above-maximum"
+          ? `Il numero di circoscrizioni per la ${field.taxLabel} supera il massimo ufficiale calcolato (${field.maximum}).`
+          : field.status === "invalid"
+            ? `Il numero di circoscrizioni per la ${field.taxLabel} deve essere un intero non negativo.`
+            : `Indica il numero di circoscrizioni interessate da nuove trascrizioni per la ${field.taxLabel}.`;
+      issues.push({
+        id: `CALCULATION_${field.kind}_JURISDICTIONS_${field.status.toUpperCase().replace("-", "_")}`,
+        level: "blocking",
+        fieldId: field.fieldId,
+        message,
+        sourceId: "SRC-39",
+        sourcePointer: `Quadro EF, rigo ${field.row}; controllo SUC13`,
+      });
+    }
+  }
   const hasTestament =
     technicalFieldValue(
       declaration.declaration,
@@ -1918,8 +1962,8 @@ export function runSuccessionCalculation(
     ) === "1";
   let declarationTaxes = calculateDeclarationTaxSummary(allocations, result.totalTaxCents, {
     openingDate: openingDateForCalculation,
-    mortgageJurisdictionCount,
-    stampDutyJurisdictionCount,
+    declaredMortgageJurisdictionCount,
+    declaredStampDutyJurisdictionCount,
     automaticLandRegistry:
       technicalFieldValue(
         declaration.declaration,
@@ -2046,8 +2090,8 @@ export function runSuccessionCalculation(
   }
   declarationTaxes = calculateDeclarationTaxSummary(allocations, result.totalTaxCents, {
     openingDate: openingDateForCalculation,
-    mortgageJurisdictionCount,
-    stampDutyJurisdictionCount,
+    declaredMortgageJurisdictionCount,
+    declaredStampDutyJurisdictionCount,
     automaticLandRegistry:
       technicalFieldValue(
         declaration.declaration,
@@ -2073,6 +2117,13 @@ export function runSuccessionCalculation(
     penaltiesCents: [declarationTaxes.penaltiesCents],
     interestCents: [declarationTaxes.interestCents],
   });
+  declarationTaxes = {
+    ...declarationTaxes,
+    officialFieldValues: addSnapshotAutomaticOfficialFieldValues(
+      declaration.declaration,
+      declarationTaxes.officialFieldValues,
+    ),
+  };
   const compareDeclaredEuro = (
     path: string,
     expectedCents: bigint,
@@ -2684,6 +2735,178 @@ export function saveCanonicalFields(
   })();
   synchronizeChecklist(database, input.practiceId, input.declarationId);
   return { revision, issues: [] };
+}
+
+function canonicalOccurrenceEntries(
+  declaration: DeclarationSnapshot,
+  occurrenceGroup: string,
+): Array<[string, DeclarationSnapshot["fields"][string]]> {
+  return Object.entries(declaration.fields).filter(
+    ([, field]) =>
+      field.occurrenceId !== null &&
+      getCatalogField(field.fieldId)?.occurrenceGroup === occurrenceGroup,
+  );
+}
+
+export function listCanonicalOccurrenceIds(
+  declaration: DeclarationSnapshot,
+  occurrenceGroup: string,
+): string[] {
+  return [
+    ...new Set(
+      canonicalOccurrenceEntries(declaration, occurrenceGroup).map(
+        ([, field]) => field.occurrenceId!,
+      ),
+    ),
+  ];
+}
+
+export function reorderCanonicalOccurrences(
+  database: Database.Database,
+  input: {
+    practiceId: string;
+    declarationId: string;
+    expectedRevision: number;
+    occurrenceGroup: string;
+    occurrenceIds: string[];
+  },
+): number {
+  const record = getDeclaration(database, input.declarationId, input.practiceId);
+  if (!record) throw new Error("DECLARATION_NOT_FOUND");
+  if (record.revision !== input.expectedRevision) throw new Error("REVISION_CONFLICT");
+  const currentIds = listCanonicalOccurrenceIds(record.declaration, input.occurrenceGroup);
+  const requestedIds = [...new Set(input.occurrenceIds)];
+  if (
+    currentIds.length === 0 ||
+    requestedIds.length !== input.occurrenceIds.length ||
+    requestedIds.length !== currentIds.length ||
+    requestedIds.some((occurrenceId) => !currentIds.includes(occurrenceId))
+  )
+    throw new Error("OCCURRENCE_ORDER_INVALID");
+  if (requestedIds.every((occurrenceId, index) => occurrenceId === currentIds[index]))
+    return record.revision;
+
+  const entries = Object.entries(record.declaration.fields);
+  const occurrenceEntries = canonicalOccurrenceEntries(record.declaration, input.occurrenceGroup);
+  const occurrenceKeys = new Set(occurrenceEntries.map(([key]) => key));
+  const entriesByOccurrence = Map.groupBy(occurrenceEntries, ([, field]) => field.occurrenceId!);
+  const reorderedEntries = requestedIds.flatMap(
+    (occurrenceId) => entriesByOccurrence.get(occurrenceId) ?? [],
+  );
+  const fields: DeclarationSnapshot["fields"] = {};
+  let inserted = false;
+  for (const [key, field] of entries) {
+    if (occurrenceKeys.has(key)) {
+      if (!inserted) {
+        for (const [occurrenceKey, occurrenceField] of reorderedEntries)
+          fields[occurrenceKey] = occurrenceField;
+        inserted = true;
+      }
+      continue;
+    }
+    fields[key] = field;
+  }
+  const nextDeclaration = {
+    ...record.declaration,
+    fields,
+    confirmedDevolutionScenarioId: null,
+    latestCalculationRunId: null,
+  };
+  const revision = database.transaction(() => {
+    supersedeDerivedResults(
+      database,
+      input.practiceId,
+      input.declarationId,
+      new Date().toISOString(),
+    );
+    const nextRevision = saveDeclaration(
+      database,
+      input.declarationId,
+      input.expectedRevision,
+      nextDeclaration,
+    );
+    recordAuditEvent(
+      database,
+      input.practiceId,
+      input.declarationId,
+      "occurrences.reordered",
+      "Riordinate le posizioni ripetibili della dichiarazione.",
+      {
+        occurrenceGroup: input.occurrenceGroup,
+        occurrenceIds: requestedIds,
+        revision: nextRevision,
+      },
+    );
+    return nextRevision;
+  })();
+  synchronizeChecklist(database, input.practiceId, input.declarationId);
+  return revision;
+}
+
+export function removeCanonicalOccurrence(
+  database: Database.Database,
+  input: {
+    practiceId: string;
+    declarationId: string;
+    expectedRevision: number;
+    occurrenceGroup: string;
+    occurrenceId: string;
+  },
+): number {
+  const record = getDeclaration(database, input.declarationId, input.practiceId);
+  if (!record) throw new Error("DECLARATION_NOT_FOUND");
+  if (record.revision !== input.expectedRevision) throw new Error("REVISION_CONFLICT");
+  const occurrenceEntries = canonicalOccurrenceEntries(
+    record.declaration,
+    input.occurrenceGroup,
+  ).filter(([, field]) => field.occurrenceId === input.occurrenceId);
+  if (occurrenceEntries.length === 0) throw new Error("OCCURRENCE_NOT_FOUND");
+  const removedKeys = new Set(occurrenceEntries.map(([key]) => key));
+  const fields = Object.fromEntries(
+    Object.entries(record.declaration.fields).filter(([key]) => !removedKeys.has(key)),
+  );
+  const officialRuleConfirmations = Object.fromEntries(
+    Object.entries(record.declaration.officialRuleConfirmations).filter(
+      ([key]) => !removedKeys.has(key),
+    ),
+  );
+  const nextDeclaration = {
+    ...record.declaration,
+    fields,
+    officialRuleConfirmations,
+    confirmedDevolutionScenarioId: null,
+    latestCalculationRunId: null,
+  };
+  const revision = database.transaction(() => {
+    supersedeDerivedResults(
+      database,
+      input.practiceId,
+      input.declarationId,
+      new Date().toISOString(),
+    );
+    const nextRevision = saveDeclaration(
+      database,
+      input.declarationId,
+      input.expectedRevision,
+      nextDeclaration,
+    );
+    recordAuditEvent(
+      database,
+      input.practiceId,
+      input.declarationId,
+      "occurrence.removed",
+      "Rimossa una posizione ripetibile dalla dichiarazione.",
+      {
+        occurrenceGroup: input.occurrenceGroup,
+        occurrenceId: input.occurrenceId,
+        fieldIds: occurrenceEntries.map(([, field]) => field.fieldId),
+        revision: nextRevision,
+      },
+    );
+    return nextRevision;
+  })();
+  synchronizeChecklist(database, input.practiceId, input.declarationId);
+  return revision;
 }
 
 export function listDomainAuditEvents(

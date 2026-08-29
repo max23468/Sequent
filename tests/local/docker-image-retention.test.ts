@@ -34,7 +34,7 @@ exit 1
   );
   writeFileSync(
     path.join(bin, "df"),
-    "#!/bin/sh\nprintf 'Filesystem 1024-blocks Used Available Capacity Mounted on\\nfake 100 50 50 50%% /\\n'\n",
+    "#!/bin/sh\nprintf 'Filesystem 1024-blocks Used Available Capacity Mounted on\\nfake 100 90 10 90%% /\\n'\n",
   );
   writeFileSync(
     path.join(bin, "docker"),
@@ -109,7 +109,7 @@ test("la build locale viene rifiutata prima di Docker con disco oltre soglia", (
   mkdirSync(lock, { recursive: true });
   writeFileSync(
     path.join(bin, "df"),
-    "#!/bin/sh\nprintf 'Filesystem 1024-blocks Used Available Capacity Mounted on\\nfake 100 90 10 90%% /\\n'\n",
+    "#!/bin/sh\nprintf 'Filesystem 1024-blocks Used Available Capacity Mounted on\\nfake 100 91 9 91%% /\\n'\n",
   );
   writeFileSync(path.join(bin, "docker"), `#!/bin/sh\n: > '${dockerCalled}'\nexit 0\n`);
   chmodSync(path.join(bin, "df"), 0o755);
@@ -122,7 +122,6 @@ test("la build locale viene rifiutata prima di Docker con disco oltre soglia", (
           ...process.env,
           PATH: `${bin}:${process.env.PATH}`,
           TMPDIR: lock,
-          SEQUENT_LOCAL_BUILD_MAX_DISK_PERCENT: "85",
         },
         stdio: "pipe",
       }),

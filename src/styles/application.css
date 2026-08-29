@@ -2125,6 +2125,18 @@ input[type="file"] {
   color: var(--muted);
   line-height: 1.4;
 }
+.official-occurrence-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.official-occurrence-actions .button.text {
+  margin-left: auto;
+}
 .checklist-form > .official-fields-actions,
 .devolution-form > .official-fields-actions {
   padding: 0 var(--workspace-content-gutter) 18px;

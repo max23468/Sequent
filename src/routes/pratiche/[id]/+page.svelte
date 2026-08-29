@@ -173,7 +173,7 @@
       {#if form?.retryError}<p class="workspace-form-error" role="alert">{form.retryError}</p>{/if}
       {#if form?.cancelError}<p class="workspace-form-error" role="alert">{form.cancelError}</p>{/if}
       {#if viewMode === "quadri"}
-        <QuadroFields {data} {form} actionUrl={formAction("saveFields", "quadri")} duplicateActionUrl={formAction("duplicateSubjectEntry", "quadri")} />
+        <QuadroFields {data} {form} actionUrl={formAction("saveFields", "quadri")} occurrenceActionUrl={formAction("manageOccurrence", "quadri")} duplicateActionUrl={formAction("duplicateSubjectEntry", "quadri")} />
         <section class="workspace-inline-support"><QuadroReferences {data} /></section>
       {:else if selectedSection === "overview"}
         <PracticeOverview {data} />
@@ -261,6 +261,7 @@
         <OperationalAreaFields
           {data}
           actionUrl={formAction("saveFields", selectedSection)}
+          occurrenceActionUrl={formAction("manageOccurrence", selectedSection)}
           returnSection={selectedSection}
         />
         {#if form?.fieldError}<p class="workspace-form-error" role="alert">{form.fieldError}</p>{/if}
