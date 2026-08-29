@@ -28,6 +28,11 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /--archive-sha256 '\$archive_sha256'/);
   assert.match(workflow, /--manifest-sha256 '\$manifest_sha256'/);
   assert.match(workflow, /task: "sequent-production"/);
+  assert.match(
+    workflow,
+    /printf '%s\\n' "\$deployment_id" >"\$RUNNER_TEMP\/sequent-deployment-id"/,
+  );
+  assert.match(workflow, /chmod 0600 "\$RUNNER_TEMP\/sequent-deployment-id"/);
   assert.match(workflow, /sudo \/usr\/local\/sbin\/sequent-run-trusted-deploy --commit/);
   assert.match(workflow, /install -o root -g root -m 0600.*run-trusted-deploy\.sh/);
   assert.match(workflow, /sha256sum --check --strict/);
@@ -54,12 +59,40 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.ok(workflow.indexOf("deployment_status success") < postdeployCleanup);
   assert.ok(workflow.indexOf('scp "${ssh_options[@]}" release-artifact') < postdeployCleanup);
   assert.match(workflow, /::warning title=Pulizia immagini differita::Il deploy resta valido/);
+  assert.match(workflow, /name: Finalizza il tentativo di deployment/);
+  assert.match(workflow, /JOB_STATUS: \$\{\{ job\.status \}\}/);
+  assert.match(workflow, /if: always\(\)/);
+  assert.match(workflow, /deployments\/\$deployment_id\/statuses/);
+  assert.match(workflow, /success\|failure\|error\|inactive/);
+  assert.match(workflow, /state: "failure"/);
+  assert.match(workflow, /if \[\[ "\$JOB_STATUS" == cancelled \]\]/);
+  assert.match(workflow, /for attempt in \{1\.\.12\}/);
+  assert.match(workflow, /\(\(attempt == 12\)\) \|\| sleep 5/);
+  assert.match(workflow, /::warning title=Pulizia dopo annullamento differita::/);
+  const cancellationCleanup = workflow.indexOf('if [[ "$JOB_STATUS" == cancelled ]]');
+  assert.ok(cancellationCleanup > postdeployCleanup);
+  assert.match(
+    workflow.slice(cancellationCleanup),
+    /sudo \/usr\/local\/sbin\/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0/,
+  );
   assert.doesNotMatch(
     workflow.slice(0, workflow.indexOf('scp "${ssh_options[@]}" release-artifact')),
     /sequent-prune-docker-images/,
   );
   assert.doesNotMatch(workflow, /sudo \/opt\/sequent\/repo\/scripts/);
   assert.doesNotMatch(workflow, /docker build|continue-on-error/);
+});
+
+test("il runbook qualifica la finalizzazione di un deploy annullato", () => {
+  const runbook = read("docs/runbooks/vps.md");
+
+  assert.match(runbook, /finalizzatore eseguito anche dopo un annullamento/);
+  assert.match(runbook, /chiude come fallito un Deployment ancora pendente/);
+  assert.match(runbook, /solo dopo che il deploy interrotto ha completato il proprio rollback/);
+  assert.match(
+    runbook,
+    /runtime corrente, rollback, container e immagini trattenute restano protetti/,
+  );
 });
 
 test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
