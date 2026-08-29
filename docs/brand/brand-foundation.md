@@ -77,7 +77,7 @@ La favicon primaria è un unico SVG adattivo. Chrome e gli altri browser che app
 
 L’istanza operativa resta a visibilità limitata: l’hostname non viene promosso né pubblicizzato e chi non conosce l’URL non deve poterlo scoprire attraverso motori di ricerca o superfici SEO. La conoscenza dell’URL non è però un controllo di sicurezza: il login resta il confine di accesso ai contenuti.
 
-L’applicazione privata continua a dichiarare `noindex` sia nei metadati sia tramite header HTTP; crawler, snippet e indicizzazione delle immagini sono disabilitati e `robots.txt` richiede di non esplorare l’istanza. Canonical URL, metadati Open Graph pubblici, sitemap e indicizzazione non vengono anticipati senza un sito effettivamente destinato alla consultazione pubblica. Un eventuale futuro sito pubblico resta una superficie distinta dall’istanza operativa privata.
+L’applicazione privata continua a dichiarare `noindex`, `nofollow` e `noarchive` sia nei metadati sia tramite header HTTP; `robots.txt` richiede di non esplorare l’istanza. Canonical URL, metadati Open Graph pubblici, sitemap e indicizzazione non vengono anticipati senza un sito effettivamente destinato alla consultazione pubblica. Un eventuale futuro sito pubblico resta una superficie distinta dall’istanza operativa privata.
 
 ## Launcher locali
 

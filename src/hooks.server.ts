@@ -22,7 +22,7 @@ import { recoverInterruptedJobs } from "$lib/server/jobs";
 import { startJobRunner } from "$lib/server/job-runner";
 import { cleanupExpiredUploadSessions } from "$lib/server/resumable-uploads";
 
-const PRIVATE_ROBOTS_DIRECTIVE = "noindex, nofollow, noarchive, nosnippet, noimageindex";
+const PRIVATE_ROBOTS_DIRECTIVE = "noindex, nofollow, noarchive";
 
 let initialization: Promise<void> | undefined;
 
