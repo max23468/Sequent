@@ -74,6 +74,24 @@ export function createPractice(database: Database.Database, title: string): Prac
   };
 }
 
+export function renamePractice(
+  database: Database.Database,
+  practiceId: string,
+  title: string,
+): boolean {
+  const normalizedTitle = title.trim();
+  if (normalizedTitle.length === 0 || normalizedTitle.length > 120)
+    throw new Error("INVALID_PRACTICE_TITLE");
+  const result = database
+    .prepare(
+      `UPDATE practices
+       SET title = ?, updated_at = ?
+       WHERE id = ? AND status = 'active'`,
+    )
+    .run(normalizedTitle, new Date().toISOString(), practiceId);
+  return result.changes === 1;
+}
+
 export function getDeclaration(
   database: Database.Database,
   declarationId: string,

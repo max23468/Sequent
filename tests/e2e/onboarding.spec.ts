@@ -58,6 +58,37 @@ async function createPracticeFromDashboard(
   await expect(page.getByRole("heading", { name: practiceTitle })).toBeVisible();
 }
 
+test("l’intestazione della pratica resta compatta e consente di rinominarla", async ({ page }) => {
+  const initialTitle = unique("Pratica da rinominare");
+  const renamedTitle = unique("Pratica rinominata");
+  await authenticate(page);
+  await createPracticeFromDashboard(page, initialTitle);
+  await page.getByRole("button", { name: "Panoramica" }).click();
+  await expect(page).toHaveURL(/sezione=overview/);
+
+  const practiceHeading = page.locator(".practice-heading");
+  await expect(practiceHeading.getByRole("link", { name: "Dashboard", exact: true })).toHaveCount(
+    0,
+  );
+  await expect(practiceHeading.getByText(/Revisione \d+/)).toHaveCount(0);
+  await expect(page.getByText("Vista operativa", { exact: true })).toHaveCSS(
+    "white-space",
+    "nowrap",
+  );
+
+  await page.getByText("Azioni", { exact: true }).click();
+  await page.getByRole("button", { name: "Rinomina pratica" }).click();
+  const titleInput = page.getByLabel("Nome della pratica");
+  await expect(titleInput).toHaveValue(initialTitle);
+  await titleInput.fill(renamedTitle);
+  await page.getByRole("button", { name: "Salva", exact: true }).click();
+
+  await expect(page.getByRole("heading", { name: renamedTitle })).toBeVisible();
+  await expect(page).toHaveTitle(`${renamedTitle} · Sequent`);
+  await expect(page).toHaveURL(/sezione=overview/);
+  await expect(page.getByText("Salvato", { exact: true })).toBeVisible();
+});
+
 async function uploadFromWorkspace(
   page: import("@playwright/test").Page,
   documentName: string,
@@ -133,7 +164,7 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
   await createPracticeFromDashboard(page, practiceTitle);
   await expect(page).toHaveURL(/\/pratiche\/.+/);
   await expect(page.getByRole("heading", { name: practiceTitle })).toBeVisible();
-  await expect(page.getByText("Revisione 1")).toBeVisible();
+  await expect(page.getByText(/Revisione \d+/)).toHaveCount(0);
   await expect(page.getByText("Nessun documento caricato.")).toBeVisible();
   const practiceTitleSize = await page
     .getByRole("heading", { name: practiceTitle })

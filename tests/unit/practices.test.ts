@@ -3,7 +3,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
-import { createPractice, listPractices, saveDeclaration } from "../../src/lib/server/practices.ts";
+import {
+  createPractice,
+  getPractice,
+  listPractices,
+  renamePractice,
+  saveDeclaration,
+} from "../../src/lib/server/practices.ts";
 
 const directories: string[] = [];
 
@@ -15,6 +21,16 @@ afterEach(() => {
 });
 
 describe("persistenza delle pratiche", () => {
+  it("rinomina una pratica attiva normalizzando il titolo", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-practice-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Titolo iniziale");
+    expect(renamePractice(database, practice.id, "  Titolo aggiornato  ")).toBe(true);
+    expect(getPractice(database, practice.id)?.title).toBe("Titolo aggiornato");
+    expect(() => renamePractice(database, practice.id, "   ")).toThrow("INVALID_PRACTICE_TITLE");
+  });
+
   it("rifiuta un salvataggio basato su una revisione superata", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-practice-"));
     directories.push(directory);

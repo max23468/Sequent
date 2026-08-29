@@ -1,15 +1,3 @@
-@media (max-width: 1380px) {
-  .practice-heading {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-  .practice-heading-actions {
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
-}
-
 @media (max-width: 1180px) {
   .topbar {
     gap: 16px;
@@ -41,8 +29,11 @@
   }
   .practice-heading {
     align-items: flex-start;
+    grid-template-columns: minmax(0, 1fr);
   }
   .practice-heading-actions {
+    width: 100%;
+    flex-wrap: wrap;
     justify-content: flex-start;
   }
 }
@@ -397,12 +388,15 @@
   }
   .practice-heading {
     align-items: flex-start;
-    flex-direction: column;
   }
   .practice-title-line {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 6px;
+    width: 100%;
+  }
+  .practice-heading h1 {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
   .practice-heading-actions {
     position: relative;
