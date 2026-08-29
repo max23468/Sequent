@@ -3,6 +3,10 @@
   import BrandLogo from "$lib/components/BrandLogo.svelte";
 </script>
 
+<svelte:head>
+  <title>{page.status === 404 ? "Pagina non trovata · Sequent" : "Errore · Sequent"}</title>
+</svelte:head>
+
 <main class="auth-page">
   <section class="auth-panel compact">
     <BrandLogo />
