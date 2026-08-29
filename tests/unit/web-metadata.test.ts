@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const appHtml = readFileSync("src/app.html", "utf8");
+const robots = readFileSync("static/robots.txt", "utf8");
 const manifest = JSON.parse(readFileSync("static/site.webmanifest", "utf8")) as {
   name: string;
   short_name: string;
@@ -17,6 +18,11 @@ describe("production browser metadata", () => {
     expect(appHtml).toContain('media="(prefers-color-scheme: dark)"');
     expect(appHtml).toContain('href="/apple-touch-icon.png"');
     expect(appHtml).toContain('href="/site.webmanifest"');
+    expect(appHtml).toContain('src="/browser-theme.js"');
+  });
+
+  it("keeps crawler discovery disabled", () => {
+    expect(robots).toBe("User-agent: *\nDisallow: /\n");
   });
 
   it("keeps all manifest icon assets present", () => {
@@ -39,12 +45,14 @@ describe("production browser metadata", () => {
     }
   });
 
-  it("keeps standalone browser icon assets present", () => {
+  it("keeps standalone browser assets present", () => {
     for (const asset of [
       "static/favicon.ico",
       "static/favicon.svg",
       "static/favicon-dark.svg",
       "static/apple-touch-icon.png",
+      "static/browser-theme.js",
+      "static/robots.txt",
     ]) {
       expect(existsSync(asset), `${asset} must exist`).toBe(true);
     }
