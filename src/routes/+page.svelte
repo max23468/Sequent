@@ -186,7 +186,7 @@
           {/each}
           {#each data.failedVerifications as verification (verification.jobId)}
             <li>
-              <a href={`/pratiche/${verification.practiceId}?documento=${verification.documentId}`}>
+              <a href={`/pratiche/${verification.practiceId}?sezione=documents&documento=${verification.documentId}`}>
                 <span><strong>Verifica tecnica non riuscita</strong><small>{verification.documentName} · {verification.practiceTitle}</small></span>
                 <ChevronRight size={19} aria-hidden="true" />
               </a>

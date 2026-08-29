@@ -4,6 +4,19 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.1.6
+
+### Added
+
+- matrice deterministica di parità tra i 715 campi ufficiali della vista Quadri e le corrispondenti aree della vista operativa, con coperture complete, parziali e mancanti esplicitamente classificate;
+- campi ufficiali modificabili anche nella vista operativa, organizzati nelle otto aree di lavoro e salvati sullo stesso modello canonico della vista Quadri.
+
+### Changed
+
+- workspace della pratica disposto su una sola colonna informativa, con fonti, situazione e riferimenti collocati sotto il contenuto pertinente;
+- navigazione delle sezioni su mobile trasformata in un menu chiuso di default;
+- azioni, box di riepilogo, spaziature e testi responsive uniformati su desktop e mobile.
+
 ## 0.1.5
 
 ### Added

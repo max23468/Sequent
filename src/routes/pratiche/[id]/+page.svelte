@@ -1,10 +1,8 @@
 <script lang="ts">
   import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
-  import { tick } from "svelte";
   import {
-    Bot, Check, CheckCircle2, ChevronDown, CircleAlert, FileText, Landmark,
-    LayoutDashboard, ListChecks, LoaderCircle, Pencil, Upload, X,
+    Bot, Check, FileText, LayoutDashboard, ListChecks, LoaderCircle, Pencil, Upload, X,
   } from "@lucide/svelte";
   import ProcessingErrors from "$lib/components/ProcessingErrors.svelte";
   import ActiveProcessing from "$lib/components/ActiveProcessing.svelte";
@@ -14,17 +12,18 @@
   import PracticeContextPanel from "$lib/components/PracticeContextPanel.svelte";
   import PracticeDomainSection from "$lib/components/PracticeDomainSection.svelte";
   import PracticeOverview from "$lib/components/PracticeOverview.svelte";
-  import RenamePracticeDialog from "$lib/components/RenamePracticeDialog.svelte";
+  import PracticeWorkspaceHeader from "$lib/components/PracticeWorkspaceHeader.svelte";
+  import PracticeWorkspaceNavigation from "$lib/components/PracticeWorkspaceNavigation.svelte";
+  import OperationalAreaFields from "$lib/components/OperationalAreaFields.svelte";
   import QuadroFields from "$lib/components/QuadroFields.svelte";
   import QuadroReferences from "$lib/components/QuadroReferences.svelte";
   import ReviewQueue from "$lib/components/ReviewQueue.svelte";
   import { uploadFilesResumably } from "$lib/client/resumable-upload";
   import { documentStatusLabels } from "$lib/document-status";
-  import { formatItalianDate } from "$lib/format";
-  import { practiceDomainSections, practiceSections } from "$lib/practice-workspace";
+  import { practiceDomainSectionByOperationalSection } from "$lib/practice-workspace";
 
   let { data, form } = $props();
-  let selectedSection = $derived(page.url.searchParams.get("sezione") ?? "documents");
+  let selectedSection = $derived(page.url.searchParams.get("sezione") ?? "overview");
   let viewMode = $derived<"operational" | "quadri">(
     page.url.searchParams.get("vista") === "quadri" ||
       page.url.searchParams.get("sezione") === "quadri"
@@ -35,9 +34,10 @@
   let editedValue = $state("");
   let uploadProgress = $state<number | null>(null);
   let resumableUploadError = $state("");
-  let workspaceActionsMenu = $state<HTMLDetailsElement>();
-  // oxlint-disable-next-line no-unassigned-vars -- Svelte assegna il componente tramite bind:this.
-  let renameDialog: { show: () => void };
+  let selectedDomainSection = $derived.by(() => {
+    const section = selectedSection;
+    return practiceDomainSectionByOperationalSection[section] ?? null;
+  });
 
   let selectedSourceRef = $derived(
     data.selectedReview?.sourceRefs.find(
@@ -60,7 +60,7 @@
     search.set("sezione", section);
     if (section !== "documents") search.delete("documento");
     if (section !== "verifications") search.delete("verifica");
-    await goto(`${page.url.pathname}?${search}`, { replaceState: true, noScroll: true, keepFocus: true, invalidateAll: false });
+    await goto(`${page.url.pathname}?${search}`, { replaceState: true, invalidateAll: false });
   }
   async function selectView(mode: "operational" | "quadri") {
     const nextSection = mode === "quadri" ? "quadri" : "overview";
@@ -68,7 +68,7 @@
     search.set("vista", mode);
     search.set("sezione", nextSection);
     if (mode === "quadri" && !search.has("quadro")) search.set("quadro", "EA");
-    await goto(`${page.url.pathname}?${search}`, { replaceState: true, noScroll: true, keepFocus: true });
+    await goto(`${page.url.pathname}?${search}`, { replaceState: true });
   }
   function selectOperationalView() {
     return selectView("operational");
@@ -82,15 +82,20 @@
     search.set("vista", "quadri");
     search.set("sezione", "quadri");
     search.set("quadro", quadro);
-    await goto(`${page.url.pathname}?${search}`, { replaceState: true, noScroll: true, keepFocus: true });
+    await goto(`${page.url.pathname}?${search}`, { replaceState: true });
+  }
+  async function selectDeclaration(event: Event) {
+    const declarationId = (event.currentTarget as HTMLSelectElement).value;
+    const search = new URLSearchParams(page.url.searchParams);
+    search.set("dichiarazione", declarationId);
+    await goto(`${page.url.pathname}?${search}`, { replaceState: true });
   }
   async function chooseWorkspaceFile() {
     const search = new URLSearchParams(page.url.searchParams);
     search.set("sezione", "documents");
     search.set("vista", "operational");
     search.delete("documento");
-    await goto(`${page.url.pathname}?${search}`, { replaceState: true, noScroll: true });
-    await tick();
+    await goto(`${page.url.pathname}?${search}`, { replaceState: true });
     document.querySelector<HTMLInputElement>("#workspace-file")?.click();
   }
   function handleWorkspaceFile(event: Event) {
@@ -98,18 +103,6 @@
   }
   function handleEditedValue(event: Event) {
     editedValue = (event.currentTarget as HTMLInputElement).value;
-  }
-  function dismissWorkspaceActions(event: PointerEvent | KeyboardEvent) {
-    if (!workspaceActionsMenu?.open) return;
-    if (event.type === "pointerdown" && workspaceActionsMenu.contains(event.target as Node)) return;
-    if (event.type === "keydown" && (event as KeyboardEvent).key !== "Escape") return;
-    workspaceActionsMenu.open = false;
-    if (event.type === "keydown")
-      workspaceActionsMenu.querySelector<HTMLElement>("summary")?.focus();
-  }
-  function openRenameDialog() {
-    if (workspaceActionsMenu) workspaceActionsMenu.open = false;
-    renameDialog?.show();
   }
   function formAction(name: string, section = selectedSection): string {
     const search = new URLSearchParams(page.url.searchParams);
@@ -147,51 +140,31 @@
   }
 </script>
 
-<svelte:window onpointerdown={dismissWorkspaceActions} onkeydown={dismissWorkspaceActions} />
-
 <svelte:head><title>{data.practice.title} · Sequent</title></svelte:head>
 <div class="practice-page page-frame">
-  <div class="practice-heading">
-    <div class="practice-heading-copy">
-      <p class="breadcrumbs"><a href="/pratiche" data-sveltekit-prefetch>Pratiche</a><span>/</span><span title={data.practice.title}>{data.practice.title}</span></p>
-      <div class="practice-title-line"><h1 title={data.practice.title}>{data.practice.title}</h1></div>
-      <div class="practice-meta-row"><span>Aggiornata il {formatItalianDate(data.practice.updatedAt)}</span><span class="saved-state"><CheckCircle2 size={18} />Salvato</span></div>
-    </div>
-    <div class="practice-heading-actions">
-      <div class="practice-view-switch" aria-label="Organizzazione della pratica">
-        <button type="button" class:active={viewMode === "operational"} aria-pressed={viewMode === "operational"} onclick={selectOperationalView}>Vista operativa</button>
-        <button type="button" class:active={viewMode === "quadri"} aria-pressed={viewMode === "quadri"} onclick={selectQuadriView}>Vista Quadri</button>
-      </div>
-      <details class="workspace-actions-menu" bind:this={workspaceActionsMenu}>
-        <summary class="button secondary">Azioni <ChevronDown size={17} /></summary>
-        <div class="workspace-actions-popover"><button type="button" onclick={openRenameDialog}><Pencil size={17} />Rinomina pratica</button><button type="button" onclick={chooseWorkspaceFile}><Upload size={17} />Carica documento</button><a href={`/pratiche/${data.practice.id}/riepilogo`} target="_blank"><FileText size={17} />Apri il riepilogo</a></div>
-      </details>
-    </div>
-  </div>
+  <PracticeWorkspaceHeader
+    practice={data.practice}
+    declarations={data.declarations}
+    selectedDeclarationId={data.declaration.id}
+    {viewMode}
+    renameActionUrl={formAction("rename")}
+    renameError={form?.renameError}
+    onSelectOperationalView={selectOperationalView}
+    onSelectQuadriView={selectQuadriView}
+    onSelectDeclaration={selectDeclaration}
+    onChooseWorkspaceFile={chooseWorkspaceFile}
+  />
 
   <div class="practice-workspace">
-    <aside class="workspace-sections">
-      <div class="workspace-panel-heading"><h2>{viewMode === "quadri" ? "Quadri" : "Sezioni"}</h2></div>
-      {#if viewMode === "operational"}
-        <nav aria-label="Sezioni pratica">
-          {#each practiceSections as section (section.id)}
-            {@const Icon = section.icon}
-            <button type="button" class:active={selectedSection === section.id} data-section={section.id} aria-pressed={selectedSection === section.id} onclick={selectSection}>
-              <Icon size={19} /><span>{section.label}</span>
-              {#if section.id === "verifications" && data.reviewItems.length > 0}<small>{data.reviewItems.length}</small>{/if}
-            </button>
-          {/each}
-        </nav>
-      {:else}
-        <nav aria-label="Quadri della dichiarazione" class="quadri-navigation">
-          {#each data.quadri as quadro (quadro.id)}
-            <button type="button" class:active={data.selectedQuadro === quadro.id} data-quadro={quadro.id} aria-pressed={data.selectedQuadro === quadro.id} aria-label={`${quadro.id === "Frontespizio" ? "Frontespizio" : `Quadro ${quadro.id}`}: ${quadro.verifiedFieldCount} etichette verificate su ${quadro.userFieldCount} campi compilabili`} title={`${quadro.verifiedFieldCount} etichette verificate su ${quadro.userFieldCount} campi compilabili`} onclick={selectQuadro}>
-              <FileText size={18} /><span>{quadro.id === "Frontespizio" ? "Frontespizio" : `Quadro ${quadro.id}`}</span><small>{quadro.verifiedFieldCount}/{quadro.userFieldCount}</small>
-            </button>
-          {/each}
-        </nav>
-      {/if}
-    </aside>
+    <PracticeWorkspaceNavigation
+      {viewMode}
+      {selectedSection}
+      selectedQuadro={data.selectedQuadro}
+      quadri={data.quadri}
+      reviewCount={data.reviewItems.length}
+      onSelectSection={selectSection}
+      onSelectQuadro={selectQuadro}
+    />
 
     <section class="workspace-main">
       {#if data.activeJobs.length > 0}
@@ -201,8 +174,10 @@
       {#if form?.cancelError}<p class="workspace-form-error" role="alert">{form.cancelError}</p>{/if}
       {#if viewMode === "quadri"}
         <QuadroFields {data} {form} actionUrl={formAction("saveFields", "quadri")} duplicateActionUrl={formAction("duplicateSubjectEntry", "quadri")} />
+        <section class="workspace-inline-support"><QuadroReferences {data} /></section>
       {:else if selectedSection === "overview"}
         <PracticeOverview {data} />
+        <section class="workspace-inline-support"><PracticeContextPanel {data} /></section>
       {:else if selectedSection === "documents"}
         <div class="workspace-panel-heading"><h2>Documenti</h2><span>{data.documents.length}</span></div>
         <form class="inline-upload" method="POST" action="?/upload" enctype="multipart/form-data" onsubmit={uploadDocument}>
@@ -222,6 +197,9 @@
           <div class="panel-empty workspace-empty"><FileText size={27} /><p>Nessun documento caricato.</p><span>Gli originali aggiunti alla pratica compariranno qui.</span></div>
         {:else}
           <DocumentList documents={data.documents} selectedDocumentId={data.selectedDocument?.id ?? null} statusLabels={documentStatusLabels} />
+        {/if}
+        {#if data.selectedDocument}
+          <section class="workspace-inline-support"><DocumentSourcePanel {data} {form} statusLabels={documentStatusLabels} {selectedSourceRef} /></section>
         {/if}
       {:else if selectedSection === "verifications"}
         <div class="workspace-panel-heading"><h2>Da verificare</h2><span>{data.reviewItems.length}</span></div>
@@ -258,41 +236,36 @@
             <ReviewQueue items={data.reviewItems} selectedId={data.selectedReview.id} />
           </div>
         {/if}
-      {:else if practiceDomainSections.has(selectedSection)}
+        {#if data.selectedDocument || data.selectedReview}
+          <section class="workspace-inline-support"><DocumentSourcePanel {data} {form} statusLabels={documentStatusLabels} {selectedSourceRef} /></section>
+        {/if}
+      {:else if !selectedDomainSection}
+        <div class="panel-empty workspace-empty"><LayoutDashboard size={27} /><p>Sezione non disponibile.</p><span>Torna alla panoramica della pratica.</span></div>
+      {/if}
+      {#if viewMode === "operational" && selectedDomainSection}
         <PracticeDomainSection
           {data}
           {form}
-          {selectedSection}
-          createDeclarationAction={formAction("createDeclaration", "declaration")}
-          addSubjectAction={formAction("addSubject", "beneficiaries")}
-          addAssetAction={formAction("addAsset", "assets")}
-          checklistAction={formAction("updateChecklist", "checklist")}
+          selectedSection={selectedDomainSection}
+          createDeclarationAction={formAction("createDeclaration", "overview")}
+          addSubjectAction={formAction("addSubject", "people")}
+          addAssetAction={formAction("addAsset", "estate")}
+          checklistAction={formAction("updateChecklist", "documents")}
           saveDevolutionAction={formAction("saveDevolution", "devolution")}
           confirmDevolutionAction={formAction("confirmDevolution", "devolution")}
-          runCalculationAction={formAction("runCalculation", "calculations")}
-          confirmCalculationAction={formAction("confirmCalculation", "calculations")}
+          runCalculationAction={formAction("runCalculation", "taxes")}
+          confirmCalculationAction={formAction("confirmCalculation", "taxes")}
         />
-      {:else}
-        <div class="panel-empty workspace-empty"><LayoutDashboard size={27} /><p>Sezione non disponibile.</p><span>Torna alla panoramica della pratica.</span></div>
+      {/if}
+      {#if viewMode === "operational" && data.operationalArea}
+        <OperationalAreaFields
+          {data}
+          actionUrl={formAction("saveFields", selectedSection)}
+          returnSection={selectedSection}
+        />
+        {#if form?.fieldError}<p class="workspace-form-error" role="alert">{form.fieldError}</p>{/if}
       {/if}
       {#if form?.domainError}<p class="workspace-form-error" role="alert">{form.domainError}</p>{/if}
     </section>
-
-    <aside class="workspace-source">
-      {#if viewMode === "quadri"}
-        <QuadroReferences {data} />
-      {:else if selectedSection !== "documents" && selectedSection !== "verifications"}
-        <PracticeContextPanel {data} />
-      {:else}
-        <DocumentSourcePanel {data} {form} statusLabels={documentStatusLabels} {selectedSourceRef} />
-      {/if}
-    </aside>
   </div>
 </div>
-
-<RenamePracticeDialog
-  bind:this={renameDialog}
-  actionUrl={formAction("rename")}
-  title={data.practice.title}
-  error={form?.renameError}
-/>

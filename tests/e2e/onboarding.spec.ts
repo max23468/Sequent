@@ -94,6 +94,11 @@ async function uploadFromWorkspace(
   documentName: string,
   content = "fixture sintetica indipendente",
 ) {
+  const documentsSection = page.getByRole("button", { name: "Documenti", exact: true });
+  if (!(await documentsSection.isVisible())) {
+    await page.getByRole("button", { name: /Apri il menu Sezioni/ }).click();
+  }
+  await documentsSection.click();
   await page.getByLabel("Aggiungi un documento").setInputFiles({
     name: documentName,
     mimeType: "text/plain",
@@ -164,20 +169,23 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
   await createPracticeFromDashboard(page, practiceTitle);
   await expect(page).toHaveURL(/\/pratiche\/.+/);
   await expect(page.getByRole("heading", { name: practiceTitle })).toBeVisible();
-  await expect(page.getByText(/Revisione \d+/)).toHaveCount(0);
+  await expect(page.locator(".practice-heading").getByText(/Revisione \d+/)).toHaveCount(0);
+  await page.getByRole("button", { name: "Documenti" }).click();
   await expect(page.getByText("Nessun documento caricato.")).toBeVisible();
   const practiceTitleSize = await page
     .getByRole("heading", { name: practiceTitle })
     .evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
   expect(practiceTitleSize).toBeLessThan(dashboardTitleSize);
 
-  await page.getByRole("button", { name: /Defunto e dichiarazione/ }).click();
-  await expect(page.getByRole("heading", { name: "Defunto e dichiarazione" })).toBeVisible();
+  await page.getByRole("button", { name: "Panoramica" }).click();
+  await expect(page.getByRole("heading", { name: "Dichiarazione selezionata" })).toBeVisible();
   expect(
     (await page.locator(".workspace-panel-heading").nth(1).locator(":scope > span").boundingBox())
       ?.width,
   ).toBeGreaterThanOrEqual(46);
-  await expect(page.getByText("Prima dichiarazione")).toBeVisible();
+  await expect(
+    page.locator(".declaration-list").getByText("Prima dichiarazione", { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Aggiungi una dichiarazione successiva" }),
   ).toBeVisible();
@@ -195,12 +203,12 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
     mimeType: "text/plain",
     buffer: Buffer.from("fixture dal menu azioni"),
   });
-  await expect(page.getByRole("heading", { name: "Documenti" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Documenti", exact: true })).toBeVisible();
   await expect(page.getByText(workspaceDocument, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Carica", exact: true }).click();
   await expect(page.getByRole("heading", { name: workspaceDocument })).toBeVisible();
 
-  await page.getByRole("button", { name: /Defunto e dichiarazione/ }).click();
+  await page.getByRole("button", { name: "Panoramica" }).click();
   await expect(page).not.toHaveURL(/documento=/);
   const search = page.getByPlaceholder("Cerca in Sequent");
   await search.fill(workspaceDocument);
@@ -208,7 +216,7 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
     .locator(".search-results")
     .getByRole("link", { name: new RegExp(workspaceDocument) })
     .click();
-  await expect(page.getByRole("heading", { name: "Documenti" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Documenti", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: workspaceDocument })).toBeVisible();
 });
 
@@ -289,7 +297,9 @@ test("ricerca da tastiera una pratica e un documento", async ({ page }) => {
     page.locator(".search-results").getByRole("link", { name: new RegExp(documentName) }),
   ).toBeVisible();
   await search.press("Enter");
-  await expect(page).toHaveURL(/\/pratiche\/.+\?documento=/);
+  await expect(page).toHaveURL(
+    (url) => url.pathname.startsWith("/pratiche/") && url.searchParams.has("documento"),
+  );
   await expect(page.getByRole("heading", { name: documentName })).toBeVisible();
 });
 
@@ -384,27 +394,38 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await authenticate(page);
   await createPracticeFromDashboard(page, practiceTitle);
 
-  await page.getByRole("button", { name: "Soggetti" }).click();
+  await page.getByRole("button", { name: "Persone" }).click();
   const subjectForm = page.locator("form.domain-inline-form");
   await subjectForm.getByLabel("Ruolo").selectOption("decedent");
   await subjectForm.getByLabel("Nome o denominazione").fill(decedentName);
   await subjectForm.getByLabel("Codice fiscale").fill(decedentTaxCode);
   await subjectForm.getByRole("button", { name: "Aggiungi" }).click();
-  await expect(page.getByText(decedentName, { exact: true })).toBeVisible();
+  await expect(page.getByText(decedentName, { exact: true }).first()).toBeVisible();
 
   await subjectForm.getByLabel("Ruolo").selectOption("beneficiary");
   await subjectForm.getByLabel("Nome o denominazione").fill(beneficiaryName);
   await subjectForm.getByLabel("Codice fiscale").fill(taxCode);
   await subjectForm.getByRole("button", { name: "Aggiungi" }).click();
-  await expect(page.getByText(beneficiaryName, { exact: true })).toBeVisible();
+  await expect(page.getByText(beneficiaryName, { exact: true }).first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Beni e passività" }).click();
+  const operationalSubjectGroup = page
+    .locator("details.operational-fields-group")
+    .filter({ hasText: beneficiaryName });
+  await operationalSubjectGroup.locator(":scope > summary").click();
+  await operationalSubjectGroup.getByRole("textbox", { name: /^\d+ Cognome$/ }).fill("ROSSI");
+  const saveOperationalSubject = operationalSubjectGroup.getByRole("button", {
+    name: "Salva questa scheda",
+  });
+  await confirmOfficialInstructions(saveOperationalSubject);
+  await saveOperationalSubject.click();
+
+  await page.getByRole("button", { name: "Patrimonio" }).click();
   const assetForm = page.locator("form.domain-inline-form");
   await assetForm.getByLabel("Tipo").selectOption("building");
   await assetForm.getByLabel("Descrizione").fill(assetName);
   await assetForm.getByLabel("Valore").fill("200000,00");
   await assetForm.getByRole("button", { name: "Aggiungi" }).click();
-  await expect(page.getByText(assetName, { exact: true })).toBeVisible();
+  await expect(page.getByText(assetName, { exact: true }).first()).toBeVisible();
 
   await page.getByRole("button", { name: "Vista Quadri" }).click();
   await expect(page.getByRole("heading", { name: "Quadro EA", level: 2 })).toBeVisible();
@@ -415,13 +436,15 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await expect(page.getByRole("textbox", { name: "1 Codice fiscale", exact: true })).toHaveValue(
     taxCode,
   );
+  await expect(page.getByRole("textbox", { name: /Cognome/, exact: false })).toHaveValue("ROSSI");
+  await page.getByRole("textbox", { name: /^\d+ Nome$/ }).fill("MARIO");
   await page.getByRole("combobox", { name: "2 Tipo soggetto", exact: true }).selectOption("1");
   await page
     .getByRole("combobox", { name: "4 Grado di parentela", exact: true })
     .selectOption("10");
-  const saveBeneficiary = page.getByRole("button", { name: "Salva questa posizione" });
-  await confirmOfficialInstructions(saveBeneficiary);
-  await saveBeneficiary.click();
+  const saveOfficialSubject = page.getByRole("button", { name: "Salva questa posizione" });
+  await confirmOfficialInstructions(saveOfficialSubject);
+  await saveOfficialSubject.click();
   await page.getByRole("button", { name: /^Frontespizio:/ }).click();
   await expect(page.getByRole("heading", { name: "Frontespizio", level: 2 })).toBeVisible();
   await expect(page.getByText(decedentName, { exact: true })).toBeVisible();
@@ -515,24 +538,35 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await expect(officialAssetValue).toHaveValue("200000");
 
   await page.getByRole("button", { name: "Vista operativa" }).click();
+  await page.getByRole("button", { name: "Persone" }).click();
+  const reloadedOperationalSubject = page
+    .locator("details.operational-fields-group")
+    .filter({ hasText: `${beneficiaryName} · posizione 2` });
+  await reloadedOperationalSubject.locator(":scope > summary").click();
+  await expect(reloadedOperationalSubject.getByRole("textbox", { name: /^\d+ Nome$/ })).toHaveValue(
+    "MARIO",
+  );
   await page.getByRole("button", { name: "Devoluzione" }).click();
-  await page.getByLabel("Numeratore").fill("1");
-  await page.getByLabel("Denominatore").fill("1");
-  await page.getByRole("button", { name: "Salva proposta di devoluzione" }).click();
+  const devolutionForm = page.locator("form").filter({
+    has: page.getByRole("button", { name: "Salva proposta di devoluzione" }),
+  });
+  await devolutionForm.getByLabel("Numeratore", { exact: true }).fill("1");
+  await devolutionForm.getByLabel("Denominatore", { exact: true }).fill("1");
+  await devolutionForm.getByRole("button", { name: "Salva proposta di devoluzione" }).click();
   await expect(page.getByText("Proposta pronta per la conferma")).toBeVisible();
   await page.getByRole("button", { name: "Conferma professionalmente" }).click();
   await expect(page.getByText("Devoluzione confermata")).toBeVisible();
 
-  await page.getByRole("button", { name: "Calcoli" }).click();
+  await page.getByRole("button", { name: "Imposte e pagamenti" }).click();
   await page.getByRole("button", { name: "Esegui il calcolo" }).click();
-  await expect(page.getByText(/Imposta complessiva:/)).toBeVisible();
+  await expect(page.getByText(/Imposta di successione:/)).toBeVisible();
   await expect(page.getByText("Dati da completare")).toBeVisible();
   await expect(page.getByRole("button", { name: "Conferma il calcolo" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Documenti richiesti" }).click();
+  await page.getByRole("button", { name: "Documenti" }).click();
   await expect(page.locator(".checklist-row")).not.toHaveCount(0);
 
-  await page.getByRole("button", { name: "Riepilogo ed esportazione" }).click();
+  await page.getByRole("button", { name: "Riepilogo finale" }).click();
   const summaryHref = await page
     .locator(".export-grid")
     .getByRole("link", { name: "Apri il dossier" })

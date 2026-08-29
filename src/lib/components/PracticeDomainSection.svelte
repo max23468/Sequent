@@ -63,9 +63,22 @@
     return subject.taxCode ?? "";
   }
 
+  function subjectAnchorEntityId(subject: (typeof data.subjects)[number]): string | null {
+    if (subject.role === "decedent") return data.selectedDecedent?.id ?? null;
+    return data.quadroSubjects.find(
+      (entry: PageData["quadroSubjects"][number]) => entry.subjectId === subject.id,
+    )?.id ?? null;
+  }
+
+  function sectionHref(section: string): string {
+    const search = new URLSearchParams(page.url.searchParams);
+    search.set("sezione", section);
+    return `${page.url.pathname}?${search.toString()}`;
+  }
+
   function declarationHref(declarationId: string): string {
     const search = new URLSearchParams(page.url.searchParams);
-    search.set("sezione", "declaration");
+    search.set("sezione", "overview");
     search.set("dichiarazione", declarationId);
     return `${page.url.pathname}?${search.toString()}`;
   }
@@ -88,7 +101,7 @@
 </script>
 
 {#if selectedSection === "declaration"}
-  <div class="workspace-panel-heading"><h2>Defunto e dichiarazione</h2><span>{data.declarations.length}</span></div>
+  <div class="workspace-panel-heading"><h2>Dichiarazione selezionata</h2><span>{data.declarations.length}</span></div>
   <div class="domain-section">
     <div class="declaration-list">
       {#each data.declarations as declaration (declaration.id)}
@@ -104,7 +117,7 @@
     </form>
   </div>
 {:else if selectedSection === "beneficiaries"}
-  <div class="workspace-panel-heading"><h2>Soggetti</h2><span>{data.subjects.length}</span></div>
+  <div class="workspace-panel-heading"><h2>Persone della pratica</h2><span>{data.subjects.length}</span></div>
   <div class="domain-section">
     {#if data.subjects.length === 0}
       <div class="panel-empty domain-empty"><UsersRound size={27} /><p>Nessun soggetto registrato.</p><span>Defunto, beneficiari e rappresentanti sono condivisi fra le dichiarazioni della pratica.</span></div>
@@ -112,7 +125,8 @@
       <ul class="domain-entity-list">
         {#each data.subjects as subject (subject.id)}
           {@const taxCode = subjectTaxCode(subject)}
-          <li><UserRound size={19} /><span><strong>{subject.displayName}</strong><small>{subject.role === "decedent" ? "Defunto" : subject.role === "beneficiary" ? "Beneficiario" : subject.role === "representative" ? "Rappresentante" : "Altro soggetto"}{taxCode ? ` · ${taxCode}` : ""}</small></span></li>
+          {@const anchorEntityId = subjectAnchorEntityId(subject)}
+          <li><UserRound size={19} /><span><strong>{subject.displayName}</strong><small>{subject.role === "decedent" ? "Defunto" : subject.role === "beneficiary" ? "Beneficiario" : subject.role === "representative" ? "Rappresentante" : "Altro soggetto"}{taxCode ? ` · ${taxCode}` : ""}</small></span>{#if anchorEntityId}<a href={`#operational-entity-${anchorEntityId}`}>Apri i dati</a>{/if}</li>
         {/each}
       </ul>
     {/if}
@@ -127,12 +141,12 @@
     </form>
   </div>
 {:else if selectedSection === "assets"}
-  <div class="workspace-panel-heading"><h2>Beni e passività</h2><span>{data.assets.length}</span></div>
+  <div class="workspace-panel-heading"><h2>Elementi del patrimonio</h2><span>{data.assets.length}</span></div>
   <div class="domain-section">
     {#if data.assets.length === 0}
       <div class="panel-empty domain-empty"><Building2 size={27} /><p>Nessun bene o passività registrato.</p><span>Ogni elemento viene registrato una sola volta e poi ripreso nel Quadro pertinente.</span></div>
     {:else}
-      <ul class="domain-entity-list">{#each data.assets as asset (asset.id)}<li><Building2 size={19} /><span><strong>{asset.displayName}</strong><small>{assetKindLabels[asset.kind]} · {money(asset.valueCents)}{asset.quadro ? ` · Quadro ${asset.quadro}` : ""}</small></span></li>{/each}</ul>
+      <ul class="domain-entity-list">{#each data.assets as asset (asset.id)}<li><Building2 size={19} /><span><strong>{asset.displayName}</strong><small>{assetKindLabels[asset.kind]} · {money(asset.valueCents)}{asset.quadro ? ` · Quadro ${asset.quadro}` : ""}</small></span>{#if asset.quadro}<a href={`#operational-entity-${asset.id}`}>Apri i dati</a>{/if}</li>{/each}</ul>
     {/if}
     <form class="domain-inline-form" method="POST" action={addAssetAction}>
       <h3>Aggiungi un bene o una passività</h3>
@@ -169,11 +183,11 @@
 {:else if selectedSection === "devolution"}
   <DevolutionSection {data} {form} saveAction={saveDevolutionAction} confirmAction={confirmDevolutionAction} {assetKindLabels} />
 {:else if selectedSection === "calculations"}
-  <div class="workspace-panel-heading"><h2>Calcoli</h2><span>{data.declaration.declaration.latestCalculationRunId ? "Confermati" : "Da confermare"}</span></div>
+  <div class="workspace-panel-heading"><h2>Calcolo e piano di pagamento</h2><span>{data.declaration.declaration.latestCalculationRunId ? "Confermati" : "Da confermare"}</span></div>
   <div class="calculation-actions"><div><Calculator size={25} /><span><strong>Calcolo dell’imposta di successione</strong><small>Applica le regole ufficiali alle quote della devoluzione confermata.</small></span></div><form method="POST" action={runCalculationAction}><input type="hidden" name="declarationId" value={data.declaration.id} /><button class="button primary" type="submit">Esegui il calcolo</button></form></div>
   {#if latestCalculation}
     <section class="calculation-result">
-      <header><div><strong>Imposta complessiva: {money(latestCalculation.totalTaxCents)}</strong><span>{latestCalculation.status === "confirmed" ? "Calcolo confermato" : latestCalculation.status === "blocked" ? "Dati da completare" : "Calcolo da confermare"}</span></div></header>
+      <header><div><strong>Imposta di successione: {money(latestCalculation.totalTaxCents)}</strong><span>{latestCalculation.status === "confirmed" ? "Calcolo confermato" : latestCalculation.status === "blocked" ? "Dati da completare" : "Calcolo da confermare"}</span></div></header>
       {#each latestCalculation.beneficiaries as result (result.beneficiaryId)}
         {@const subject = data.subjects.find((candidate: { id: string }) => candidate.id === result.beneficiaryId)}
         <div class="calculation-beneficiary"><h3>{subject?.displayName ?? "Beneficiario"}</h3><dl><div><dt>Quota ereditaria</dt><dd>{money(result.qe)}</dd></div><div><dt>Denaro, gioielli e mobilia</dt><dd>{money(result.qdn)}</dd></div><div><dt>Passività</dt><dd>{money(result.qp)}</dd></div><div><dt>Attivo netto</dt><dd>{money(result.an)}</dd></div><div><dt>Franchigia</dt><dd>{money(result.fr)}</dd></div><div><dt>Presunzione</dt><dd>{money(result.pr)}</dd></div><div><dt>Imposta lorda</dt><dd>{money(result.isl)}</dd></div><div><dt>Riduzioni</dt><dd>{money(result.reductions)}</dd></div><div><dt>Imposta estera detraibile</dt><dd>{money(result.foreignTaxCredit)}</dd></div><div><dt>Imposta netta</dt><dd>{money(result.isn)}</dd></div></dl></div>
@@ -208,18 +222,18 @@
   {/if}
   {#if form?.calculationError}<p class="workspace-form-error" role="alert">{form.calculationError}</p>{/if}
 {:else if selectedSection === "checks"}
-  <div class="workspace-panel-heading"><h2>Controlli</h2><span>{data.declarationIssues.length}</span></div>
+  <div class="workspace-panel-heading"><h2>Controlli finali</h2><span>{data.declarationIssues.length}</span></div>
   {#if data.declarationIssues.length === 0}
     <div class="panel-empty workspace-empty"><ShieldCheck size={27} /><p>Nessun problema sui dati inseriti.</p><span>I controlli coprono struttura, regole ufficiali, documenti, devoluzione e calcoli.</span></div>
   {:else}
-    <ul class="checks-list">{#each data.declarationIssues as issue (issue.id + (issue.fieldId ?? ""))}<li><CircleAlert size={19} /><span><strong>{issue.message}</strong><small>Fonte: {issue.sourceId}</small></span></li>{/each}</ul>
+    <ul class="checks-list">{#each data.declarationIssues as issue (issue.id + (issue.fieldId ?? ""))}<li><CircleAlert size={19} /><span><strong>{issue.message}</strong><small>Fonte: {issue.sourceId}</small></span>{#if issue.operationalSection}<a href={sectionHref(issue.operationalSection)}>Vai ai dati</a>{/if}</li>{/each}</ul>
   {/if}
 {:else if selectedSection === "exports"}
-  <div class="workspace-panel-heading"><h2>Riepilogo ed esportazione</h2><span>{data.declarationReady ? "Disponibile" : "Bozza"}</span></div>
+  <div class="workspace-panel-heading"><h2>Riepilogo finale</h2><span>{data.declarationReady ? "Disponibile" : "Bozza"}</span></div>
   <div class="export-grid">
-    <article><FileOutput size={28} /><h3>Fac-simile del modello</h3><p>Frontespizio e quadri pertinenti sul modello ufficiale, marcati come non trasmettibili.</p><a class="button primary" href={`/pratiche/${data.practice.id}/facsimile.pdf?dichiarazione=${data.declaration.id}`} target="_blank" rel="noreferrer">Apri fac-simile</a><a class="button secondary" href={`/pratiche/${data.practice.id}/facsimile.pdf?dichiarazione=${data.declaration.id}&download=1`} download>Scarica PDF</a></article>
-    <article><FileOutput size={28} /><h3>Dossier della pratica</h3><p>Soggetti, beni, devoluzione, calcoli, documenti richiesti e controlli.</p><a class="button primary" href={`/pratiche/${data.practice.id}/riepilogo?dichiarazione=${data.declaration.id}`} target="_blank">Apri il dossier</a><a class="button secondary" href={`/pratiche/${data.practice.id}/riepilogo.pdf?dichiarazione=${data.declaration.id}`}>Scarica il dossier</a></article>
-    <article><ShieldCheck size={28} /><h3>Rapporto dei controlli</h3><p>Esito riproducibile con fonti applicate e codice di verifica.</p><a class="button secondary" href={`/pratiche/${data.practice.id}/riepilogo.json?dichiarazione=${data.declaration.id}`} target="_blank">Scarica i dati</a></article>
+    <article><FileOutput size={28} /><h3>Fac-simile del modello</h3><p>Frontespizio e quadri pertinenti sul modello ufficiale, marcati come non trasmettibili.</p><div class="export-actions"><a class="button primary" href={`/pratiche/${data.practice.id}/facsimile.pdf?dichiarazione=${data.declaration.id}`} target="_blank" rel="noreferrer">Apri fac-simile</a><a class="button secondary" href={`/pratiche/${data.practice.id}/facsimile.pdf?dichiarazione=${data.declaration.id}&download=1`} download>Scarica PDF</a></div></article>
+    <article><ShieldCheck size={28} /><h3>Rapporto dei controlli</h3><p>Esito riproducibile con fonti applicate e codice di verifica.</p><div class="export-actions"><a class="button secondary" href={`/pratiche/${data.practice.id}/riepilogo.json?dichiarazione=${data.declaration.id}`} target="_blank">Scarica i dati</a></div></article>
+    <article><FileOutput size={28} /><h3>Dossier della pratica</h3><p>Soggetti, beni, devoluzione, calcoli, documenti richiesti e controlli.</p><div class="export-actions"><a class="button primary" href={`/pratiche/${data.practice.id}/riepilogo?dichiarazione=${data.declaration.id}`} target="_blank">Apri il dossier</a><a class="button secondary" href={`/pratiche/${data.practice.id}/riepilogo.pdf?dichiarazione=${data.declaration.id}`}>Scarica il dossier</a></div></article>
   </div>
 {:else if selectedSection === "history"}
   <div class="workspace-panel-heading"><h2>Cronologia</h2><span>{data.auditEvents.length}</span></div>
