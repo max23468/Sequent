@@ -22,6 +22,8 @@ import { recoverInterruptedJobs } from "$lib/server/jobs";
 import { startJobRunner } from "$lib/server/job-runner";
 import { cleanupExpiredUploadSessions } from "$lib/server/resumable-uploads";
 
+const PRIVATE_ROBOTS_DIRECTIVE = "noindex, nofollow, noarchive, nosnippet, noimageindex";
+
 let initialization: Promise<void> | undefined;
 
 async function initialize() {
@@ -83,9 +85,6 @@ export const handle: Handle = async ({ event, resolve }) => {
   const response = await resolve(event, {
     filterSerializedResponseHeaders: (name) => name === "content-type",
   });
-  response.headers.set(
-    "X-Robots-Tag",
-    "noindex, nofollow, noarchive, nosnippet, noimageindex",
-  );
+  response.headers.set("X-Robots-Tag", PRIVATE_ROBOTS_DIRECTIVE);
   return response;
 };
