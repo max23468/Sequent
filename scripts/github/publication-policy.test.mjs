@@ -284,3 +284,18 @@ test("la candidata riusa i gate PR e pubblica un digest ARM64 senza tar inter-jo
   assert.match(workflow, /mcr\.microsoft\.com\/playwright:v1\.62\.1-noble@sha256:[0-9a-f]{64}/);
   assert.doesNotMatch(workflow, /\bssh\b|deploy/i);
 });
+
+test("i container browser installano la toolchain nativa prima delle dipendenze", async () => {
+  const workflowUrls = [
+    new URL("../../.github/workflows/ci.yml", import.meta.url),
+    new URL("../../.github/workflows/release-candidate.yml", import.meta.url),
+  ];
+
+  for (const workflowUrl of workflowUrls) {
+    const workflow = await readFile(workflowUrl, "utf8");
+    assert.match(
+      workflow,
+      /Installa la toolchain nativa nel container browser[\s\S]*apt-get install --yes --no-install-recommends build-essential[\s\S]*- run: npm ci/,
+    );
+  }
+});
