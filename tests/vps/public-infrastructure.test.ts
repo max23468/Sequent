@@ -121,35 +121,25 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
     compose,
     /\/tmp:size=256m,mode=1777,uid=\$\{SEQUENT_RUNTIME_UID:\?[^}]+\},gid=\$\{SEQUENT_RUNTIME_GID:\?[^}]+\}/,
   );
-  assert.doesNotMatch(compose, /no-new-privileges:true/);
-  assert.match(compose, /apparmor=unconfined/);
-  assert.match(compose, /seccomp=unconfined/);
+  assert.match(compose, /no-new-privileges:true/);
+  assert.doesNotMatch(compose, /apparmor=unconfined|seccomp=unconfined/);
   assert.match(compose, /cap_drop:\s*\n\s*- ALL/);
-  for (const capability of [
-    "DAC_OVERRIDE",
-    "NET_ADMIN",
-    "SETFCAP",
-    "SETGID",
-    "SETUID",
-    "SYS_ADMIN",
-  ]) {
-    assert.match(compose, new RegExp(`\\s- ${capability}`));
-  }
+  assert.doesNotMatch(compose, /cap_add:|SYS_ADMIN|NET_ADMIN|SETUID/);
   assert.match(dockerfile, /ca-certificates/);
   assert.match(dockerfile, /^FROM node:26\.7\.0-trixie-slim@sha256:[0-9a-f]{64} AS node-base$/m);
   assert.match(dockerfile, /COPY requirements-ocr\.txt/);
   assert.match(dockerfile, /COPY --from=ocr --chown=root:root \/opt\/ocr \/opt\/ocr/);
   assert.match(dockerfile, /python3 -m venv \/opt\/ocr/);
   assert.match(dockerfile, /COPY --from=build --chown=root:root \/app\/node_modules/);
-  assert.match(dockerfile, /scripts\/codex-launcher\.c/);
   assert.match(dockerfile, /find \/ -xdev -type f -perm \/6000 -exec chmod a-s/);
-  assert.match(dockerfile, /install -o root -g root -m 4755/);
+  assert.doesNotMatch(dockerfile, /codex-launcher|4755/);
+  assert.match(dockerfile, /test -z "\$\(find \/ -xdev -type f -perm \/6000 -print -quit\)"/);
   assert.match(dockerfile, /'X-Forwarded-For':'127\.0\.0\.1'/);
   assert.match(release, /scripts\/local\/verify-docker-runtime\.sh/);
   assert.match(runbook, /SEQUENT_ORIGIN/);
   assert.match(runbook, /tmpfs.*stessi UID e GID.*1777/);
-  assert.match(runbook, /launcher minimo della CLI Codex/);
-  assert.match(runbook, /`bwrap`/);
+  assert.match(runbook, /profilo Production qualificato finché Codex è spento/);
+  assert.match(runbook, /futura attivazione di Codex richiede un profilo runtime separato/);
   assert.match(runbook, /sovrascrivere gli header inoltrati dal client/);
   assert.match(runbook, /unico hop davanti a Sequent/);
   assert.match(runbook, /rete esterna dedicata `sequent-proxy`/);

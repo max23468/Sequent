@@ -140,13 +140,15 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /up --detach --no-build --force-recreate/);
   assert.match(deploy, /\.deployment-maintenance/);
   assert.match(deploy, /\$SEQUENT_ORIGIN\/api\/health/);
-  assert.match(deploy, /if ! public_identity_output=/);
+  assert.match(deploy, /if ! public_health_status=/);
   assert.match(deploy, /rollback non healthy; manutenzione mantenuta/);
   assert.match(deploy, /health pubblico non interpretabile/);
-  assert.match(deploy, /public_identity\[@\].*-eq 3/);
-  assert.doesNotMatch(deploy, /readarray -t public_identity < <\(/);
-  assert.match(deploy, /public_identity\[1\].*\$commit/);
-  assert.match(deploy, /public_identity\[2\].*\$candidate_image_id/);
+  assert.match(deploy, /set\(health\) != \{"status"\}/);
+  assert.match(deploy, /public_health_status.*== ok/);
+  assert.doesNotMatch(deploy, /public_identity|commit pubblico|image ID pubblico/);
+  assert.match(deploy, /HostConfig\.CapAdd.*== null/);
+  assert.match(deploy, /HostConfig\.SecurityOpt.*no-new-privileges:true/);
+  assert.match(deploy, /AppArmorProfile.*!= unconfined/);
   assert.match(deploy, /prune_old_directories "\$root\/releases"/);
   assert.match(deploy, /prune_old_directories "\$root\/snapshots"/);
   assert.match(deploy, /sequent-production-deployment\/v1/);
@@ -278,11 +280,16 @@ test("la manutenzione Docker protegge anche un runtime selezionato per image ID"
   assert.match(prune, /current_ref.*sha256:\[0-9a-f\]\{64\}/s);
 });
 
-test("l'health pubblico espone commit e image ID exact dell'immagine", () => {
+test("l'health pubblico espone soltanto uno stato generico", () => {
   const health = read("src/routes/api/health/+server.ts");
+  const storageHealth = read("src/lib/server/health.ts");
   const compose = read("deploy/compose.example.yml");
 
-  assert.match(health, /commit: process\.env\.SEQUENT_COMMIT_SHA/);
-  assert.match(health, /imageId: process\.env\.SEQUENT_IMAGE_ID/);
-  assert.match(compose, /SEQUENT_IMAGE_ID: \$\{SEQUENT_IMAGE:/);
+  assert.match(health, /json\(\{ status: healthy \? "ok" : "degraded" \}/);
+  assert.doesNotMatch(health, /sqliteVersion|SEQUENT_COMMIT_SHA|SEQUENT_IMAGE_ID/);
+  assert.match(health, /searchParams\.get\("scope"\) === "storage"/);
+  assert.match(health, /isStorageHealthy\(storage\)/);
+  assert.match(storageHealth, /MIN_HEALTHY_FREE_BYTES = 5n/);
+  assert.match(storageHealth, /MAX_HEALTHY_DISK_USED_PERCENT = 90n/);
+  assert.doesNotMatch(compose, /SEQUENT_IMAGE_ID/);
 });

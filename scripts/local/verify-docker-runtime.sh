@@ -38,9 +38,7 @@ docker run --rm --platform linux/arm64 --user 0:0 --entrypoint /bin/sh "$image" 
 set -eu
 test -z "$(getcap -r / 2>/dev/null)"
 setid_files="$(find / -xdev -type f -perm /6000 -print 2>/dev/null)"
-test "$(printf "%s\n" "$setid_files" | grep -c .)" = 1
-printf "%s\n" "$setid_files" | grep -E \
-  "^/app/node_modules/@openai/.+/vendor/.+/bin/codex$" >/dev/null
+test -z "$setid_files"
 '
 
 printf 'Runtime Docker qualificato: immagine=%s piattaforma=linux/arm64 utente=10001:10001\n' \

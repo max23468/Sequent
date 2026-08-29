@@ -1,21 +1,19 @@
+import { statfsSync } from "node:fs";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
+import { getDataDirectory } from "$lib/server/config";
 import { openDatabase } from "$lib/server/database";
+import { isStorageHealthy } from "$lib/server/health";
 
-export const GET: RequestHandler = () => {
-  const database = openDatabase();
-  const integrity = database.pragma("quick_check", { simple: true });
-  const sqliteVersion = (
-    database.prepare("SELECT sqlite_version() AS version").get() as { version: string }
-  ).version;
-  const healthy = integrity === "ok";
-  return json(
-    {
-      status: healthy ? "ok" : "degraded",
-      sqliteVersion,
-      commit: process.env.SEQUENT_COMMIT_SHA ?? "unversioned",
-      imageId: process.env.SEQUENT_IMAGE_ID ?? "unversioned",
-    },
-    { status: healthy ? 200 : 503 },
-  );
+export const GET: RequestHandler = ({ url }) => {
+  let healthy: boolean;
+  if (url.searchParams.get("scope") === "storage") {
+    const storage = statfsSync(getDataDirectory(), { bigint: true });
+    healthy = isStorageHealthy(storage);
+  } else {
+    const database = openDatabase();
+    healthy = database.pragma("quick_check", { simple: true }) === "ok";
+  }
+
+  return json({ status: healthy ? "ok" : "degraded" }, { status: healthy ? 200 : 503 });
 };
