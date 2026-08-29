@@ -23,6 +23,12 @@
       "purpose": "any"
     },
     {
+      "src": "/icons/sequent-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
       "src": "/icons/sequent-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
