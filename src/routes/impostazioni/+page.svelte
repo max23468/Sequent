@@ -14,7 +14,7 @@
   <section class="settings-panel">
     <div class="panel-title"><ExternalLink size={22} /><h2>Applicazioni esterne</h2></div>
     {#each data.launchers as launcher (launcher.id)}
-      <div class="settings-row"><div><strong>{launcher.label}</strong><span>{launcher.instructions}</span></div><span class:available={launcher.state === "available"} class="capability-state"><ShieldCheck size={17} />{launcher.state === "available" ? "Disponibile" : launcher.state === "disabled" ? "Non attivo" : "Apertura manuale"}</span></div>
+      <div class="settings-row"><div><strong>{launcher.label}</strong><span>{launcher.instructions}</span></div><span class:available={launcher.state === "available"} class="capability-state">{#if launcher.state === "available"}<ShieldCheck size={17} />{:else if launcher.state === "disabled"}<ShieldAlert size={17} />{:else}<ExternalLink size={17} />{/if}{launcher.state === "available" ? "Disponibile" : launcher.state === "disabled" ? "Non attivo" : "Apertura manuale"}</span></div>
     {/each}
   </section>
   <section class="settings-panel">

@@ -22,6 +22,9 @@
   text-decoration: none;
   color: var(--navy);
 }
+.brand-logo-static {
+  cursor: default;
+}
 .brand-symbol {
   position: relative;
   display: block;
@@ -120,9 +123,17 @@
   color: var(--muted);
   opacity: 1;
 }
+.search-box:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 18%, transparent);
+}
 .search-clear {
   position: absolute;
   right: 7px;
+}
+.mobile-search-trigger.icon-button,
+.search-close.icon-button {
+  display: none;
 }
 .search-results {
   position: absolute;

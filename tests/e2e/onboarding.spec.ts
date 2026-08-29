@@ -80,6 +80,38 @@ async function confirmOfficialInstructions(button: import("@playwright/test").Lo
   if ((await confirmation.count()) > 0) await confirmation.check();
 }
 
+async function expectOfficialCheckboxesAligned(page: import("@playwright/test").Page) {
+  const fieldCheckboxes = page.locator(".official-checkbox-control input[type=checkbox]");
+  const confirmations = page.locator(".official-confirmation");
+  expect(await fieldCheckboxes.count()).toBeGreaterThan(0);
+  expect(await confirmations.count()).toBeGreaterThan(0);
+  expect(
+    await fieldCheckboxes.evaluateAll((checkboxes) =>
+      checkboxes.every((checkbox) => {
+        const box = checkbox.getBoundingClientRect();
+        const text = checkbox.nextElementSibling?.getBoundingClientRect();
+        return Boolean(
+          text &&
+          box.height <= 19 &&
+          Math.abs(box.top + box.height / 2 - (text.top + text.height / 2)) <= 1,
+        );
+      }),
+    ),
+  ).toBe(true);
+  expect(
+    await confirmations.evaluateAll((labels) =>
+      labels.every((label) => {
+        const checkbox = label.querySelector<HTMLInputElement>('input[type="checkbox"]');
+        const text = label.querySelector("span");
+        if (!checkbox || !text) return false;
+        const box = checkbox.getBoundingClientRect();
+        const copy = text.getBoundingClientRect();
+        return box.height <= 19 && Math.abs(box.top - copy.top) <= 2;
+      }),
+    ),
+  ).toBe(true);
+}
+
 test("crea una pratica e usa il workspace minimo", async ({ page }) => {
   const practiceTitle = unique("Pratica workspace");
   const workspaceDocument = `workspace-${suffix}.txt`;
@@ -93,10 +125,8 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Da verificare" })).toBeVisible();
   await expect(page.locator(".topbar-divider")).toBeVisible();
-  expect((await page.locator(".attention-panel").boundingBox())?.height).toBeGreaterThanOrEqual(
-    420,
-  );
-  expect((await page.locator(".recent-panel").boundingBox())?.height).toBeGreaterThanOrEqual(380);
+  await expect(page.locator(".attention-panel")).toHaveCSS("min-height", "0px");
+  await expect(page.locator(".recent-panel")).toHaveCSS("min-height", "0px");
   const dashboardTitleSize = await page
     .getByRole("heading", { name: "Dashboard" })
     .evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
@@ -371,6 +401,10 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     page.locator('output[id="field-frontespizio.beneficiari.numero-chiamati"]'),
   ).toHaveText("0");
   const legalDevolution = page.getByRole("checkbox", { name: "Devoluzione per legge" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expectOfficialCheckboxesAligned(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expectOfficialCheckboxesAligned(page);
   await legalDevolution.check();
   const saveGeneralData = page.getByRole("button", { name: "Salva dati generali" });
   await confirmOfficialInstructions(saveGeneralData);
@@ -402,6 +436,14 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await expect(practiceDeadline.getByText("1 gen 2026")).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(deadlines).toBeVisible();
+  const deadlineCopy = practiceDeadline.locator("small");
+  expect(
+    await deadlineCopy.evaluate((copy) => {
+      const copyBounds = copy.getBoundingClientRect();
+      const rowBounds = copy.closest("li")!.getBoundingClientRect();
+      return rowBounds.bottom - copyBounds.bottom;
+    }),
+  ).toBeGreaterThanOrEqual(10);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
@@ -561,6 +603,7 @@ test("su mobile nasconde i launcher e mantiene soltanto le azioni interne", asyn
   await page.setViewportSize({ width: 402, height: 874 });
   await authenticate(page);
   await createPracticeFromDashboard(page, practiceTitle);
+  const workspaceUrl = page.url();
   await page.goto("/");
   await expect(
     page.getByRole("navigation", { name: "Navigazione principale mobile" }),
@@ -574,6 +617,82 @@ test("su mobile nasconde i launcher e mantiene soltanto le azioni interne", asyn
   await expect(quickActions.getByRole("link", { name: "Riprendi ultima pratica" })).toBeVisible();
   await expect(quickActions.getByRole("button")).toHaveCount(1);
   await expect(quickActions.getByRole("link")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(quickActions).toBeHidden();
+
+  await openAccountMenu(page);
+  await expect(page.locator(".account-menu")).toHaveAttribute("open", "");
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".account-menu")).not.toHaveAttribute("open", "");
+
+  await page.goto(workspaceUrl);
+  expect((await page.locator(".workspace-sections").boundingBox())?.height).toBeLessThan(120);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.getByText("Azioni", { exact: true }).click();
+  const workspacePopover = page.locator(".workspace-actions-popover");
+  await expect(workspacePopover).toBeVisible();
+  const popoverBounds = await workspacePopover.boundingBox();
+  expect(popoverBounds).not.toBeNull();
+  expect(popoverBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(popoverBounds!.x + popoverBounds!.width).toBeLessThanOrEqual(402);
+  await page.keyboard.press("Escape");
+  await expect(workspacePopover).toBeHidden();
+});
+
+test("su mobile la ricerca è compatta e richiudibile, la barra è ridotta e il logo torna alla Dashboard da ogni superficie", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 402, height: 874 });
+  await authenticate(page);
+  await page.goto("/pratiche");
+
+  const mobileNavigation = page.getByRole("navigation", {
+    name: "Navigazione principale mobile",
+  });
+  await expect(mobileNavigation).toBeVisible();
+  expect((await mobileNavigation.boundingBox())?.height).toBeLessThanOrEqual(62);
+
+  const searchButton = page.getByRole("button", { name: "Apri ricerca" });
+  const searchBox = page.locator(".search-box");
+  const searchIcon = searchButton.locator("svg");
+  const [buttonBounds, iconBounds] = await Promise.all([
+    searchButton.boundingBox(),
+    searchIcon.boundingBox(),
+  ]);
+  expect(buttonBounds).not.toBeNull();
+  expect(iconBounds).not.toBeNull();
+  expect(
+    Math.abs(buttonBounds!.x + buttonBounds!.width / 2 - (iconBounds!.x + iconBounds!.width / 2)),
+  ).toBeLessThan(1);
+  expect(
+    Math.abs(buttonBounds!.y + buttonBounds!.height / 2 - (iconBounds!.y + iconBounds!.height / 2)),
+  ).toBeLessThan(1);
+
+  await searchButton.click();
+  await expect(page.getByPlaceholder("Cerca in Sequent")).toBeFocused();
+  await expect(page.getByRole("button", { name: "Chiudi ricerca" })).toBeVisible();
+  expect((await searchBox.boundingBox())?.width).toBeLessThanOrEqual(320);
+  await page.getByRole("button", { name: "Chiudi ricerca" }).click();
+  await expect(searchButton).toBeVisible();
+  await expect(page.getByPlaceholder("Cerca in Sequent")).toBeHidden();
+
+  for (const route of ["/pratiche", "/documenti", "/impostazioni", "/pagina-inesistente"]) {
+    await page.goto(route);
+    await page.getByRole("link", { name: /Sequent,/ }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+  }
+
+  await page.goto("/pratiche");
+  const practiceHref = await page.locator(".index-list a").first().getAttribute("href");
+  expect(practiceHref).toBeTruthy();
+  for (const route of [practiceHref!, `${practiceHref}/riepilogo`]) {
+    await page.goto(route);
+    await page.getByRole("link", { name: "Sequent, Dashboard" }).click();
+    await expect(page).toHaveURL(/\/$/);
+  }
 });
 
 test("su mobile carica un documento senza interferenze dalla navigazione fissa", async ({
@@ -612,6 +731,8 @@ test("chiude la sessione e consente un nuovo accesso", async ({ page }) => {
   await openAccountMenu(page);
   await page.getByRole("button", { name: "Esci" }).click();
   await expect(page).toHaveURL(/\/login$/);
+  await expect(page.locator(".brand-logo-static")).toBeVisible();
+  await expect(page.locator(".brand-logo")).not.toHaveAttribute("href", /.+/);
   await page.getByLabel("Nome utente").fill(username.toUpperCase());
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Accedi" }).click();

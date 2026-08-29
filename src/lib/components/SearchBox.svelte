@@ -5,6 +5,7 @@
   let query = $state("");
   let results = $state<SearchResult[]>([]);
   let open = $state(false);
+  let mobileOpen = $state(false);
   let loading = $state(false);
   let requestId = 0;
   const resultIcons = {
@@ -34,6 +35,19 @@
     query = "";
     results = [];
     open = false;
+    mobileOpen = false;
+  }
+
+  function openMobileSearch() {
+    mobileOpen = true;
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLInputElement>("#global-search")?.focus(),
+    );
+  }
+
+  function closeMobileSearch() {
+    clear();
+    document.querySelector<HTMLInputElement>("#global-search")?.blur();
   }
 
   function handleFocus() {
@@ -42,7 +56,8 @@
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === "Escape") {
-      open = false;
+      if (mobileOpen) closeMobileSearch();
+      else open = false;
       return;
     }
     if (event.key === "ArrowDown" && open) {
@@ -67,7 +82,7 @@
       (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey && !isTyping);
     if (isSearchShortcut) {
       event.preventDefault();
-      document.querySelector<HTMLInputElement>("#global-search")?.focus();
+      openMobileSearch();
       if (query.trim()) open = true;
     }
   }
@@ -75,8 +90,17 @@
 
 <svelte:window onkeydown={handleGlobalKeydown} />
 
-<div class="search-box" role="search">
-  <Search size={19} strokeWidth={1.8} aria-hidden="true" />
+<div class:mobile-open={mobileOpen} class="search-box" role="search">
+  <button
+    class="icon-button mobile-search-trigger"
+    type="button"
+    aria-label="Apri ricerca"
+    aria-expanded={mobileOpen}
+    onclick={openMobileSearch}
+  >
+    <Search size={19} strokeWidth={1.8} aria-hidden="true" />
+  </button>
+  <Search class="search-inline-icon" size={19} strokeWidth={1.8} aria-hidden="true" />
   <label class="sr-only" for="global-search">Cerca in Sequent</label>
   <input
     id="global-search"
@@ -93,6 +117,14 @@
       <X size={17} aria-hidden="true" />
     </button>
   {/if}
+  <button
+    class="icon-button search-close"
+    type="button"
+    aria-label="Chiudi ricerca"
+    onclick={closeMobileSearch}
+  >
+    <X size={18} aria-hidden="true" />
+  </button>
   {#if open}
     <div
       id="global-search-results"

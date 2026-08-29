@@ -5,6 +5,9 @@
   padding: 28px;
   background: var(--surface-soft);
 }
+.auth-page.authenticated-error {
+  min-height: calc(100vh - var(--header-height));
+}
 .auth-panel {
   width: min(100%, 480px);
   padding: 42px;
