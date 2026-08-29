@@ -20,13 +20,18 @@ export function releaseNotes(changelog, version) {
   return `## Novità\n\n${match.groups.body.trim()}\n`;
 }
 
+export function releaseCommitMatches({ checkOnly, commit, head, main }) {
+  return checkOnly ? commit === head || commit === main : commit === main;
+}
+
 function main() {
   const commit = argument("--commit");
   const checkOnly = process.argv.includes("--check");
   if (!/^[0-9a-f]{40}$/.test(commit ?? "")) throw new Error("Usa --commit con uno SHA completo");
-  const expectedCommit = output("git", ["rev-parse", checkOnly ? "HEAD" : "origin/main"]);
-  if (expectedCommit !== commit)
-    throw new Error(checkOnly ? "Verifica release non exact-HEAD" : "Release non exact-main");
+  const head = output("git", ["rev-parse", "HEAD"]);
+  const mainCommit = output("git", ["rev-parse", "origin/main"]);
+  if (!releaseCommitMatches({ checkOnly, commit, head, main: mainCommit }))
+    throw new Error(checkOnly ? "Verifica release non exact-HEAD/main" : "Release non exact-main");
   const version = JSON.parse(readFileSync("package.json", "utf8")).version;
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error("Versione release non SemVer numerica");
   const tag = `v${version}`;
