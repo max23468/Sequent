@@ -20,11 +20,11 @@ Riferimenti canonici:
 - `static/brand/sequent-symbol.svg`: variante ottimizzata usata dall’interfaccia.
 - `static/brand/sequent-symbol-monochrome.svg`: controllo monocromatico.
 - `static/brand/sequent-symbol-inverse.svg`: variante bianca per superfici scure.
-- `static/favicon.svg`: favicon vettoriale per superfici chiare.
-- `static/favicon-dark.svg`: favicon vettoriale ad alto contrasto per chrome del browser scuro.
+- `static/favicon.svg`: favicon vettoriale adattiva; il rendering di base resta leggibile anche nei browser che non applicano la media query scura dentro le favicon SVG.
 - `static/favicon.ico`: fallback raster multirisoluzione con tile chiara, leggibile indipendentemente dal colore della tab.
+- `static/safari-pinned-tab.svg`: maschera monocromatica dedicata alle tab fissate di Safari.
 - `static/apple-touch-icon.png`: icona dedicata ai collegamenti salvati sui dispositivi Apple.
-- `static/icons/`: icone installabili normali e maskable dichiarate dal web manifest.
+- `static/icons/`: icone installabili normali e maskable dichiarate dal web manifest, inclusa una maskable SVG full-bleed per Safari su macOS.
 - `static/site.webmanifest`: metadati di installazione dell’app web.
 
 Il wordmark usa Georgia con fallback Times New Roman. Nell’app è testo reale affiancato al simbolo, non testo rasterizzato o incorporato nell’SVG.
@@ -67,13 +67,13 @@ Il workspace desktop segue `sezioni | contenuto | fonte`. In questa fondazione m
 
 Il tema segue il sistema e consente override chiaro/scuro persistito localmente. Sono obbligatori HTML semantico, label esplicite, focus visibile, flussi principali da tastiera, contrasto sufficiente, reflow e riduzione del movimento.
 
-Il browser riceve anche il `color-scheme` effettivo e un `theme-color` sincronizzato con il tema applicato, così controlli nativi e chrome compatibile non restano incoerenti quando l’utente forza chiaro o scuro.
+Il browser riceve anche il `color-scheme` effettivo e un `theme-color` sincronizzato con il tema applicato, così controlli nativi e chrome compatibile non restano incoerenti quando l’utente forza chiaro o scuro. Il colore di fondo reale di `html` e `body` resta sempre coerente con il tema, così Safari può usare correttamente la superficie della pagina anche quando la propria chrome non applica `theme-color` nello stesso modo degli altri browser.
 
 ## Browser, titoli e metadati production
 
 I titoli delle pagine seguono il formato `Contesto · Sequent`; il workspace di una pratica può sostituire il contesto generico con il titolo reale della pratica. Errori e schermate di autenticazione hanno titoli dedicati, così cronologia, tab e switcher del sistema operativo restano riconoscibili.
 
-Le favicon hanno varianti chiare e scure selezionabili dal browser, con `.ico` di fallback. Le icone installabili derivano dallo stesso simbolo approvato; la variante maskable mantiene una safe area maggiore per evitare ritagli del marchio.
+La favicon primaria è un unico SVG adattivo. Chrome e gli altri browser che applicano `prefers-color-scheme` dentro l’SVG ricevono la resa specifica chiara o scura; Safari dispone invece di un rendering di base con tile opaca e contrasto sufficiente, quindi resta leggibile anche quando WebKit non applica la media query interna. Il `.ico` resta il fallback raster. Safari riceve inoltre `apple-touch-icon`, una maschera dedicata per le tab fissate e una icona maskable SVG full-bleed nel manifest.
 
 L’istanza operativa resta a visibilità limitata: l’hostname non viene promosso né pubblicizzato e chi non conosce l’URL non deve poterlo scoprire attraverso motori di ricerca o superfici SEO. La conoscenza dell’URL non è però un controllo di sicurezza: il login resta il confine di accesso ai contenuti.
 
