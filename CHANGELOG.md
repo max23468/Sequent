@@ -4,6 +4,12 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.1.2
+
+### Fixed
+
+- download del fac-simile escluso dalla navigazione client, evitando errori console pur conservando il nome file fornito dalla risposta PDF.
+
 ## 0.1.1
 
 ### Fixed
