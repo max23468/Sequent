@@ -472,6 +472,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     .getByRole("link", { name: "Scarica PDF" });
   await expect(facsimilePreviewLink).toHaveAttribute("target", "_blank");
   await expect(facsimilePreviewLink).toHaveAttribute("rel", "noreferrer");
+  await expect(facsimileDownloadLink).toHaveAttribute("download", "");
   const facsimilePreviewHref = await facsimilePreviewLink.getAttribute("href");
   const facsimileDownloadHref = await facsimileDownloadLink.getAttribute("href");
   const dossierPdfHref = await page
@@ -504,6 +505,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     "href",
     facsimileDownloadHref,
   );
+  await expect(page.getByRole("link", { name: "Scarica PDF" })).toHaveAttribute("download", "");
   await expect(page.getByText("Bozza — controlli da completare", { exact: true })).toBeVisible();
   await expect(page.getByText(beneficiaryName, { exact: true }).first()).toBeVisible();
   await expect(page.getByText(assetName, { exact: true }).first()).toBeVisible();
