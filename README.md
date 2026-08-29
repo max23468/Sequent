@@ -8,6 +8,8 @@ Questo repository pubblico contiene codice, documentazione, cataloghi derivati, 
 
 Il piano canonico e la sequenza di implementazione sono in [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md). Lo stato effettivo del software deriva dall'HEAD corrente, dai gate e dalla configurazione privata dell'istanza: non viene duplicato in questo README.
 
+La mappa numerica delle release fino alla `1.0.0` e le regole operative di incremento sono in [`docs/VERSIONING.md`](docs/VERSIONING.md).
+
 La configurazione del repository e i required checks sono descritti nel [`runbook GitHub`](docs/runbooks/github.md).
 
 Backup, ripristino e preparazione applicativa della prima attivazione sono descritti nei runbook [`backup e restore`](docs/runbooks/backup-restore.md) e [`prima attivazione`](docs/runbooks/initial-activation.md).
