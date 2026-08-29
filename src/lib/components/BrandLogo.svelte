@@ -1,11 +1,27 @@
 <script lang="ts">
-  let { compact = false } = $props<{ compact?: boolean }>();
+  let {
+    compact = false,
+    href = "/",
+    label,
+  } = $props<{ compact?: boolean; href?: string | null; label?: string }>();
+
+  let accessibleLabel = $derived(label ?? (href === "/" ? "Sequent, Dashboard" : "Sequent"));
 </script>
 
-<a class:compact class="brand-logo" href="/" aria-label="Sequent, Dashboard">
+{#snippet brandContent()}
   <span class="brand-symbol" aria-hidden="true">
     <img class="brand-symbol-light" src="/brand/sequent-symbol.svg" alt="" />
     <img class="brand-symbol-dark" src="/brand/sequent-symbol-inverse.svg" alt="" />
   </span>
   <span>Sequent</span>
-</a>
+{/snippet}
+
+{#if href}
+  <a class:compact class="brand-logo" {href} aria-label={accessibleLabel}>
+    {@render brandContent()}
+  </a>
+{:else}
+  <div class:compact class="brand-logo brand-logo-static" aria-label={accessibleLabel}>
+    {@render brandContent()}
+  </div>
+{/if}

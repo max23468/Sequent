@@ -5,7 +5,7 @@
 
 <main class="auth-page">
   <section class="auth-panel">
-    <BrandLogo />
+    <BrandLogo href={null} />
     <h1>Crea l’account proprietario</h1>
     <p>Questo è l’unico account dell’istanza. Le credenziali restano protette sulla tua VPS.</p>
     <form method="POST">

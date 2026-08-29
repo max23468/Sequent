@@ -4,6 +4,15 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.1.3
+
+### Fixed
+
+- ricerca mobile centrata, compatta e richiudibile senza occupare l’intero schermo;
+- barra di navigazione inferiore ridotta e spaziatura mobile corretta per scadenze e menu del workspace;
+- logo collegato alla Dashboard su tutte le superfici autenticate e sugli stati di errore;
+- checkbox e relative etichette riallineate su desktop e mobile.
+
 ## 0.1.2
 
 ### Fixed

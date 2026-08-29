@@ -7,6 +7,7 @@
   let createDialog: HTMLDialogElement | undefined = undefined;
   let uploadDialog: HTMLDialogElement | undefined = undefined;
   let launcherDialog: HTMLDialogElement | undefined = undefined;
+  let quickActionsMenu: HTMLDivElement | undefined = undefined;
   let quickActionsOpen = $state(false);
   let selectedLauncher = $state<(typeof data.launchers)[number] | null>(null);
   let uploadProgress = $state<number | null>(null);
@@ -56,6 +57,18 @@
 
   function toggleQuickActions() {
     quickActionsOpen = !quickActionsOpen;
+  }
+
+  function handleDashboardPointerDown(event: PointerEvent) {
+    if (quickActionsOpen && !quickActionsMenu?.contains(event.target as Node)) {
+      quickActionsOpen = false;
+    }
+  }
+
+  function handleDashboardKeydown(event: KeyboardEvent) {
+    if (event.key !== "Escape" || !quickActionsOpen) return;
+    quickActionsOpen = false;
+    quickActionsMenu?.querySelector<HTMLElement>("button")?.focus();
   }
 
   function closeLauncherDialog() {
@@ -108,6 +121,8 @@
 
 </script>
 
+<svelte:window onpointerdown={handleDashboardPointerDown} onkeydown={handleDashboardKeydown} />
+
 <svelte:head><title>Dashboard · Sequent</title></svelte:head>
 
 <div class="dashboard-page page-frame">
@@ -127,7 +142,7 @@
     </div>
     <div class="mobile-heading-actions">
       <button class="button primary" type="button" onclick={showCreateDialog}><Plus size={23} aria-hidden="true" />Nuova</button>
-      <div class="quick-actions-menu">
+      <div class="quick-actions-menu" bind:this={quickActionsMenu}>
         <button class="button icon-only" type="button" aria-label="Azioni rapide" aria-expanded={quickActionsOpen} onclick={toggleQuickActions}><MoreVertical size={25} aria-hidden="true" /></button>
         <span>Azioni rapide</span>
         {#if quickActionsOpen}

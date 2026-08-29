@@ -92,7 +92,7 @@
 }
 .dashboard-panel {
   min-width: 0;
-  min-height: 423px;
+  min-height: 0;
   padding: 21px;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -100,7 +100,7 @@
 }
 .recent-panel {
   grid-column: 1 / -1;
-  min-height: 386px;
+  min-height: 0;
 }
 .panel-title {
   display: flex;
@@ -177,6 +177,7 @@
 .deadline-list a {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 19px;
+  padding-block: 12px;
 }
 .deadline-list time,
 .deadline-list .deadline-to-check {
@@ -1601,16 +1602,20 @@ input[type="file"] {
   font-size: 0.8rem;
   line-height: 1.5;
 }
-.official-confirmation {
-  align-items: flex-start !important;
-  margin: 14px 2px 0 !important;
+.official-fields label.official-confirmation {
+  align-items: flex-start;
+  min-height: 44px;
+  margin: 14px 2px 0;
   color: var(--text);
+  cursor: pointer;
   line-height: 1.45;
 }
 .official-confirmation input {
   width: 18px;
   height: 18px;
+  min-height: 18px;
   margin-top: 1px;
+  padding: 0;
   flex: 0 0 auto;
   accent-color: var(--teal);
 }
@@ -1917,10 +1922,30 @@ input[type="file"] {
   color: var(--text);
   font-size: 0.86rem;
 }
+.official-fields label.official-checkbox-control {
+  min-height: 44px;
+  margin: 0;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 400;
+}
 .official-checkbox-control input {
   width: 18px;
   height: 18px;
+  min-height: 18px;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
   accent-color: var(--teal);
+}
+.official-fields label.official-checkbox-control span {
+  display: inline;
+  min-width: 0;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+  font-size: 0.86rem;
 }
 .official-fields-actions {
   display: flex;

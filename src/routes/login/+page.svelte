@@ -5,7 +5,7 @@
 
 <main class="auth-page">
   <section class="auth-panel compact">
-    <BrandLogo />
+    <BrandLogo href={null} />
     <h1>Accedi</h1>
     <p>Apri la tua istanza privata.</p>
     <form method="POST">

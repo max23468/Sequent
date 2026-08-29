@@ -72,7 +72,7 @@
     {#if field.entryMode === "derived"}
       <output class="official-derived-value" id={controlId}>{displayedFieldValue()}</output>
     {:else if field.control === "checkbox"}
-      <div class="official-checkbox-control"><input type="hidden" name={`value:${field.canonicalId}`} value={uncheckedValue()} disabled={entityMissing} /><input id={controlId} type="checkbox" name={`value:${field.canonicalId}`} value="1" checked={fieldValue() === "1"} disabled={entityMissing} /><span>Sì</span></div>
+      <label class="official-checkbox-control" for={controlId}><input type="hidden" name={`value:${field.canonicalId}`} value={uncheckedValue()} disabled={entityMissing} /><input id={controlId} type="checkbox" name={`value:${field.canonicalId}`} value="1" checked={fieldValue() === "1"} disabled={entityMissing} /><span>Sì</span></label>
     {:else if largeOptionList}
       <input id={controlId} name={`value:${field.canonicalId}`} list={`options-${controlId}`} value={fieldValue()} autocomplete="off" disabled={entityMissing} />
       <datalist id={`options-${controlId}`}>{#each field.options as option (option.value)}<option value={option.value}>{option.label}</option>{/each}</datalist>

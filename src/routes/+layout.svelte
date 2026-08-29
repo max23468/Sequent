@@ -8,6 +8,7 @@
   import "./app.css";
 
   let { children, data } = $props();
+  let accountMenu = $state<HTMLDetailsElement>();
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: Home },
@@ -23,7 +24,19 @@
       ? page.url.pathname === "/" || page.url.pathname === "/__design"
       : page.url.pathname.startsWith(href);
   }
+
+  function handleShellPointerDown(event: PointerEvent) {
+    if (accountMenu?.open && !accountMenu.contains(event.target as Node)) accountMenu.open = false;
+  }
+
+  function handleShellKeydown(event: KeyboardEvent) {
+    if (event.key !== "Escape" || !accountMenu?.open) return;
+    accountMenu.open = false;
+    accountMenu.querySelector<HTMLElement>("summary")?.focus();
+  }
 </script>
+
+<svelte:window onpointerdown={handleShellPointerDown} onkeydown={handleShellKeydown} />
 
 <svelte:head>
   <title>{browserTitle}</title>
@@ -49,7 +62,7 @@
       </nav>
       <div class="topbar-tools">
         <SearchBox />
-        <details class="account-menu">
+        <details class="account-menu" bind:this={accountMenu}>
           <summary aria-label="Apri menu utente">
             <span class="account-avatar"><UserRound size={19} aria-hidden="true" /></span>
             <span class="account-label">{data.username ?? "Utente"}</span>
@@ -69,7 +82,7 @@
       {#each navItems as item (item.href)}
         <a class:active={isActive(item.href)} href={item.href} aria-current={isActive(item.href) ? "page" : undefined}>
           <item.icon
-            size={25}
+            size={22}
             strokeWidth={1.8}
             fill={item.href === "/" && isActive(item.href) ? "currentColor" : "none"}
             aria-hidden="true"

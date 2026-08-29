@@ -19,6 +19,7 @@
   import QuadroReferences from "$lib/components/QuadroReferences.svelte";
   import ReviewQueue from "$lib/components/ReviewQueue.svelte";
   import { uploadFilesResumably } from "$lib/client/resumable-upload";
+  import { documentStatusLabels } from "$lib/document-status";
   import { formatItalianDate } from "$lib/format";
 
   let { data, form } = $props();
@@ -33,6 +34,7 @@
   let editedValue = $state("");
   let uploadProgress = $state<number | null>(null);
   let resumableUploadError = $state("");
+  let workspaceActionsMenu = $state<HTMLDetailsElement>();
 
   const sections = [
     { id: "overview", label: "Panoramica", available: true, icon: LayoutDashboard },
@@ -48,13 +50,6 @@
     { id: "exports", label: "Riepilogo ed esportazione", available: true, icon: FileOutput },
     { id: "history", label: "Cronologia", available: true, icon: History },
   ] as const;
-  const statusLabels: Record<string, string> = {
-    received: "Ricevuto", classifying: "Classificazione…", processing: "Elaborazione…",
-    processed: "Elaborato", to_review: "Da verificare", unsupported: "Non elaborabile",
-    unreadable: "Illeggibile", authoritative: "Fonte autorevole",
-    candidate_attachment: "Da preparare per l’invio",
-    included_attachment: "Allegato controllato",
-  };
   const domainSections = new Set([
     "declaration", "beneficiaries", "assets", "checklist", "devolution",
     "calculations", "checks", "exports", "history",
@@ -120,6 +115,14 @@
   function handleEditedValue(event: Event) {
     editedValue = (event.currentTarget as HTMLInputElement).value;
   }
+  function dismissWorkspaceActions(event: PointerEvent | KeyboardEvent) {
+    if (!workspaceActionsMenu?.open) return;
+    if (event.type === "pointerdown" && workspaceActionsMenu.contains(event.target as Node)) return;
+    if (event.type === "keydown" && (event as KeyboardEvent).key !== "Escape") return;
+    workspaceActionsMenu.open = false;
+    if (event.type === "keydown")
+      workspaceActionsMenu.querySelector<HTMLElement>("summary")?.focus();
+  }
   function formAction(name: string, section = selectedSection): string {
     const search = new URLSearchParams(page.url.searchParams);
     const actionKeys = Array.from(search.keys()).filter((key) => key.startsWith("/"));
@@ -156,6 +159,8 @@
   }
 </script>
 
+<svelte:window onpointerdown={dismissWorkspaceActions} onkeydown={dismissWorkspaceActions} />
+
 <svelte:head><title>{data.practice.title} · Sequent</title></svelte:head>
 <div class="practice-page page-frame">
   <div class="practice-heading">
@@ -169,7 +174,7 @@
         <button type="button" class:active={viewMode === "quadri"} aria-pressed={viewMode === "quadri"} onclick={selectQuadriView}>Vista Quadri</button>
       </div>
       <span class="practice-revision">Revisione {data.declaration.revision}</span>
-      <details class="workspace-actions-menu">
+      <details class="workspace-actions-menu" bind:this={workspaceActionsMenu}>
         <summary class="button secondary">Azioni <ChevronDown size={17} /></summary>
         <div class="workspace-actions-popover"><button type="button" onclick={chooseWorkspaceFile}><Upload size={17} />Carica documento</button><a href={`/pratiche/${data.practice.id}/riepilogo`} target="_blank"><FileText size={17} />Apri il riepilogo</a></div>
       </details>
@@ -229,7 +234,7 @@
         {#if data.documents.length === 0}
           <div class="panel-empty workspace-empty"><FileText size={27} /><p>Nessun documento caricato.</p><span>Gli originali aggiunti alla pratica compariranno qui.</span></div>
         {:else}
-          <DocumentList documents={data.documents} selectedDocumentId={data.selectedDocument?.id ?? null} {statusLabels} />
+          <DocumentList documents={data.documents} selectedDocumentId={data.selectedDocument?.id ?? null} statusLabels={documentStatusLabels} />
         {/if}
       {:else if selectedSection === "verifications"}
         <div class="workspace-panel-heading"><h2>Da verificare</h2><span>{data.reviewItems.length}</span></div>
@@ -292,7 +297,7 @@
       {:else if selectedSection !== "documents" && selectedSection !== "verifications"}
         <PracticeContextPanel {data} />
       {:else}
-        <DocumentSourcePanel {data} {form} {statusLabels} {selectedSourceRef} />
+        <DocumentSourcePanel {data} {form} statusLabels={documentStatusLabels} {selectedSourceRef} />
       {/if}
     </aside>
   </div>
