@@ -112,6 +112,14 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /stat -c '%U:%G:%a' "\$root\/releases".*root:root:750/s);
   assert.match(deploy, /stat -c '%U:%G:%a' "\$root\/snapshots".*root:root:700/s);
   assert.match(deploy, /install -d -o root -g root -m 0750 "\$release_dir"/);
+  assert.match(deploy, /previous_release_layout=.*stat -c '%U:%G:%a'/);
+  assert.match(deploy, /ubuntu:ubuntu:750/);
+  assert.match(deploy, /chown root:root "\$previous_release_dir"/);
+  assert.match(deploy, /migrazione della release precedente fallita/);
+  assert.ok(
+    deploy.indexOf('chown root:root "$previous_release_dir"') <
+      deploy.indexOf('"${candidate_compose[@]}" down --remove-orphans'),
+  );
   assert.match(deploy, /up --detach --no-build --force-recreate/);
   assert.match(deploy, /\.deployment-maintenance/);
   assert.match(deploy, /\$SEQUENT_ORIGIN\/api\/health/);
