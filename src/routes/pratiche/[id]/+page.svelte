@@ -3,9 +3,8 @@
   import { page } from "$app/state";
   import { tick } from "svelte";
   import {
-    ArrowLeft, Bot, Building2, Calculator, Check, CheckCircle2, ChevronDown, CircleAlert,
-    FileOutput, FileText, FolderOpen, History, Landmark, LayoutDashboard, ListChecks, LoaderCircle,
-    PackageCheck, Pencil, Scale, ShieldCheck, Upload, UserRound, UsersRound, X,
+    Bot, Check, CheckCircle2, ChevronDown, CircleAlert, FileText, Landmark,
+    LayoutDashboard, ListChecks, LoaderCircle, Pencil, Upload, X,
   } from "@lucide/svelte";
   import ProcessingErrors from "$lib/components/ProcessingErrors.svelte";
   import ActiveProcessing from "$lib/components/ActiveProcessing.svelte";
@@ -15,12 +14,14 @@
   import PracticeContextPanel from "$lib/components/PracticeContextPanel.svelte";
   import PracticeDomainSection from "$lib/components/PracticeDomainSection.svelte";
   import PracticeOverview from "$lib/components/PracticeOverview.svelte";
+  import RenamePracticeDialog from "$lib/components/RenamePracticeDialog.svelte";
   import QuadroFields from "$lib/components/QuadroFields.svelte";
   import QuadroReferences from "$lib/components/QuadroReferences.svelte";
   import ReviewQueue from "$lib/components/ReviewQueue.svelte";
   import { uploadFilesResumably } from "$lib/client/resumable-upload";
   import { documentStatusLabels } from "$lib/document-status";
   import { formatItalianDate } from "$lib/format";
+  import { practiceDomainSections, practiceSections } from "$lib/practice-workspace";
 
   let { data, form } = $props();
   let selectedSection = $derived(page.url.searchParams.get("sezione") ?? "documents");
@@ -35,25 +36,8 @@
   let uploadProgress = $state<number | null>(null);
   let resumableUploadError = $state("");
   let workspaceActionsMenu = $state<HTMLDetailsElement>();
-
-  const sections = [
-    { id: "overview", label: "Panoramica", available: true, icon: LayoutDashboard },
-    { id: "documents", label: "Documenti", available: true, icon: FolderOpen },
-    { id: "verifications", label: "Da verificare", available: true, icon: ListChecks },
-    { id: "declaration", label: "Defunto e dichiarazione", available: true, icon: UserRound },
-    { id: "beneficiaries", label: "Soggetti", available: true, icon: UsersRound },
-    { id: "assets", label: "Beni e passività", available: true, icon: Building2 },
-    { id: "checklist", label: "Documenti richiesti", available: true, icon: PackageCheck },
-    { id: "devolution", label: "Devoluzione", available: true, icon: Scale },
-    { id: "calculations", label: "Calcoli", available: true, icon: Calculator },
-    { id: "checks", label: "Controlli", available: true, icon: ShieldCheck },
-    { id: "exports", label: "Riepilogo ed esportazione", available: true, icon: FileOutput },
-    { id: "history", label: "Cronologia", available: true, icon: History },
-  ] as const;
-  const domainSections = new Set([
-    "declaration", "beneficiaries", "assets", "checklist", "devolution",
-    "calculations", "checks", "exports", "history",
-  ]);
+  // oxlint-disable-next-line no-unassigned-vars -- Svelte assegna il componente tramite bind:this.
+  let renameDialog: { show: () => void };
 
   let selectedSourceRef = $derived(
     data.selectedReview?.sourceRefs.find(
@@ -123,6 +107,10 @@
     if (event.type === "keydown")
       workspaceActionsMenu.querySelector<HTMLElement>("summary")?.focus();
   }
+  function openRenameDialog() {
+    if (workspaceActionsMenu) workspaceActionsMenu.open = false;
+    renameDialog?.show();
+  }
   function formAction(name: string, section = selectedSection): string {
     const search = new URLSearchParams(page.url.searchParams);
     const actionKeys = Array.from(search.keys()).filter((key) => key.startsWith("/"));
@@ -165,20 +153,19 @@
 <div class="practice-page page-frame">
   <div class="practice-heading">
     <div class="practice-heading-copy">
-      <p class="breadcrumbs"><a href="/pratiche" data-sveltekit-prefetch>Pratiche</a><span>/</span>{data.practice.title}</p>
-      <div class="practice-title-line"><h1>{data.practice.title}</h1><span>Aggiornata {formatItalianDate(data.practice.updatedAt)}</span><span class="saved-state"><CheckCircle2 size={18} />Salvato</span></div>
+      <p class="breadcrumbs"><a href="/pratiche" data-sveltekit-prefetch>Pratiche</a><span>/</span><span title={data.practice.title}>{data.practice.title}</span></p>
+      <div class="practice-title-line"><h1 title={data.practice.title}>{data.practice.title}</h1></div>
+      <div class="practice-meta-row"><span>Aggiornata il {formatItalianDate(data.practice.updatedAt)}</span><span class="saved-state"><CheckCircle2 size={18} />Salvato</span></div>
     </div>
     <div class="practice-heading-actions">
       <div class="practice-view-switch" aria-label="Organizzazione della pratica">
         <button type="button" class:active={viewMode === "operational"} aria-pressed={viewMode === "operational"} onclick={selectOperationalView}>Vista operativa</button>
         <button type="button" class:active={viewMode === "quadri"} aria-pressed={viewMode === "quadri"} onclick={selectQuadriView}>Vista Quadri</button>
       </div>
-      <span class="practice-revision">Revisione {data.declaration.revision}</span>
       <details class="workspace-actions-menu" bind:this={workspaceActionsMenu}>
         <summary class="button secondary">Azioni <ChevronDown size={17} /></summary>
-        <div class="workspace-actions-popover"><button type="button" onclick={chooseWorkspaceFile}><Upload size={17} />Carica documento</button><a href={`/pratiche/${data.practice.id}/riepilogo`} target="_blank"><FileText size={17} />Apri il riepilogo</a></div>
+        <div class="workspace-actions-popover"><button type="button" onclick={openRenameDialog}><Pencil size={17} />Rinomina pratica</button><button type="button" onclick={chooseWorkspaceFile}><Upload size={17} />Carica documento</button><a href={`/pratiche/${data.practice.id}/riepilogo`} target="_blank"><FileText size={17} />Apri il riepilogo</a></div>
       </details>
-      <a class="button secondary" href="/" data-sveltekit-prefetch><ArrowLeft size={18} />Dashboard</a>
     </div>
   </div>
 
@@ -187,7 +174,7 @@
       <div class="workspace-panel-heading"><h2>{viewMode === "quadri" ? "Quadri" : "Sezioni"}</h2></div>
       {#if viewMode === "operational"}
         <nav aria-label="Sezioni pratica">
-          {#each sections as section (section.id)}
+          {#each practiceSections as section (section.id)}
             {@const Icon = section.icon}
             <button type="button" class:active={selectedSection === section.id} data-section={section.id} aria-pressed={selectedSection === section.id} onclick={selectSection}>
               <Icon size={19} /><span>{section.label}</span>
@@ -271,7 +258,7 @@
             <ReviewQueue items={data.reviewItems} selectedId={data.selectedReview.id} />
           </div>
         {/if}
-      {:else if domainSections.has(selectedSection)}
+      {:else if practiceDomainSections.has(selectedSection)}
         <PracticeDomainSection
           {data}
           {form}
@@ -302,3 +289,10 @@
     </aside>
   </div>
 </div>
+
+<RenamePracticeDialog
+  bind:this={renameDialog}
+  actionUrl={formAction("rename")}
+  title={data.practice.title}
+  error={form?.renameError}
+/>

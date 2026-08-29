@@ -4,6 +4,21 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.0
+
+### Added
+
+- rinomina persistente della pratica dal menu Azioni, conservando la sezione e la vista correnti.
+
+### Changed
+
+- intestazione della pratica più compatta e responsiva, senza il collegamento Dashboard duplicato né il contatore tecnico di revisione.
+
+### Fixed
+
+- sfondo delle finestre modali reso neutro, senza dominante blu;
+- pulizia delle immagini Docker Production rinviata fino al completamento del readback e del rollback qualificato.
+
 ## 0.1.4
 
 ### Added

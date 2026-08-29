@@ -20,6 +20,7 @@ import {
   getPractice,
   listDeclarations,
   listPracticeDocuments,
+  renamePractice,
 } from "$lib/server/practices";
 import {
   buildComplianceReport,
@@ -56,6 +57,11 @@ import {
 } from "$lib/server/official-attachments";
 
 const shortLabel = z.string().trim().min(1, "Inserisci una descrizione.").max(160);
+const practiceTitle = z
+  .string()
+  .trim()
+  .min(1, "Inserisci un nome.")
+  .max(120, "Usa al massimo 120 caratteri.");
 const subjectRole = z.enum(["decedent", "beneficiary", "representative", "other"]);
 const assetKind = z.enum([
   "land",
@@ -177,6 +183,20 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
 };
 
 export const actions = {
+  rename: async ({ locals, params, request, url }) => {
+    if (!locals.ownerId) redirect(303, "/login");
+    const database = openDatabase();
+    if (!getPractice(database, params.id)) error(404, "Pratica non trovata");
+    const formData = await request.formData();
+    const parsed = practiceTitle.safeParse(formData.get("title"));
+    if (!parsed.success) return fail(400, { renameError: parsed.error.issues[0]?.message });
+    if (!renamePractice(database, params.id, parsed.data)) error(404, "Pratica non trovata");
+    const search = new URLSearchParams(url.searchParams);
+    for (const key of Array.from(search.keys())) {
+      if (key.startsWith("/")) search.delete(key);
+    }
+    redirect(303, `${url.pathname}${search.size > 0 ? `?${search}` : ""}`);
+  },
   upload: async ({ locals, params, request }) => {
     if (!locals.ownerId) redirect(303, "/login");
     const database = openDatabase();

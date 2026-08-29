@@ -270,7 +270,7 @@
   width: min(92vw, 620px);
 }
 .app-dialog::backdrop {
-  background: rgb(0 15 34 / 48%);
+  background: rgb(0 0 0 / 48%);
   backdrop-filter: blur(3px);
 }
 .app-dialog form {
@@ -460,9 +460,9 @@ input[type="file"] {
 }
 
 .practice-heading {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: flex-end;
-  justify-content: space-between;
   gap: 28px;
   margin-bottom: 24px;
 }
@@ -470,6 +470,10 @@ input[type="file"] {
   padding-top: 24px;
 }
 .practice-heading h1 {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: clamp(1.75rem, 2vw, 2.05rem);
   letter-spacing: -0.025em;
 }
@@ -477,26 +481,39 @@ input[type="file"] {
   min-width: 0;
 }
 .practice-title-line {
+  min-width: 0;
+}
+.practice-meta-row {
   display: flex;
   align-items: center;
-  gap: 16px;
-}
-.practice-title-line > span:not(.saved-state),
-.practice-revision {
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 7px;
   color: var(--muted);
   font-size: 0.84rem;
+}
+.practice-meta-row > span {
+  white-space: nowrap;
 }
 .practice-heading-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+  white-space: nowrap;
 }
 .breadcrumbs {
   display: flex;
+  min-width: 0;
   gap: 8px;
   margin-bottom: 10px;
   color: var(--muted);
   font-size: 0.86rem;
+}
+.breadcrumbs > span:last-child {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .breadcrumbs a {
   text-decoration: none;
@@ -1265,6 +1282,7 @@ input[type="file"] {
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 650;
+  white-space: nowrap;
 }
 .practice-view-switch button.active {
   background: var(--surface);
