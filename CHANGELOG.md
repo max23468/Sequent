@@ -19,6 +19,10 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 - bump di sola versione escluso dai gate ARM64 quando il confronto strutturale dei package file lo prova;
 - pulizia Docker ordinaria rimossa dal percorso critico e demandata al timer selettivo.
 
+### Fixed
+
+- controllo della versione release compatibile sia con l'HEAD della PR sia con lo SHA squash di `origin/main` dopo il merge.
+
 ## 0.1.7
 
 ### Changed
