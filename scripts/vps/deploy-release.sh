@@ -194,6 +194,19 @@ previous_image_id="$(docker inspect --format '{{.Image}}' "$current_container")"
 previous_commit="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$previous_image_id")"
 [[ "$previous_commit" =~ ^[0-9a-f]{40}$ ]] || fail "commit precedente non leggibile"
 previous_runtime_image="$previous_image_id"
+previous_release_dir="$root/releases/$previous_commit"
+if [[ -e "$previous_release_dir" ]]; then
+  [[ -d "$previous_release_dir" && ! -L "$previous_release_dir" ]] ||
+    fail "directory della release precedente non regolare"
+  previous_release_layout="$(stat -c '%U:%G:%a' "$previous_release_dir")"
+  [[ "$previous_release_layout" == ubuntu:ubuntu:750 ||
+    "$previous_release_layout" == root:root:750 ]] ||
+    fail "directory della release precedente non conforme"
+  chown root:root "$previous_release_dir"
+  chmod 0750 "$previous_release_dir"
+  [[ "$(stat -c '%U:%G:%a' "$previous_release_dir")" == root:root:750 ]] ||
+    fail "migrazione della release precedente fallita"
+fi
 write_trusted_runtime_env "$previous_runtime_image"
 rollback_compose_file="$(mktemp /run/sequent-rollback-compose.XXXXXX)"
 git_as_checkout_owner show "$previous_commit:deploy/compose.example.yml" \
@@ -452,7 +465,6 @@ else
 fi
 install -o root -g root -m 0640 "$manifest" "$release_dir/release-manifest.json"
 install -o root -g root -m 0640 "$archive" "$release_dir/sequent-release-arm64.tar"
-previous_release_dir="$root/releases/$previous_commit"
 if [[ -e "$previous_release_dir" ]]; then
   [[ -d "$previous_release_dir" && ! -L "$previous_release_dir" \
     && "$(stat -c '%U:%G:%a' "$previous_release_dir")" == "root:root:750" ]] ||
