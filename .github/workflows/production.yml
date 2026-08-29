@@ -122,7 +122,7 @@ jobs:
           # Le sole espansioni client sono valori validati e necessari al comando remoto.
           # shellcheck disable=SC2029
           ssh "${ssh_options[@]}" "$SSH_USER@$SSH_HOST" \
-            "set -eu; cd /opt/sequent/repo; git diff --quiet; git diff --cached --quiet; git fetch origin main; git checkout main; git merge --ff-only origin/main; test \"\$(git rev-parse HEAD)\" = '$CANDIDATE_COMMIT'; if [ -e /usr/local/sbin/sequent-prune-docker-images ]; then test \"\$(stat -c '%U:%G:%a' /usr/local/sbin/sequent-prune-docker-images)\" = root:root:755; sudo /usr/local/sbin/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0; fi; install -d -m 0700 '$incoming'"
+            "set -eu; cd /opt/sequent/repo; git diff --quiet; git diff --cached --quiet; git fetch origin main; git checkout main; git merge --ff-only origin/main; test \"\$(git rev-parse HEAD)\" = '$CANDIDATE_COMMIT'; install -d -m 0700 '$incoming'"
           scp "${ssh_options[@]}" release-artifact/sequent-release-arm64.tar \
             release-artifact/release-manifest.json scripts/vps/run-trusted-deploy.sh \
             "$SSH_USER@$SSH_HOST:$incoming/"
@@ -139,6 +139,19 @@ jobs:
 
           deployment_status success
           trap - ERR
+
+      - name: Pulisce le immagini dopo il deploy
+        if: success()
+        env:
+          SSH_HOST: ${{ secrets.SEQUENT_SSH_HOST }}
+          SSH_USER: ${{ secrets.SEQUENT_SSH_USER }}
+        run: |
+          if ! ssh -i "$RUNNER_TEMP/sequent-ssh/key" -o IdentitiesOnly=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/sequent-ssh/known_hosts" \
+            -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "if [ -e /usr/local/sbin/sequent-prune-docker-images ]; then test \"\$(stat -c '%U:%G:%a' /usr/local/sbin/sequent-prune-docker-images)\" = root:root:755 && sudo /usr/local/sbin/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0; fi"; then
+            echo "::warning title=Pulizia immagini differita::Il deploy resta valido; verificare il timer di manutenzione sulla VPS"
+          fi
 
       - name: Elimina materiale SSH e trasferimento temporaneo
         if: always()
