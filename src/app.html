@@ -3,12 +3,56 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="/favicon.svg" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" id="sequent-theme-color" content="#FFFEFF" />
+    <meta name="application-name" content="Sequent" />
+    <meta name="apple-mobile-web-app-title" content="Sequent" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link
+      rel="icon"
+      href="/favicon.svg"
+      type="image/svg+xml"
+      media="(prefers-color-scheme: light)"
+    />
+    <link
+      rel="icon"
+      href="/favicon-dark.svg"
+      type="image/svg+xml"
+      media="(prefers-color-scheme: dark)"
+    />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <script>
-      try {
-        const theme = localStorage.getItem("sequent-theme");
-        if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
-      } catch {}
+      (() => {
+        const root = document.documentElement;
+        const themeColor = document.querySelector("#sequent-theme-color");
+        const darkPreference = window.matchMedia("(prefers-color-scheme: dark)");
+
+        function storedTheme() {
+          try {
+            const value = localStorage.getItem("sequent-theme");
+            return value === "light" || value === "dark" ? value : "system";
+          } catch {
+            return "system";
+          }
+        }
+
+        function applyBrowserTheme() {
+          const theme = storedTheme();
+          if (theme === "light" || theme === "dark") root.dataset.theme = theme;
+          else delete root.dataset.theme;
+
+          const dark = theme === "dark" || (theme === "system" && darkPreference.matches);
+          themeColor?.setAttribute("content", dark ? "#0F1214" : "#FFFEFF");
+        }
+
+        applyBrowserTheme();
+        window.addEventListener("sequent-theme-change", applyBrowserTheme);
+        if (darkPreference.addEventListener) darkPreference.addEventListener("change", applyBrowserTheme);
+        else darkPreference.addListener(applyBrowserTheme);
+      })();
     </script>
     %sveltekit.head%
   </head>
