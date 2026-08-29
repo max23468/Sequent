@@ -20,7 +20,12 @@ Riferimenti canonici:
 - `static/brand/sequent-symbol.svg`: variante ottimizzata usata dall’interfaccia.
 - `static/brand/sequent-symbol-monochrome.svg`: controllo monocromatico.
 - `static/brand/sequent-symbol-inverse.svg`: variante bianca per superfici scure.
-- `static/favicon.svg`: favicon vettoriale.
+- `static/favicon.svg`: favicon vettoriale per superfici chiare.
+- `static/favicon-dark.svg`: favicon vettoriale ad alto contrasto per chrome del browser scuro.
+- `static/favicon.ico`: fallback raster multirisoluzione con tile chiara, leggibile indipendentemente dal colore della tab.
+- `static/apple-touch-icon.png`: icona dedicata ai collegamenti salvati sui dispositivi Apple.
+- `static/icons/`: icone installabili normali e maskable dichiarate dal web manifest.
+- `static/site.webmanifest`: metadati di installazione dell’app web.
 
 Il wordmark usa Georgia con fallback Times New Roman. Nell’app è testo reale affiancato al simbolo, non testo rasterizzato o incorporato nell’SVG.
 
@@ -61,6 +66,16 @@ Il workspace desktop segue `sezioni | contenuto | fonte`. In questa fondazione m
 ## Tema e accessibilità
 
 Il tema segue il sistema e consente override chiaro/scuro persistito localmente. Sono obbligatori HTML semantico, label esplicite, focus visibile, flussi principali da tastiera, contrasto sufficiente, reflow e riduzione del movimento.
+
+Il browser riceve anche il `color-scheme` effettivo e un `theme-color` sincronizzato con il tema applicato, così controlli nativi e chrome compatibile non restano incoerenti quando l’utente forza chiaro o scuro.
+
+## Browser, titoli e metadati production
+
+I titoli delle pagine seguono il formato `Contesto · Sequent`; il workspace di una pratica può sostituire il contesto generico con il titolo reale della pratica. Errori e schermate di autenticazione hanno titoli dedicati, così cronologia, tab e switcher del sistema operativo restano riconoscibili.
+
+Le favicon hanno varianti chiare e scure selezionabili dal browser, con `.ico` di fallback. Le icone installabili derivano dallo stesso simbolo approvato; la variante maskable mantiene una safe area maggiore per evitare ritagli del marchio.
+
+L’applicazione privata continua a dichiarare `noindex`: canonical URL, metadati Open Graph pubblici, sitemap e indicizzazione non vengono anticipati senza un’origine pubblica canonica e un sito effettivamente destinato alla consultazione pubblica. Il futuro sito pubblico potrà aggiungerli senza cambiare il contratto dell’istanza operativa privata.
 
 ## Launcher locali
 
