@@ -32,10 +32,27 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /install -o root -g root -m 0600.*run-trusted-deploy\.sh/);
   assert.match(workflow, /sha256sum --check --strict/);
   assert.match(workflow, /install -o root -g root -m 0755.*sequent-run-trusted-deploy/);
+  assert.match(workflow, /if \[ -e \/usr\/local\/sbin\/sequent-prune-docker-images \]; then/);
+  assert.match(
+    workflow,
+    /stat -c '%U:%G:%a' \/usr\/local\/sbin\/sequent-prune-docker-images.*root:root:755/,
+  );
+  assert.match(
+    workflow,
+    /sudo \/usr\/local\/sbin\/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0/,
+  );
   assert.ok(
     workflow.indexOf("sha256sum --check --strict") <
       workflow.indexOf("sudo /usr/local/sbin/sequent-run-trusted-deploy --commit"),
   );
+  const predeployCleanup = workflow.indexOf(
+    "sudo /usr/local/sbin/sequent-prune-docker-images --minimum-age-hours 0",
+  );
+  assert.ok(
+    workflow.indexOf("test \\\"\\$(git rev-parse HEAD)\\\" = '$CANDIDATE_COMMIT'") <
+      predeployCleanup,
+  );
+  assert.ok(predeployCleanup < workflow.indexOf('scp "${ssh_options[@]}" release-artifact'));
   assert.doesNotMatch(workflow, /sudo \/opt\/sequent\/repo\/scripts/);
   assert.doesNotMatch(workflow, /docker build|continue-on-error/);
 });
