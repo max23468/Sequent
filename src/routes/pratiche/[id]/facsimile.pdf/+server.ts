@@ -49,10 +49,11 @@ export const GET: RequestHandler = async ({ locals, params, url }) => {
         quadro: asset.quadro,
       })),
     });
+    const disposition = url.searchParams.get("download") === "1" ? "attachment" : "inline";
     return new Response(pdf as BodyInit, {
       headers: {
         "content-type": "application/pdf",
-        "content-disposition": `attachment; filename="sequent-${params.id}-facsimile.pdf"`,
+        "content-disposition": `${disposition}; filename="sequent-${params.id}-facsimile.pdf"`,
         "cache-control": "private, no-store",
       },
     });

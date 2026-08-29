@@ -464,24 +464,46 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     .locator(".export-grid")
     .getByRole("link", { name: "Apri il dossier" })
     .getAttribute("href");
-  const facsimileHref = await page
+  const facsimilePreviewLink = page
     .locator(".export-grid")
-    .getByRole("link", { name: "Scarica il fac-simile" })
-    .getAttribute("href");
+    .getByRole("link", { name: "Apri fac-simile" });
+  const facsimileDownloadLink = page
+    .locator(".export-grid")
+    .getByRole("link", { name: "Scarica PDF" });
+  await expect(facsimilePreviewLink).toHaveAttribute("target", "_blank");
+  await expect(facsimilePreviewLink).toHaveAttribute("rel", "noreferrer");
+  const facsimilePreviewHref = await facsimilePreviewLink.getAttribute("href");
+  const facsimileDownloadHref = await facsimileDownloadLink.getAttribute("href");
   const dossierPdfHref = await page
     .locator(".export-grid")
     .getByRole("link", { name: "Scarica il dossier" })
     .getAttribute("href");
-  expect(summaryHref).toBeTruthy();
-  expect(facsimileHref).toBeTruthy();
-  expect(dossierPdfHref).toBeTruthy();
-  for (const href of [facsimileHref!, dossierPdfHref!]) {
+  if (!summaryHref || !facsimilePreviewHref || !facsimileDownloadHref || !dossierPdfHref)
+    throw new Error("I collegamenti di esportazione devono avere un URL");
+  const facsimileResponses = [
+    [facsimilePreviewHref, "inline"],
+    [facsimileDownloadHref, "attachment"],
+  ] as const;
+  for (const [href, disposition] of facsimileResponses) {
     const pdfResponse = await page.request.get(href);
     expect(pdfResponse.status()).toBe(200);
     expect(pdfResponse.headers()["content-type"]).toBe("application/pdf");
+    expect(pdfResponse.headers()["content-disposition"]).toMatch(new RegExp(`^${disposition};`));
     expect((await pdfResponse.body()).subarray(0, 5).toString()).toBe("%PDF-");
   }
-  await page.goto(summaryHref!);
+  const dossierPdfResponse = await page.request.get(dossierPdfHref);
+  expect(dossierPdfResponse.status()).toBe(200);
+  expect(dossierPdfResponse.headers()["content-type"]).toBe("application/pdf");
+  expect((await dossierPdfResponse.body()).subarray(0, 5).toString()).toBe("%PDF-");
+  await page.goto(summaryHref);
+  await expect(page.getByRole("link", { name: "Apri fac-simile" })).toHaveAttribute(
+    "target",
+    "_blank",
+  );
+  await expect(page.getByRole("link", { name: "Scarica PDF" })).toHaveAttribute(
+    "href",
+    facsimileDownloadHref,
+  );
   await expect(page.getByText("Bozza — controlli da completare", { exact: true })).toBeVisible();
   await expect(page.getByText(beneficiaryName, { exact: true }).first()).toBeVisible();
   await expect(page.getByText(assetName, { exact: true }).first()).toBeVisible();

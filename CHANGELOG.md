@@ -4,6 +4,12 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.1.1
+
+### Fixed
+
+- apertura del fac-simile PDF in una nuova scheda del browser, mantenendo separata l’azione di download.
+
 ## 0.1.0
 
 ### Added
