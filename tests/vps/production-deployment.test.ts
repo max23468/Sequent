@@ -199,6 +199,8 @@ test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {
   assert.match(launcher, /"\$deploy_mode" == 100755/);
   assert.match(launcher, /chmod 0755 "\$deploy_script"/);
   assert.match(launcher, /stat -c '%U:%G:%a' "\$deploy_script".*root:root:755/s);
+  assert.doesNotMatch(launcher, /-x "\$deploy_script"/);
+  assert.match(launcher, /\/bin\/bash "\$deploy_script" --commit/);
   assert.ok(
     launcher.indexOf('"$extracted_tree" == "$expected_tree"') <
       launcher.indexOf('chmod 0755 "$deploy_script"'),
@@ -206,7 +208,7 @@ test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {
   assert.match(launcher, /SEQUENT_TRUSTED_REPOSITORY="\$trusted_source"/);
   assert.ok(
     launcher.indexOf('"$extracted_tree" == "$expected_tree"') <
-      launcher.indexOf('"$deploy_script" --commit'),
+      launcher.indexOf('/bin/bash "$deploy_script" --commit'),
   );
   assert.doesNotMatch(launcher, /source |eval |docker build/);
 });

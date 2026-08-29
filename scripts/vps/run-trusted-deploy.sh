@@ -171,12 +171,11 @@ deploy_mode="$(git_as_checkout_owner ls-tree "$commit" -- scripts/vps/deploy-rel
   exit 1
 }
 /bin/chmod 0755 "$deploy_script"
-[[ "$(/usr/bin/stat -c '%U:%G:%a' "$deploy_script")" == root:root:755 &&
-  -x "$deploy_script" ]] || {
-  echo "ERRORE: modo eseguibile del deploy exact-commit non ripristinabile" >&2
+[[ "$(/usr/bin/stat -c '%U:%G:%a' "$deploy_script")" == root:root:755 ]] || {
+  echo "ERRORE: permessi del deploy exact-commit non ripristinabili" >&2
   exit 1
 }
 
 SEQUENT_TRUSTED_REPOSITORY="$trusted_source" \
   SEQUENT_CHECKOUT_REPOSITORY="$repository" \
-  "$deploy_script" --commit "$commit" --archive "$trusted_archive" --manifest "$trusted_manifest"
+  /bin/bash "$deploy_script" --commit "$commit" --archive "$trusted_archive" --manifest "$trusted_manifest"
