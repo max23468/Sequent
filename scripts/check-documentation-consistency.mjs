@@ -37,7 +37,11 @@ const implementationFiles = execFileSync(
   .filter((file) => file && file !== "package-lock.json" && existsSync(file))
   .sort();
 
-const satelliteExceptions = new Set(["CHANGELOG.md", "docs/MASTER_PLAN.md"]);
+const satelliteExceptions = new Set([
+  "CHANGELOG.md",
+  "docs/MASTER_PLAN.md",
+  "docs/VERSIONING.md",
+]);
 const generatedImplementationExceptions = new Set([
   "src/domain/official-catalog/technical-schema.json",
 ]);
