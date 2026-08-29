@@ -4,6 +4,10 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+### Added
+
+- policy numerica di versioning fino alla prima major stabile, con mappa tra fasi del Master Plan e release, divieto di suffissi prerelease/build e regole per minor, patch e validazione finale.
+
 ## 0.1.0
 
 ### Added
