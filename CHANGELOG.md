@@ -22,6 +22,7 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 ### Fixed
 
 - controllo della versione release compatibile sia con l'HEAD della PR sia con lo SHA squash di `origin/main` dopo il merge.
+- container browser predisposti alla compilazione delle dipendenze native richiesta dalla toolchain fissata dal progetto.
 
 ## 0.1.7
 

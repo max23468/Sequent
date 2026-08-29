@@ -109,6 +109,8 @@ jobs:
         with:
           node-version: 26.7.0
           cache: npm
+      - name: Installa la toolchain nativa nel container browser
+        run: apt-get update && apt-get install --yes --no-install-recommends build-essential
       - run: npm ci
       - run: npm run test:e2e -- --project "${{ matrix.browser }}"
 
