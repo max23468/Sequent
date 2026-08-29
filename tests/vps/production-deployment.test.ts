@@ -192,6 +192,17 @@ test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {
   assert.match(launcher, /sha256sum "\$trusted_manifest"/);
   assert.match(launcher, /install -o root -g root -m 0600 "\$archive" "\$trusted_archive"/);
   assert.match(launcher, /chown -R root:root "\$trusted_source"/);
+  assert.match(
+    launcher,
+    /git_as_checkout_owner ls-tree "\$commit" -- scripts\/vps\/deploy-release\.sh/,
+  );
+  assert.match(launcher, /"\$deploy_mode" == 100755/);
+  assert.match(launcher, /chmod 0755 "\$deploy_script"/);
+  assert.match(launcher, /stat -c '%U:%G:%a' "\$deploy_script".*root:root:755/s);
+  assert.ok(
+    launcher.indexOf('"$extracted_tree" == "$expected_tree"') <
+      launcher.indexOf('chmod 0755 "$deploy_script"'),
+  );
   assert.match(launcher, /SEQUENT_TRUSTED_REPOSITORY="\$trusted_source"/);
   assert.ok(
     launcher.indexOf('"$extracted_tree" == "$expected_tree"') <

@@ -160,8 +160,20 @@ trusted_manifest="$trusted_source/release-manifest.json"
   exit 1
 }
 deploy_script="$trusted_source/scripts/vps/deploy-release.sh"
-[[ -f "$deploy_script" && ! -L "$deploy_script" && -x "$deploy_script" ]] || {
-  echo "ERRORE: deploy exact-commit non eseguibile" >&2
+[[ -f "$deploy_script" && ! -L "$deploy_script" ]] || {
+  echo "ERRORE: deploy exact-commit assente o non regolare" >&2
+  exit 1
+}
+deploy_mode="$(git_as_checkout_owner ls-tree "$commit" -- scripts/vps/deploy-release.sh |
+  /usr/bin/cut -d' ' -f1)"
+[[ "$deploy_mode" == 100755 ]] || {
+  echo "ERRORE: modo Git del deploy exact-commit non qualificato" >&2
+  exit 1
+}
+/bin/chmod 0755 "$deploy_script"
+[[ "$(/usr/bin/stat -c '%U:%G:%a' "$deploy_script")" == root:root:755 &&
+  -x "$deploy_script" ]] || {
+  echo "ERRORE: modo eseguibile del deploy exact-commit non ripristinabile" >&2
   exit 1
 }
 
