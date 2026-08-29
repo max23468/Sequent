@@ -31,7 +31,7 @@ Non aggiungere dati reali, documenti cliente, segreti o artefatti privati al rep
 
 La pulizia finale rimuove soltanto branch e worktree temporanei creati nel ciclo corrente e già assorbiti. Se un passaggio non è applicabile, dichiaralo e prosegui con gli altri. Non dichiarare `pubblicato` finché tutti i passaggi applicabili e la rilettura finale di PR, check, candidata, eventuale deploy/release e stato Git non sono completi.
 
-## Gate dei commenti Codex
+## Gate delle conversazioni di review
 
 - Non eseguire il merge finché tutti i required checks non sono verdi e tutte le conversazioni non sono risolte. Dopo il merge rileggi `main`, elimina il branch temporaneo e verifica che checkout e VPS canonica siano puliti, quando la VPS rientra nello scope.
 

@@ -38,7 +38,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$CANDIDATE_COMMIT"
           test "$(git rev-parse origin/main)" = "$CANDIDATE_COMMIT"
           printf 'tree=%s\n' "$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
-      - name: Verifica review Codex dell'HEAD e identità dell'albero squash
+      - name: Verifica identità della PR e dell'albero squash
         env:
           CANDIDATE_COMMIT: ${{ inputs.commit }}
           GH_TOKEN: ${{ github.token }}
