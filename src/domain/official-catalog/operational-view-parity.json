@@ -1941,7 +1941,7 @@
     "quadro": "Frontespizio",
     "officialSection": "Residente estero",
     "visibleNumber": "56",
-    "label": "Localita' di residenza estera",
+    "label": "Località di residenza estera",
     "professionalObject": "presentatore",
     "cardinality": {
       "fieldMin": 0,
@@ -10533,7 +10533,7 @@
     "quadro": "EB",
     "officialSection": "Estero",
     "visibleNumber": "20",
-    "label": "Localita' estera",
+    "label": "Località estera",
     "professionalObject": "terreno",
     "cardinality": {
       "fieldMin": 0,
@@ -13441,7 +13441,7 @@
     "quadro": "EC",
     "officialSection": "Estero",
     "visibleNumber": "17",
-    "label": "Localita'  estera",
+    "label": "Località  estera",
     "professionalObject": "fabbricato",
     "cardinality": {
       "fieldMin": 0,
@@ -15837,7 +15837,7 @@
     "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroED/Modulo/Passivita/Tipo",
     "technicalPath": "/Fornitura/Dichiarazione/QuadroED/Modulo/Passivita/Tipo",
     "quadro": "ED",
-    "officialSection": "Passivita",
+    "officialSection": "Passività",
     "visibleNumber": "1",
     "label": "Tipo",
     "professionalObject": "passività",
@@ -15923,7 +15923,7 @@
     "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroED/Modulo/Passivita/Descrizione",
     "technicalPath": "/Fornitura/Dichiarazione/QuadroED/Modulo/Passivita/Descrizione",
     "quadro": "ED",
-    "officialSection": "Passivita",
+    "officialSection": "Passività",
     "visibleNumber": "2",
     "label": "Descrizione",
     "professionalObject": "passività",
@@ -16009,7 +16009,7 @@
     "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroED/Modulo/Passivita/EstremiDocumento",
     "technicalPath": "/Fornitura/Dichiarazione/QuadroED/Modulo/Passivita/EstremiDocumento",
     "quadro": "ED",
-    "officialSection": "Passivita",
+    "officialSection": "Passività",
     "visibleNumber": "3",
     "label": "Estremi documento",
     "professionalObject": "passività",
@@ -16095,7 +16095,7 @@
     "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroED/Modulo/Passivita/DataDocumento",
     "technicalPath": "/Fornitura/Dichiarazione/QuadroED/Modulo/Passivita/DataDocumento",
     "quadro": "ED",
-    "officialSection": "Passivita",
+    "officialSection": "Passività",
     "visibleNumber": "4",
     "label": "Data documento",
     "professionalObject": "passività",
@@ -19054,7 +19054,7 @@
     "quadro": "EF",
     "officialSection": "Trust disab",
     "visibleNumber": "2",
-    "label": "EF3-bis - Valore complessivo delle quote di beni conferiti in trust in favore di persone con disabilita'  - Valore",
+    "label": "EF3-bis - Valore complessivo delle quote di beni conferiti in trust in favore di persone con disabilità  - Valore",
     "professionalObject": "liquidazione, tributo o pagamento",
     "cardinality": {
       "fieldMin": 1,
@@ -19306,7 +19306,7 @@
     "quadro": "EF",
     "officialSection": "Imposta catastale trust disab",
     "visibleNumber": "2",
-    "label": "EF10-bis - Valore complessivo delle quote di beni conferiti in trust in favore di persone con disabilita'  - Valore",
+    "label": "EF10-bis - Valore complessivo delle quote di beni conferiti in trust in favore di persone con disabilità  - Valore",
     "professionalObject": "liquidazione, tributo o pagamento",
     "cardinality": {
       "fieldMin": 1,
@@ -19390,7 +19390,7 @@
     "quadro": "EF",
     "officialSection": "Sezione iv imposta bollo",
     "visibleNumber": "2",
-    "label": "EF16 - BOLLO - Numero delle circoscrizioni di pubblicita' immobiliare",
+    "label": "EF16 - BOLLO - Numero delle circoscrizioni di pubblicità immobiliare",
     "professionalObject": "liquidazione, tributo o pagamento",
     "cardinality": {
       "fieldMin": 0,
@@ -20393,7 +20393,7 @@
     "quadro": "EF",
     "officialSection": "Trust disab",
     "visibleNumber": "3",
-    "label": "EF3-bis - Valore complessivo delle quote di beni conferiti in trust in favore di persone con disabilita' - Imposta",
+    "label": "EF3-bis - Valore complessivo delle quote di beni conferiti in trust in favore di persone con disabilità - Imposta",
     "professionalObject": "liquidazione, tributo o pagamento",
     "cardinality": {
       "fieldMin": 0,
@@ -20645,7 +20645,7 @@
     "quadro": "EF",
     "officialSection": "Sezione i imposta ipotecaria",
     "visibleNumber": "3",
-    "label": "EF6 - Imposta ipotecaria gia' versata",
+    "label": "EF6 - Imposta ipotecaria già versata",
     "professionalObject": "liquidazione, tributo o pagamento",
     "cardinality": {
       "fieldMin": 0,
@@ -20663,10 +20663,10 @@
     },
     "semanticCategory": "importo-professionale",
     "handling": "inserito",
-    "handlingBasis": "catalog-default-candidate",
+    "handlingBasis": "explicit-professional-input",
     "semanticReview": {
-      "status": "candidata",
-      "reason": "La classificazione come inserito resta una proposta: il catalogo usa il default editabile, ma non contiene una regola esplicita sul produttore del valore.",
+      "status": "qualificata",
+      "reason": "La fonte descrive esplicitamente la valorizzazione del dato professionale e i relativi vincoli, senza definirne una formula automatica.",
       "provenance": [
         "SRC-03",
         "SRC-07",
@@ -20696,13 +20696,13 @@
       }
     },
     "operationalVisibility": "esatta",
-    "operationalEditability": "sola-lettura",
-    "currentCoverage": "parziale",
-    "coverageReason": "Il campo canonico è visibile, ma resta in sola lettura nella Vista operativa finché la modalità di compilazione non viene qualificata.",
+    "operationalEditability": "completa",
+    "currentCoverage": "coperto",
+    "coverageReason": "Il campo canonico è visibile e modificabile nella propria area operativa e viene salvato dalla stessa azione usata nella Vista Quadri.",
     "currentEvidence": [
       "src/domain/operational-parity.ts#listOperationalAreaFields",
       "src/lib/components/OperationalFieldGroup.svelte",
-      "src/lib/components/OfficialFieldControl.svelte"
+      "src/routes/pratiche/[id]/+page.server.ts#saveFields"
     ],
     "candidateOperationalArea": "Imposte e pagamenti",
     "candidateContext": "Liquidazione e importi da versare",
@@ -21065,7 +21065,7 @@
     "quadro": "EF",
     "officialSection": "Imposta catastale trust disab",
     "visibleNumber": "3",
-    "label": "EF10-bis - Valore complessivo delle quote di beni conferiti in trust in favore di persone con disabilita' - Imposta",
+    "label": "EF10-bis - Valore complessivo delle quote di beni conferiti in trust in favore di persone con disabilità - Imposta",
     "professionalObject": "liquidazione, tributo o pagamento",
     "cardinality": {
       "fieldMin": 0,
@@ -21233,7 +21233,7 @@
     "quadro": "EF",
     "officialSection": "Sezione ii imposta catastale",
     "visibleNumber": "3",
-    "label": "EF12 - Imposta catastale gia' versata",
+    "label": "EF12 - Imposta catastale già versata",
     "professionalObject": "liquidazione, tributo o pagamento",
     "cardinality": {
       "fieldMin": 0,
@@ -21251,10 +21251,10 @@
     },
     "semanticCategory": "importo-professionale",
     "handling": "inserito",
-    "handlingBasis": "catalog-default-candidate",
+    "handlingBasis": "explicit-professional-input",
     "semanticReview": {
-      "status": "candidata",
-      "reason": "La classificazione come inserito resta una proposta: il catalogo usa il default editabile, ma non contiene una regola esplicita sul produttore del valore.",
+      "status": "qualificata",
+      "reason": "La fonte descrive esplicitamente la valorizzazione del dato professionale e i relativi vincoli, senza definirne una formula automatica.",
       "provenance": [
         "SRC-03",
         "SRC-07",
@@ -21284,13 +21284,13 @@
       }
     },
     "operationalVisibility": "esatta",
-    "operationalEditability": "sola-lettura",
-    "currentCoverage": "parziale",
-    "coverageReason": "Il campo canonico è visibile, ma resta in sola lettura nella Vista operativa finché la modalità di compilazione non viene qualificata.",
+    "operationalEditability": "completa",
+    "currentCoverage": "coperto",
+    "coverageReason": "Il campo canonico è visibile e modificabile nella propria area operativa e viene salvato dalla stessa azione usata nella Vista Quadri.",
     "currentEvidence": [
       "src/domain/operational-parity.ts#listOperationalAreaFields",
       "src/lib/components/OperationalFieldGroup.svelte",
-      "src/lib/components/OfficialFieldControl.svelte"
+      "src/routes/pratiche/[id]/+page.server.ts#saveFields"
     ],
     "candidateOperationalArea": "Imposte e pagamenti",
     "candidateContext": "Liquidazione e importi da versare",
@@ -21739,7 +21739,7 @@
     "quadro": "EF",
     "officialSection": "Imposta calcolata",
     "visibleNumber": "3",
-    "label": "EF18bis - Imposta di successione - Imposta calcolata - Imposta gia' versata",
+    "label": "EF18bis - Imposta di successione - Imposta calcolata - Imposta già versata",
     "professionalObject": "liquidazione, tributo o pagamento",
     "cardinality": {
       "fieldMin": 0,
@@ -22581,9 +22581,9 @@
     "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/DocumentiPassivita/DocumentiPassivitaNum",
     "technicalPath": "/Fornitura/Dichiarazione/QuadroEG/DocumentiPassivita/DocumentiPassivitaNum",
     "quadro": "EG",
-    "officialSection": "Documenti passivita",
+    "officialSection": "Documenti passività",
     "visibleNumber": "1",
-    "label": "Documenti comprovanti passivita'",
+    "label": "Documenti comprovanti passività",
     "professionalObject": "documento o allegato della dichiarazione",
     "cardinality": {
       "fieldMin": 1,
@@ -22750,9 +22750,9 @@
     "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/DocumentiIdentita/DocumentiIdentitaNum",
     "technicalPath": "/Fornitura/Dichiarazione/QuadroEG/DocumentiIdentita/DocumentiIdentitaNum",
     "quadro": "EG",
-    "officialSection": "Documenti identita",
+    "officialSection": "Documenti identità",
     "visibleNumber": "1",
-    "label": "Documento d'identita'",
+    "label": "Documento d'identità",
     "professionalObject": "documento o allegato della dichiarazione",
     "cardinality": {
       "fieldMin": 1,
@@ -35014,7 +35014,7 @@
     "quadro": "EH",
     "officialSection": "Opzioni",
     "visibleNumber": "34",
-    "label": "Flag Comune Attivita'",
+    "label": "Flag Comune Attività",
     "professionalObject": "agevolazione prima casa",
     "cardinality": {
       "fieldMin": 0,
@@ -39570,7 +39570,7 @@
     "quadro": "EH",
     "officialSection": "Sezione i dich sost",
     "visibleNumber": "76",
-    "label": "Flag Passivita'",
+    "label": "Flag Passività",
     "professionalObject": "situazione dichiarata nel Quadro EH",
     "cardinality": {
       "fieldMin": 0,
@@ -44997,7 +44997,7 @@
     "quadro": "EL",
     "officialSection": "Luogo tavolare",
     "visibleNumber": "6",
-    "label": "Via o localita'",
+    "label": "Via o località",
     "professionalObject": "terreno tavolare",
     "cardinality": {
       "fieldMin": 0,
@@ -47989,7 +47989,7 @@
     "quadro": "EM",
     "officialSection": "Luogo tavolare",
     "visibleNumber": "6",
-    "label": "Via o localita'",
+    "label": "Via o località",
     "professionalObject": "fabbricato tavolare",
     "cardinality": {
       "fieldMin": 0,
@@ -53292,7 +53292,7 @@
     "quadro": "EO",
     "officialSection": "Titoli",
     "visibleNumber": "3",
-    "label": "Quantita'",
+    "label": "Quantità",
     "professionalObject": "titolo o rapporto finanziario",
     "cardinality": {
       "fieldMin": 0,
@@ -55346,7 +55346,7 @@
     "quadro": "EP",
     "officialSection": "Tipo",
     "visibleNumber": "3",
-    "label": "Nazionalita'",
+    "label": "Nazionalità",
     "professionalObject": "aeromobile",
     "cardinality": {
       "fieldMin": 1,
@@ -56971,7 +56971,7 @@
     "quadro": "EQ",
     "officialSection": "Tipo",
     "visibleNumber": "1",
-    "label": "Tipo unita'",
+    "label": "Tipo unità",
     "professionalObject": "nave o imbarcazione",
     "cardinality": {
       "fieldMin": 1,
@@ -57056,7 +57056,7 @@
     "quadro": "EQ",
     "officialSection": "Tipo",
     "visibleNumber": "2",
-    "label": "Nazionalita'",
+    "label": "Nazionalità",
     "professionalObject": "nave o imbarcazione",
     "cardinality": {
       "fieldMin": 1,
