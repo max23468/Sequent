@@ -389,8 +389,6 @@ describe("motori deterministici", () => {
       500_000n,
       {
         openingDate: "2025-10-22",
-        mortgageJurisdictionCount: 2,
-        stampDutyJurisdictionCount: 1,
         automaticLandRegistry: true,
         copyRequested: true,
         paymentTiming: 2,
@@ -420,9 +418,34 @@ describe("motori deterministici", () => {
     expect(summary).toMatchObject({
       assessmentMode: "self-assessment",
       mortgageServicesCents: 24_000n,
-      stampDutyCents: 11_700n,
+      stampDutyCents: 20_200n,
       specialTaxesCents: 1_600n,
-      totalAtSubmissionCents: 777_300n,
+      totalAtSubmissionCents: 785_800n,
+    });
+    expect(summary.officialFieldValues).toMatchObject({
+      "xsd:/Fornitura/Dichiarazione/QuadroEE/TotaleValoreImmobili": "300000",
+      "xsd:/Fornitura/Dichiarazione/QuadroEE/TotaleAttivo": "320000",
+      "xsd:/Fornitura/Dichiarazione/QuadroEE/TotaleValoreAsseEreditarioNetto": "310000",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneI_ImpostaIpotecaria/PrimaCasa/PrimaCasa_Numero":
+        "1",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneI_ImpostaIpotecaria/PrimaCasa/AgevolazionePX_Valore":
+        "100000",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneI_ImpostaIpotecaria/ImpostaIpotecariaDovuta":
+        "4200",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneII_ImpostaCatastale/ImpostaCatastaleDovuta":
+        "2200",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneIII_TassaIpotecaria/Circoscrizioni_Imposta":
+        "240",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero": "2",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneIV_ImpostaBollo/ImpostaBollo_CopiaConforme":
+        "32",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneIV_ImpostaBollo/Circoscrizioni_Numero": "2",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneIV_ImpostaBollo/Circoscrizioni_Imposta": "202",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneV_TributiSpeciali/CopiaConforme/CopiaConforme_Importo":
+        "16",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/TotaleDaVersare": "7858",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/ImpostaDaVersare":
+        "5000",
     });
   });
 
@@ -451,8 +474,6 @@ describe("motori deterministici", () => {
       0n,
       {
         openingDate: "2025-10-22",
-        mortgageJurisdictionCount: 0,
-        stampDutyJurisdictionCount: 0,
         automaticLandRegistry: true,
         copyRequested: false,
         paymentTiming: 1,
@@ -498,8 +519,6 @@ describe("motori deterministici", () => {
       0n,
       {
         openingDate: "2025-10-22",
-        mortgageJurisdictionCount: 0,
-        stampDutyJurisdictionCount: 0,
         automaticLandRegistry: true,
         copyRequested: true,
         paymentTiming: 1,
@@ -547,8 +566,6 @@ describe("motori deterministici", () => {
       0n,
       {
         openingDate: "2025-10-22",
-        mortgageJurisdictionCount: 0,
-        stampDutyJurisdictionCount: 0,
         automaticLandRegistry: true,
         copyRequested: false,
         paymentTiming: 1,
@@ -557,6 +574,16 @@ describe("motori deterministici", () => {
 
     expect(summary.mortgageTax).toMatchObject({ taxableCents: 0n, dueCents: 60_000n });
     expect(summary.cadastralTax).toMatchObject({ taxableCents: 0n, dueCents: 60_000n });
+    expect(
+      summary.officialFieldValues[
+        "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneI_ImpostaIpotecaria/PrimaCasa/PrimaCasa_Numero"
+      ],
+    ).toBe("3");
+    expect(
+      summary.officialFieldValues[
+        "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneI_ImpostaIpotecaria/PrimaCasa/AgevolazionePX_Valore"
+      ],
+    ).toBe("90000");
   });
 
   it("mantiene proporzionale la quota dello stesso immobile non coperta dall’agevolazione G", () => {
@@ -574,8 +601,6 @@ describe("motori deterministici", () => {
       0n,
       {
         openingDate: "2025-10-22",
-        mortgageJurisdictionCount: 0,
-        stampDutyJurisdictionCount: 0,
         automaticLandRegistry: true,
         copyRequested: false,
         paymentTiming: 1,
@@ -590,6 +615,11 @@ describe("motori deterministici", () => {
       taxableCents: 10_000_000n,
       dueCents: 100_000n,
     });
+    expect(
+      summary.officialFieldValues[
+        "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneI_ImpostaIpotecaria/AgevolazioneG/AgevolazioneG_Valore"
+      ],
+    ).toBe("100000");
   });
 
   it("estende l’agevolazione M a tutte le quote dello stesso immobile", () => {
@@ -607,8 +637,6 @@ describe("motori deterministici", () => {
       0n,
       {
         openingDate: "2025-10-22",
-        mortgageJurisdictionCount: 0,
-        stampDutyJurisdictionCount: 0,
         automaticLandRegistry: true,
         copyRequested: false,
         paymentTiming: 1,
@@ -617,6 +645,11 @@ describe("motori deterministici", () => {
 
     expect(summary.mortgageTax).toMatchObject({ taxableCents: 0n, dueCents: 20_000n });
     expect(summary.cadastralTax).toMatchObject({ taxableCents: 0n, dueCents: 0n });
+    expect(
+      summary.officialFieldValues[
+        "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneI_ImpostaIpotecaria/AgevolazioneM/AgevolazioneM_Valore"
+      ],
+    ).toBe("200000");
   });
 
   it("applica il regime agevolato del trust soltanto dal 2017", () => {
@@ -630,8 +663,6 @@ describe("motori deterministici", () => {
       subjectType: "5",
     };
     const options = {
-      mortgageJurisdictionCount: 0,
-      stampDutyJurisdictionCount: 0,
       automaticLandRegistry: true,
       copyRequested: false,
       paymentTiming: 1 as const,
@@ -668,8 +699,6 @@ describe("motori deterministici", () => {
       0n,
       {
         openingDate: "2013-12-31",
-        mortgageJurisdictionCount: 0,
-        stampDutyJurisdictionCount: 0,
         automaticLandRegistry: true,
         copyRequested: false,
         paymentTiming: 1,
@@ -691,8 +720,6 @@ describe("motori deterministici", () => {
     const firstHome = { ...ordinary, assetId: "prima-casa-storica", reliefCode: "P" };
     const options = {
       openingDate: "2013-12-31",
-      mortgageJurisdictionCount: 0,
-      stampDutyJurisdictionCount: 0,
       automaticLandRegistry: true,
       copyRequested: false,
       paymentTiming: 1 as const,
@@ -724,8 +751,6 @@ describe("motori deterministici", () => {
       0n,
       {
         openingDate: "2025-10-22",
-        mortgageJurisdictionCount: 1,
-        stampDutyJurisdictionCount: 1,
         automaticLandRegistry: true,
         copyRequested: false,
         paymentTiming: 1,
@@ -847,8 +872,6 @@ describe("motori deterministici", () => {
   it("mantiene fuori dall’autoliquidazione le successioni anteriori al 2025", () => {
     const summary = calculateDeclarationTaxSummary([], 500_000n, {
       openingDate: "2024-12-31",
-      mortgageJurisdictionCount: 0,
-      stampDutyJurisdictionCount: 0,
       automaticLandRegistry: false,
       copyRequested: false,
       paymentTiming: 2,
@@ -860,8 +883,6 @@ describe("motori deterministici", () => {
   it("arrotonda l’imposta di successione all’euro prima del Quadro EF", () => {
     const summary = calculateDeclarationTaxSummary([], 886_546n, {
       openingDate: "2025-10-22",
-      mortgageJurisdictionCount: 0,
-      stampDutyJurisdictionCount: 0,
       automaticLandRegistry: true,
       copyRequested: false,
       paymentTiming: 2,
@@ -885,8 +906,6 @@ describe("motori deterministici", () => {
     };
     const options = {
       openingDate: "2025-10-22",
-      mortgageJurisdictionCount: 0,
-      stampDutyJurisdictionCount: 0,
       automaticLandRegistry: true,
       copyRequested: false,
       paymentTiming: 1 as const,
@@ -922,8 +941,6 @@ describe("motori deterministici", () => {
       0n,
       {
         openingDate: "2025-10-22",
-        mortgageJurisdictionCount: 0,
-        stampDutyJurisdictionCount: 0,
         automaticLandRegistry: true,
         copyRequested: false,
         paymentTiming: 1,

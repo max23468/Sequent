@@ -49,9 +49,16 @@ describe("mappatura della parità informativa", () => {
       expect(checkedInMap.some((row) => row.candidateOperationalArea === area)).toBe(true);
   });
 
-  it("separa modalità qualificate, proposte e blocker senza riusare il default editabile", () => {
+  it("qualifica ogni modalità dalla fonte senza riusare il default editabile", () => {
     const handlingCounts = Object.fromEntries(
-      [null, "inserito", "derivato", "gestito-automaticamente"].map((handling) => [
+      [
+        null,
+        "inserito",
+        "derivato",
+        "gestito-automaticamente",
+        "gestione-contestuale",
+        "riservato-ufficio",
+      ].map((handling) => [
         handling ?? "non-determinato",
         checkedInMap.filter((row) => row.handling === handling).length,
       ]),
@@ -63,12 +70,14 @@ describe("mappatura della parità informativa", () => {
       ]),
     );
     expect(handlingCounts).toEqual({
-      "non-determinato": 34,
-      inserito: 637,
+      "non-determinato": 0,
+      inserito: 644,
       derivato: 5,
-      "gestito-automaticamente": 39,
+      "gestito-automaticamente": 56,
+      "gestione-contestuale": 2,
+      "riservato-ufficio": 8,
     });
-    expect(reviewCounts).toEqual({ qualificata: 460, candidata: 221, irrisolta: 34 });
+    expect(reviewCounts).toEqual({ qualificata: 715, candidata: 0, irrisolta: 0 });
     expect(
       checkedInMap
         .filter((row) => row.semanticReview.status === "irrisolta")
@@ -81,7 +90,7 @@ describe("mappatura della parità informativa", () => {
     ).toBe(true);
   });
 
-  it("qualifica formule e sottoscrizioni, ma blocca caselle quadro, servizio e importi senza fonte", () => {
+  it("qualifica formule, sottoscrizioni, caselle quadro e campi di servizio", () => {
     const eeRows = checkedInMap.filter((row) => row.quadro === "EE");
     expect(eeRows).toHaveLength(8);
     expect(
@@ -107,7 +116,10 @@ describe("mappatura della parità informativa", () => {
     expect(compiledQuadroBoxes).toHaveLength(16);
     expect(
       compiledQuadroBoxes.every(
-        (row) => row.handling === null && row.semanticReview.status === "irrisolta",
+        (row) =>
+          row.handling === "gestito-automaticamente" &&
+          row.semanticReview.status === "qualificata" &&
+          row.handlingBasis === "official-application-behavior",
       ),
     ).toBe(true);
 
@@ -117,10 +129,30 @@ describe("mappatura della parità informativa", () => {
         row.technicalPath.endsWith("/IdentificativoProdSoftware"),
     );
     expect(serviceFields).toHaveLength(5);
-    expect(serviceFields.every((row) => row.destinationReview.status === "irrisolta")).toBe(true);
+    expect(serviceFields.every((row) => row.destinationReview.status === "qualificata")).toBe(true);
+    expect(serviceFields.filter((row) => row.handling === "riservato-ufficio")).toHaveLength(4);
+    expect(serviceFields.filter((row) => row.handling === "gestito-automaticamente")).toHaveLength(
+      1,
+    );
+
+    const jurisdictionCounts = checkedInMap.filter((row) =>
+      row.technicalPath.endsWith("/Circoscrizioni_Numero"),
+    );
+    expect(jurisdictionCounts).toHaveLength(2);
+    expect(
+      jurisdictionCounts.every(
+        (row) =>
+          row.handling === "gestione-contestuale" &&
+          row.semanticReview.status === "qualificata" &&
+          row.semanticReview.blocker === null &&
+          row.handlingByDeclarationKind?.first === "gestito-automaticamente" &&
+          row.handlingByDeclarationKind["substitute-1"] === "inserito" &&
+          row.semanticReview.provenance.some((source) => source.startsWith("SRC-39:")),
+      ),
+    ).toBe(true);
   });
 
-  it("conferma le destinazioni professionali e lascia irrisolti soltanto i dati di servizio", () => {
+  it("conferma le destinazioni di tutti i campi, inclusi quelli riservati all’ufficio", () => {
     expect(
       checkedInMap
         .filter((row) => row.destinationReview.uiDecision === "definitiva")
@@ -132,7 +164,7 @@ describe("mappatura della parità informativa", () => {
     ).toBe(true);
     expect(
       checkedInMap.filter((row) => row.destinationReview.uiDecision === "non-definitiva"),
-    ).toHaveLength(5);
+    ).toHaveLength(0);
     expect(
       Object.fromEntries(
         OPERATIONAL_AREAS.map((area) => [
@@ -177,21 +209,25 @@ describe("mappatura della parità informativa", () => {
     ).toBe(true);
   });
 
-  it("deriva la copertura dalla superficie operativa corrente senza dichiarare una falsa parità", () => {
+  it("deriva dalla superficie operativa la copertura statica completa", () => {
     const counts = Object.fromEntries(
       ["coperto", "parziale", "mancante"].map((status) => [
         status,
         checkedInMap.filter((row) => row.currentCoverage === status).length,
       ]),
     );
-    expect(counts).toEqual({ coperto: 421, parziale: 289, mancante: 5 });
+    expect(counts).toEqual({ coperto: 715, parziale: 0, mancante: 0 });
     expect(
       checkedInMap
         .filter((row) => row.currentCoverage === "coperto")
         .every(
           (row) =>
             row.operationalVisibility === "esatta" &&
-            (row.operationalEditability === "completa" || row.handling === "derivato"),
+            (row.operationalEditability === "completa" ||
+              row.handling === "derivato" ||
+              row.handling === "gestito-automaticamente" ||
+              row.handling === "gestione-contestuale" ||
+              row.handling === "riservato-ufficio"),
         ),
     ).toBe(true);
     expect(
@@ -212,7 +248,7 @@ describe("mappatura della parità informativa", () => {
     expect(OPERATIONAL_AREAS).not.toContain("Cronologia");
   });
 
-  it("espone nelle otto aree i 710 campi con destinazione UI definitiva", () => {
+  it("espone nelle otto aree i 715 campi con destinazione UI definitiva", () => {
     expect(Object.keys(OPERATIONAL_SECTION_AREAS)).toEqual([
       "overview",
       "documents",
@@ -224,7 +260,7 @@ describe("mappatura della parità informativa", () => {
       "final",
     ]);
     const exposed = OPERATIONAL_AREAS.flatMap(listOperationalAreaFields);
-    expect(exposed).toHaveLength(710);
+    expect(exposed).toHaveLength(715);
     expect(new Set(exposed.map((field) => field.canonicalId)).size).toBe(exposed.length);
     expect(
       exposed.every(
@@ -235,6 +271,19 @@ describe("mappatura della parità informativa", () => {
     ).toBe(true);
     expect(
       exposed.filter((field) => isOperationalParityEditable(field.operationalParity)),
-    ).toHaveLength(416);
+    ).toHaveLength(644);
+    expect(
+      exposed.filter((field) =>
+        isOperationalParityEditable(field.operationalParity, "substitute-1"),
+      ),
+    ).toHaveLength(646);
+    expect(
+      exposed.filter(
+        (field) =>
+          isOperationalParityEditable(field.operationalParity, "first") &&
+          (field.appliesToDeclarationKinds.length === 0 ||
+            field.appliesToDeclarationKinds.includes("first")),
+      ),
+    ).toHaveLength(641);
   });
 });

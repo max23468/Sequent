@@ -4,6 +4,26 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.1.9
+
+### Added
+
+- qualificazione ufficiale completa dei 715 campi della dichiarazione, inclusi produttore del valore, modalità di gestione, destinazione operativa e applicabilità;
+- mappa deterministica Comune-conservatoria e calcolo contestuale delle circoscrizioni per le dichiarazioni ordinarie e sostitutive;
+- harness server parametrico per il round-trip fra Vista Quadri e Vista operativa, con persistenza, revisioni concorrenti, dichiarazioni successive e occorrenze ripetibili isolate.
+
+### Changed
+
+- tutti i campi ufficiali risultano coperti nelle due viste: 644 inseriti dal professionista, 56 automatici, 8 riservati all’ufficio, 5 derivati e 2 contestuali;
+- campi automatici, derivati e riservati all’ufficio condividono la stessa fonte canonica e restano in sola lettura in entrambe le viste;
+- precedenza assegnata alle istruzioni ufficiali esplicite quando descrivono un input professionale, rispetto alla sola evidenza osservata nell’applicativo ufficiale.
+- soglia predefinita del gate disco per le build ARM64 locali aumentata dall’85% al 90%, mantenendo configurabile il limite esplicito.
+
+### Fixed
+
+- salvataggio canonico bidirezionale e riordino o rimozione delle occorrenze ripetibili senza perdita d’identità;
+- aggiornamento deterministico dei valori automatici e rifiuto dei conflitti di revisione senza sovrascritture silenziose.
+
 ## 0.1.8
 
 ### Changed

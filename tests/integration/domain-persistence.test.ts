@@ -37,6 +37,12 @@ const directories: string[] = [];
 const BUILDING_VALUE_FIELD_ID = "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/Valore";
 const BUILDING_PREVIOUS_VALUE_FIELD_ID =
   "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/ValorePrecSucc";
+const BUILDING_PROVINCE_FIELD_ID =
+  "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/Luogo/Provincia";
+const BUILDING_MUNICIPALITY_FIELD_ID =
+  "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/Luogo/Italia/CodiceComune";
+const BUILDING_ADMINISTRATIVE_MUNICIPALITY_FIELD_ID =
+  "xsd:/Fornitura/Dichiarazione/QuadroEC/Modulo/Fabbricati/Luogo/Italia/CodiceComuneAmministrativo";
 const VESSEL_LENGTH_FIELD_ID =
   "xsd:/Fornitura/Dichiarazione/QuadroEQ/Modulo/Navi/Tipo/Dimensione/Lunghezza";
 const VESSEL_TONNAGE_FIELD_ID =
@@ -222,8 +228,8 @@ describe("persistenza del procedimento", () => {
     expect(calculation.issues.map(({ id }) => id)).not.toContain("CALCULATION_RULES_INCOMPLETE");
     expect(calculation.issues.map(({ id }) => id)).toEqual(
       expect.arrayContaining([
-        "CALCULATION_MORTGAGE_JURISDICTIONS_MISSING",
-        "CALCULATION_STAMP_DUTY_JURISDICTIONS_MISSING",
+        "CALCULATION_CONSERVATORY_NOT_FOUND",
+        "CALCULATION_PAYMENT_PLAN_TEMPISTICA_OBBLIGATORIA",
       ]),
     );
     expect(() =>
@@ -1800,6 +1806,206 @@ describe("persistenza del procedimento", () => {
     });
     expect(calculation.status).toBe("blocked");
     expect(calculation.issues.map(({ id }) => id)).toContain("CALCULATION_FOREIGN_TAX_DIVERGENCE");
+  });
+
+  it("calcola le circoscrizioni dalla conservatoria del Comune amministrativo", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-conservatories-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Circoscrizioni sintetiche");
+    const decedent = createSharedSubject(database, practice.id, {
+      role: "decedent",
+      displayName: "Defunto",
+    });
+    const beneficiary = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Beneficiario",
+    });
+    const romeBuilding = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Fabbricato Roma",
+      valueCents: 10_000_000n,
+    });
+    const milanBuilding = createSharedAsset(database, practice.id, {
+      kind: "building",
+      displayName: "Fabbricato Milano",
+      valueCents: 10_000_000n,
+    });
+
+    let revision = saveCanonicalFields(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      entityId: beneficiary.id,
+      fields: [
+        { fieldId: "quadro-ea.soggetto.tipo", value: "1" },
+        { fieldId: "quadro-ea.soggetto.grado-parentela", value: "10" },
+      ],
+      confirmOfficialRules: true,
+    }).revision;
+    revision = saveCanonicalField(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: revision,
+      fieldId: "frontespizio.defunto.data-decesso",
+      value: "01012025",
+      entityId: decedent.id,
+    }).revision;
+    revision = saveCanonicalFields(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: revision,
+      entityId: romeBuilding.id,
+      fields: [
+        { fieldId: BUILDING_VALUE_FIELD_ID, value: "100000" },
+        { fieldId: BUILDING_PROVINCE_FIELD_ID, value: "RM" },
+        { fieldId: BUILDING_MUNICIPALITY_FIELD_ID, value: "H501" },
+        { fieldId: BUILDING_ADMINISTRATIVE_MUNICIPALITY_FIELD_ID, value: "H501" },
+      ],
+      confirmOfficialRules: true,
+    }).revision;
+    revision = saveCanonicalFields(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: revision,
+      entityId: milanBuilding.id,
+      fields: [
+        { fieldId: BUILDING_VALUE_FIELD_ID, value: "100000" },
+        { fieldId: BUILDING_PROVINCE_FIELD_ID, value: "MI" },
+        { fieldId: BUILDING_MUNICIPALITY_FIELD_ID, value: "H501" },
+        { fieldId: BUILDING_ADMINISTRATIVE_MUNICIPALITY_FIELD_ID, value: "F205" },
+      ],
+      confirmOfficialRules: true,
+    }).revision;
+    const scenario = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: revision,
+      shares: [romeBuilding, milanBuilding].map((asset) => ({
+        assetId: asset.id,
+        beneficiaryId: beneficiary.id,
+        numerator: 1n,
+        denominator: 1n,
+        rightCode: "1",
+      })),
+    });
+    revision = confirmDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      scenarioId: scenario.id,
+      expectedRevision: revision,
+    });
+
+    const calculation = runSuccessionCalculation(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+    });
+    expect(calculation.issues.map(({ id }) => id)).not.toContain(
+      "CALCULATION_CONSERVATORY_NOT_FOUND",
+    );
+    expect(calculation.declarationTaxes.jurisdictionCounts).toMatchObject({
+      mortgage: 2,
+      stampDuty: 2,
+      mode: "automatic",
+    });
+    expect(calculation.declarationTaxes.officialFieldValues).toMatchObject({
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero": "2",
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneIV_ImpostaBollo/Circoscrizioni_Numero": "2",
+    });
+    expect(getDeclaration(database, practice.declarationId, practice.id)?.revision).toBe(revision);
+
+    const successive = createSuccessiveDeclaration(
+      database,
+      practice.id,
+      practice.declarationId,
+      "substitute-1",
+    );
+    const successiveScenario = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: successive.id,
+      expectedRevision: successive.revision,
+      shares: [romeBuilding, milanBuilding].map((asset) => ({
+        assetId: asset.id,
+        beneficiaryId: beneficiary.id,
+        numerator: 1n,
+        denominator: 1n,
+        rightCode: "1",
+      })),
+    });
+    let successiveRevision = confirmDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: successive.id,
+      scenarioId: successiveScenario.id,
+      expectedRevision: successive.revision,
+    });
+    const missingProfessionalCounts = runSuccessionCalculation(database, {
+      practiceId: practice.id,
+      declarationId: successive.id,
+    });
+    expect(missingProfessionalCounts.issues.map(({ id }) => id)).toEqual(
+      expect.arrayContaining([
+        "CALCULATION_MORTGAGE_JURISDICTIONS_MISSING",
+        "CALCULATION_STAMP_DUTY_JURISDICTIONS_MISSING",
+      ]),
+    );
+
+    successiveRevision = saveCanonicalFields(database, {
+      practiceId: practice.id,
+      declarationId: successive.id,
+      expectedRevision: successiveRevision,
+      fields: [
+        {
+          fieldId:
+            "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero",
+          value: "1",
+        },
+        {
+          fieldId:
+            "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneIV_ImpostaBollo/Circoscrizioni_Numero",
+          value: "2",
+        },
+      ],
+      confirmOfficialRules: true,
+    }).revision;
+    const updatedSuccessiveScenario = saveDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: successive.id,
+      expectedRevision: successiveRevision,
+      shares: [romeBuilding, milanBuilding].map((asset) => ({
+        assetId: asset.id,
+        beneficiaryId: beneficiary.id,
+        numerator: 1n,
+        denominator: 1n,
+        rightCode: "1",
+      })),
+    });
+    successiveRevision = confirmDevolutionScenario(database, {
+      practiceId: practice.id,
+      declarationId: successive.id,
+      scenarioId: updatedSuccessiveScenario.id,
+      expectedRevision: successiveRevision,
+    });
+    const professionalCounts = runSuccessionCalculation(database, {
+      practiceId: practice.id,
+      declarationId: successive.id,
+    });
+    expect(professionalCounts.issues.map(({ id }) => id)).not.toEqual(
+      expect.arrayContaining([
+        "CALCULATION_MORTGAGE_JURISDICTIONS_MISSING",
+        "CALCULATION_STAMP_DUTY_JURISDICTIONS_MISSING",
+      ]),
+    );
+    expect(professionalCounts.declarationTaxes.jurisdictionCounts).toMatchObject({
+      mortgage: 1,
+      stampDuty: 2,
+      mortgageMaximum: 2,
+      stampDutyMaximum: 2,
+      mode: "professional-input",
+    });
+    expect(professionalCounts.declarationTaxes.officialFieldValues).not.toHaveProperty(
+      "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero",
+    );
+    expect(getDeclaration(database, successive.id, practice.id)?.revision).toBe(successiveRevision);
   });
 
   it("trova anche soggetti e beni tramite l’indice di ricerca", () => {

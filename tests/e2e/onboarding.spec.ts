@@ -3,6 +3,17 @@ import Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { saveCanonicalFieldsFromView } from "../../src/lib/server/canonical-field-views.ts";
+import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
+import {
+  confirmCalculationRun,
+  confirmDevolutionScenario,
+  createSharedAsset,
+  createSharedSubject,
+  runSuccessionCalculation,
+  saveDevolutionScenario,
+} from "../../src/lib/server/domain.ts";
+import { createSuccessiveDeclaration, getDeclaration } from "../../src/lib/server/practices.ts";
 
 test.describe.configure({ mode: "serial" });
 
@@ -115,6 +126,209 @@ async function confirmOfficialInstructions(button: import("@playwright/test").Lo
     .getByRole("checkbox", { name: "Confermo di aver verificato queste indicazioni" });
   if ((await confirmation.count()) > 0) await confirmation.check();
 }
+
+function prepareConfirmedAutomaticFields(practiceId: string) {
+  const dataDirectory = process.env.SEQUENT_E2E_DATA_DIR ?? ".test-data/e2e";
+  const database = openDatabase(dataDirectory);
+  const declaration = database
+    .prepare("SELECT id FROM declarations WHERE practice_id = ? ORDER BY sequence ASC LIMIT 1")
+    .get(practiceId) as { id: string } | undefined;
+  if (!declaration) throw new Error("Dichiarazione sintetica E2E non trovata");
+  const decedent = createSharedSubject(database, practiceId, {
+    role: "decedent",
+    displayName: "Defunto automatici E2E",
+  });
+  const beneficiary = createSharedSubject(database, practiceId, {
+    role: "beneficiary",
+    displayName: "Beneficiario automatici E2E",
+  });
+  const company = createSharedAsset(database, practiceId, {
+    kind: "company",
+    displayName: "Azienda automatica E2E",
+    valueCents: 20_000_000n,
+  });
+  let revision = getDeclaration(database, declaration.id, practiceId)!.revision;
+  revision = saveCanonicalFieldsFromView(database, {
+    practiceId,
+    declarationId: declaration.id,
+    expectedRevision: revision,
+    view: { kind: "quadri", quadro: "EA" },
+    entityId: beneficiary.id,
+    fields: [
+      { fieldId: "quadro-ea.soggetto.tipo", value: "1" },
+      { fieldId: "quadro-ea.soggetto.grado-parentela", value: "10" },
+    ],
+    confirmOfficialRules: true,
+  }).revision;
+  revision = saveCanonicalFieldsFromView(database, {
+    practiceId,
+    declarationId: declaration.id,
+    expectedRevision: revision,
+    view: { kind: "quadri", quadro: "Frontespizio" },
+    entityId: decedent.id,
+    fields: [{ fieldId: "frontespizio.defunto.data-decesso", value: "01012025" }],
+    confirmOfficialRules: true,
+  }).revision;
+  revision = saveCanonicalFieldsFromView(database, {
+    practiceId,
+    declarationId: declaration.id,
+    expectedRevision: revision,
+    view: { kind: "quadri", quadro: "EN" },
+    entityId: company.id,
+    fields: [
+      {
+        fieldId: "xsd:/Fornitura/Dichiarazione/QuadroEN/Modulo/Aziende/Valore",
+        value: "200000",
+      },
+    ],
+    confirmOfficialRules: true,
+  }).revision;
+  revision = saveCanonicalFieldsFromView(database, {
+    practiceId,
+    declarationId: declaration.id,
+    expectedRevision: revision,
+    view: { kind: "quadri", quadro: "EF" },
+    fields: [
+      {
+        fieldId:
+          "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/TempisticaPagamento",
+        value: "1",
+      },
+    ],
+    confirmOfficialRules: true,
+  }).revision;
+  const scenario = saveDevolutionScenario(database, {
+    practiceId,
+    declarationId: declaration.id,
+    expectedRevision: revision,
+    shares: [
+      {
+        assetId: company.id,
+        beneficiaryId: beneficiary.id,
+        numerator: 1n,
+        denominator: 1n,
+        rightCode: "1",
+      },
+    ],
+  });
+  if (scenario.issues.length > 0) throw new Error("Devoluzione sintetica E2E non valida");
+  revision = confirmDevolutionScenario(database, {
+    practiceId,
+    declarationId: declaration.id,
+    scenarioId: scenario.id,
+    expectedRevision: revision,
+  });
+  const calculation = runSuccessionCalculation(database, {
+    practiceId,
+    declarationId: declaration.id,
+  });
+  if (calculation.status !== "draft" || calculation.issues.length > 0)
+    throw new Error("Calcolo sintetico E2E non confermabile");
+  confirmCalculationRun(database, {
+    practiceId,
+    declarationId: declaration.id,
+    calculationId: calculation.id,
+    expectedRevision: revision,
+  });
+  closeDatabase(dataDirectory);
+}
+
+function createSubstituteOneForE2e(practiceId: string): string {
+  const dataDirectory = process.env.SEQUENT_E2E_DATA_DIR ?? ".test-data/e2e";
+  const database = openDatabase(dataDirectory);
+  const source = database
+    .prepare("SELECT id FROM declarations WHERE practice_id = ? ORDER BY sequence ASC LIMIT 1")
+    .get(practiceId) as { id: string } | undefined;
+  if (!source) throw new Error("Dichiarazione sorgente E2E non trovata");
+  const successive = createSuccessiveDeclaration(database, practiceId, source.id, "substitute-1");
+  closeDatabase(dataDirectory);
+  return successive.id;
+}
+
+test("mostra gli automatici confermati dalla stessa fonte e in sola lettura nelle due viste", async ({
+  page,
+}) => {
+  const practiceTitle = unique("Parità automatici");
+  await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  const practiceId = page.url().match(/\/pratiche\/([^?]+)/)?.[1];
+  if (!practiceId) throw new Error("Identificativo pratica E2E non disponibile");
+  prepareConfirmedAutomaticFields(practiceId);
+
+  await page.reload();
+  await page.getByRole("button", { name: "Vista Quadri" }).click();
+  await page.getByRole("button", { name: "Quadro EF", exact: true }).click();
+  const automaticName =
+    "5 EF18bis - Imposta di successione - Imposta calcolata - Imposta da versare";
+  const quadriAutomaticOutput = page.getByRole("status", { name: automaticName });
+  const quadriAutomatic = quadriAutomaticOutput.locator("xpath=../..");
+  await expect(quadriAutomaticOutput).toHaveText("6600");
+  await expect(quadriAutomatic.locator("input, select, textarea")).toHaveCount(0);
+  await expect(
+    quadriAutomatic.getByText(
+      "Valore prodotto automaticamente dall’elaborazione ufficiale confermata.",
+    ),
+  ).toBeVisible();
+  const quadriJurisdiction = page
+    .locator(".official-field")
+    .filter({ hasText: "EF15 - Tassa ipotecaria - Valore" });
+  await expect(quadriJurisdiction.locator("output")).toHaveText("0");
+  await expect(
+    quadriJurisdiction.locator("input:not([type=hidden]), select, textarea"),
+  ).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Vista operativa" }).click();
+  await page.getByRole("button", { name: "Imposte e pagamenti" }).click();
+  const operationalAutomatic = page.locator("details.operational-fields-group").filter({
+    hasText: "Liquidazione e importi da versare",
+  });
+  await operationalAutomatic.locator(":scope > summary").click();
+  const operationalAutomaticOutput = operationalAutomatic.getByRole("status", {
+    name: automaticName,
+  });
+  const operationalAutomaticField = operationalAutomaticOutput.locator("xpath=../..");
+  await expect(operationalAutomaticOutput).toHaveText("6600");
+  await expect(operationalAutomaticField.locator("input, select, textarea")).toHaveCount(0);
+  const operationalJurisdiction = operationalAutomatic
+    .locator(".official-field")
+    .filter({ hasText: "EF15 - Tassa ipotecaria - Valore" });
+  await expect(operationalJurisdiction.locator("output")).toHaveText("0");
+  await expect(
+    operationalJurisdiction.locator("input:not([type=hidden]), select, textarea"),
+  ).toHaveCount(0);
+});
+
+test("rende modificabili le circoscrizioni soltanto nella sostitutiva di tipo 1", async ({
+  page,
+}) => {
+  const practiceTitle = unique("Parità circoscrizioni sostitutiva");
+  await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  const practiceId = page.url().match(/\/pratiche\/([^?]+)/)?.[1];
+  if (!practiceId) throw new Error("Identificativo pratica E2E non disponibile");
+  const declarationId = createSubstituteOneForE2e(practiceId);
+
+  await page.goto(
+    `/pratiche/${practiceId}?sezione=quadri&vista=quadri&quadro=EF&dichiarazione=${declarationId}`,
+  );
+  const quadriJurisdiction = page
+    .locator(".official-field")
+    .filter({ hasText: "EF15 - Tassa ipotecaria - Valore" });
+  await expect(quadriJurisdiction.locator('input:not([type="hidden"])')).toHaveCount(1);
+  await expect(quadriJurisdiction.locator("output")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Vista operativa" }).click();
+  await page.getByRole("button", { name: "Imposte e pagamenti" }).click();
+  const group = page.locator("details.operational-fields-group").filter({
+    hasText: "Liquidazione e importi da versare",
+  });
+  await group.locator(":scope > summary").click();
+  const operationalJurisdiction = group
+    .locator(".official-field")
+    .filter({ hasText: "EF15 - Tassa ipotecaria - Valore" });
+  await expect(operationalJurisdiction.locator('input:not([type="hidden"])')).toHaveCount(1);
+  await expect(operationalJurisdiction.locator("output")).toHaveCount(0);
+});
 
 async function expectOfficialCheckboxesAligned(page: import("@playwright/test").Page) {
   const fieldCheckboxes = page.locator(".official-checkbox-control input[type=checkbox]");
@@ -394,6 +608,50 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await authenticate(page);
   await createPracticeFromDashboard(page, practiceTitle);
 
+  await page.getByRole("button", { name: "Devoluzione" }).click();
+  const professionalGroup = page
+    .locator("details.operational-fields-group")
+    .filter({ hasText: "Testamento estero" });
+  const professionalField = professionalGroup
+    .locator(".official-field")
+    .filter({ hasText: "Testamento estero" });
+  await expect(professionalField).toBeVisible();
+  await expect(professionalField.locator("input:not([type=hidden]), select, textarea")).toHaveCount(
+    1,
+  );
+
+  await page.getByRole("button", { name: "Riepilogo finale" }).click();
+  const automaticGroup = page
+    .locator("details.operational-fields-group")
+    .filter({ hasText: "Casella quadri compilati: 'EA'" });
+  const automaticField = automaticGroup
+    .locator(".official-field")
+    .filter({ hasText: "Casella quadri compilati: 'EA'" });
+  await expect(automaticField).toBeVisible();
+  await expect(automaticField.locator("output")).toHaveText("Non indicato");
+  await expect(automaticField.locator("input:not([type=hidden]), select, textarea")).toHaveCount(0);
+  await expect(
+    automaticField.getByText("Valore gestito automaticamente dalle regole ufficiali.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Controlli finali" }).click();
+  const officeGroup = page.locator("details.operational-fields-group").filter({
+    hasText: "Dati prodotti dal software o riservati all’ufficio",
+  });
+  const officeField = officeGroup
+    .locator(".official-field")
+    .filter({ hasText: "Flag 1 (presentazione di doppie prime dichiarazioni)" });
+  await expect(officeField).toBeVisible();
+  await expect(officeField.locator("input:not([type=hidden]), select, textarea")).toHaveCount(0);
+  await expect(
+    officeField.getByText(
+      "Campo riservato all’ufficio: Sequent lo conserva in sola lettura e non lo produce.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+
   await page.getByRole("button", { name: "Persone" }).click();
   const subjectForm = page.locator("form.domain-inline-form");
   await subjectForm.getByLabel("Ruolo").selectOption("decedent");
@@ -475,7 +733,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   });
   await expect(
     page.locator(".official-fields").getByRole("button", { name: /^Salva/ }),
-  ).toHaveCount(15);
+  ).toHaveCount(13);
   await civilStatus.selectOption("3");
   await deathDate.fill("01012025");
   const saveDecedent = page.getByRole("button", { name: "Salva dati del defunto" });
@@ -539,7 +797,121 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await saveOfficialAsset.click();
   await expect(officialAssetValue).toHaveValue("200000");
 
+  await page.getByRole("button", { name: "Quadro EH", exact: true }).click();
+  const newOccurrenceGroup = page.locator("section.official-fields-group").filter({
+    has: page.getByRole("heading", {
+      name: "Presenza interdetti · nuova posizione",
+      exact: true,
+    }),
+  });
+  await newOccurrenceGroup.getByRole("textbox", { name: "3 Certificatore" }).fill("CERT1");
+  await newOccurrenceGroup.getByRole("button", { name: "Aggiungi questa posizione" }).click();
+  const savedOccurrenceGroup = page.locator("section.official-fields-group").filter({
+    has: page.getByRole("heading", { name: "Presenza interdetti · posizione 1", exact: true }),
+  });
+  await expect(savedOccurrenceGroup.getByRole("textbox", { name: "3 Certificatore" })).toHaveValue(
+    "CERT1",
+  );
+  const secondOccurrenceGroup = page.locator("section.official-fields-group").filter({
+    has: page.getByRole("heading", {
+      name: "Presenza interdetti · nuova posizione",
+      exact: true,
+    }),
+  });
+  await secondOccurrenceGroup.getByRole("textbox", { name: "3 Certificatore" }).fill("CERT2");
+  await secondOccurrenceGroup.getByRole("button", { name: "Aggiungi questa posizione" }).click();
+
   await page.getByRole("button", { name: "Vista operativa" }).click();
+  await page.getByRole("button", { name: "Panoramica" }).click();
+  let operationalOccurrenceGroup = page.locator("details.operational-fields-group").filter({
+    has: page.getByText(
+      "Indicatori generali del Quadro EH della dichiarazione selezionata · posizione 1",
+      { exact: true },
+    ),
+  });
+  await operationalOccurrenceGroup.locator(":scope > summary").click();
+  const operationalOccurrenceValue = operationalOccurrenceGroup.getByRole("textbox", {
+    name: "3 Certificatore",
+  });
+  await expect(operationalOccurrenceValue).toHaveValue("CERT1");
+  const secondOperationalOccurrence = page.locator("details.operational-fields-group").filter({
+    has: page.getByText(
+      "Indicatori generali del Quadro EH della dichiarazione selezionata · posizione 2",
+      { exact: true },
+    ),
+  });
+  await secondOperationalOccurrence.locator(":scope > summary").click();
+  await expect(
+    secondOperationalOccurrence.getByRole("textbox", { name: "3 Certificatore" }),
+  ).toHaveValue("CERT2");
+  await secondOperationalOccurrence.getByRole("button", { name: "Sposta prima" }).click();
+
+  operationalOccurrenceGroup = page.locator("details.operational-fields-group").filter({
+    has: page.getByText(
+      "Indicatori generali del Quadro EH della dichiarazione selezionata · posizione 1",
+      { exact: true },
+    ),
+  });
+  await operationalOccurrenceGroup.locator(":scope > summary").click();
+  await expect(
+    operationalOccurrenceGroup.getByRole("textbox", { name: "3 Certificatore" }),
+  ).toHaveValue("CERT2");
+  const movedSecondOccurrence = page.locator("details.operational-fields-group").filter({
+    has: page.getByText(
+      "Indicatori generali del Quadro EH della dichiarazione selezionata · posizione 2",
+      { exact: true },
+    ),
+  });
+  await movedSecondOccurrence.locator(":scope > summary").click();
+  await expect(movedSecondOccurrence.getByRole("textbox", { name: "3 Certificatore" })).toHaveValue(
+    "CERT1",
+  );
+  await movedSecondOccurrence.getByRole("button", { name: "Rimuovi posizione" }).click();
+  await expect(
+    page.getByText(
+      "Indicatori generali del Quadro EH della dichiarazione selezionata · posizione 2",
+      { exact: true },
+    ),
+  ).toHaveCount(0);
+
+  operationalOccurrenceGroup = page.locator("details.operational-fields-group").filter({
+    has: page.getByText(
+      "Indicatori generali del Quadro EH della dichiarazione selezionata · posizione 1",
+      { exact: true },
+    ),
+  });
+  await operationalOccurrenceGroup.locator(":scope > summary").click();
+  const survivingOccurrenceValue = operationalOccurrenceGroup.getByRole("textbox", {
+    name: "3 Certificatore",
+  });
+  await survivingOccurrenceValue.fill("CERT3");
+  await operationalOccurrenceGroup.getByRole("button", { name: "Salva questa posizione" }).click();
+  await page.getByRole("button", { name: "Vista Quadri" }).click();
+  await page.getByRole("button", { name: "Quadro EH", exact: true }).click();
+  await expect(
+    page
+      .locator("section.official-fields-group")
+      .filter({
+        has: page.getByRole("heading", {
+          name: "Presenza interdetti · posizione 1",
+          exact: true,
+        }),
+      })
+      .getByRole("textbox", { name: "3 Certificatore" }),
+  ).toHaveValue("CERT3");
+  await page.getByRole("button", { name: "Vista operativa" }).click();
+  await page.getByRole("button", { name: "Devoluzione" }).click();
+  await expect(page.locator('output[id="field-frontespizio.beneficiari.numero-eredi"]')).toHaveText(
+    "2",
+  );
+  await page.getByRole("button", { name: "Patrimonio" }).click();
+  const operationalAssetGroup = page
+    .locator("details.operational-fields-group")
+    .filter({ hasText: assetName });
+  await operationalAssetGroup.locator(":scope > summary").first().click();
+  await expect(
+    operationalAssetGroup.getByRole("textbox", { name: /^\d+ Valore$/ }).first(),
+  ).toHaveValue("200000");
   await page.getByRole("button", { name: "Persone" }).click();
   const reloadedOperationalSubject = page
     .locator("details.operational-fields-group")

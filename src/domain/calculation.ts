@@ -3,6 +3,10 @@ import {
   applicableLegalFramework,
   usufructCoefficientForAge,
 } from "./temporal-rules.ts";
+import {
+  calculateOfficialJurisdictionCounts,
+  type OfficialJurisdictionCounts,
+} from "./municipality-conservatory.ts";
 
 export const SUCCESSION_TAX_RULESET_VERSION = "2026.08.12" as const;
 
@@ -114,6 +118,7 @@ export interface DeclarationTaxSummary {
   mortgageServicesCents: bigint;
   stampDutyCents: bigint;
   specialTaxesCents: bigint;
+  jurisdictionCounts: OfficialJurisdictionCounts;
   successionTax: {
     calculatedCents: bigint;
     alreadyPaidCents: bigint;
@@ -123,7 +128,8 @@ export interface DeclarationTaxSummary {
   penaltiesCents: bigint;
   interestCents: bigint;
   totalAtSubmissionCents: bigint;
-  sourceRefs: readonly ["SRC-07", "SRC-08", "SRC-10", "SRC-13", "SRC-14"];
+  officialFieldValues: Record<string, string>;
+  sourceRefs: readonly ["SRC-07", "SRC-08", "SRC-10", "SRC-13", "SRC-14", "SRC-39"];
 }
 
 export interface Fraction {
@@ -339,8 +345,8 @@ export function calculateDeductibleRecentMaintenanceDebtCents(input: {
 
 export interface DeclarationTaxOptions {
   openingDate: string;
-  mortgageJurisdictionCount: number;
-  stampDutyJurisdictionCount: number;
+  declaredMortgageJurisdictionCount?: number;
+  declaredStampDutyJurisdictionCount?: number;
   automaticLandRegistry: boolean;
   copyRequested: boolean;
   hasTestament?: boolean;
@@ -466,14 +472,14 @@ export function calculateDeclarationTaxSummary(
   successionTaxCents: bigint,
   options: DeclarationTaxOptions,
 ): DeclarationTaxSummary {
-  if (
-    !Number.isInteger(options.mortgageJurisdictionCount) ||
-    options.mortgageJurisdictionCount < 0 ||
-    !Number.isInteger(options.stampDutyJurisdictionCount) ||
-    options.stampDutyJurisdictionCount < 0
-  )
-    throw new Error("NUMERO_CIRCOSCRIZIONI_NON_VALIDO");
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(options.openingDate)) throw new Error("DATA_NON_VALIDA");
+  const declarationKind = options.substituteType
+    ? (`substitute-${options.substituteType}` as const)
+    : "first";
+  const jurisdictionCounts = calculateOfficialJurisdictionCounts(allocations, declarationKind, {
+    mortgage: options.declaredMortgageJurisdictionCount,
+    stampDuty: options.declaredStampDutyJurisdictionCount,
+  });
   const assessmentMode = applicableLegalFramework(options.openingDate).assessmentMode;
   const assetGroups = groupAllocationsByAsset(allocations);
   const hasRelief = (group: (typeof assetGroups)[number], code: string) =>
@@ -554,6 +560,24 @@ export function calculateDeclarationTaxSummary(
     (sum, group) => (hasRelief(group, "G") ? sum + proportionalValueCents(group) : sum),
     0n,
   );
+  const allocatedValueFor = (group: (typeof propertyGroups)[number]) =>
+    group.allocations.reduce((sum, allocation) => sum + allocation.valueCents, 0n);
+  const reliefGValueCents = propertyGroups.reduce(
+    (sum, group) =>
+      sum +
+      group.allocations.reduce(
+        (groupSum, allocation) =>
+          allocation.reliefCode?.toUpperCase() === "G"
+            ? groupSum + allocation.valueCents
+            : groupSum,
+        0n,
+      ),
+    0n,
+  );
+  const reliefMValueCents = propertyGroups.reduce(
+    (sum, group) => (hasRelief(group, "M") ? sum + allocatedValueFor(group) : sum),
+    0n,
+  );
   const hasReliefG = propertyGroups.some((group) => hasRelief(group, "G"));
   const hasReliefM = propertyGroups.some((group) => hasRelief(group, "M"));
   const historicalFixedTaxCents = options.openingDate >= "2014-01-01" ? 20_000n : 16_800n;
@@ -564,6 +588,10 @@ export function calculateDeclarationTaxSummary(
       : 0n;
   const fixedM = hasReliefM ? historicalFixedTaxCents : 0n;
   const fixedTrust = propertyGroups.some(trustReliefApplies) ? 20_000n : 0n;
+  const trustValueCents = propertyGroups.reduce(
+    (sum, group) => (trustReliefApplies(group) ? sum + allocatedValueFor(group) : sum),
+    0n,
+  );
   const eligibleFirstHomeAllocations = (group: (typeof assetGroups)[number]) =>
     group.allocations.filter(
       (allocation) =>
@@ -604,6 +632,16 @@ export function calculateDeclarationTaxSummary(
       beneficiariesWithAlternativeHome.add(allocation.beneficiaryId);
   }
   const firstHomeCount = firstHomeUnits.size;
+  const firstHomeValueCents = propertyGroups
+    .filter((group) => BUILDING_KINDS.has(groupKind(group)))
+    .reduce((sum, group) => {
+      const hasFirstHomeRelief = group.allocations.some((allocation) =>
+        FIRST_HOME_RELIEFS.has(allocation.reliefCode?.toUpperCase() ?? ""),
+      );
+      return hasFirstHomeRelief || FIRST_HOME_HABITATION_RIGHTS.has(habitationRight(group))
+        ? sum + allocatedValueFor(group)
+        : sum;
+    }, 0n);
   const firstHomeFixed = BigInt(firstHomeCount) * historicalFixedTaxCents;
   let proportionalMortgage = roundToWholeEuro((taxablePropertyCents * 2n) / 100n);
   let proportionalCadastral = roundToWholeEuro(taxablePropertyCents / 100n);
@@ -687,8 +725,7 @@ export function calculateDeclarationTaxSummary(
   );
   const successionPayable = successionDifference <= 1_000n ? 0n : successionDifference;
   const mortgageServicesCents =
-    BigInt(options.mortgageJurisdictionCount) *
-    BigInt(options.automaticLandRegistry ? 12_000 : 6_500);
+    BigInt(jurisdictionCounts.mortgage) * BigInt(options.automaticLandRegistry ? 12_000 : 6_500);
   const propertyAllocations = allocations.filter((allocation) =>
     PROPERTY_KINDS.has(allocation.assetKind),
   );
@@ -703,7 +740,7 @@ export function calculateDeclarationTaxSummary(
             ["36", "37"].includes(allocation.relationshipCode ?? ""),
         )));
   const stampDutyCents =
-    BigInt(options.stampDutyJurisdictionCount) * 8_500n +
+    BigInt(jurisdictionCounts.stampDuty) * 8_500n +
     (options.copyRequested && !copyStampExempt ? 3_200n : 0n);
   const specialTaxesCents = options.copyRequested ? 1_600n : 0n;
   const penaltiesCents = (options.penaltiesCents ?? []).reduce((sum, value) => sum + value, 0n);
@@ -712,6 +749,102 @@ export function calculateDeclarationTaxSummary(
     assessmentMode === "self-assessment" && options.paymentTiming === 2
       ? (options.initialSuccessionPaymentCents ?? successionPayable)
       : 0n;
+  const wholeEuros = (cents: bigint) => String(cents / 100n);
+  const eePath = "xsd:/Fornitura/Dichiarazione/QuadroEE";
+  const efPath = "xsd:/Fornitura/Dichiarazione/QuadroEF";
+  const officialFieldValues: Record<string, string> = {
+    [`${eePath}/TotaleValoreImmobili`]: wholeEuros(propertyCents),
+    [`${eePath}/TotaleValoreAziende`]: wholeEuros(companiesCents),
+    [`${eePath}/TotaleValoreTitoli`]: wholeEuros(securitiesCents),
+    [`${eePath}/TotaleValoreAereiNavi`]: wholeEuros(aircraftAndVesselsCents),
+    [`${eePath}/TotaleValoreAltriBeni`]: wholeEuros(otherAssetsCents),
+    [`${eePath}/TotaleAttivo`]: wholeEuros(totalAssetsCents),
+    [`${eePath}/TotalePassivo`]: wholeEuros(totalLiabilitiesCents),
+    [`${eePath}/TotaleValoreAsseEreditarioNetto`]: wholeEuros(
+      totalAssetsCents - totalLiabilitiesCents,
+    ),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/PrimaCasa/PrimaCasa_Numero`]: String(firstHomeCount),
+    [`${efPath}/SezioneIV_ImpostaBollo/ImpostaBollo_CopiaConforme`]: options.copyRequested
+      ? wholeEuros(copyStampExempt ? 0n : 3_200n)
+      : "",
+    [`${efPath}/SezioneVBis_ImpostaSuccessione/ImpostaNonDovuta`]:
+      options.presenterCode === "9" && options.allBeneficiariesDisabled === true ? "1" : "",
+    [`${efPath}/SezioneVI_SanzioniInteressi/TotaleDaVersare/TotaleDaVersare_Sanzioni`]:
+      wholeEuros(penaltiesCents),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/ImpostaProporzionale/ImpostaProporzionale_Imponibile`]:
+      wholeEuros(taxablePropertyCents),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/AgevolazioneG/AgevolazioneG_Valore`]:
+      wholeEuros(reliefGValueCents),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/AgevolazioneM/AgevolazioneM_Valore`]:
+      wholeEuros(reliefMValueCents),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/TrustDisab/TrustDisab_Valore`]:
+      wholeEuros(trustValueCents),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/PrimaCasa/AgevolazionePX_Valore`]:
+      wholeEuros(firstHomeValueCents),
+    [`${efPath}/SezioneII_ImpostaCatastale/ImpostaProporzionale/ImpostaProporzionale_Imponibile`]:
+      wholeEuros(taxablePropertyCents),
+    [`${efPath}/SezioneII_ImpostaCatastale/ImpostaCatastaleTrustDisab/ImpostaCatastaleTrustDisab_Valore`]:
+      wholeEuros(trustValueCents),
+    [`${efPath}/SezioneVI_SanzioniInteressi/TotaleDaVersare/TotaleDaVersare_Interessi`]:
+      wholeEuros(interestCents),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/ImpostaProporzionale/ImpostaProporzionale_Imposta`]:
+      wholeEuros(proportionalMortgage),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/AgevolazioneG/AgevolazioneG_Imposta`]:
+      wholeEuros(fixedG),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/AgevolazioneM/AgevolazioneM_Imposta`]:
+      wholeEuros(fixedM),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/TrustDisab/TrustDisab_Imposta`]: wholeEuros(fixedTrust),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/PrimaCasa/PrimaCasa_Imposta`]:
+      wholeEuros(firstHomeFixed),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/ImpostaIpotecariaDovuta`]: wholeEuros(mortgageDue),
+    [`${efPath}/SezioneI_ImpostaIpotecaria/ImpostaIpotecariaDaVersare`]:
+      wholeEuros(mortgagePayable),
+    [`${efPath}/SezioneII_ImpostaCatastale/ImpostaProporzionale/ImpostaProporzionale_Imposta`]:
+      wholeEuros(proportionalCadastral),
+    [`${efPath}/SezioneII_ImpostaCatastale/ImpostaCatastaleFissa`]: wholeEuros(firstHomeFixed),
+    [`${efPath}/SezioneII_ImpostaCatastale/ImpostaCatastaleTrustDisab/ImpostaCatastaleTrustDisab_Imposta`]:
+      wholeEuros(fixedTrust),
+    [`${efPath}/SezioneII_ImpostaCatastale/ImpostaCatastaleDovuta`]: wholeEuros(cadastralDue),
+    [`${efPath}/SezioneII_ImpostaCatastale/ImpostaCatastaleDaVersare`]:
+      wholeEuros(cadastralPayable),
+    [`${efPath}/SezioneIII_TassaIpotecaria/Circoscrizioni_Imposta`]:
+      wholeEuros(mortgageServicesCents),
+    [`${efPath}/SezioneIV_ImpostaBollo/Circoscrizioni_Imposta`]: wholeEuros(stampDutyCents),
+    [`${efPath}/SezioneV_TributiSpeciali/CopiaConforme/CopiaConforme_Importo`]:
+      wholeEuros(specialTaxesCents),
+    [`${efPath}/TotaleDaVersare`]: wholeEuros(
+      mortgagePayable +
+        cadastralPayable +
+        mortgageServicesCents +
+        stampDutyCents +
+        specialTaxesCents +
+        successionAtSubmission +
+        penaltiesCents +
+        interestCents,
+    ),
+    [`${efPath}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/ImpostaDaVersare`]:
+      wholeEuros(successionPayable),
+    [`${efPath}/SezioneVBis_ImpostaSuccessione/ImpostaCalcolata/Imposta`]:
+      wholeEuros(roundedSuccessionTaxCents),
+    ["xsd:/Fornitura/Dichiarazione/Frontespizio/ImportoDaVersare"]: wholeEuros(
+      mortgagePayable +
+        cadastralPayable +
+        mortgageServicesCents +
+        stampDutyCents +
+        specialTaxesCents +
+        successionAtSubmission +
+        penaltiesCents +
+        interestCents,
+    ),
+  };
+  if (jurisdictionCounts.mode === "automatic") {
+    officialFieldValues[`${efPath}/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero`] = String(
+      jurisdictionCounts.mortgage,
+    );
+    officialFieldValues[`${efPath}/SezioneIV_ImpostaBollo/Circoscrizioni_Numero`] = String(
+      jurisdictionCounts.stampDuty,
+    );
+  }
   return {
     assessmentMode,
     estate: {
@@ -741,6 +874,7 @@ export function calculateDeclarationTaxSummary(
     mortgageServicesCents,
     stampDutyCents,
     specialTaxesCents,
+    jurisdictionCounts,
     successionTax: {
       calculatedCents: roundedSuccessionTaxCents,
       alreadyPaidCents: successionAlreadyPaid,
@@ -758,7 +892,8 @@ export function calculateDeclarationTaxSummary(
       successionAtSubmission +
       penaltiesCents +
       interestCents,
-    sourceRefs: ["SRC-07", "SRC-08", "SRC-10", "SRC-13", "SRC-14"],
+    officialFieldValues,
+    sourceRefs: ["SRC-07", "SRC-08", "SRC-10", "SRC-13", "SRC-14", "SRC-39"],
   };
 }
 

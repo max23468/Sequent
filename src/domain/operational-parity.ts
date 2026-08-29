@@ -1,4 +1,6 @@
 import { QUADRI, listQuadroFields, type QuadroId } from "./official-catalog/catalog.ts";
+import officialApplicationEvidence from "./official-catalog/successionionline-field-evidence.json" with { type: "json" };
+import type { DeclarationKind } from "./municipality-conservatory.ts";
 
 export const OPERATIONAL_AREAS = [
   "Panoramica",
@@ -25,9 +27,15 @@ export const OPERATIONAL_SECTION_AREAS = {
 
 export type OperationalSectionId = keyof typeof OPERATIONAL_SECTION_AREAS;
 type OperationalVisibility = "esatta" | "sintetica" | "assente";
-type OperationalEditability = "completa" | "sola-lettura" | "assente";
+type OperationalEditability = "completa" | "sola-lettura" | "contestuale" | "assente";
 type CoverageStatus = "coperto" | "parziale" | "mancante";
-type FieldHandling = "inserito" | "derivato" | "gestito-automaticamente";
+type FieldHandling =
+  | "inserito"
+  | "derivato"
+  | "gestito-automaticamente"
+  | "riservato-ufficio"
+  | "gestione-contestuale";
+type ConcreteFieldHandling = Exclude<FieldHandling, "gestione-contestuale">;
 type SemanticReviewStatus = "qualificata" | "candidata" | "irrisolta";
 type SemanticCategory =
   | "dato-professionale"
@@ -69,12 +77,14 @@ export interface OperationalParityRow {
   };
   semanticCategory: SemanticCategory;
   handling: FieldHandling | null;
+  handlingByDeclarationKind?: Record<DeclarationKind, ConcreteFieldHandling>;
   handlingBasis:
     | "explicit-derived-rule"
     | "official-deterministic-rule"
     | "professional-attestation"
     | "explicit-professional-input"
     | "professional-object-input"
+    | "official-application-behavior"
     | "catalog-default-candidate"
     | "insufficient-official-source";
   semanticReview: ReviewEvidence;
@@ -98,6 +108,21 @@ export interface OperationalParityRow {
 }
 
 type VisibleCatalogField = ReturnType<typeof listQuadroFields>[number];
+
+interface OfficialApplicationFieldEvidence {
+  fieldId: string;
+  recordCode: string;
+  uiControls: string[];
+  reviewedProducer: "professionista" | "automatico" | "riservato-ufficio";
+  producerBasis: string;
+}
+
+const OFFICIAL_APPLICATION_EVIDENCE = new Map(
+  (officialApplicationEvidence.fields as OfficialApplicationFieldEvidence[]).map((evidence) => [
+    evidence.fieldId,
+    evidence,
+  ]),
+);
 
 const ASSET_QUADRI = new Set<QuadroId>([
   "EB",
@@ -184,6 +209,11 @@ function isAmount(field: VisibleCatalogField): boolean {
 
 function hasDeterministicOfficialRule(quadro: QuadroId, field: VisibleCatalogField): boolean {
   if (quadro !== "EE" && quadro !== "EF") return false;
+  if (
+    field.path.endsWith("/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero") ||
+    field.path.endsWith("/SezioneIV_ImpostaBollo/Circoscrizioni_Numero")
+  )
+    return false;
   return /\bdeve essere (?:uguale|pari)\b/.test(officialText(field));
 }
 
@@ -195,6 +225,36 @@ function isUnresolvedEfAmount(quadro: QuadroId, field: VisibleCatalogField): boo
     (field.name === "CreditoImposta" && field.documentation.length === 0) ||
     /_(?:Sanzioni|Interessi)$/.test(field.name)
   );
+}
+
+export function requiresOfficialApplicationEvidence(
+  quadro: QuadroId,
+  field: VisibleCatalogField,
+): boolean {
+  if (field.entryMode === "derived" && field.derivedFrom) return false;
+  if (
+    isServiceField(field) ||
+    isCompiledQuadroBox(field) ||
+    field.path.endsWith("/Frontespizio/ImportoDaVersare") ||
+    isUnresolvedEfAmount(quadro, field)
+  )
+    return true;
+  if (quadro === "EF" && field.name === "ImpostaNonDovuta") return false;
+  if (
+    quadro === "EF" &&
+    (field.path.endsWith("/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero") ||
+      field.path.endsWith("/SezioneIV_ImpostaBollo/Circoscrizioni_Numero"))
+  )
+    return false;
+  if (hasDeterministicOfficialRule(quadro, field) || isSignature(field)) return false;
+  if (
+    quadro === "EF" &&
+    /(?:pu[oò] essere valorizzato|indicare il numero)/.test(officialText(field))
+  )
+    return false;
+  if (isPresenceOrChoice(field)) return true;
+  const scope = field.entityScope ?? "declaration";
+  return scope === "declaration" && quadro !== "EG";
 }
 
 function professionalObject(quadro: QuadroId, path: string): string {
@@ -250,8 +310,8 @@ function candidateDestination(
   if (isServiceField(field))
     return {
       area: "Controlli finali",
-      context: "Dettaglio tecnico di produzione o ricezione, fuori dalla navigazione ordinaria",
-      unresolved: true,
+      context: "Dati prodotti dal software o riservati all’ufficio",
+      unresolved: false,
     };
   if (isSignature(field))
     return {
@@ -380,9 +440,10 @@ function handlingAssessment(
   field: VisibleCatalogField,
 ): Pick<
   OperationalParityRow,
-  "semanticCategory" | "handling" | "handlingBasis" | "semanticReview"
+  "semanticCategory" | "handling" | "handlingByDeclarationKind" | "handlingBasis" | "semanticReview"
 > {
   const provenance = officialProvenance(field);
+  const applicationEvidence = OFFICIAL_APPLICATION_EVIDENCE.get(field.canonicalId);
   if (field.entryMode === "derived" && field.derivedFrom)
     return {
       semanticCategory: "indicatore-derivato",
@@ -395,6 +456,82 @@ function handlingAssessment(
         blocker: null,
       },
     };
+  if (
+    quadro === "EF" &&
+    /(?:pu[oò] essere valorizzato|indicare il numero)/.test(officialText(field))
+  )
+    return {
+      semanticCategory: isAmount(field) ? "importo-professionale" : "dato-professionale",
+      handling: "inserito",
+      handlingBasis: "explicit-professional-input",
+      semanticReview: {
+        status: "qualificata",
+        reason:
+          "La fonte descrive esplicitamente la valorizzazione del dato professionale e i relativi vincoli, senza definirne una formula automatica.",
+        provenance: applicationEvidence
+          ? [
+              ...provenance,
+              `src/domain/official-catalog/successionionline-field-evidence.json#${applicationEvidence.recordCode}`,
+              `SuccessioniOnLine:SUC13:${applicationEvidence.producerBasis}`,
+            ]
+          : provenance,
+        blocker: null,
+      },
+    };
+  if (applicationEvidence) {
+    const applicationProvenance = [
+      ...provenance,
+      `src/domain/official-catalog/successionionline-field-evidence.json#${applicationEvidence.recordCode}`,
+      `SuccessioniOnLine:SUC13:${applicationEvidence.producerBasis}`,
+    ];
+    if (applicationEvidence.reviewedProducer === "riservato-ufficio")
+      return {
+        semanticCategory: "dato-di-servizio",
+        handling: "riservato-ufficio",
+        handlingBasis: "official-application-behavior",
+        semanticReview: {
+          status: "qualificata",
+          reason:
+            "Lo schema e il controllo ufficiale riservano il campo alle dichiarazioni gestite dall’ufficio; Sequent lo conserva e lo mostra in sola lettura, senza produrlo né renderlo modificabile.",
+          provenance: applicationProvenance,
+          blocker: null,
+        },
+      };
+    if (applicationEvidence.reviewedProducer === "automatico")
+      return {
+        semanticCategory: isAmount(field)
+          ? "totale-o-importo-calcolato"
+          : isCompiledQuadroBox(field)
+            ? "casella-di-presenza-o-scelta"
+            : "dato-di-servizio",
+        handling: "gestito-automaticamente",
+        handlingBasis: "official-application-behavior",
+        semanticReview: {
+          status: "qualificata",
+          reason: field.path.endsWith("/IdentificativoProdSoftware")
+            ? "Il valore identifica il software che genera la fornitura ed è prodotto automaticamente da Sequent."
+            : isCompiledQuadroBox(field)
+              ? "Il controllo ufficiale valorizza la casella in modo deterministico dalla presenza del Quadro corrispondente."
+              : "Il controllo ufficiale produce il valore in sola lettura dal medesimo calcolo della liquidazione.",
+          provenance: applicationProvenance,
+          blocker: null,
+        },
+      };
+    return {
+      semanticCategory: isAmount(field) ? "importo-professionale" : "dato-professionale",
+      handling: "inserito",
+      handlingBasis: "official-application-behavior",
+      semanticReview: {
+        status: "qualificata",
+        reason:
+          applicationEvidence.uiControls.length > 0
+            ? "SuccessioniOnLine acquisisce il valore dal professionista tramite un controllo diretto, un wizard o una finestra specializzata; non esiste una formula che lo produca."
+            : "SuccessioniOnLine acquisisce il valore nel flusso professionale specializzato e il controllo ufficiale non applica una formula di produzione automatica.",
+        provenance: applicationProvenance,
+        blocker: null,
+      },
+    };
+  }
   if (isServiceField(field))
     return {
       semanticCategory: "dato-di-servizio",
@@ -467,6 +604,35 @@ function handlingAssessment(
         blocker: null,
       },
     };
+  if (
+    quadro === "EF" &&
+    (field.path.endsWith("/SezioneIII_TassaIpotecaria/Circoscrizioni_Numero") ||
+      field.path.endsWith("/SezioneIV_ImpostaBollo/Circoscrizioni_Numero"))
+  )
+    return {
+      semanticCategory: "dato-professionale",
+      handling: "gestione-contestuale",
+      handlingByDeclarationKind: {
+        first: "gestito-automaticamente",
+        "substitute-1": "inserito",
+        "substitute-2": "gestito-automaticamente",
+        "substitute-3": "gestito-automaticamente",
+      },
+      handlingBasis: "official-deterministic-rule",
+      semanticReview: {
+        status: "qualificata",
+        reason:
+          "Il controllo ufficiale calcola le conservatorie distinte dalla mappa Comune-conservatoria. Nella sostitutiva di tipo 1 il professionista indica il sottoinsieme interessato da nuove trascrizioni, entro il massimo calcolato; negli altri tipi il valore è automatico.",
+        provenance: [
+          ...provenance,
+          "SRC-39:it/finanze/entrate/sco/resources/comuni_conservatorie.res",
+          "SRC-39:it.finanze.entrate.sco.modSUC2013.TassaIpotecaria",
+          "SRC-39:it.finanze.entrate.sco.modSUC2013.ImpostaDiBollo",
+          "src/domain/municipality-conservatory.ts#calculateOfficialJurisdictionCounts",
+        ],
+        blocker: null,
+      },
+    };
   if (hasDeterministicOfficialRule(quadro, field))
     return {
       semanticCategory: "totale-o-importo-calcolato",
@@ -489,22 +655,6 @@ function handlingAssessment(
         status: "qualificata",
         reason:
           "Il campo rappresenta una sottoscrizione o attestazione professionale visibile e non un risultato calcolabile da altri dati.",
-        provenance,
-        blocker: null,
-      },
-    };
-  if (
-    quadro === "EF" &&
-    /(?:pu[oò] essere valorizzato|indicare il numero)/.test(officialText(field))
-  )
-    return {
-      semanticCategory: isAmount(field) ? "importo-professionale" : "dato-professionale",
-      handling: "inserito",
-      handlingBasis: "explicit-professional-input",
-      semanticReview: {
-        status: "qualificata",
-        reason:
-          "La fonte descrive esplicitamente la valorizzazione del dato professionale e i relativi vincoli, senza definirne una formula automatica.",
         provenance,
         blocker: null,
       },
@@ -645,7 +795,9 @@ function currentOperationalCoverage(
       currentEvidence: [
         "src/domain/operational-parity.ts#listOperationalAreaFields",
         "src/lib/components/OperationalFieldGroup.svelte",
+        "src/lib/server/canonical-field-views.ts#saveCanonicalFieldsFromView",
         "src/routes/pratiche/[id]/+page.server.ts#saveFields",
+        "tests/integration/operational-parity-roundtrip.test.ts",
       ],
     };
   if (assessment.handling === "derivato")
@@ -659,14 +811,58 @@ function currentOperationalCoverage(
         "src/domain/operational-parity.ts#listOperationalAreaFields",
         "src/lib/components/OfficialFieldControl.svelte",
         "src/domain/derived-fields.ts#deriveOfficialFieldValue",
+        "tests/integration/operational-parity-roundtrip.test.ts",
+      ],
+    };
+  if (assessment.handling === "gestito-automaticamente")
+    return {
+      operationalVisibility: "esatta",
+      operationalEditability: "sola-lettura",
+      currentCoverage: "coperto",
+      coverageReason:
+        "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
+      currentEvidence: [
+        "src/domain/calculation.ts#calculateDeclarationTaxSummary",
+        "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+        "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
+        "src/lib/components/OfficialFieldControl.svelte",
+        "tests/integration/operational-parity-roundtrip.test.ts",
+      ],
+    };
+  if (assessment.handling === "riservato-ufficio")
+    return {
+      operationalVisibility: "esatta",
+      operationalEditability: "sola-lettura",
+      currentCoverage: "coperto",
+      coverageReason:
+        "Il campo riservato all’ufficio è consultabile dalla fonte canonica in entrambe le viste e non è modificabile né prodotto da Sequent.",
+      currentEvidence: [
+        "src/domain/official-catalog/successionionline-field-evidence.json",
+        "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
+        "src/lib/components/OfficialFieldControl.svelte",
+        "tests/integration/operational-parity-roundtrip.test.ts",
+      ],
+    };
+  if (assessment.handling === "gestione-contestuale")
+    return {
+      operationalVisibility: "esatta",
+      operationalEditability: "contestuale",
+      currentCoverage: "coperto",
+      coverageReason:
+        "Il campo è automatico nelle dichiarazioni ordinarie e nelle sostitutive 2/3; nella sostitutiva 1 è modificabile entro il massimo ufficiale calcolato per le nuove trascrizioni.",
+      currentEvidence: [
+        "src/domain/municipality-conservatory.ts#calculateOfficialJurisdictionCounts",
+        "src/domain/calculation.ts#calculateDeclarationTaxSummary",
+        "src/lib/server/domain.ts#calculateAndStore",
+        "src/lib/server/canonical-field-views.ts",
+        "tests/unit/municipality-conservatory.test.ts",
+        "tests/integration/operational-parity-roundtrip.test.ts",
       ],
     };
   const reason =
     assessment.semanticReview.status === "candidata"
       ? "Il campo canonico è visibile, ma resta in sola lettura nella Vista operativa finché la modalità di compilazione non viene qualificata."
-      : assessment.semanticReview.status === "irrisolta"
-        ? "Il campo canonico è visibile, ma il blocker semantico impedisce di renderlo modificabile nella Vista operativa."
-        : "Il campo canonico è visibile, ma la gestione automatica non è ancora applicata in modo coerente e non modificabile in entrambe le viste.";
+      : "Il campo canonico è visibile, ma il blocker semantico impedisce di renderlo modificabile nella Vista operativa.";
   return {
     operationalVisibility: "esatta",
     operationalEditability: "sola-lettura",
@@ -681,9 +877,40 @@ function currentOperationalCoverage(
 }
 
 export function isOperationalParityEditable(
-  parity: Pick<OperationalParityRow, "handling" | "semanticReview">,
+  parity: Pick<OperationalParityRow, "handling" | "handlingByDeclarationKind" | "semanticReview">,
+  declarationKind?: DeclarationKind,
 ): boolean {
-  return parity.handling === "inserito" && parity.semanticReview.status === "qualificata";
+  const handling = declarationKind
+    ? operationalParityHandlingForDeclaration(parity, declarationKind)
+    : parity.handling;
+  return handling === "inserito" && parity.semanticReview.status === "qualificata";
+}
+
+export function operationalParityHandlingForDeclaration(
+  parity: Pick<OperationalParityRow, "handling" | "handlingByDeclarationKind">,
+  declarationKind: DeclarationKind,
+): ConcreteFieldHandling | null {
+  if (parity.handling !== "gestione-contestuale") return parity.handling;
+  return parity.handlingByDeclarationKind?.[declarationKind] ?? null;
+}
+
+export function isOperationalParityAutomatic(
+  parity: Pick<OperationalParityRow, "handling" | "handlingByDeclarationKind">,
+  declarationKind: DeclarationKind,
+): boolean {
+  return (
+    operationalParityHandlingForDeclaration(parity, declarationKind) === "gestito-automaticamente"
+  );
+}
+
+export function isOperationalParityOfficeReserved(
+  parity: Pick<OperationalParityRow, "handling" | "handlingByDeclarationKind">,
+  declarationKind?: DeclarationKind,
+): boolean {
+  const handling = declarationKind
+    ? operationalParityHandlingForDeclaration(parity, declarationKind)
+    : parity.handling;
+  return handling === "riservato-ufficio";
 }
 
 function requiredParityTests(handling: FieldHandling | null, scope: string): string[] {
@@ -694,6 +921,16 @@ function requiredParityTests(handling: FieldHandling | null, scope: string): str
     return ["stessa-fonte-in-entrambe-le-viste", "sola-lettura-coerente", ...common];
   if (handling === "gestito-automaticamente")
     return ["generazione-automatica-coerente", "sola-lettura-in-entrambe-le-viste", ...common];
+  if (handling === "riservato-ufficio")
+    return ["sola-lettura-in-entrambe-le-viste", "nessuna-produzione-da-sequent", ...common];
+  if (handling === "gestione-contestuale")
+    return [
+      "generazione-automatica-per-tipo-dichiarazione",
+      "input-professionale-sostitutiva-1",
+      "massimo-ufficiale-non-superabile",
+      "sola-lettura-coerente-quando-automatico",
+      ...common,
+    ];
   return [
     "vista-quadri-verso-vista-operativa",
     "vista-operativa-verso-vista-quadri",

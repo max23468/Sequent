@@ -39,6 +39,7 @@ const implementationFiles = execFileSync(
 
 const satelliteExceptions = new Set(["CHANGELOG.md", "docs/MASTER_PLAN.md", "docs/VERSIONING.md"]);
 const generatedImplementationExceptions = new Set([
+  "src/domain/official-catalog/municipality-conservatory-map.json",
   "src/domain/official-catalog/technical-schema.json",
 ]);
 const milestoneIdentifierPattern = /(?<![A-Za-z])M\d+\b|(?:^|[^a-z])m\d+\b/u;

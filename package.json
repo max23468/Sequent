@@ -1,6 +1,6 @@
 {
   "name": "sequent",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "type": "module",
   "scripts": {
@@ -35,6 +35,8 @@
     "verify:sources": "node scripts/official-sources/verify.ts",
     "verify:suc13-control": "node scripts/official-sources/qualify-suc13-control.mjs",
     "generate:facsimile-layout": "node scripts/official-sources/generate-facsimile-layout.mjs",
+    "generate:municipality-conservatory-map": "node scripts/official-sources/generate-municipality-conservatory-map.ts",
+    "generate:successionionline-field-evidence": "node scripts/official-sources/generate-successionionline-field-evidence.ts",
     "generate:operational-parity-map": "node scripts/official-sources/generate-operational-parity-map.ts",
     "render:facsimile-fixture": "node --experimental-strip-types scripts/official-sources/render-facsimile-fixture.ts",
     "diz:compare": "node scripts/diz/compare.ts",
