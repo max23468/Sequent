@@ -83,6 +83,9 @@ export const handle: Handle = async ({ event, resolve }) => {
   const response = await resolve(event, {
     filterSerializedResponseHeaders: (name) => name === "content-type",
   });
-  response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+  response.headers.set(
+    "X-Robots-Tag",
+    "noindex, nofollow, noarchive, nosnippet, noimageindex",
+  );
   return response;
 };
