@@ -1,0 +1,104 @@
+<script lang="ts">
+  import type { PageData } from "../../routes/pratiche/[id]/$types";
+  import { isOperationalParityEditable } from "../../domain/operational-parity";
+  import OfficialFieldControl from "./OfficialFieldControl.svelte";
+
+  type OperationalField = PageData["operationalFields"][number];
+  type OfficialInstruction = OperationalField["instructions"][number];
+
+  let { data, group, actionUrl, returnSection } = $props<{
+    data: PageData;
+    group: {
+      key: string;
+      label: string;
+      context: string;
+      quadro: string;
+      fields: OperationalField[];
+      entityId: string | null;
+      entityMissing: boolean;
+      occurrenceId: string | null;
+      isNewOccurrence: boolean;
+      initiallyOpen: boolean;
+      anchorId: string | null;
+    };
+    actionUrl: string;
+    returnSection: string;
+  }>();
+
+  function isEditable(field: OperationalField): boolean {
+    return isOperationalParityEditable(field.operationalParity);
+  }
+
+  function readOnlyReason(field: OperationalField): string {
+    const review = field.operationalParity.semanticReview;
+    if (review.status === "irrisolta") return review.blocker ?? review.reason;
+    if (review.status === "candidata")
+      return "Consultabile qui; la modalità di compilazione è ancora da qualificare sulle fonti ufficiali.";
+    if (field.operationalParity.handling === "gestito-automaticamente")
+      return "Valore gestito automaticamente dalle regole ufficiali.";
+    if (field.operationalParity.handling === "derivato")
+      return "Valore derivato dagli altri dati della dichiarazione.";
+    return "Valore disponibile in sola lettura.";
+  }
+
+  function editableFields(): OperationalField[] {
+    return group.fields.filter(isEditable);
+  }
+
+  function groupInstructions(): OfficialInstruction[] {
+    const instructions = editableFields().flatMap((field) => field.instructions);
+    return instructions.filter(
+      (instruction, index, all) =>
+        all.findIndex((candidate) => candidate.id === instruction.id) === index,
+    );
+  }
+
+  function saveLabel(): string {
+    if (group.occurrenceId)
+      return group.isNewOccurrence ? "Aggiungi questa posizione" : "Salva questa posizione";
+    if (group.entityId) return "Salva questa scheda";
+    return "Salva questi dati";
+  }
+</script>
+
+<details id={group.anchorId ?? undefined} class="official-fields-group operational-fields-group" open={group.initiallyOpen}>
+  <summary class="operational-fields-summary">
+    <span><strong>{group.label}</strong><small>{group.context}</small></span>
+    <span class="operational-fields-meta">{group.quadro === "Frontespizio" ? "Frontespizio" : `Quadro ${group.quadro}`} · {group.fields.length} campi</span>
+  </summary>
+  {#if group.entityMissing}
+    <p class="qualification-notice" role="status">Crea prima l’oggetto professionale richiesto per compilare questo blocco.</p>
+  {/if}
+  <form method="POST" action={actionUrl}>
+    <input type="hidden" name="declarationId" value={data.declaration.id} />
+    <input type="hidden" name="expectedRevision" value={data.declaration.revision} />
+    <input type="hidden" name="entityId" value={group.entityId ?? ""} />
+    <input type="hidden" name="occurrenceId" value={group.occurrenceId ?? ""} />
+    <input type="hidden" name="quadro" value={group.quadro} />
+    <input type="hidden" name="returnSection" value={returnSection} />
+    {#each group.fields as field (field.canonicalId)}
+      <OfficialFieldControl
+        {data}
+        {field}
+        occurrenceId={group.occurrenceId}
+        entityId={group.entityId}
+        entityMissing={group.entityMissing}
+        readOnly={!isEditable(field)}
+        readOnlyReason={readOnlyReason(field)}
+      />
+    {/each}
+    {#if editableFields().length > 0}
+      {#if groupInstructions().length > 0}
+        <details class="official-instructions">
+          <summary>Indicazioni dell’Agenzia da verificare ({groupInstructions().length})</summary>
+          <ul>{#each groupInstructions() as instruction (instruction.id)}<li>{instruction.instruction}</li>{/each}</ul>
+        </details>
+        <label class="official-confirmation"><input type="checkbox" name="confirmOfficialRules" value="yes" required /><span>Confermo di aver verificato queste indicazioni sui dati del blocco.</span></label>
+      {/if}
+      <div class="official-fields-actions">
+        <button class="button primary" type="submit" disabled={group.entityMissing}>{saveLabel()}</button>
+        <small>Il salvataggio aggiorna gli stessi campi canonici della Vista Quadri.</small>
+      </div>
+    {/if}
+  </form>
+</details>

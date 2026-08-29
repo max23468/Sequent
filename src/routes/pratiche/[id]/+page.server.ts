@@ -50,6 +50,13 @@ import {
   QUADRI,
   type QuadroId,
 } from "../../../domain/official-catalog/catalog.ts";
+import {
+  OPERATIONAL_SECTION_AREAS,
+  isOperationalSectionId,
+  isOperationalParityEditable,
+  listOperationalAreaFields,
+  type OperationalSectionId,
+} from "../../../domain/operational-parity.ts";
 import { validateFieldValue } from "../../../domain/validation.ts";
 import {
   listOfficialAttachments,
@@ -79,6 +86,28 @@ const assetKind = z.enum([
   "donation",
 ]);
 const declarationKind = z.enum(["substitute-1", "substitute-2", "substitute-3"]);
+
+const OPERATIONAL_FIELD_SECTIONS = new Map<string, OperationalSectionId>(
+  (
+    Object.entries(OPERATIONAL_SECTION_AREAS) as Array<
+      [OperationalSectionId, (typeof OPERATIONAL_SECTION_AREAS)[OperationalSectionId]]
+    >
+  ).flatMap(([section, area]) =>
+    listOperationalAreaFields(area).map((field) => [field.canonicalId, section]),
+  ),
+);
+
+function issueOperationalSection(issue: {
+  id: string;
+  fieldId: string | null;
+}): OperationalSectionId | null {
+  if (issue.fieldId) return OPERATIONAL_FIELD_SECTIONS.get(issue.fieldId) ?? null;
+  if (issue.id.startsWith("CHECKLIST_") || issue.id.startsWith("OFFICIAL_ATTACHMENTS_"))
+    return "documents";
+  if (issue.id.startsWith("DEVOLUTION_")) return "devolution";
+  if (issue.id.startsWith("CALCULATION_")) return "taxes";
+  return null;
+}
 
 function euroToCents(value: unknown): bigint | null {
   const normalized = String(value ?? "")
@@ -140,10 +169,19 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
   const quadroFields = listQuadroFields(selectedQuadro).filter(
     (field) => field.visibleFieldId !== null,
   );
+  const requestedSection = url.searchParams.get("sezione") ?? "overview";
+  const operationalArea = isOperationalSectionId(requestedSection)
+    ? OPERATIONAL_SECTION_AREAS[requestedSection]
+    : null;
+  const operationalFields = operationalArea ? listOperationalAreaFields(operationalArea) : [];
   const newOccurrenceIds = Object.fromEntries(
-    [...new Set(quadroFields.map((field) => field.occurrenceGroup).filter(Boolean))].map(
-      (group) => [group, randomUUID()],
-    ),
+    [
+      ...new Set(
+        [...quadroFields, ...operationalFields]
+          .map((field) => field.occurrenceGroup)
+          .filter(Boolean),
+      ),
+    ].map((group) => [group, randomUUID()]),
   );
   return {
     practice,
@@ -175,8 +213,13 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     quadri: listQuadroSummaries(),
     selectedQuadro,
     quadroFields,
+    operationalArea,
+    operationalFields,
     newOccurrenceIds,
-    declarationIssues: complianceReport.issues,
+    declarationIssues: complianceReport.issues.map((issue) => ({
+      ...issue,
+      operationalSection: issueOperationalSection(issue),
+    })),
     declarationReady: complianceReport.ready,
     codexEnabled: isCodexEnabled(),
   };
@@ -373,7 +416,7 @@ export const actions = {
         return fail(409, { domainError: "Il defunto è già presente nella pratica." });
       throw subjectError;
     }
-    redirect(303, `/pratiche/${params.id}?sezione=beneficiaries&dichiarazione=${declarationId}`);
+    redirect(303, `/pratiche/${params.id}?sezione=people&dichiarazione=${declarationId}`);
   },
   addAsset: async ({ locals, params, request }) => {
     if (!locals.ownerId) redirect(303, "/login");
@@ -404,13 +447,14 @@ export const actions = {
         domainError: "Inserisci il valore in euro, usando al massimo due decimali.",
       });
     createSharedAsset(database, params.id, { ...parsed.data, valueCents, declarationId });
-    redirect(303, `/pratiche/${params.id}?sezione=assets&dichiarazione=${declarationId}`);
+    redirect(303, `/pratiche/${params.id}?sezione=estate&dichiarazione=${declarationId}`);
   },
   saveFields: async ({ locals, params, request }) => {
     if (!locals.ownerId) redirect(303, "/login");
     const formData = await request.formData();
     const declarationId = String(formData.get("declarationId") ?? "");
     const fieldIds = formData.getAll("fieldId").map(String);
+    const returnSection = String(formData.get("returnSection") ?? "");
     const entityId = String(formData.get("entityId") ?? "") || null;
     const occurrenceIdValue = String(formData.get("occurrenceId") ?? "") || null;
     const occurrenceId = occurrenceIdValue
@@ -427,6 +471,19 @@ export const actions = {
       return fail(400, {
         fieldError: "Non è stato possibile identificare i dati da salvare.",
       });
+    if (isOperationalSectionId(returnSection)) {
+      const editableFieldIds = new Set(
+        listOperationalAreaFields(OPERATIONAL_SECTION_AREAS[returnSection])
+          .filter((field) => isOperationalParityEditable(field.operationalParity))
+          .map((field) => field.canonicalId),
+      );
+      const unsupportedField = fieldIds.find((fieldId) => !editableFieldIds.has(fieldId));
+      if (unsupportedField)
+        return fail(400, {
+          fieldError:
+            "Questo dato non è modificabile dalla Vista operativa finché la sua modalità di compilazione non viene qualificata.",
+        });
+    }
     try {
       const result = saveCanonicalFields(openDatabase(), {
         practiceId: params.id,
@@ -452,6 +509,11 @@ export const actions = {
       throw saveError;
     }
     const quadro = String(formData.get("quadro") ?? "EA");
+    if (isOperationalSectionId(returnSection))
+      redirect(
+        303,
+        `/pratiche/${params.id}?sezione=${returnSection}&vista=operational&dichiarazione=${declarationId}`,
+      );
     const subjectQuery =
       quadro === "EA" && entityId ? `&soggetto=${encodeURIComponent(entityId)}` : "";
     const assetQuery =
@@ -510,7 +572,7 @@ export const actions = {
         });
       throw checklistError;
     }
-    redirect(303, `/pratiche/${params.id}?sezione=checklist&dichiarazione=${declarationId}`);
+    redirect(303, `/pratiche/${params.id}?sezione=documents&dichiarazione=${declarationId}`);
   },
   saveDevolution: async ({ locals, params, request }) => {
     if (!locals.ownerId) redirect(303, "/login");
@@ -623,7 +685,7 @@ export const actions = {
         });
       throw calculationError;
     }
-    redirect(303, `/pratiche/${params.id}?sezione=calculations&dichiarazione=${declarationId}`);
+    redirect(303, `/pratiche/${params.id}?sezione=taxes&dichiarazione=${declarationId}`);
   },
   confirmCalculation: async ({ locals, params, request }) => {
     if (!locals.ownerId) redirect(303, "/login");
@@ -651,7 +713,7 @@ export const actions = {
     }
     redirect(
       303,
-      `/pratiche/${params.id}?sezione=calculations&dichiarazione=${String(formData.get("declarationId") ?? "")}`,
+      `/pratiche/${params.id}?sezione=taxes&dichiarazione=${String(formData.get("declarationId") ?? "")}`,
     );
   },
   duplicateSubjectEntry: async ({ locals, params, request }) => {

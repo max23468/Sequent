@@ -15,11 +15,11 @@ export async function searchSequent(query: string): Promise<SearchResult[]> {
     ...result,
     href: `/pratiche/${result.practiceId}${
       result.kind === "document"
-        ? `?documento=${result.id}`
+        ? `?sezione=documents&documento=${result.id}`
         : result.kind === "subject"
-          ? "?sezione=beneficiaries"
+          ? "?sezione=people"
           : result.kind === "asset"
-            ? "?sezione=assets"
+            ? "?sezione=estate"
             : ""
     }`,
   }));

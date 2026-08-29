@@ -191,7 +191,7 @@
   color: var(--danger);
 }
 .technical-alert {
-  margin: 16px 0;
+  margin: 16px var(--workspace-content-gutter);
   padding: 15px 16px;
   border: 1px solid var(--danger-line);
   border-radius: 6px;
@@ -312,7 +312,7 @@
   background: var(--surface-soft);
 }
 .app-dialog label,
-.inline-upload label,
+.inline-upload > label,
 .auth-panel label {
   margin-bottom: 7px;
   font-size: 0.83rem;
@@ -501,6 +501,23 @@ input[type="file"] {
   gap: 12px;
   white-space: nowrap;
 }
+.practice-declaration-selector {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.practice-declaration-selector select {
+  min-height: 36px;
+  max-width: 155px;
+  padding: 0 28px 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.78rem;
+}
 .breadcrumbs {
   display: flex;
   min-width: 0;
@@ -582,16 +599,27 @@ input[type="file"] {
 }
 .practice-workspace {
   display: grid;
-  grid-template-columns: minmax(180px, 0.55fr) minmax(360px, 1.25fr) minmax(300px, 1fr);
+  grid-template-columns: minmax(220px, 0.3fr) minmax(0, 1.7fr);
   min-height: 660px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--surface);
   overflow: hidden;
 }
-.workspace-sections,
-.workspace-main {
+
+.workspace-sections {
   border-right: 1px solid var(--line);
+}
+.workspace-sections-toggle {
+  display: none;
+}
+.workspace-main {
+  --workspace-content-gutter: 18px;
+
+  min-width: 0;
+}
+.workspace-inline-support {
+  border-top: 1px solid var(--line-soft);
 }
 .workspace-panel-heading {
   display: flex;
@@ -662,6 +690,7 @@ input[type="file"] {
 }
 .inline-upload > div {
   display: flex;
+  align-items: center;
   gap: 9px;
 }
 .upload-progress {
@@ -1419,7 +1448,10 @@ input[type="file"] {
 }
 .domain-inline-form .button {
   justify-self: start;
+  min-height: 42px;
   margin-top: 16px;
+  padding-inline: 16px;
+  font-size: 0.84rem;
 }
 .domain-entity-list,
 .checks-list {
@@ -1437,6 +1469,23 @@ input[type="file"] {
 .checks-list li > span {
   display: grid;
   gap: 4px;
+}
+.domain-entity-list li > span,
+.checks-list li > span {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.domain-entity-list li > a,
+.checks-list li > a {
+  flex: 0 0 auto;
+  color: var(--teal);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.domain-entity-list li > a:hover,
+.checks-list li > a:hover {
+  text-decoration: underline;
 }
 .domain-entity-list svg,
 .checks-list svg {
@@ -1552,12 +1601,89 @@ input[type="file"] {
 .official-fields {
   padding: 10px 18px 24px;
 }
+.operational-canonical-fields {
+  border-top: 1px solid var(--line);
+}
+.operational-canonical-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 18px 8px;
+}
+.operational-canonical-heading h2 {
+  margin: 0;
+  font-size: 1.08rem;
+}
+.operational-canonical-heading p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.operational-canonical-heading > span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
 .official-fields-group {
   margin-top: 14px;
   padding: 0 16px 18px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 95%, var(--background));
+}
+.operational-fields-group {
+  padding-bottom: 0;
+  scroll-margin-top: 18px;
+}
+.operational-fields-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 2px;
+  cursor: pointer;
+  list-style: none;
+}
+.operational-fields-summary::-webkit-details-marker {
+  display: none;
+}
+.operational-fields-summary > span:first-child {
+  display: grid;
+  gap: 4px;
+}
+.operational-fields-summary strong {
+  font-size: 0.92rem;
+}
+.operational-fields-summary small,
+.operational-fields-meta {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.operational-fields-meta {
+  flex: 0 0 auto;
+  text-align: right;
+}
+.operational-fields-group[open] .operational-fields-summary {
+  border-bottom: 1px solid var(--line-soft);
+}
+.operational-fields-group form {
+  padding-bottom: 18px;
+}
+.operational-fields-group .qualification-notice {
+  margin: 14px 2px 0;
+  padding: 12px 14px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.operational-field-note {
+  align-self: center;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
 }
 .official-fields-group-heading {
   display: flex;
@@ -1683,6 +1809,7 @@ input[type="file"] {
 .checklist-groups {
   display: grid;
   gap: 10px;
+  padding: 18px var(--workspace-content-gutter) 0;
 }
 
 .checklist-row {
@@ -1726,9 +1853,14 @@ input[type="file"] {
 
 .devolution-asset {
   overflow: hidden;
+  margin-inline: var(--workspace-content-gutter);
   border: 1px solid var(--line-soft);
   border-radius: 15px;
   background: var(--surface);
+}
+
+.devolution-form > .devolution-asset:first-of-type {
+  margin-top: 18px;
 }
 
 .devolution-asset > header,
@@ -1770,7 +1902,7 @@ input[type="file"] {
 }
 
 .decision-confirmation {
-  margin-top: 15px;
+  margin: 15px var(--workspace-content-gutter) 24px;
   border: 1px solid color-mix(in srgb, var(--success) 35%, var(--line));
   border-radius: 14px;
   background: color-mix(in srgb, var(--success) 5%, var(--surface));
@@ -1782,7 +1914,7 @@ input[type="file"] {
 }
 
 .calculation-actions {
-  margin-bottom: 16px;
+  margin: 18px var(--workspace-content-gutter) 16px;
   border: 1px solid var(--line-soft);
   border-radius: 14px;
   background: var(--surface);
@@ -1800,6 +1932,7 @@ input[type="file"] {
 
 .calculation-result {
   overflow: hidden;
+  margin: 0 var(--workspace-content-gutter) 24px;
   border: 1px solid var(--line-soft);
   border-radius: 15px;
   background: var(--surface);
@@ -1823,6 +1956,7 @@ input[type="file"] {
 
 .calculation-beneficiary dl div {
   display: flex;
+  min-width: 0;
   justify-content: space-between;
   gap: 15px;
   padding: 8px 0;
@@ -1830,12 +1964,15 @@ input[type="file"] {
 }
 
 .calculation-beneficiary dt {
+  min-width: 0;
   color: var(--muted);
 }
 
 .calculation-beneficiary dd {
+  flex: 0 0 auto;
   margin: 0;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .calculation-totals {
@@ -1903,8 +2040,9 @@ input[type="file"] {
 
 .export-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+  padding: 18px var(--workspace-content-gutter) 24px;
 }
 
 .export-grid article {
@@ -1931,6 +2069,18 @@ input[type="file"] {
 .export-grid p {
   flex: 1;
   color: var(--muted);
+}
+.export-actions {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.export-actions .button {
+  min-height: 42px;
+  padding-inline: 12px;
+  font-size: 0.78rem;
 }
 .official-checkbox-control {
   display: inline-flex;
@@ -1974,6 +2124,10 @@ input[type="file"] {
 .official-fields-actions small {
   color: var(--muted);
   line-height: 1.4;
+}
+.checklist-form > .official-fields-actions,
+.devolution-form > .official-fields-actions {
+  padding: 0 var(--workspace-content-gutter) 18px;
 }
 .official-source-panel {
   padding: 24px 20px;

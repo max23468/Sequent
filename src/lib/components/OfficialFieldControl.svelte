@@ -4,14 +4,26 @@
 
   type QuadroField = PageData["quadroFields"][number];
 
-  let { data, field, occurrenceId, entityMissing } = $props<{
+  let {
+    data,
+    field,
+    occurrenceId,
+    entityMissing,
+    entityId: entityIdOverride = undefined,
+    readOnly = false,
+    readOnlyReason = "",
+  } = $props<{
     data: PageData;
     field: QuadroField;
     occurrenceId: string | null;
     entityMissing: boolean;
+    entityId?: string | null;
+    readOnly?: boolean;
+    readOnlyReason?: string;
   }>();
 
   function fieldEntityId(): string | null {
+    if (entityIdOverride !== undefined) return entityIdOverride;
     if (field.entityScope === "decedent") return data.selectedDecedent?.id ?? null;
     if (field.entityScope === "subject") return data.selectedSubject?.id ?? null;
     if (field.entityScope === "asset") return data.selectedAsset?.id ?? null;
@@ -61,15 +73,18 @@
 
   const largeOptionList = $derived(field.options.length > 80);
   const controlId = $derived(
-    `field-${field.canonicalId}${occurrenceId ? `-${occurrenceId}` : ""}`,
+    `field-${field.canonicalId}${fieldEntityId() ? `-${fieldEntityId()}` : ""}${occurrenceId ? `-${occurrenceId}` : ""}`,
   );
 </script>
 
 <div class="official-field">
-  {#if field.entryMode !== "derived"}<input type="hidden" name="fieldId" value={field.canonicalId} />{/if}
+  {#if field.entryMode !== "derived" && !readOnly}<input type="hidden" name="fieldId" value={field.canonicalId} />{/if}
   <label for={controlId}>{#if field.visibleNumber}<span>{field.visibleNumber}</span>{/if}{field.label}</label>
   <div>
-    {#if field.entryMode === "derived"}
+    {#if readOnly}
+      <output class="official-derived-value" id={controlId}>{fieldValue() === "" ? "Non indicato" : displayedFieldValue()}</output>
+      {#if readOnlyReason}<small class="operational-field-note">{readOnlyReason}</small>{/if}
+    {:else if field.entryMode === "derived"}
       <output class="official-derived-value" id={controlId}>{displayedFieldValue()}</output>
     {:else if field.control === "checkbox"}
       <label class="official-checkbox-control" for={controlId}><input type="hidden" name={`value:${field.canonicalId}`} value={uncheckedValue()} disabled={entityMissing} /><input id={controlId} type="checkbox" name={`value:${field.canonicalId}`} value="1" checked={fieldValue() === "1"} disabled={entityMissing} /><span>Sì</span></label>

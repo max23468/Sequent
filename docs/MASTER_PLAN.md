@@ -648,19 +648,14 @@ La vista per quadri usa denominazioni, ordine, sezioni, numerazione dei campi e 
 
 - Panoramica;
 - Documenti;
-- Defunto e dichiarazione;
-- Beneficiari;
-- Immobili;
-- Rapporti finanziari;
-- Altri beni;
-- Passività;
-- Donazioni;
+- Persone;
+- Patrimonio;
 - Devoluzione;
-- Agevolazioni e volture;
-- Controlli;
-- Esportazioni e invii;
-- Scadenze essenziali;
-- Cronologia e storico.
+- Imposte e pagamenti;
+- Controlli finali;
+- Riepilogo finale.
+
+Le otto aree sono destinazioni professionali dei medesimi campi canonici mostrati nella Vista Quadri. `Persone` comprende defunto, beneficiari, presentatori e altri soggetti; `Patrimonio` usa schede tipizzate per immobili, rapporti, aziende, altri beni e passività. La dichiarazione selezionata è contesto della pratica, non una sezione: il cambio e la creazione di una dichiarazione successiva restano disponibili dalla Panoramica e dalle azioni contestuali. `Da verificare` compare soltanto in presenza di elementi pendenti; scadenze e cronologia restano superfici trasversali o secondarie. Documenti richiesti e allegati sono riuniti in `Documenti`.
 
 ---
 
