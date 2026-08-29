@@ -2896,7 +2896,7 @@ Ogni PR esegue gate proporzionati, determinati dalla diff con fallback conservat
 
 Un check aggregatore sempre presente verifica che tutti e soltanto i job richiesti dalla classificazione siano verdi. Un file non classificato, una diff vuota inattesa, un job cancellato o un output mancante falliscono chiusi. La classificazione decide quali suite aggiungere, non può trasformare un finding o un errore reale in advisory.
 
-Svelte Doctor gira una sola volta nelle PR ordinarie e sensibili. Browser e immagine ARM64 sono obbligatori quando la diff tocca i relativi confini; la release esegue sempre entrambi. Prima della release resta obbligatoria la suite completa.
+Svelte Doctor gira una sola volta nelle PR ordinarie e sensibili. Chromium e WebKit girano in job isolati e paralleli dentro un'immagine Playwright fissata per digest. Browser e immagine ARM64 sono obbligatori quando la diff tocca i relativi confini; la release esegue sempre entrambi. Prima della release resta obbligatoria la suite completa, ma una candidata può riusare l'evidenza verde dell'HEAD della PR quando lo squash produce lo stesso albero Git. Il push dello squash su `main` non ripete i job pesanti già coperti dalla PR e dalla candidata.
 
 ## 46.4 Release e attivazione
 
@@ -3262,9 +3262,9 @@ Le release seguono `MAJOR.MINOR.PATCH`: major per cambiamenti incompatibili deli
 
 Il checkout `/opt/sequent/repo/` può contenere branch e modifiche in corso senza influire sul servizio. Una candidata nasce dopo merge su `main`, supera i gate e diventa la release attiva soltanto dentro un ciclo tecnico approvato dall'owner. La richiesta affermativa `Pubblica` costituisce tale approvazione per gli aggiornamenti di un runtime già attivo; la prima attivazione richiede invece un'autorizzazione esplicita separata.
 
-La pubblicazione può essere orchestrata da un comando unico che verifica branch, working tree, classificazione, preflight locale, PR, required checks, squash merge, identità dell'albero Git, eliminazione del branch e rilettura finale. Il comando resta in dry-run senza l'opzione esplicita di esecuzione. Con `--execute`, usato soltanto dopo `Pubblica`, completa anche la candidata per le modifiche runtime e il deploy/readback quando rileva una Production già attiva e il relativo workflow qualificato. Modifiche esclusivamente documentali, di test o di governance non producono immagini, release o deploy.
+La pubblicazione può essere orchestrata da un comando unico che verifica branch, working tree, classificazione, preflight locale, PR, required checks, squash merge, identità dell'albero Git, eliminazione del branch e rilettura finale. Il preflight exact-HEAD può produrre una ricevuta locale esterna alla working tree, legata a commit, tree, lockfile, toolchain, piattaforma e comandi ed è riusabile soltanto entro una finestra breve. Il comando resta in dry-run senza l'opzione esplicita di esecuzione. Con `--execute`, usato soltanto dopo `Pubblica`, completa anche la candidata per le modifiche runtime e il deploy/readback quando rileva una Production già attiva e il relativo workflow qualificato. Dopo il merge e prima di ogni dispatch rilegge la Production attiva o riuscita e ricalcola il diff operativo, attendendo una distribuzione concorrente quando questo evita una candidata ridondante. Modifiche esclusivamente documentali, di test o di governance non producono immagini, release o deploy.
 
-L'impatto runtime viene valutato in modo conservativo. Un percorso sconosciuto presume impatto runtime; il diff operativo della distribuzione parte dall'ultima release attiva verificata, così più merge runtime correlati vengono distribuiti insieme una sola volta. Versione e changelog, quando richiesti, sono completati nella stessa pull request della modifica runtime.
+L'impatto runtime viene valutato in modo conservativo. Un percorso sconosciuto presume impatto runtime; il diff operativo della distribuzione parte dall'ultima release attiva verificata, così più merge runtime correlati vengono distribuiti insieme una sola volta. Un cambiamento a `package.json` e `package-lock.json` viene escluso dai gate ARM64 soltanto quando il confronto strutturale prova che sono cambiati esclusivamente i campi di versione. Versione e changelog, quando richiesti, sono completati nella stessa pull request della modifica runtime.
 
 È vietato:
 
@@ -3292,7 +3292,7 @@ Restano confermati i gate rigorosi già scelti:
 
 L'accessibilità viene verificata sui requisiti pratici definiti in «Brand, UI, accessibilità e localizzazione», senza audit WCAG formale separato.
 
-La candidata pubblica costruisce l'immagine ARM64 una sola volta. Un manifest lega commit, albero Git, piattaforma, image ID, nome dell'archivio e SHA-256; un job separato scarica lo stesso archivio, ne verifica manifest e digest e carica l'immagine senza ricostruirla. L'artefatto verificato può essere selezionato dal successivo deploy approvato finché resta disponibile. Una divergenza qualunque obbliga a ricostruire e ricertificare la candidata.
+La candidata pubblica costruisce l'immagine ARM64 una sola volta. Lo stesso job prova il runtime, crea un archivio esclusivamente temporaneo per la scansione locale, lo elimina, pubblica l'immagine su GHCR e ne esegue il readback per riferimento immutabile. Un piccolo manifest lega versione, commit, albero Git, piattaforma e digest GHCR; solo il manifest passa alla Production. Una divergenza qualunque obbliga a ricostruire e ricertificare la candidata.
 
 ## 52.4 Preflight sulle modifiche rischiose
 
@@ -3314,7 +3314,7 @@ Dopo approvazione:
 3. attiva una breve modalità manutenzione e blocca nuove mutazioni;
 4. attende o interrompe in sicurezza il job attivo;
 5. crea lo snapshot tecnico previsto;
-6. esegue pull, migrazioni e aggiornamento del servizio `sequent`;
+6. esegue il pull del digest GHCR prima della manutenzione, poi migrazioni e aggiornamento del servizio `sequent`;
 7. esegue health check e smoke test;
 8. riapre l'applicazione;
 9. ripristina immagine e snapshot precedenti se uno dei controlli fallisce.
@@ -3323,7 +3323,7 @@ Non è richiesto zero downtime. Non viene creato un evidence pack formale per og
 
 ## 52.6 Aggiornamenti automatici
 
-Una release stabile approvata viene distribuita senza SSH manuale. `Pubblica` autorizza la distribuzione tecnica applicabile di una modifica runtime su un'istanza già attiva, ma non esiste auto-pubblicazione a ogni merge e una PR documentale, di test o di governance non avvia il deploy. Non esiste promozione Development → Production: si sostituisce soltanto la release attiva dell'unica istanza. La prima attivazione resta separata.
+Una release stabile approvata viene distribuita senza SSH manuale. Dopo il readback Production riuscito l'orchestratore crea e rilegge automaticamente tag e GitHub Release della versione candidata. La pulizia Docker ordinaria resta fuori dal percorso critico ed è demandata al timer selettivo; soltanto un deploy annullato tenta una pulizia immediata di recupero. `Pubblica` autorizza la distribuzione tecnica applicabile di una modifica runtime su un'istanza già attiva, ma non esiste auto-pubblicazione a ogni merge e una PR documentale, di test o di governance non avvia il deploy. Non esiste promozione Development → Production: si sostituisce soltanto la release attiva dell'unica istanza. La prima attivazione resta separata.
 
 ## 52.7 Dipendenze
 

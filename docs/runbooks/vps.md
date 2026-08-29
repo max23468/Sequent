@@ -130,9 +130,9 @@ L’installazione operativa colloca lo script root-owned in `/usr/local/sbin/seq
 
 La migrazione della distribuzione del container non modifica schema o dati. Il rollback deve quindi selezionare la candidata ARM64 precedente già qualificata, senza ricostruirla e senza down migration:
 
-1. identificare SHA precedente, archivio ARM64 e relativo `release-manifest.json` nel registro delle release approvate;
-2. eseguire `scripts/github/release-artifact.mjs verify` sull'archivio e sul manifest prima del caricamento;
-3. caricare l'archivio verificato e rileggere image ID, piattaforma, label OCI del commit e digest dichiarati dal manifest;
+1. identificare SHA precedente, riferimento GHCR immutabile e relativo `release-manifest.json` nel registro delle release approvate;
+2. eseguire `scripts/github/release-artifact.mjs verify` sul manifest e rileggere il digest dal registry;
+3. eseguire il pull del riferimento verificato e rileggere image ID, piattaforma e label OCI del commit dichiarati dal manifest;
 4. durante una finestra di deploy separatamente autorizzata, puntare il Compose al digest precedente senza modificare i volumi dati;
 5. verificare health, commit, image ID, digest, Node, npm e converter dopo il riavvio;
 6. se il readback diverge, lasciare il servizio fermo e investigare senza ricostruire o sostituire l'artefatto di rollback.

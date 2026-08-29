@@ -10,7 +10,7 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /^name: Production$/m);
   assert.match(workflow, /^run-name: Production \$\{\{ inputs\.commit \}\}$/m);
   assert.doesNotMatch(workflow, /^run-name:.*release_run/m);
-  assert.match(workflow, /permissions:\n  actions: read\n  contents: read\n  deployments: write/);
+  assert.match(workflow, /permissions:\n  actions: read\n  contents: write\n  deployments: write/);
   assert.match(workflow, /environment: Production/);
   assert.match(workflow, /cancel-in-progress: false/);
   assert.match(workflow, /test .*\.head_sha.*CANDIDATE_COMMIT/);
@@ -22,12 +22,14 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /candidate_tree=.*git rev-parse.*CANDIDATE_COMMIT.*\^\{tree\}/);
   assert.match(workflow, /--commit "\$CANDIDATE_COMMIT"/);
   assert.match(workflow, /--tree "\$candidate_tree"/);
-  assert.match(workflow, /archive_sha256=.*sha256sum/);
   assert.match(workflow, /manifest_sha256=.*sha256sum/);
   assert.match(workflow, /launcher_sha256=.*run-trusted-deploy\.sh/);
-  assert.match(workflow, /--archive-sha256 '\$archive_sha256'/);
+  assert.match(workflow, /--image-ref '\$image_ref'/);
+  assert.match(workflow, /--docker-config '\$docker_config'/);
   assert.match(workflow, /--manifest-sha256 '\$manifest_sha256'/);
   assert.match(workflow, /task: "sequent-production"/);
+  assert.match(workflow, /name: Crea e rilegge tag e GitHub Release/);
+  assert.match(workflow, /release\.mjs --commit "\$CANDIDATE_COMMIT"/);
   assert.match(
     workflow,
     /printf '%s\\n' "\$deployment_id" >"\$RUNNER_TEMP\/sequent-deployment-id"/,
@@ -37,28 +39,14 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /install -o root -g root -m 0600.*run-trusted-deploy\.sh/);
   assert.match(workflow, /sha256sum --check --strict/);
   assert.match(workflow, /install -o root -g root -m 0755.*sequent-run-trusted-deploy/);
-  assert.match(workflow, /name: Pulisce le immagini dopo il deploy/);
-  assert.match(workflow, /if: success\(\)/);
-  assert.match(workflow, /if ! ssh -i "\$RUNNER_TEMP\/sequent-ssh\/key"/);
-  assert.match(workflow, /if \[ -e \/usr\/local\/sbin\/sequent-prune-docker-images \]; then/);
-  assert.match(
-    workflow,
-    /stat -c '%U:%G:%a' \/usr\/local\/sbin\/sequent-prune-docker-images.*root:root:755/,
-  );
-  assert.match(
-    workflow,
-    /sudo \/usr\/local\/sbin\/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0/,
-  );
+  assert.doesNotMatch(workflow, /name: Pulisce le immagini dopo il deploy/);
+  assert.match(workflow, /SEQUENT_GHCR_USERNAME/);
+  assert.match(workflow, /SEQUENT_GHCR_TOKEN/);
+  assert.match(workflow, /docker login ghcr\.io.*--password-stdin/);
   assert.ok(
     workflow.indexOf("sha256sum --check --strict") <
       workflow.indexOf("sudo /usr/local/sbin/sequent-run-trusted-deploy --commit"),
   );
-  const postdeployCleanup = workflow.indexOf(
-    "sudo /usr/local/sbin/sequent-prune-docker-images --minimum-age-hours 0",
-  );
-  assert.ok(workflow.indexOf("deployment_status success") < postdeployCleanup);
-  assert.ok(workflow.indexOf('scp "${ssh_options[@]}" release-artifact') < postdeployCleanup);
-  assert.match(workflow, /::warning title=Pulizia immagini differita::Il deploy resta valido/);
   assert.match(workflow, /name: Finalizza il tentativo di deployment/);
   assert.match(workflow, /JOB_STATUS: \$\{\{ job\.status \}\}/);
   assert.match(workflow, /if: always\(\)/);
@@ -66,19 +54,14 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /success\|failure\|error\|inactive/);
   assert.match(workflow, /state: "failure"/);
   assert.match(workflow, /if \[\[ "\$JOB_STATUS" == cancelled \]\]/);
-  assert.match(workflow, /for attempt in \{1\.\.12\}/);
-  assert.match(workflow, /\(\(attempt == 12\)\) \|\| sleep 5/);
   assert.match(workflow, /::warning title=Pulizia dopo annullamento differita::/);
   const cancellationCleanup = workflow.indexOf('if [[ "$JOB_STATUS" == cancelled ]]');
-  assert.ok(cancellationCleanup > postdeployCleanup);
+  assert.ok(cancellationCleanup > workflow.indexOf("deployment_status success"));
   assert.match(
     workflow.slice(cancellationCleanup),
     /sudo \/usr\/local\/sbin\/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0/,
   );
-  assert.doesNotMatch(
-    workflow.slice(0, workflow.indexOf('scp "${ssh_options[@]}" release-artifact')),
-    /sequent-prune-docker-images/,
-  );
+  assert.doesNotMatch(workflow.slice(0, cancellationCleanup), /sequent-prune-docker-images/);
   assert.doesNotMatch(workflow, /sudo \/opt\/sequent\/repo\/scripts/);
   assert.doesNotMatch(workflow, /docker build|continue-on-error/);
 });
@@ -109,7 +92,7 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /root:ubuntu:750/);
   assert.ok(
     deploy.indexOf('repository="${SEQUENT_TRUSTED_REPOSITORY:-}"') <
-      deploy.indexOf('for input in "$archive" "$manifest"'),
+      deploy.indexOf('[[ "$manifest" == "$repository/"* ]]'),
   );
   assert.match(deploy, /mktemp \/run\/sequent-rollback-compose\./);
   assert.match(deploy, /show "\$previous_commit:deploy\/compose\.example\.yml"/);
@@ -130,24 +113,16 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.doesNotMatch(deploy, /source "\$runtime_env"/);
   assert.match(deploy, /SEQUENT_DEPLOY_MAX_DISK_PERCENT:-79/);
   assert.match(deploy, /SEQUENT_RELEASE_RETENTION_COUNT:-2/);
-  assert.match(
-    deploy,
-    /required_bytes=\$\(\(2 \* archive_bytes \+ 2 \* data_bytes \+ safety_bytes\)\)/,
-  );
+  assert.match(deploy, /required_bytes=\$\(\(2 \* data_bytes \+ safety_bytes\)\)/);
   assert.match(deploy, /available_bytes >= required_bytes/);
   assert.match(deploy, /schema manifest non valido/);
   assert.match(deploy, /commit manifest divergente/);
   assert.match(deploy, /tree manifest divergente/);
-  assert.match(deploy, /artifact_image_id=.*artifact_identity\[5\]/);
-  assert.match(deploy, /image ID artefatto non valido/);
-  assert.match(deploy, /docker ps --all --quiet --filter "ancestor=\$candidate_tag"/);
-  assert.match(deploy, /docker image rm "\$candidate_tag"/);
-  assert.match(deploy, /candidate_image_id=.*docker image inspect.*\$candidate_tag/s);
+  assert.match(deploy, /riferimento manifest divergente/);
+  assert.match(deploy, /digest manifest divergente/);
+  assert.match(deploy, /docker pull --platform linux\/arm64 "\$image_ref"/);
+  assert.match(deploy, /candidate_image_id=.*docker image inspect.*\$image_ref/s);
   assert.match(deploy, /image ID runtime candidato non valido/);
-  assert.ok(
-    deploy.indexOf('docker image rm "$candidate_tag"') <
-      deploy.indexOf('docker load --input "$archive"'),
-  );
   assert.match(deploy, /migration-\$commit/);
   assert.match(deploy, /source\.backup\(destination\)/);
   assert.match(deploy, /PRAGMA quick_check/);
@@ -206,7 +181,10 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
     'write_trusted_runtime_env "$previous_runtime_image"',
     previousImage,
   );
-  const artifactLoad = deploy.indexOf('docker load --input "$archive"', immutableRollbackEnv);
+  const artifactLoad = deploy.indexOf(
+    'docker pull --platform linux/arm64 "$image_ref"',
+    immutableRollbackEnv,
+  );
   assert.ok(
     previousImage >= 0 &&
       previousImage < immutableRollbackEnv &&
@@ -260,11 +238,13 @@ test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {
   assert.match(launcher, /migrate_layout_directory "\$root\/releases" 750 750/);
   assert.match(launcher, /migrate_layout_directory "\$root\/snapshots" 700 700/);
   assert.match(launcher, /layout preesistente non qualificato/);
-  assert.match(launcher, /--archive-sha256/);
+  assert.match(launcher, /--image-ref/);
+  assert.match(launcher, /--docker-config/);
   assert.match(launcher, /--manifest-sha256/);
-  assert.match(launcher, /sha256sum "\$trusted_archive"/);
   assert.match(launcher, /sha256sum "\$trusted_manifest"/);
-  assert.match(launcher, /install -o root -g root -m 0600 "\$archive" "\$trusted_archive"/);
+  assert.match(launcher, /configurazione registry non valida/);
+  assert.match(launcher, /root:root:700/);
+  assert.match(launcher, /root:root:600/);
   assert.match(launcher, /chown -R root:root "\$trusted_source"/);
   assert.match(
     launcher,
@@ -303,8 +283,7 @@ test("il deploy trusted non esegue Git come root", () => {
   assert.doesNotMatch(deploy, /^\s*git -C/m);
   assert.doesNotMatch(deploy, /with-node\.sh|SEQUENT_NODE_SLOT/);
   assert.match(deploy, /\/usr\/bin\/python3 - "\$manifest"/);
-  assert.match(deploy, /sha256sum "\$archive"/);
-  assert.match(deploy, /docker load --input "\$archive"/);
+  assert.match(deploy, /docker pull --platform linux\/arm64 "\$image_ref"/);
   const artifact = read("scripts/github/release-artifact.mjs");
   const verify = artifact.slice(artifact.indexOf("async function verify"));
   assert.match(verify, /commit: value\(args, "--commit"\)/);

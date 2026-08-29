@@ -96,12 +96,10 @@ test("le azioni cache e artifact usano linee basate su Node 24", () => {
   const ci = read(".github/workflows/ci.yml");
   const release = read(".github/workflows/release-candidate.yml");
 
-  assert.match(ci, /actions\/cache@[0-9a-f]{40} # v(?:[6-9]|\d{2,})\./);
+  assert.doesNotMatch(ci, /actions\/cache@/);
   assert.match(release, /actions\/upload-artifact@[0-9a-f]{40} # v(?:[7-9]|\d{2,})\./);
-  assert.equal(
-    release.match(/actions\/download-artifact@[0-9a-f]{40} # v(?:[8-9]|\d{2,})\./g)?.length,
-    2,
-  );
+  assert.doesNotMatch(release, /actions\/download-artifact@/);
+  assert.match(ci, /mcr\.microsoft\.com\/playwright:v1\.62\.1-noble@sha256:[0-9a-f]{64}/);
 });
 
 test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", () => {

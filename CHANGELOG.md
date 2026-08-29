@@ -4,6 +4,21 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.1.8
+
+### Changed
+
+- pubblicazione end-to-end accelerata con immagine ARM64 su GHCR per digest, manifest leggero e pull diretto sulla VPS;
+- Chromium e WebKit eseguiti in parallelo e in ambienti isolati fissati per digest;
+- preflight locale exact-HEAD riusabile tramite ricevuta esterna legata a tree, lockfile, toolchain e comandi;
+- classificazione operativa ricalcolata dopo il merge e dopo eventuali Production concorrenti, evitando candidate ridondanti;
+- scansione dell'immagine eseguita nello stesso job ARM64 che la produce, prima della pubblicazione;
+- tag e GitHub Release creati e riletti automaticamente dopo un deploy riuscito;
+- suite pubblica della PR riusata dalla candidata solo a parità di albero Git e gate richiesti verdi;
+- job pesanti non ripetuti sul push dello squash a `main`;
+- bump di sola versione escluso dai gate ARM64 quando il confronto strutturale dei package file lo prova;
+- pulizia Docker ordinaria rimossa dal percorso critico e demandata al timer selettivo.
+
 ## 0.1.7
 
 ### Changed

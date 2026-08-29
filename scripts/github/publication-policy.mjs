@@ -24,12 +24,14 @@ const BROWSER = [
   /^(?:playwright\.config\.ts|svelte\.config\.js|vite\.config\.ts)$/,
 ];
 
+const PACKAGE_METADATA = /^(?:package|package-lock)\.json$/;
+
 const ARM64 = [
   /^Dockerfile$/,
   /^requirements-ocr\.txt$/,
   /^deploy\//,
   /^scripts\/vps\//,
-  /^(?:package|package-lock)\.json$/,
+  PACKAGE_METADATA,
   /^src\/lib\/server\/(?:document-ingestion|launchers)\.ts$/,
   /^tests\/(?:integration\/document-ingestion|unit\/launchers|vps\/)/,
 ];
@@ -66,7 +68,7 @@ const DOCUMENTS = [
   /^tests\/(?:integration\/document-ingestion|unit\/launchers)\.test\.ts$/,
   /^scripts\/benchmark\//,
 ];
-const GOVERNANCE = [/^\.github\/workflows\//, /^scripts\/github\//, /^package(?:-lock)?\.json$/];
+const GOVERNANCE = [/^\.github\/workflows\//, /^scripts\/github\//, PACKAGE_METADATA];
 
 const TEST_ONLY = [/^tests\//, /(?:^|\.)test\.[cm]?[jt]sx?$/, /^playwright\.config\.ts$/];
 
@@ -92,34 +94,39 @@ const KNOWN_NON_RUNTIME = [
   /^(?:CONTRIBUTING\.md|\.dockerignore|\.gitignore|svelte-doctor\.config\.json)$/,
 ];
 
-export function classifyChangedFiles(files, { release = false } = {}) {
+export function classifyChangedFiles(files, { release = false, packageMetadataOnly = false } = {}) {
   const normalized = [
     ...new Set(files.filter(Boolean).map((file) => file.replace(/^\.\//, ""))),
   ].sort();
+  const materialFiles = packageMetadataOnly
+    ? normalized.filter((file) => !PACKAGE_METADATA.test(file))
+    : normalized;
   const capabilities = {
-    arm64: matchesAny(normalized, ARM64),
-    browser: matchesAny(normalized, BROWSER),
-    compliance: matchesAny(normalized, COMPLIANCE),
-    diz: matchesAny(normalized, DIZ),
-    documents: matchesAny(normalized, DOCUMENTS),
-    persistence: matchesAny(normalized, PERSISTENCE),
-    security: matchesAny(normalized, SECURITY),
+    arm64: matchesAny(materialFiles, ARM64),
+    browser: matchesAny(materialFiles, BROWSER),
+    compliance: matchesAny(materialFiles, COMPLIANCE),
+    diz: matchesAny(materialFiles, DIZ),
+    documents: matchesAny(materialFiles, DOCUMENTS),
+    persistence: matchesAny(materialFiles, PERSISTENCE),
+    security: matchesAny(materialFiles, SECURITY),
   };
   const unknown = normalized.filter(
     (file) => !matches(file, RUNTIME) && !matches(file, KNOWN_NON_RUNTIME),
   );
   const rapid = normalized.length > 0 && normalized.every((file) => matches(file, RAPID_ONLY));
   const sensitive =
-    matchesAny(normalized, GOVERNANCE) ||
+    matchesAny(materialFiles, GOVERNANCE) ||
     Object.values(capabilities).some(Boolean) ||
     normalized.length === 0 ||
     unknown.length > 0;
-  const runtime = normalized.length === 0 || matchesAny(normalized, RUNTIME) || unknown.length > 0;
+  const runtime =
+    normalized.length === 0 || matchesAny(materialFiles, RUNTIME) || unknown.length > 0;
   const level = release ? "release" : rapid ? "rapid" : sensitive ? "sensitive" : "ordinary";
 
   return {
     level,
     files: normalized,
+    packageMetadataOnly,
     unknown,
     runtime,
     ...capabilities,
@@ -132,6 +139,49 @@ export function classifyChangedFiles(files, { release = false } = {}) {
       capabilities.security,
     runFull: release,
   };
+}
+
+function stripVersionMetadata(file, value) {
+  const normalized = structuredClone(value);
+  if (file === "package.json") delete normalized.version;
+  if (file === "package-lock.json") {
+    delete normalized.version;
+    if (normalized.packages?.[""]) delete normalized.packages[""].version;
+  }
+  return normalized;
+}
+
+export function packageChangesAreVersionOnly(base, head = "HEAD", readBlob = gitBlob) {
+  for (const file of ["package.json", "package-lock.json"]) {
+    let before;
+    let after;
+    try {
+      before = JSON.parse(readBlob(base, file));
+      after = JSON.parse(readBlob(head, file));
+    } catch {
+      return false;
+    }
+    if (
+      JSON.stringify(stripVersionMetadata(file, before)) !==
+      JSON.stringify(stripVersionMetadata(file, after))
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function gitBlob(revision, file) {
+  return execFileSync("git", ["show", `${revision}:${file}`], { encoding: "utf8" });
+}
+
+export function classifyRevisionRange(base, head = "HEAD", { release = false } = {}) {
+  const files = changedFiles(base, head);
+  const packageChanged = files.some((file) => PACKAGE_METADATA.test(file));
+  return classifyChangedFiles(files, {
+    release,
+    packageMetadataOnly: packageChanged && packageChangesAreVersionOnly(base, head),
+  });
 }
 
 function matchesAny(files, patterns) {
@@ -193,9 +243,7 @@ function main() {
   const headIndex = args.indexOf("--head");
   const base = baseIndex >= 0 ? args[baseIndex + 1] : "origin/main";
   const head = headIndex >= 0 ? args[headIndex + 1] : "HEAD";
-  const classification = classifyChangedFiles(changedFiles(base, head), {
-    release: args.includes("--release"),
-  });
+  const classification = classifyRevisionRange(base, head, { release: args.includes("--release") });
   const outputs = githubOutputs(classification);
 
   if (process.env.GITHUB_OUTPUT) {

@@ -3,6 +3,13 @@
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
+export const REUSED_PR_CHECKS = [
+  "Foundation",
+  "Dependency review",
+  "Analyze (javascript-typescript)",
+  "PR gate",
+];
+
 function output(command, args) {
   return execFileSync(command, args, { encoding: "utf8" }).trim();
 }
@@ -17,6 +24,7 @@ export function validateReleaseReview({
   pulls,
   reviewedHead,
   reviewedTree,
+  statusCheckRollup = [],
 }) {
   const associated = pulls.filter(
     (pull) => pull.merged_at && pull.merge_commit_sha === candidateCommit,
@@ -30,8 +38,27 @@ export function validateReleaseReview({
   if (reviewedTree !== candidateTree) {
     throw new Error("L'albero della candidata diverge dall'HEAD approvato");
   }
+  const states = new Map(
+    statusCheckRollup.map((check) => [
+      check.name ?? check.context,
+      check.conclusion ?? check.state,
+    ]),
+  );
+  const invalidChecks = REUSED_PR_CHECKS.filter(
+    (name) => !["SUCCESS", "SKIPPED"].includes(states.get(name)),
+  );
+  if (invalidChecks.length) {
+    throw new Error(`Evidenza PR assente o non riuscita: ${invalidChecks.join(", ")}`);
+  }
 
-  return { pullRequest: pull.number, reviewedHead, candidateCommit, candidateTree };
+  return {
+    schema: "sequent-release-review/v1",
+    pullRequest: pull.number,
+    reviewedHead,
+    candidateCommit,
+    candidateTree,
+    reusedChecks: REUSED_PR_CHECKS,
+  };
 }
 
 function argument(name) {
@@ -60,6 +87,15 @@ function main() {
   }
   const pull = associated[0];
   const reviewedHead = pull.head.sha;
+  const statusCheckRollup = json("gh", [
+    "pr",
+    "view",
+    String(pull.number),
+    "--json",
+    "statusCheckRollup",
+    "--jq",
+    ".statusCheckRollup",
+  ]);
 
   execFileSync("git", ["fetch", "--quiet", "--no-tags", "origin", `pull/${pull.number}/head`]);
   if (output("git", ["rev-parse", "FETCH_HEAD"]) !== reviewedHead) {
@@ -74,6 +110,7 @@ function main() {
         pulls,
         reviewedHead,
         reviewedTree,
+        statusCheckRollup,
       }),
       null,
       2,
