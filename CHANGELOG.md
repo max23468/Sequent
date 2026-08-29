@@ -4,6 +4,10 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+### Added
+
+- policy numerica di versioning fino alla `1.0.0`, con mappa milestone-release, divieto di suffissi prerelease/build e regole per minor, patch e linea di validazione M7.
+
 ## 0.1.0
 
 ### Added
