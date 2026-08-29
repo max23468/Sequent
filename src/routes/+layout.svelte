@@ -31,7 +31,10 @@
     name="description"
     content="Assistente operativo privato per dichiarazioni di successione"
   />
-  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <meta
+    name="robots"
+    content="noindex, nofollow, noarchive, nosnippet, noimageindex"
+  />
 </svelte:head>
 
 {#if data.authenticated}
