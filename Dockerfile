@@ -32,9 +32,7 @@ RUN python3 -m venv /opt/ocr \
 
 FROM dependencies AS build
 COPY . .
-RUN cc -O2 -Wall -Wextra -Werror -fPIE -pie -Wl,-z,relro,-z,now \
-      -o /tmp/codex-launcher scripts/codex-launcher.c \
-    && npm run build \
+RUN npm run build \
     && npm prune --omit=dev
 
 FROM node-base AS runtime
@@ -52,7 +50,7 @@ ENV NODE_ENV=production \
 WORKDIR /app
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
-      ca-certificates file fonts-dejavu-core ghostscript icc-profiles-free imagemagick jbig2 \
+      ca-certificates file fonts-dejavu-core ghostscript icc-profiles-free imagemagick jbig2 libcap2-bin \
       libreoffice-calc-nogui libreoffice-core-nogui libreoffice-writer-nogui openssl pngquant \
       poppler-utils python3 qpdf tesseract-ocr tesseract-ocr-ita unpaper unzip \
     && rm -rf /var/lib/apt/lists/* \
@@ -65,7 +63,6 @@ COPY --from=build --chown=root:root /app/build ./build
 COPY --from=build --chown=root:root /app/node_modules ./node_modules
 COPY --from=build --chown=root:root /app/package.json ./package.json
 COPY --from=build --chown=root:root /app/private/official-sources/modello-dichiarazione-successione-2025.pdf ./official-sources/modello-dichiarazione-successione-2025.pdf
-COPY --from=build /tmp/codex-launcher /tmp/codex-launcher
 RUN find / -xdev -type f -perm /6000 -exec chmod a-s {} + \
     && getcap -r / 2>/dev/null \
       | while IFS= read -r capability_line; do \
@@ -73,14 +70,8 @@ RUN find / -xdev -type f -perm /6000 -exec chmod a-s {} + \
           test -z "$capability_path" || setcap -r "$capability_path"; \
         done \
     && test -z "$(getcap -r / 2>/dev/null)" \
-    && codex_path="$(find /app/node_modules/@openai -type f -path '*/bin/codex' -print -quit)" \
-    && test -n "$codex_path" \
-    && mv "$codex_path" "$codex_path.real" \
-    && chown root:root "$codex_path.real" \
-    && chmod 0755 "$codex_path.real" \
-    && install -o root -g root -m 4755 /tmp/codex-launcher "$codex_path" \
-    && rm -f /tmp/codex-launcher \
-    && test "$(find / -xdev -type f -perm /6000 | wc -l)" -eq 1
+    && test -z "$(find / -xdev -type f -perm /6000 -print -quit)" \
+    && test -z "$(find /app/node_modules/@openai -perm /022 -print -quit)"
 USER 10001:10001
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:3000/api/health',{headers:{'X-Forwarded-For':'127.0.0.1'}}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]

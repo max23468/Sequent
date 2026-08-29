@@ -38,6 +38,7 @@ test("il runtime conserva i converter e separa gli strumenti di build", () => {
     "icc-profiles-free",
     "imagemagick",
     "jbig2",
+    "libcap2-bin",
     "libreoffice-calc-nogui",
     "libreoffice-core-nogui",
     "libreoffice-writer-nogui",
@@ -62,6 +63,7 @@ test("il runtime conserva i converter e separa gli strumenti di build", () => {
   assert.match(verifier, /find \/ -xdev -type f -perm \/6000/);
   assert.match(verifier, /getcap -r \/ 2>\/dev\/null/);
   assert.match(verifier, /find \/app\/node_modules\/@openai -writable/);
+  assert.match(dockerfile, /find \/app\/node_modules\/@openai -perm \/022/);
 });
 
 test("Dependabot aggiorna settimanalmente il digest Docker senza auto-merge", () => {

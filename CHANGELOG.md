@@ -4,6 +4,17 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.1.4
+
+### Added
+
+- controllo pubblico dedicato allo spazio del filesystem dei dati, degradato sotto 5 GiB liberi o dal 90% di utilizzo.
+
+### Security
+
+- health pubblico ridotto al solo stato generico, con identità dell’immagine e del commit verificata esclusivamente dalla procedura di deploy sulla VPS;
+- runtime Production senza capability aggiuntive, file setuid/setgid o profili seccomp e AppArmor disabilitati, finché Codex resta spento.
+
 ## 0.1.3
 
 ### Fixed

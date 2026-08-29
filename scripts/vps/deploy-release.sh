@@ -517,30 +517,43 @@ curl --fail --silent --header 'X-Forwarded-For: 127.0.0.1' http://127.0.0.1:3300
   fail "root filesystem live scrivibile"
 [[ "$(docker inspect --format '{{json .HostConfig.CapDrop}}' "$candidate_container")" == '["ALL"]' ]] ||
   fail "capability drop live divergente"
+[[ "$(docker inspect --format '{{json .HostConfig.CapAdd}}' "$candidate_container")" == null ]] ||
+  fail "capability aggiuntive live presenti"
+[[ "$(docker inspect --format '{{json .HostConfig.SecurityOpt}}' "$candidate_container")" == '["no-new-privileges:true"]' ]] ||
+  fail "security options live divergenti"
+[[ "$(docker inspect --format '{{.AppArmorProfile}}' "$candidate_container")" != unconfined ]] ||
+  fail "profilo AppArmor live non confinato"
 [[ "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$candidate_container")" == sequent ]] ||
   fail "progetto Compose live divergente"
 [[ -f "$database" ]] && check_database "$database"
-public_health="$(curl --fail --silent --show-error --max-time 15 "$SEQUENT_ORIGIN/api/health")"
-public_identity_output=
-if ! public_identity_output="$(/usr/bin/python3 - "$public_health" <<'PY'
+read_public_health_status() {
+  local health_url="$1"
+  local public_health
+  public_health="$(curl --fail --silent --show-error --max-time 15 "$health_url")"
+  /usr/bin/python3 - "$public_health" <<'PY'
 import json
 import sys
 
 health = json.loads(sys.argv[1])
-for key in ("status", "commit", "imageId"):
-    value = health.get(key)
-    if not isinstance(value, str) or "\n" in value or "\r" in value:
-        raise SystemExit("identità health non valida")
-    print(value)
+if set(health) != {"status"}:
+    raise SystemExit("health pubblico non generico")
+status = health["status"]
+if not isinstance(status, str) or "\n" in status or "\r" in status:
+    raise SystemExit("stato health non valido")
+print(status)
 PY
-)"; then
+}
+
+public_health_status=
+if ! public_health_status="$(read_public_health_status "$SEQUENT_ORIGIN/api/health")"; then
   fail "health pubblico non interpretabile"
 fi
-readarray -t public_identity <<<"$public_identity_output"
-[[ "${#public_identity[@]}" -eq 3 ]] || fail "identità pubblica non conforme"
-[[ "${public_identity[0]:-}" == ok ]] || fail "health pubblico non conforme"
-[[ "${public_identity[1]:-}" == "$commit" ]] || fail "commit pubblico divergente"
-[[ "${public_identity[2]:-}" == "$candidate_image_id" ]] || fail "image ID pubblico divergente"
+[[ "$public_health_status" == ok ]] || fail "health pubblico non conforme"
+public_storage_health_status=
+if ! public_storage_health_status="$(read_public_health_status "$SEQUENT_ORIGIN/api/health?scope=storage")"; then
+  fail "health pubblico storage non interpretabile"
+fi
+[[ "$public_storage_health_status" == ok ]] || fail "health pubblico storage non conforme"
 
 printf '%s\n' "$candidate_image_id" >"$release_dir/image-id"
 chown root:root "$release_dir/image-id"
