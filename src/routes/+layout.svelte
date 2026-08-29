@@ -4,6 +4,7 @@
   import BrandLogo from "$lib/components/BrandLogo.svelte";
   import SearchBox from "$lib/components/SearchBox.svelte";
   import ThemeSelector from "$lib/components/ThemeSelector.svelte";
+  import { resolvePageTitle } from "$lib/page-title";
   import "./app.css";
 
   let { children, data } = $props();
@@ -15,16 +16,17 @@
     { href: "/impostazioni", label: "Impostazioni", icon: Settings },
   ];
 
+  let browserTitle = $derived(resolvePageTitle(page.url.pathname));
+
   function isActive(href: string) {
     return href === "/"
       ? page.url.pathname === "/" || page.url.pathname === "/__design"
       : page.url.pathname.startsWith(href);
   }
-
 </script>
 
 <svelte:head>
-  <title>Sequent</title>
+  <title>{browserTitle}</title>
   <meta
     name="description"
     content="Assistente operativo privato per dichiarazioni di successione"
