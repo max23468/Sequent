@@ -166,7 +166,7 @@ function decodeXml(value: string): string {
 
   return value.replaceAll(
     /&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g,
-    (entity, body: string) => {
+    (_entity, body: string) => {
       if (body === "amp") return "&";
       if (body === "lt") return "<";
       if (body === "gt") return ">";

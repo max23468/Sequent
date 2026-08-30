@@ -10,6 +10,7 @@ import {
   renamePractice,
   saveDeclaration,
 } from "../../src/lib/server/practices.ts";
+import { createEmptyDeclaration, setCanonicalField } from "../../src/domain/declaration.ts";
 
 const directories: string[] = [];
 
@@ -37,16 +38,20 @@ describe("persistenza delle pratiche", () => {
     const database = openDatabase(directory);
     const practice = createPractice(database, "Pratica sintetica");
     expect(
-      saveDeclaration(database, practice.declarationId, 1, {
-        schemaVersion: 1,
-        fields: { note: "prima" },
-      }),
+      saveDeclaration(
+        database,
+        practice.declarationId,
+        1,
+        setCanonicalField(createEmptyDeclaration(), "note", "prima", "manually_corrected"),
+      ),
     ).toBe(2);
     expect(() =>
-      saveDeclaration(database, practice.declarationId, 1, {
-        schemaVersion: 1,
-        fields: { note: "persa" },
-      }),
+      saveDeclaration(
+        database,
+        practice.declarationId,
+        1,
+        setCanonicalField(createEmptyDeclaration(), "note", "persa", "manually_corrected"),
+      ),
     ).toThrow("REVISION_CONFLICT");
   });
 

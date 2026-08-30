@@ -1,6 +1,6 @@
 <script lang="ts">
   import { deriveOfficialFieldValue } from "../../domain/derived-fields";
-  import { isOperationalParityAutomatic } from "../../domain/operational-parity";
+  import { isOperationalParityAutomatic } from "../../domain/operational-parity-shared";
   import type { PageData } from "../../routes/pratiche/[id]/$types";
 
   type QuadroField = PageData["quadroFields"][number];

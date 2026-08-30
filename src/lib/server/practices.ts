@@ -391,6 +391,7 @@ export function saveDeclaration(
   expectedRevision: number,
   declaration: unknown,
 ): number {
+  const validated = parseDeclaration(declaration);
   const now = new Date().toISOString();
   const result = database.transaction(() => {
     const update = database
@@ -399,7 +400,7 @@ export function saveDeclaration(
          SET declaration_json = ?, revision = revision + 1, updated_at = ?
          WHERE id = ? AND revision = ?`,
       )
-      .run(JSON.stringify(declaration), now, declarationId, expectedRevision);
+      .run(JSON.stringify(validated), now, declarationId, expectedRevision);
     if (update.changes !== 1) throw new Error("REVISION_CONFLICT");
     database
       .prepare(

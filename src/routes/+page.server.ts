@@ -7,7 +7,7 @@ import { describeDocumentIngestionFailure, ingestDocument } from "$lib/server/do
 import { listPendingReviewSummaries } from "$lib/server/documents";
 import { listFailedBlobVerifications } from "$lib/server/jobs";
 import { getLauncherCapabilities } from "$lib/server/launchers";
-import { listPracticeDeadlines, listPracticeDomainSummaries } from "$lib/server/domain";
+import { listPracticeDeadlines, listPracticeDomainSummaries } from "$lib/server/domain-read-models";
 import { createPractice, listPractices } from "$lib/server/practices";
 
 const titleSchema = z

@@ -91,9 +91,8 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /sorgente trusted del deploy non root-owned/);
   assert.match(deploy, /artefatto fuori dalla sorgente trusted/);
   assert.match(deploy, /root:root:600/);
-  assert.match(deploy, /chown root:ubuntu "\$root\/runtime"/);
-  assert.match(deploy, /directory runtime non protetta/);
   assert.match(deploy, /root:ubuntu:750/);
+  assert.doesNotMatch(deploy, /chown root:ubuntu "\$root\/runtime"/);
   assert.ok(
     deploy.indexOf('repository="${SEQUENT_TRUSTED_REPOSITORY:-}"') <
       deploy.indexOf('[[ "$manifest" == "$repository/"* ]]'),
@@ -106,11 +105,7 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /fail\(\) \{[^}]*return 1[^}]*\}/);
   assert.doesNotMatch(deploy, /fail\(\) \{[^}]*exit 1[^}]*\}/);
   assert.match(deploy, /load_runtime_env\(\)/);
-  assert.match(deploy, /python3.*migrate-runtime-features\.py/s);
-  assert.ok(
-    deploy.indexOf("migrate-runtime-features.py") <
-      deploy.indexOf('load_runtime_env "$runtime_env"'),
-  );
+  assert.doesNotMatch(deploy, /migrate-runtime-features/);
   assert.doesNotMatch(deploy, /\/usr\/bin\/node/);
   assert.match(deploy, /chiave runtime non ammessa/);
   assert.match(deploy, /id -u sequent-runtime/);
@@ -157,13 +152,8 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /stat -c '%U:%G:%a' "\$root\/snapshots".*root:root:700/s);
   assert.match(deploy, /install -d -o root -g root -m 0750 "\$release_dir"/);
   assert.match(deploy, /previous_release_layout=.*stat -c '%U:%G:%a'/);
-  assert.match(deploy, /ubuntu:ubuntu:750/);
-  assert.match(deploy, /chown root:root "\$previous_release_dir"/);
-  assert.match(deploy, /migrazione della release precedente fallita/);
-  assert.ok(
-    deploy.indexOf('chown root:root "$previous_release_dir"') <
-      deploy.indexOf('"${candidate_compose[@]}" down --remove-orphans'),
-  );
+  assert.match(deploy, /previous_release_layout" == root:root:750/);
+  assert.doesNotMatch(deploy, /ubuntu:ubuntu:750/);
   assert.match(deploy, /up --detach --no-build --force-recreate/);
   assert.match(deploy, /\.deployment-maintenance/);
   assert.match(deploy, /\$SEQUENT_ORIGIN\/api\/health/);
@@ -248,10 +238,11 @@ test("il launcher root-owned esegue soltanto il tree Git exact-commit", () => {
   assert.equal(launcher.match(/\/usr\/bin\/git -C/g)?.length, 1);
   assert.match(launcher, /mktemp -d \/run\/sequent-deploy-source\./);
   assert.match(launcher, /mktemp -d \/run\/sequent-deploy-verification\./);
-  assert.match(launcher, /migrate_layout_directory "\$root" 750 755/);
-  assert.match(launcher, /migrate_layout_directory "\$root\/releases" 750 750/);
-  assert.match(launcher, /migrate_layout_directory "\$root\/snapshots" 700 700/);
-  assert.match(launcher, /layout preesistente non qualificato/);
+  assert.match(launcher, /assert_layout_directory "\$root" 755/);
+  assert.match(launcher, /assert_layout_directory "\$root\/releases" 750/);
+  assert.match(launcher, /assert_layout_directory "\$root\/snapshots" 700/);
+  assert.match(launcher, /layout amministrativo non conforme/);
+  assert.doesNotMatch(launcher, /ubuntu:ubuntu/);
   assert.match(launcher, /--image-ref/);
   assert.match(launcher, /--docker-config/);
   assert.match(launcher, /--manifest-sha256/);

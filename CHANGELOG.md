@@ -4,6 +4,20 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.5
+
+### Changed
+
+- dominio, calcoli, persistenza, azioni del flusso ufficiale, fogli di stile e suite di test suddivisi in moduli coesi senza facciate di compatibilità legacy;
+- dichiarazioni persistite validate integralmente sullo schema corrente, rifiutando strutture obsolete, incomplete o incoerenti invece di correggerle implicitamente;
+- migrazioni del database eseguite soltanto quando la relativa versione risulta ancora pendente e configurazione runtime resa obbligatoriamente completa;
+- asset operativi creati esclusivamente con il tipo corrente, senza conversione dei precedenti valori di categoria;
+- dipendenza `pdf-lib` fissata alla versione esatta qualificata.
+
+### Removed
+
+- migrazioni una tantum già assorbite per layout VPS e feature flag, insieme alla relativa evidenza storica e ai rami runtime di retrocompatibilità.
+
 ## 0.2.4
 
 ### Fixed

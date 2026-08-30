@@ -7,12 +7,31 @@
     ShieldAlert,
   } from "@lucide/svelte";
   import { formatItalianDate, formatMegabytes } from "$lib/format";
+  import type {
+    DizRoundTrip,
+    OfficialArtifact,
+    OfficialFlowEvent,
+    OfficialFlowSummary,
+  } from "$lib/server/official-flow";
+
+  interface OfficialFlowData {
+    officialFlow: OfficialFlowSummary;
+    declaration: { id: string };
+    declarationReady: boolean;
+    practice: { id: string };
+    dizEnabled: boolean;
+  }
 
   let { data, form, actionUrl } = $props<{
-    data: any;
-    form: any;
+    data: OfficialFlowData;
+    form: object | null;
     actionUrl: (action: string) => string;
   }>();
+  let officialFlowError = $derived.by(() => {
+    if (!form || !("officialFlowError" in form)) return null;
+    const value = (form as { officialFlowError?: unknown }).officialFlowError;
+    return typeof value === "string" ? value : null;
+  });
   const labels: Record<string, string> = {
     "diz-imported": "DIZ acquisito",
     "diz-exported": "DIZ esportato",
@@ -28,20 +47,24 @@
     "other-official": "Altro documento ufficiale",
   };
   let latestExport = $derived(
-    data.officialFlow.artifacts.find((artifact: any) => artifact.kind === "diz-exported") ?? null,
+    data.officialFlow.artifacts.find(
+      (artifact: OfficialArtifact) => artifact.kind === "diz-exported",
+    ) ?? null,
   );
   let presentationConfirmation = $derived(
-    data.officialFlow.events.find((event: any) => event.eventType === "presentation-confirmed") ?? null,
+    data.officialFlow.events.find(
+      (event: OfficialFlowEvent) => event.eventType === "presentation-confirmed",
+    ) ?? null,
   );
   let latestOpaqueChange = $derived(
     data.officialFlow.roundTrips.find(
-      (roundTrip: any) =>
+      (roundTrip: DizRoundTrip) =>
         roundTrip.comparison?.opaqueEvidence?.changed ||
         (roundTrip.comparison?.opaque?.length ?? 0) > 0,
     ) ?? null,
   );
 
-  function conflictKey(field: any) {
+  function conflictKey(field: { quadro: string; module: string; field: string }) {
     return `${field.quadro}|${field.module}|${field.field}`;
   }
 </script>
@@ -79,7 +102,7 @@
       <div><strong>DIZ non attivo</strong><p>La capacità resta disabilitata in questo ambiente. I file già acquisiti rimangono consultabili.</p></div>
     </div>
   {/if}
-  {#if form?.officialFlowError}<p class="workspace-form-error" role="alert">{form.officialFlowError}</p>{/if}
+  {#if officialFlowError}<p class="workspace-form-error" role="alert">{officialFlowError}</p>{/if}
 
   <section class="official-flow-card">
     <div class="official-flow-card-heading"><span>1</span><div><h3>Pratica modificabile</h3><p>Acquisisci un DIZ qualificato come base. L’importazione crea uno snapshot e non sovrascrive silenziosamente i dati.</p></div></div>

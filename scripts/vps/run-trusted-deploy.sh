@@ -14,24 +14,17 @@ verification_git=
 verification_user=sequent-deploy
 object_directory=
 
-migrate_layout_directory() {
+assert_layout_directory() {
   local path="$1"
-  local legacy_mode="$2"
-  local current_mode="$3"
+  local current_mode="$2"
   local layout
   [[ -d "$path" && ! -L "$path" ]] || {
     echo "ERRORE: directory del layout assente o non regolare" >&2
     exit 1
   }
   layout="$(/usr/bin/stat -c '%U:%G:%a' "$path")"
-  [[ "$layout" == "ubuntu:ubuntu:$legacy_mode" || "$layout" == "root:root:$current_mode" ]] || {
-    echo "ERRORE: layout preesistente non qualificato" >&2
-    exit 1
-  }
-  /bin/chown root:root "$path"
-  /bin/chmod "$current_mode" "$path"
-  [[ "$(/usr/bin/stat -c '%U:%G:%a' "$path")" == "root:root:$current_mode" ]] || {
-    echo "ERRORE: migrazione amministrativa del layout fallita" >&2
+  [[ "$layout" == "root:root:$current_mode" ]] || {
+    echo "ERRORE: layout amministrativo non conforme" >&2
     exit 1
   }
 }
@@ -106,9 +99,9 @@ IFS=: read -r _ _ verification_uid _ _ verification_home verification_shell <<<"
   echo "ERRORE: credenziale registry non conforme" >&2
   exit 1
 }
-migrate_layout_directory "$root" 750 755
-migrate_layout_directory "$root/releases" 750 750
-migrate_layout_directory "$root/snapshots" 700 700
+assert_layout_directory "$root" 755
+assert_layout_directory "$root/releases" 750
+assert_layout_directory "$root/snapshots" 700
 [[ -d "$repository/.git" || -f "$repository/.git" ]] || {
   echo "ERRORE: checkout Sequent assente" >&2
   exit 1

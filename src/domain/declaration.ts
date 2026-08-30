@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 const CURRENT_DECLARATION_SCHEMA = 7;
 export const CURRENT_CATALOG_VERSION = "2026.08.27.2";
 export const CURRENT_RULESET_VERSION = "2026.08.12";
@@ -53,6 +55,92 @@ export interface DeclarationSnapshot {
   latestCalculationRunId: string | null;
 }
 
+const fieldStateSchema = z.enum([
+  "missing",
+  "extracted",
+  "automatic",
+  "to_review",
+  "confirmed",
+  "manually_corrected",
+  "calculated",
+  "conflict",
+  "not_applicable",
+  "overridden",
+  "blocked",
+]);
+
+const isoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((value) => {
+    const [year, month, day] = value.split("-").map(Number);
+    const parsed = new Date(Date.UTC(year!, month! - 1, day!));
+    return (
+      parsed.getUTCFullYear() === year &&
+      parsed.getUTCMonth() === month! - 1 &&
+      parsed.getUTCDate() === day
+    );
+  });
+
+const canonicalFieldValueSchema = z
+  .object({
+    fieldId: z.string().min(1),
+    entityId: z.string().nullable(),
+    occurrenceId: z.string().nullable(),
+    value: z.unknown(),
+    state: fieldStateSchema,
+    sourceRefs: z.array(z.string()),
+    updatedAt: z.string().datetime(),
+    confirmedAt: z.string().datetime().optional(),
+  })
+  .strict();
+
+const declarationSnapshotSchema = z
+  .object({
+    schemaVersion: z.literal(CURRENT_DECLARATION_SCHEMA),
+    officialSourceBundleId: z.string().min(1),
+    catalogVersion: z.string().min(1),
+    rulesetVersion: z.string().min(1),
+    validatorVersion: z.string().min(1),
+    successionOpenedAt: isoDateSchema.nullable(),
+    declarationKind: z.enum(["first", "substitute-1", "substitute-2", "substitute-3"]),
+    fields: z.record(z.string(), canonicalFieldValueSchema),
+    decisions: z.array(
+      z
+        .object({
+          id: z.string().min(1),
+          kind: z.string().min(1),
+          summary: z.string(),
+          sourceRefs: z.array(z.string()),
+          createdAt: z.string().datetime(),
+        })
+        .strict(),
+    ),
+    officialRuleConfirmations: z.record(
+      z.string(),
+      z
+        .object({
+          ruleIds: z.array(z.string()),
+          valueJson: z.string(),
+          confirmedAt: z.string().datetime(),
+        })
+        .strict(),
+    ),
+    confirmedDevolutionScenarioId: z.string().nullable(),
+    latestCalculationRunId: z.string().nullable(),
+  })
+  .strict()
+  .superRefine((snapshot, context) => {
+    for (const [key, field] of Object.entries(snapshot.fields)) {
+      if (key === canonicalFieldKey(field.fieldId, field.entityId, field.occurrenceId)) continue;
+      context.addIssue({
+        code: "custom",
+        path: ["fields", key],
+        message: "chiave del campo canonico incoerente",
+      });
+    }
+  });
+
 export function createEmptyDeclaration(
   kind: DeclarationSnapshot["declarationKind"] = "first",
 ): DeclarationSnapshot {
@@ -73,45 +161,12 @@ export function createEmptyDeclaration(
 }
 
 export function parseDeclaration(value: unknown): DeclarationSnapshot {
-  if (!value || typeof value !== "object") return createEmptyDeclaration();
-  const candidate = value as Partial<DeclarationSnapshot> & {
-    fields?: Record<string, unknown>;
-  };
-  if (candidate.schemaVersion === CURRENT_DECLARATION_SCHEMA) {
-    return {
-      ...createEmptyDeclaration(candidate.declarationKind),
-      ...candidate,
-      fields: (candidate.fields ?? {}) as Record<string, CanonicalFieldValue>,
-      decisions: candidate.decisions ?? [],
-      officialRuleConfirmations: candidate.officialRuleConfirmations ?? {},
-    };
-  }
-
-  const migrated = createEmptyDeclaration(candidate.declarationKind);
-  migrated.successionOpenedAt = candidate.successionOpenedAt ?? null;
-  migrated.decisions = candidate.decisions ?? [];
-  migrated.officialRuleConfirmations = candidate.officialRuleConfirmations ?? {};
-  migrated.confirmedDevolutionScenarioId = candidate.confirmedDevolutionScenarioId ?? null;
-  migrated.latestCalculationRunId = candidate.latestCalculationRunId ?? null;
-  for (const [fieldId, fieldValue] of Object.entries(candidate.fields ?? {})) {
-    const previous =
-      fieldValue && typeof fieldValue === "object"
-        ? (fieldValue as Partial<CanonicalFieldValue>)
-        : null;
-    const canonicalFieldId = previous?.fieldId ?? fieldId;
-    const entityId = previous?.entityId ?? null;
-    const occurrenceId = previous?.occurrenceId ?? null;
-    migrated.fields[canonicalFieldKey(canonicalFieldId, entityId, occurrenceId)] = {
-      fieldId: canonicalFieldId,
-      entityId,
-      occurrenceId,
-      value: previous && "value" in previous ? previous.value : fieldValue,
-      state: "to_review",
-      sourceRefs: previous?.sourceRefs ?? [],
-      updatedAt: previous?.updatedAt ?? new Date(0).toISOString(),
-    };
-  }
-  return migrated;
+  if (!value || typeof value !== "object") throw new Error("DECLARATION_SCHEMA_INVALID");
+  if ((value as { schemaVersion?: unknown }).schemaVersion !== CURRENT_DECLARATION_SCHEMA)
+    throw new Error("DECLARATION_SCHEMA_UNSUPPORTED");
+  const parsed = declarationSnapshotSchema.safeParse(value);
+  if (!parsed.success) throw new Error("DECLARATION_SCHEMA_INVALID");
+  return parsed.data;
 }
 
 export function canonicalFieldKey(

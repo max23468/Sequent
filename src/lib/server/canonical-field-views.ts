@@ -14,12 +14,12 @@ import {
   type OperationalSectionId,
 } from "../../domain/operational-parity.ts";
 import type { ValidationIssue } from "../../domain/validation.ts";
+import { getAutomaticOfficialFieldValues } from "./domain-calculations.ts";
 import {
-  getAutomaticOfficialFieldValues,
   removeCanonicalOccurrence,
   reorderCanonicalOccurrences,
   saveCanonicalFields,
-} from "./domain.ts";
+} from "./domain-fields.ts";
 import { getDeclaration } from "./practices.ts";
 
 export type CanonicalFieldView =

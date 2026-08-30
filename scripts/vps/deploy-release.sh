@@ -166,12 +166,8 @@ cleanup_trusted_runtime_env() {
   fail "permessi degli snapshot non conformi"
 [[ -d "$root/runtime" && ! -L "$root/runtime" ]] || fail "directory runtime non conforme"
 runtime_layout="$(stat -c '%U:%G:%a' "$root/runtime")"
-[[ "$runtime_layout" == ubuntu:ubuntu:750 || "$runtime_layout" == root:ubuntu:750 ]] ||
+[[ "$runtime_layout" == root:ubuntu:750 ]] ||
   fail "permessi della directory runtime non conformi"
-chown root:ubuntu "$root/runtime"
-chmod 0750 "$root/runtime"
-[[ "$(stat -c '%U:%G:%a' "$root/runtime")" == root:ubuntu:750 ]] ||
-  fail "directory runtime non protetta"
 [[ "$(stat -c '%U:%G:%a' "$runtime_env")" == "ubuntu:ubuntu:600" ]] ||
   fail "permessi della configurazione runtime non conformi"
 [[ "$(stat -c '%U:%G:%a' "$runtime_compose")" == "ubuntu:ubuntu:640" ]] ||
@@ -179,8 +175,6 @@ chmod 0750 "$root/runtime"
 
 runtime_uid="$(id -u sequent-runtime)" || fail "account runtime assente"
 runtime_gid="$(id -g sequent-runtime)" || fail "gruppo runtime assente"
-/usr/bin/python3 "$repository/scripts/vps/migrate-runtime-features.py" \
-  "$runtime_env" "$(id -u ubuntu)" "$(id -g ubuntu)" "$runtime_uid" "$runtime_gid"
 load_runtime_env "$runtime_env"
 previous_runtime_image="$SEQUENT_IMAGE"
 trusted_runtime_env="$(mktemp /run/sequent-runtime-env.XXXXXX)"
@@ -224,13 +218,8 @@ if [[ -e "$previous_release_dir" ]]; then
   [[ -d "$previous_release_dir" && ! -L "$previous_release_dir" ]] ||
     fail "directory della release precedente non regolare"
   previous_release_layout="$(stat -c '%U:%G:%a' "$previous_release_dir")"
-  [[ "$previous_release_layout" == ubuntu:ubuntu:750 ||
-    "$previous_release_layout" == root:root:750 ]] ||
+  [[ "$previous_release_layout" == root:root:750 ]] ||
     fail "directory della release precedente non conforme"
-  chown root:root "$previous_release_dir"
-  chmod 0750 "$previous_release_dir"
-  [[ "$(stat -c '%U:%G:%a' "$previous_release_dir")" == root:root:750 ]] ||
-    fail "migrazione della release precedente fallita"
 fi
 write_trusted_runtime_env "$previous_runtime_image"
 rollback_compose_file="$(mktemp /run/sequent-rollback-compose.XXXXXX)"

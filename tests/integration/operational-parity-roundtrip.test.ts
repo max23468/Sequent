@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { calculateDeclarationTaxSummary } from "../../src/domain/calculation.ts";
+import { calculateDeclarationTaxSummary } from "../../src/domain/declaration-tax.ts";
 import { addSnapshotAutomaticOfficialFieldValues } from "../../src/domain/automatic-official-fields.ts";
 import type { CanonicalFieldValue, DeclarationSnapshot } from "../../src/domain/declaration.ts";
 import { deriveOfficialFieldValue } from "../../src/domain/derived-fields.ts";
@@ -37,17 +37,19 @@ import {
 } from "../../src/lib/server/canonical-field-views.ts";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
 import {
-  buildComplianceReport,
   confirmCalculationRun,
-  confirmDevolutionScenario,
-  createSharedAsset,
-  createSharedSubject,
   getAutomaticOfficialFieldValues,
-  listCanonicalOccurrenceIds,
   runSuccessionCalculation,
+} from "../../src/lib/server/domain-calculations.ts";
+import { buildComplianceReport } from "../../src/lib/server/domain-compliance.ts";
+import {
+  confirmDevolutionScenario,
   saveDevolutionScenario,
-  type AssetKind,
-} from "../../src/lib/server/domain.ts";
+} from "../../src/lib/server/domain-devolution.ts";
+import { listCanonicalOccurrenceIds } from "../../src/lib/server/domain-fields.ts";
+import type { AssetKind } from "../../src/lib/server/domain-model.ts";
+import { createSharedAsset } from "../../src/lib/server/domain-assets.ts";
+import { createSharedSubject } from "../../src/lib/server/domain-subjects.ts";
 import {
   createPractice,
   createSuccessiveDeclaration,
@@ -94,6 +96,12 @@ const ASSET_KIND_BY_QUADRO: Partial<Record<QuadroId, AssetKind>> = {
   EQ: "vessel",
   ER: "other",
 };
+
+function assetKindForQuadro(quadro: QuadroId): AssetKind {
+  const kind = ASSET_KIND_BY_QUADRO[quadro];
+  if (!kind) throw new Error(`ASSET_KIND_NOT_FOUND:${quadro}`);
+  return kind;
+}
 
 const SECTION_BY_AREA = Object.fromEntries(
   Object.entries(OPERATIONAL_SECTION_AREAS).map(([section, area]) => [area, section]),
@@ -400,8 +408,7 @@ function prepareAllEditableCases(
       .filter((row) => row.cardinality.entityScope === "asset")
       .map((row) => row.quadro),
   )) {
-    const kind = ASSET_KIND_BY_QUADRO[quadro];
-    if (!kind) throw new Error(`ASSET_KIND_NOT_FOUND:${quadro}`);
+    const kind = assetKindForQuadro(quadro);
     const asset = createSharedAsset(database, practice.id, {
       kind,
       displayName: `Bene sintetico ${quadro}`,
@@ -673,16 +680,16 @@ describe("round-trip parametrico dei campi coperti", () => {
               declarationId: declaration.id,
             })
           : null;
-        const assetKind = ASSET_KIND_BY_QUADRO[firstRow.quadro];
-        const asset = family.cases.some(({ row }) => row.cardinality.entityScope === "asset")
+        const requiresAsset = family.cases.some(
+          ({ row }) => row.cardinality.entityScope === "asset",
+        );
+        const asset = requiresAsset
           ? createSharedAsset(database, practice.id, {
-              kind: assetKind,
+              kind: assetKindForQuadro(firstRow.quadro),
               displayName: "Bene sintetico",
               declarationId: declaration.id,
             })
           : null;
-        if (family.cases.some(({ row }) => row.cardinality.entityScope === "asset") && !assetKind)
-          throw new Error(`ASSET_KIND_NOT_FOUND:${firstRow.quadro}`);
         const context = {
           decedentId: decedent?.id ?? null,
           subjectId: subject?.id ?? null,
@@ -1150,7 +1157,7 @@ describe("round-trip parametrico dei campi coperti", () => {
           const asset =
             scope === "asset"
               ? createSharedAsset(database, practice.id, {
-                  kind: ASSET_KIND_BY_QUADRO[choiceFamily.quadro],
+                  kind: assetKindForQuadro(choiceFamily.quadro),
                   displayName: `Bene ${choiceFamily.choiceGroup}`,
                   declarationId: declaration.id,
                 })
@@ -1287,7 +1294,7 @@ describe("round-trip parametrico dei campi coperti", () => {
             .map(({ row }) => row.quadro),
         )) {
           const asset = createSharedAsset(database, practice.id, {
-            kind: ASSET_KIND_BY_QUADRO[quadro],
+            kind: assetKindForQuadro(quadro),
             displayName: `Bene condizionali ${quadro}`,
             declarationId: declaration.id,
           });
@@ -1710,8 +1717,7 @@ describe("round-trip parametrico dei campi coperti", () => {
           .filter(({ row }) => row.cardinality.entityScope === "asset")
           .map(({ row }) => row.quadro),
       )) {
-        const kind = ASSET_KIND_BY_QUADRO[quadro];
-        if (!kind) throw new Error(`ASSET_KIND_NOT_FOUND:${quadro}`);
+        const kind = assetKindForQuadro(quadro);
         const firstAsset = createSharedAsset(database, practice.id, {
           kind,
           displayName: `Primo bene ${quadro}`,

@@ -3,7 +3,7 @@
   import {
     isOperationalParityEditable,
     operationalParityHandlingForDeclaration,
-  } from "../../domain/operational-parity";
+  } from "../../domain/operational-parity-shared";
   import OfficialFieldControl from "./OfficialFieldControl.svelte";
 
   type OperationalField = PageData["operationalFields"][number];

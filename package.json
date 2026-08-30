@@ -1,6 +1,6 @@
 {
   "name": "sequent",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "type": "module",
   "scripts": {
@@ -55,7 +55,7 @@
     "better-sqlite3": "13.0.3",
     "fflate": "0.8.3",
     "idb": "8.0.3",
-    "pdf-lib": "^1.17.1",
+    "pdf-lib": "1.17.1",
     "read-excel-file": "9.3.10",
     "svelte": "5.56.10",
     "unzipper-esm": "0.13.3",
