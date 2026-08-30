@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.1
+
+### Fixed
+
+- chiusura di `Pubblica` resa obbligatoria: riallineamento di `main`, rimozione verificata di branch e worktree del ciclo corrente e inventario esplicito dei residui concorrenti preservati;
+- esecuzione remota diretta senza il wrapper di pulizia rifiutata prima del push e impossibilità di chiudere il repository rilevata in anticipo.
+
 ## 0.2.0
 
 ### Added
