@@ -10,7 +10,8 @@ import {
   importDiz,
   overrideOfficialStage,
 } from "../../src/lib/server/official-flow.ts";
-import { createPractice } from "../../src/lib/server/practices.ts";
+import { createSharedSubject } from "../../src/lib/server/domain-subjects.ts";
+import { getDeclaration, createPractice } from "../../src/lib/server/practices.ts";
 import { syntheticDiz } from "../fixtures/synthetic-diz.ts";
 
 const directories: string[] = [];
@@ -23,7 +24,7 @@ afterEach(() => {
 });
 
 describe("flusso ufficiale persistente", () => {
-  it("acquisisce un DIZ senza modificare la dichiarazione e crea lo snapshot preventivo", async () => {
+  it("preserva il DIZ quando manca il target applicativo e crea lo snapshot preventivo", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-official-flow-"));
     directories.push(directory);
     const database = openDatabase(directory);
@@ -39,7 +40,16 @@ describe("flusso ufficiale persistente", () => {
     });
 
     expect(artifact.kind).toBe("diz-imported");
-    expect(artifact.metadata).toMatchObject({ format: "xstream-zip-v1", fields: 1 });
+    expect(artifact.metadata).toMatchObject({
+      format: "xstream-zip-v1",
+      fields: 1,
+      acquisition: {
+        qualifiedFields: 1,
+        importedFields: 0,
+        missingTargets: 1,
+        preservedFields: 1,
+      },
+    });
     expect(
       database.prepare("SELECT reason, declaration_revision FROM declaration_snapshots").get(),
     ).toEqual({ reason: "diz-import", declaration_revision: 1 });
@@ -52,6 +62,89 @@ describe("flusso ufficiale persistente", () => {
       stage: "diz-imported",
       stageLabel: "DIZ di partenza acquisito",
     });
+  });
+
+  it("importa i campi DIZ qualificati nella posizione corretta senza confermarli", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-official-flow-fields-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica DIZ con soggetto");
+    const subject = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Soggetto da DIZ",
+      declarationId: practice.declarationId,
+    });
+
+    const artifact = await importDiz(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      file: new File([new Uint8Array(syntheticDiz("VERDI"))], "pratica.diz", {
+        type: "application/zip",
+      }),
+      dataDirectory: directory,
+    });
+
+    expect(artifact.metadata).toMatchObject({
+      acquisition: {
+        qualifiedFields: 1,
+        importedFields: 1,
+        unchangedFields: 0,
+        conflictingFields: 0,
+        missingTargets: 0,
+      },
+    });
+    const declaration = getDeclaration(database, practice.declarationId, practice.id)?.declaration;
+    expect(
+      Object.values(declaration?.fields ?? {}).find(
+        (field) => field.entityId === subject.id && field.value === "VERDI",
+      ),
+    ).toMatchObject({
+      fieldId: "quadro-ea.soggetto.dati-anagrafici.cognome",
+      state: "to_review",
+      sourceRefs: [expect.stringMatching(/^DIZ acquisito · SHA-256 [a-f0-9]{64}$/)],
+    });
+    expect(
+      database.prepare("SELECT reason, declaration_revision FROM declaration_snapshots").get(),
+    ).toEqual({ reason: "diz-import", declaration_revision: 1 });
+    expect(
+      database
+        .prepare("SELECT revision FROM declarations WHERE id = ?")
+        .get(practice.declarationId),
+    ).toEqual({ revision: 2 });
+  });
+
+  it("non sovrascrive un valore già presente quando il DIZ diverge", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-official-flow-conflict-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica DIZ con divergenza");
+    createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "BIANCHI",
+      declarationId: practice.declarationId,
+    });
+    const first = await importDiz(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      file: new File([new Uint8Array(syntheticDiz("BIANCHI"))], "prima.diz"),
+      dataDirectory: directory,
+    });
+    const second = await importDiz(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      file: new File([new Uint8Array(syntheticDiz("NERI"))], "seconda.diz"),
+      dataDirectory: directory,
+    });
+
+    expect(first.metadata).toMatchObject({ acquisition: { importedFields: 1 } });
+    expect(second.metadata).toMatchObject({
+      acquisition: { importedFields: 0, conflictingFields: 1, preservedFields: 1 },
+    });
+    expect(
+      Object.values(
+        getDeclaration(database, practice.declarationId, practice.id)?.declaration.fields ?? {},
+      ).find((field) => field.fieldId === "quadro-ea.soggetto.dati-anagrafici.cognome")?.value,
+    ).toBe("BIANCHI");
   });
 
   it("serializza i cicli DIZ e blocca anche una nuova base finché il ciclo è aperto", async () => {

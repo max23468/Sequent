@@ -42,7 +42,13 @@ const generatedImplementationExceptions = new Set([
   "src/domain/official-catalog/municipality-conservatory-map.json",
   "src/domain/official-catalog/technical-schema.json",
 ]);
+const roadmapGuardFile = "scripts/check-documentation-consistency.mjs";
 const milestoneIdentifierPattern = /(?<![A-Za-z])M\d+\b|(?:^|[^a-z])m\d+\b/u;
+const milestoneTermPattern = /\bmilestone\b/iu;
+const masterPlan = readFileSync("docs/MASTER_PLAN.md", "utf8");
+const milestoneNames = [...masterPlan.matchAll(/^## M\d+ — (.+)$/gmu)].map((match) =>
+  match[1].trim().toLocaleLowerCase("it"),
+);
 const sourceManifest = JSON.parse(
   readFileSync("src/domain/official-catalog/source-manifest.json", "utf8"),
 );
@@ -90,9 +96,15 @@ for (const file of implementationFiles) {
   ) {
     violations.push(`${file}: usa un ID milestone nel codice permanente`);
   }
+  if (file !== roadmapGuardFile && milestoneTermPattern.test(content)) {
+    violations.push(`${file}: usa nomenclatura di milestone nel codice permanente`);
+  }
+  const normalizedContent = content.toLocaleLowerCase("it");
+  if (milestoneNames.some((name) => normalizedContent.includes(name))) {
+    violations.push(`${file}: replica il nome canonico di una milestone nel codice permanente`);
+  }
 }
 
-const masterPlan = readFileSync("docs/MASTER_PLAN.md", "utf8");
 const requiredWindowsDizPolicy = [
   "La mancata esecuzione del collaudo Windows non blocca",
   "Una divergenza DIZ riproducibile e confermata blocca l'output interessato",

@@ -1,6 +1,6 @@
 {
   "name": "sequent",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,6 +17,8 @@
     "admin:restore": "node scripts/admin/restore.ts",
     "admin:reset-owner": "node scripts/admin/reset-owner.ts",
     "admin:seed-synthetic": "node scripts/admin/seed-synthetic.ts",
+    "qualify:codex-runtime": "node scripts/admin/qualify-codex-runtime.ts",
+    "qualify:diz-corpus": "node scripts/admin/qualify-diz-corpus.ts",
     "benchmark:extraction-safety": "node scripts/benchmark/extraction-safety.ts",
     "docs:check": "node scripts/check-documentation-consistency.mjs",
     "format:check": "oxfmt --check scripts tests src package.json tsconfig.json svelte.config.js vite.config.ts playwright.config.ts svelte-doctor.config.json",

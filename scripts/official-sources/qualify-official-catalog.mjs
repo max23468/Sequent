@@ -595,7 +595,7 @@ const sourceUpdateResolutions = new Map([
     {
       state: "workflow-reconciled",
       resolution:
-        "Allegati, dichiarazioni sostitutive, ricevute e casi residui del Modello 4 sono classificati nel percorso interno; l’invio e la lettura delle ricevute restano intenzionalmente nelle milestone operative successive.",
+        "Allegati, dichiarazioni sostitutive, ricevute e casi residui del Modello 4 sono classificati nel percorso interno; l’invio e la lettura delle ricevute restano intenzionalmente nelle fasi operative successive.",
     },
   ],
   [

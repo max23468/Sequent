@@ -29,7 +29,7 @@ export function getLauncherCapabilities(): LauncherCapability[] {
       url: successioniUrl,
       instructions: dizEnabled
         ? "Apri il collegamento con OpenWebStart. L’avvio diretto resta disabilitato finché il collegamento non è stato verificato."
-        : "L’interoperabilità DIZ è disattivata in questo ambiente.",
+        : "La gestione DIZ è disattivata in questo ambiente.",
     },
   ];
 }

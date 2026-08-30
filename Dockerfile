@@ -36,17 +36,6 @@ RUN npm run build \
     && npm prune --omit=dev
 
 FROM node-base AS runtime
-ARG APP_COMMIT_SHA=unversioned
-LABEL org.opencontainers.image.source="https://github.com/max23468/Sequent" \
-  org.opencontainers.image.revision=$APP_COMMIT_SHA
-ENV NODE_ENV=production \
-    HOST=0.0.0.0 \
-    PORT=3000 \
-    HOME=/var/lib/sequent \
-    PATH=/opt/ocr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    SEQUENT_COMMIT_SHA=$APP_COMMIT_SHA \
-    SEQUENT_DATA_DIR=/var/lib/sequent \
-    SEQUENT_CODEX_HOME=/var/lib/sequent/.codex
 WORKDIR /app
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
@@ -62,6 +51,9 @@ COPY --from=ocr --chown=root:root /opt/ocr /opt/ocr
 COPY --from=build --chown=root:root /app/build ./build
 COPY --from=build --chown=root:root /app/node_modules ./node_modules
 COPY --from=build --chown=root:root /app/package.json ./package.json
+COPY --from=build --chown=root:root /app/scripts/admin/qualify-codex-runtime.ts ./scripts/admin/qualify-codex-runtime.ts
+COPY --from=build --chown=root:root /app/scripts/admin/qualify-diz-corpus.ts ./scripts/admin/qualify-diz-corpus.ts
+COPY --from=build --chown=root:root /app/src ./src
 COPY --from=build --chown=root:root /app/private/official-sources/modello-dichiarazione-successione-2025.pdf ./official-sources/modello-dichiarazione-successione-2025.pdf
 RUN find / -xdev -type f -perm /6000 -exec chmod a-s {} + \
     && getcap -r / 2>/dev/null \
@@ -72,6 +64,17 @@ RUN find / -xdev -type f -perm /6000 -exec chmod a-s {} + \
     && test -z "$(getcap -r / 2>/dev/null)" \
     && test -z "$(find / -xdev -type f -perm /6000 -print -quit)" \
     && test -z "$(find /app/node_modules/@openai -perm /022 -print -quit)"
+ARG APP_COMMIT_SHA=unversioned
+LABEL org.opencontainers.image.source="https://github.com/max23468/Sequent" \
+  org.opencontainers.image.revision=$APP_COMMIT_SHA
+ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
+    PORT=3000 \
+    HOME=/var/lib/sequent \
+    PATH=/opt/ocr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    SEQUENT_COMMIT_SHA=$APP_COMMIT_SHA \
+    SEQUENT_DATA_DIR=/var/lib/sequent \
+    SEQUENT_CODEX_HOME=/var/lib/sequent/.codex-sequent
 USER 10001:10001
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:3000/api/health',{headers:{'X-Forwarded-For':'127.0.0.1'}}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]

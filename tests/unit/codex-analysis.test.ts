@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -76,7 +84,27 @@ describe("confine runtime Codex", () => {
     mkdirSync(join(directory, "skills"));
     writeFileSync(join(directory, "state.sqlite"), "");
 
-    await expect(codexAnalysisInternals.requireDedicatedCodexHome()).resolves.toBe(directory);
+    await expect(codexAnalysisInternals.requireDedicatedCodexHome()).resolves.toBe(
+      realpathSync(directory),
+    );
+  });
+
+  it("rifiuta una home non privata o raggiunta tramite collegamento simbolico", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-codex-private-home-"));
+    const link = `${directory}-link`;
+    directories.push(directory, link);
+    process.env.SEQUENT_CODEX_HOME = directory;
+    chmodSync(directory, 0o755);
+
+    await expect(codexAnalysisInternals.requireDedicatedCodexHome()).rejects.toThrow(
+      "CODEX_HOME_NOT_PRIVATE",
+    );
+    chmodSync(directory, 0o700);
+    symlinkSync(directory, link);
+    process.env.SEQUENT_CODEX_HOME = link;
+    await expect(codexAnalysisInternals.requireDedicatedCodexHome()).rejects.toThrow(
+      "CODEX_HOME_NOT_DEDICATED",
+    );
   });
 
   it("distingue il timeout della run dalla cancellazione richiesta dall'utente", () => {
