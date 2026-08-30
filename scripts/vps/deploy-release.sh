@@ -68,11 +68,14 @@ load_runtime_env() {
   local input="$1"
   local line key value
   local image_seen=false uid_seen=false gid_seen=false origin_seen=false
+  local codex_seen=false diz_seen=false
 
   SEQUENT_IMAGE=
   SEQUENT_RUNTIME_UID=
   SEQUENT_RUNTIME_GID=
   SEQUENT_ORIGIN=
+  SEQUENT_CODEX_ENABLED=
+  SEQUENT_DIZ_ENABLED=
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -n "$line" && "$line" == *=* ]] || fail "riga della configurazione runtime non valida"
     key="${line%%=*}"
@@ -98,12 +101,23 @@ load_runtime_env() {
         origin_seen=true
         SEQUENT_ORIGIN="$value"
         ;;
+      SEQUENT_CODEX_ENABLED)
+        [[ "$codex_seen" == false ]] || fail "chiave runtime duplicata: $key"
+        codex_seen=true
+        SEQUENT_CODEX_ENABLED="$value"
+        ;;
+      SEQUENT_DIZ_ENABLED)
+        [[ "$diz_seen" == false ]] || fail "chiave runtime duplicata: $key"
+        diz_seen=true
+        SEQUENT_DIZ_ENABLED="$value"
+        ;;
       *) fail "chiave runtime non ammessa: $key" ;;
     esac
   done <"$input"
 
   [[ "$image_seen" == true && "$uid_seen" == true && "$gid_seen" == true \
-    && "$origin_seen" == true ]] || fail "configurazione runtime incompleta"
+    && "$origin_seen" == true && "$codex_seen" == true && "$diz_seen" == true ]] ||
+    fail "configurazione runtime incompleta"
   [[ "$SEQUENT_IMAGE" =~ ^sha256:[0-9a-f]{64}$ \
     || "$SEQUENT_IMAGE" =~ ^sequent(-release)?:[0-9a-f]{40}$ ]] ||
     fail "immagine runtime non valida"
@@ -112,12 +126,17 @@ load_runtime_env() {
   [[ "$SEQUENT_RUNTIME_UID" == "$runtime_uid" ]] || fail "UID runtime divergente dall'account"
   [[ "$SEQUENT_RUNTIME_GID" == "$runtime_gid" ]] || fail "GID runtime divergente dall'account"
   [[ "$SEQUENT_ORIGIN" =~ ^https://[^/]+$ ]] || fail "origine runtime non valida"
+  [[ "$SEQUENT_CODEX_ENABLED" == true || "$SEQUENT_CODEX_ENABLED" == false ]] ||
+    fail "flag Codex runtime non valida"
+  [[ "$SEQUENT_DIZ_ENABLED" == true || "$SEQUENT_DIZ_ENABLED" == false ]] ||
+    fail "flag DIZ runtime non valida"
 }
 
 write_trusted_runtime_env() {
   local image="$1"
-  printf 'SEQUENT_IMAGE=%s\nSEQUENT_RUNTIME_UID=%s\nSEQUENT_RUNTIME_GID=%s\nSEQUENT_ORIGIN=%s\n' \
+  printf 'SEQUENT_IMAGE=%s\nSEQUENT_RUNTIME_UID=%s\nSEQUENT_RUNTIME_GID=%s\nSEQUENT_ORIGIN=%s\nSEQUENT_CODEX_ENABLED=%s\nSEQUENT_DIZ_ENABLED=%s\n' \
     "$image" "$SEQUENT_RUNTIME_UID" "$SEQUENT_RUNTIME_GID" "$SEQUENT_ORIGIN" \
+    "$SEQUENT_CODEX_ENABLED" "$SEQUENT_DIZ_ENABLED" \
     >"$trusted_runtime_env"
   chown root:root "$trusted_runtime_env"
   chmod 0600 "$trusted_runtime_env"
@@ -412,7 +431,9 @@ docker run --detach --name "$migration_container" --network none --read-only \
   --tmpfs "/tmp:rw,size=256m,mode=1777,uid=$SEQUENT_RUNTIME_UID,gid=$SEQUENT_RUNTIME_GID" \
   --mount "type=bind,src=$migration_copy,dst=/var/lib/sequent" \
   --env NODE_ENV=production --env SEQUENT_DATA_DIR=/var/lib/sequent \
-  --env "ORIGIN=$SEQUENT_ORIGIN" "$candidate_image_id" >/dev/null
+  --env "ORIGIN=$SEQUENT_ORIGIN" \
+  --env "SEQUENT_CODEX_ENABLED=$SEQUENT_CODEX_ENABLED" \
+  --env "SEQUENT_DIZ_ENABLED=$SEQUENT_DIZ_ENABLED" "$candidate_image_id" >/dev/null
 for _attempt in $(seq 1 60); do
   [[ "$(docker inspect --format '{{.State.Health.Status}}' "$migration_container")" == healthy ]] && break
   sleep 1
@@ -474,8 +495,9 @@ touch "$previous_release_dir"
 
 install -o ubuntu -g ubuntu -m 0640 "$repository/deploy/compose.example.yml" "$runtime_compose"
 runtime_env_next="$(mktemp "$root/runtime/runtime.env.next.XXXXXX")"
-printf 'SEQUENT_IMAGE=%s\nSEQUENT_RUNTIME_UID=%s\nSEQUENT_RUNTIME_GID=%s\nSEQUENT_ORIGIN=%s\n' \
-  "$candidate_image_id" "$SEQUENT_RUNTIME_UID" "$SEQUENT_RUNTIME_GID" "$SEQUENT_ORIGIN" >"$runtime_env_next"
+printf 'SEQUENT_IMAGE=%s\nSEQUENT_RUNTIME_UID=%s\nSEQUENT_RUNTIME_GID=%s\nSEQUENT_ORIGIN=%s\nSEQUENT_CODEX_ENABLED=%s\nSEQUENT_DIZ_ENABLED=%s\n' \
+  "$candidate_image_id" "$SEQUENT_RUNTIME_UID" "$SEQUENT_RUNTIME_GID" "$SEQUENT_ORIGIN" \
+  "$SEQUENT_CODEX_ENABLED" "$SEQUENT_DIZ_ENABLED" >"$runtime_env_next"
 chown ubuntu:ubuntu "$runtime_env_next"
 chmod 0600 "$runtime_env_next"
 mv "$runtime_env_next" "$runtime_env"

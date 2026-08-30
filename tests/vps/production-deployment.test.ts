@@ -107,6 +107,10 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /id -g sequent-runtime/);
   assert.match(deploy, /SEQUENT_RUNTIME_UID.*runtime_uid/);
   assert.match(deploy, /SEQUENT_RUNTIME_GID.*runtime_gid/);
+  assert.match(deploy, /SEQUENT_CODEX_ENABLED.*== true.*SEQUENT_CODEX_ENABLED.*== false/s);
+  assert.match(deploy, /SEQUENT_DIZ_ENABLED.*== true.*SEQUENT_DIZ_ENABLED.*== false/s);
+  assert.match(deploy, /SEQUENT_CODEX_ENABLED=\$SEQUENT_CODEX_ENABLED/);
+  assert.match(deploy, /SEQUENT_DIZ_ENABLED=\$SEQUENT_DIZ_ENABLED/);
   assert.match(deploy, /mktemp \/run\/sequent-runtime-env\./);
   assert.match(deploy, /chown root:root "\$trusted_runtime_env"/);
   assert.match(deploy, /--env-file "\$trusted_runtime_env"/);
