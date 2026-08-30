@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
-const script = "scripts/vps/configure-runtime-features.mjs";
+const script = "scripts/vps/configure-runtime-features.py";
 const migrationScript = "scripts/vps/migrate-runtime-features.py";
 const migrationIdentity = [`${process.getuid?.()}`, `${process.getgid?.()}`, "1001", "1001"];
 
@@ -33,7 +33,7 @@ function createRuntime(extra = "") {
 test("configura atomicamente entrambe le feature flag senza alterare le altre chiavi", () => {
   const fixture = createRuntime();
   try {
-    const result = spawnSync(process.execPath, [script, "--codex", "false", "--diz", "true"], {
+    const result = spawnSync("python3", [script, "--codex", "false", "--diz", "true"], {
       cwd: process.cwd(),
       env: { ...process.env, SEQUENT_ROOT: fixture.root },
       encoding: "utf8",
@@ -130,7 +130,7 @@ test("rifiuta valori, chiavi e permessi non conformi senza sostituire il file", 
   ]) {
     try {
       const before = readFileSync(fixture.created.environment, "utf8");
-      const result = spawnSync(process.execPath, [script, ...fixture.arguments_], {
+      const result = spawnSync("python3", [script, ...fixture.arguments_], {
         cwd: process.cwd(),
         env: { ...process.env, SEQUENT_ROOT: fixture.created.root },
         encoding: "utf8",

@@ -511,6 +511,8 @@ write_trusted_runtime_env "$candidate_image_id"
   fail "directory sbin trusted non conforme"
 install -o root -g root -m 0755 "$repository/scripts/vps/prune-docker-images.sh" \
   /usr/local/sbin/sequent-prune-docker-images
+install -o root -g root -m 0755 "$repository/scripts/vps/configure-runtime-features.py" \
+  /usr/local/sbin/sequent-configure-runtime-features
 install -o root -g root -m 0644 "$repository/deploy/systemd/sequent-docker-prune.service" \
   /etc/systemd/system/sequent-docker-prune.service
 install -o root -g root -m 0644 "$repository/deploy/systemd/sequent-docker-prune.timer" \

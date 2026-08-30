@@ -4,6 +4,12 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.4
+
+### Fixed
+
+- configurazione amministrativa delle feature flag resa eseguibile sul layout runtime protetto tramite comando root-owned installato dalla release, lock condiviso, validazione completa e sostituzione atomica senza eseguire file del checkout con privilegi.
+
 ## 0.2.3
 
 ### Fixed

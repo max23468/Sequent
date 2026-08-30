@@ -80,6 +80,10 @@ test("il runbook qualifica la finalizzazione di un deploy annullato", () => {
 
 test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   const deploy = read("scripts/vps/deploy-release.sh");
+  assert.match(
+    deploy,
+    /install -o root -g root -m 0755 .*configure-runtime-features\.py.*sequent-configure-runtime-features/s,
+  );
 
   assert.match(deploy, /hub-fatture-sequent-docker\.lock/);
   assert.match(deploy, /SEQUENT_TRUSTED_REPOSITORY/);
