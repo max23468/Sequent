@@ -26,11 +26,12 @@ Prima della `1.0.0`:
 | `0.3.0` | Dominio, UX e output | criteri di uscita della fase soddisfatti |
 | `0.4.0` | Offline selettivo | criteri di uscita della fase soddisfatti |
 | `0.5.0` | Flusso ufficiale e operations | criteri di uscita della fase soddisfatti |
-| `0.6.0` | ingresso nella validazione finale | fase Flusso ufficiale e operations chiusa e avvio della validazione finale su una baseline numerata |
-| `0.6.x` | Validazione e go-live in corso | sole correzioni e hardening emersi durante la validazione finale |
+| `0.6.0` | Qualificazione Codex e acquisizione del corpus DIZ | fase Flusso ufficiale e operations chiusa, `TG-CODEX` qualificato realmente e cinque DIZ acquisiti nell'archivio applicativo |
+| `0.7.0` | ingresso nella validazione finale | qualificazione Codex e acquisizione del corpus DIZ chiuse, con avvio della validazione finale su una baseline numerata |
+| `0.7.x` | Validazione e go-live in corso | sole correzioni e hardening emersi durante la validazione finale |
 | `1.0.0` | Validazione e go-live chiusa | `TG-GOLIVE` chiuso e approvazione finale dell'owner |
 
-Il passaggio da `0.6.x` a `1.0.0` è intenzionale: non sono previste linee `0.7`, `0.8` o `0.9` solo per riempire la numerazione.
+Il passaggio da `0.7.x` a `1.0.0` è intenzionale: non sono previste linee `0.8` o `0.9` solo per riempire la numerazione.
 
 ## Regole durante lo sviluppo
 
