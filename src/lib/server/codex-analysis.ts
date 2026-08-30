@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
-import { chmod, copyFile, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
 import {
@@ -12,7 +12,8 @@ import {
 } from "@openai/codex-sdk";
 import { z } from "zod";
 import { resolveBlobPath } from "./blob-store.ts";
-import { getCodexHome, getCodexModel, getDataDirectory, isCodexEnabled } from "./config.ts";
+import { getCodexModel, getDataDirectory, isCodexEnabled } from "./config.ts";
+import { requireDedicatedCodexHome } from "./codex-home.ts";
 import { createReviewItem, getDocumentText } from "./documents.ts";
 
 const CODEX_PROMPT_VERSION = "practice-analysis-v3";
@@ -206,16 +207,6 @@ function buildCodexRuntimeOptions(workingDirectory: string, codexHome: string): 
       "hooks={}",
     ],
   };
-}
-
-async function requireDedicatedCodexHome(): Promise<string> {
-  const codexHome = getCodexHome();
-  if (!codexHome) throw new Error("CODEX_HOME_REQUIRED");
-  const forbiddenEntries = new Set(["config.toml", "requirements.toml", "plugins"]);
-  const entries = await readdir(codexHome);
-  if (entries.some((entry) => forbiddenEntries.has(entry)))
-    throw new Error("CODEX_HOME_NOT_DEDICATED");
-  return codexHome;
 }
 
 class SdkCodexAnalysisAdapter implements CodexAnalysisAdapter {

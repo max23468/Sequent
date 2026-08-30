@@ -13,7 +13,16 @@ Questa procedura qualifica Codex attraverso Sequent e acquisisce i cinque DIZ gi
 
 ## Qualificazione Codex
 
-1. Dalla release candidata, completare `codex login --device-auth` con `CODEX_HOME=/var/lib/sequent/.codex-sequent` e verificare che `login status` riporti ChatGPT, non API key.
+1. Dalla release candidata, entrare nel container come utente applicativo e inizializzare la sola home dedicata:
+
+   ```bash
+   install -d -m 700 "$SEQUENT_CODEX_HOME"
+   CODEX_HOME="$SEQUENT_CODEX_HOME" node node_modules/@openai/codex/bin/codex.js login --device-auth
+   CODEX_HOME="$SEQUENT_CODEX_HOME" node node_modules/@openai/codex/bin/codex.js login status
+   ```
+
+   Lo stato deve riportare esplicitamente l’accesso tramite ChatGPT, non una API key. La verifica applicativa usa la stessa `CODEX_HOME`; una sessione presente nella home amministrativa generale non viene accettata come prova.
+
 2. Applicare `SEQUENT_CODEX_ENABLED=true` soltanto attraverso il configuratore installato e il deploy deliberato della release qualificata.
 3. Nel container della release eseguire il controllo sintetico, scrivendo il risultato sanitizzato in una directory privata:
 
@@ -21,7 +30,7 @@ Questa procedura qualifica Codex attraverso Sequent e acquisisce i cinque DIZ gi
    npm run qualify:codex-runtime -- --output /var/lib/sequent/qualification/codex.json
    ```
 
-   Il comando usa il vero SDK e la vera sessione ChatGPT, ma crea database, pratica, documento testuale e immagine neutra sintetici sotto `/tmp`; verifica input immagine, output strutturato, provenienza letterale, persistenza del thread nel database temporaneo e benchmark fail-closed, poi rimuove il workspace. Non stampa contenuti o credenziali.
+   Il comando usa il vero SDK e la vera sessione ChatGPT, ma crea database, pratica, documento testuale e immagine neutra sintetici sotto `/tmp`; verifica input immagine, output strutturato, provenienza letterale, persistenza del thread nel database temporaneo e benchmark fail-closed, poi rimuove il workspace. Crea la directory privata del report con permessi `0700`, forza il file a `0600` e rifiuta esecuzioni non legate allo SHA completo della release. Non stampa contenuti o credenziali.
 
 4. Nell'app creare una pratica sintetica controllata, elaborare un documento testuale e un'immagine controllata, quindi avviare una run. Rileggere proposte, fonti e stato; riavviare il container attraverso la corsia operativa, rileggere la stessa run e avviare una seconda analisi che riprenda il thread persistito.
 5. Verificare l'indisponibilità controllata con la flag spenta e, in una finestra concordata, completare logout e nuovo device login della sola home dedicata. Non cancellare o sostituire la sessione amministrativa generale.
@@ -47,7 +56,7 @@ npm run qualify:diz-corpus -- \
   --output /var/lib/sequent/qualification/diz-corpus.json
 ```
 
-Il comando richiede esattamente cinque DIZ univoci, associa ciascun hash a un solo artefatto attivo, rilegge il blob, ripete il parsing e verifica nel modello canonico ogni campo qualificato. Fallisce se manca una posizione, resta una divergenza o un file non coincide. Il report contiene soltanto conteggi sanitizzati.
+Il comando richiede esattamente cinque DIZ univoci, associa ciascun hash ad almeno un’acquisizione attiva e completa, rilegge il blob, ripete il parsing e verifica metadati, contenuti opachi e ogni campo qualificato nel modello canonico. Eventuali tentativi incompleti precedenti restano nella cronologia senza impedire la prova dell’acquisizione corretta più recente. Il controllo fallisce se manca una posizione, resta una divergenza, i metadati non coincidono o un file è diverso. Il report contiene soltanto conteggi sanitizzati, è legato allo SHA completo della release e viene scritto con directory `0700` e file `0600`.
 
 ## Chiusura della qualificazione
 

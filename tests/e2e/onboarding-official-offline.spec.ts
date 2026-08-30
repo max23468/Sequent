@@ -44,6 +44,7 @@ test("conserva separatamente gli artefatti del flusso ufficiale", async ({ page,
   ).toBeVisible();
   await expect(page.getByText("Prima ricevuta · trasmissione", { exact: true })).toBeVisible();
   await expect(page.getByText(/prima-ricevuta-sintetica\.pdf/)).toBeVisible();
+  await expect(page.getByText(/^SHA-256 [a-f0-9]{64}$/)).toBeVisible();
 });
 
 test("crea un backup manuale verificato dalle impostazioni", async ({ page, browserName }) => {

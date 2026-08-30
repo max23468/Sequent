@@ -22,6 +22,15 @@
     dizEnabled: boolean;
   }
 
+  interface DizAcquisition {
+    qualifiedFields: number;
+    importedFields: number;
+    unchangedFields: number;
+    conflictingFields: number;
+    missingTargets: number;
+    preservedFields: number;
+  }
+
   let { data, form, actionUrl } = $props<{
     data: OfficialFlowData;
     form: object | null;
@@ -51,6 +60,27 @@
       (artifact: OfficialArtifact) => artifact.kind === "diz-exported",
     ) ?? null,
   );
+  let latestImport = $derived(
+    data.officialFlow.artifacts.find(
+      (artifact: OfficialArtifact) => artifact.kind === "diz-imported",
+    ) ?? null,
+  );
+  let latestAcquisition = $derived.by(() => {
+    const acquisition = latestImport?.metadata.acquisition;
+    if (!acquisition || typeof acquisition !== "object") return null;
+    const candidate = acquisition as Partial<DizAcquisition>;
+    const counts = [
+      candidate.qualifiedFields,
+      candidate.importedFields,
+      candidate.unchangedFields,
+      candidate.conflictingFields,
+      candidate.missingTargets,
+      candidate.preservedFields,
+    ];
+    return counts.every((count) => Number.isInteger(count) && Number(count) >= 0)
+      ? (candidate as DizAcquisition)
+      : null;
+  });
   let presentationConfirmation = $derived(
     data.officialFlow.events.find(
       (event: OfficialFlowEvent) => event.eventType === "presentation-confirmed",
@@ -112,6 +142,17 @@
       <input id="official-diz-import" name="file" type="file" accept=".diz,application/zip" required />
       <button class="button secondary" type="submit" disabled={!data.dizEnabled || data.officialFlow.pendingRoundTrip}>Acquisisci</button>
     </form>
+    {#if latestAcquisition}
+      {@const acquisitionIncomplete = latestAcquisition.conflictingFields > 0 || latestAcquisition.missingTargets > 0}
+      <div class="diz-acquisition-summary" class:incomplete={acquisitionIncomplete} role={acquisitionIncomplete ? "alert" : "status"}>
+        <strong>{acquisitionIncomplete ? "Acquisizione da completare" : "Dati acquisiti nella dichiarazione"}</strong>
+        <p>{latestAcquisition.importedFields} nuovi dati in Da verificare · {latestAcquisition.unchangedFields} già coincidenti · {latestAcquisition.preservedFields} conservati soltanto nell’originale.</p>
+        {#if acquisitionIncomplete}
+          <p>{latestAcquisition.conflictingFields} valori differiscono dai dati esistenti e {latestAcquisition.missingTargets} posizioni non sono collegate. Nessun dato esistente è stato sostituito.</p>
+          <a href={`?vista=quadri&sezione=quadri&quadro=EA&dichiarazione=${data.declaration.id}`}>Controlla il Quadro EA</a>
+        {/if}
+      </div>
+    {/if}
   </section>
 
   <section class="official-flow-card">
@@ -208,7 +249,7 @@
     {:else}
       <ul>
         {#each data.officialFlow.artifacts as artifact (artifact.id)}
-          <li><div><strong>{labels[artifact.kind] ?? artifact.kind}</strong><span>{artifact.originalName} · {formatMegabytes(artifact.byteSize)} · {formatItalianDate(artifact.createdAt)}</span></div><a href={`/pratiche/${data.practice.id}/artefatti/${artifact.id}`} aria-label={`Scarica ${artifact.originalName}`}><ArrowDownToLine size={18} /></a></li>
+          <li><div><strong>{labels[artifact.kind] ?? artifact.kind}</strong><span>{artifact.originalName} · {formatMegabytes(artifact.byteSize)} · {formatItalianDate(artifact.createdAt)}</span><code>SHA-256 {artifact.sha256}</code></div><a href={`/pratiche/${data.practice.id}/artefatti/${artifact.id}`} aria-label={`Scarica ${artifact.originalName}`}><ArrowDownToLine size={18} /></a></li>
         {/each}
       </ul>
     {/if}

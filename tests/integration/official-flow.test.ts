@@ -47,7 +47,7 @@ describe("flusso ufficiale persistente", () => {
         qualifiedFields: 1,
         importedFields: 0,
         missingTargets: 1,
-        preservedFields: 0,
+        preservedFields: 1,
       },
     });
     expect(
@@ -138,7 +138,7 @@ describe("flusso ufficiale persistente", () => {
 
     expect(first.metadata).toMatchObject({ acquisition: { importedFields: 1 } });
     expect(second.metadata).toMatchObject({
-      acquisition: { importedFields: 0, conflictingFields: 1 },
+      acquisition: { importedFields: 0, conflictingFields: 1, preservedFields: 1 },
     });
     expect(
       Object.values(

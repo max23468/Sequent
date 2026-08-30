@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { evaluateExtractionSafetyBenchmark } from "../../src/lib/benchmark/extraction-safety.ts";
 import { analyzePracticeWithCodex } from "../../src/lib/server/codex-analysis.ts";
 import { getCodexCapability } from "../../src/lib/server/codex-capability.ts";
@@ -17,7 +17,17 @@ function argument(name: string): string | null {
   return index >= 0 ? (process.argv[index + 1] ?? null) : null;
 }
 
+async function writePrivateReport(path: string, report: unknown): Promise<void> {
+  const resolved = resolve(path);
+  await mkdir(dirname(resolved), { recursive: true, mode: 0o700 });
+  await writeFile(resolved, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 });
+  await chmod(resolved, 0o600);
+}
+
 const outputPath = argument("--output");
+const releaseCommit = process.env.SEQUENT_COMMIT_SHA;
+if (!releaseCommit || !/^[a-f0-9]{40}$/.test(releaseCommit))
+  throw new Error("CODEX_QUALIFICATION_RELEASE_REQUIRED");
 if (process.env.OPENAI_API_KEY) throw new Error("CODEX_QUALIFICATION_API_KEY_DISALLOWED");
 if (process.env.SEQUENT_CODEX_ENABLED !== "true")
   throw new Error("CODEX_QUALIFICATION_NOT_ENABLED");
@@ -133,7 +143,7 @@ try {
     format: "sequent-codex-runtime-qualification",
     version: 1,
     generatedAt: new Date().toISOString(),
-    commit: process.env.SEQUENT_COMMIT_SHA ?? "working-tree",
+    commit: releaseCommit,
     capability: capability.state,
     run: {
       completed: true,
@@ -151,9 +161,7 @@ try {
     },
   };
   if (outputPath) {
-    await writeFile(resolve(outputPath), `${JSON.stringify(sanitizedReport, null, 2)}\n`, {
-      mode: 0o600,
-    });
+    await writePrivateReport(outputPath, sanitizedReport);
   }
   process.stdout.write(`${JSON.stringify(sanitizedReport)}\n`);
   if (!report.passedSafetyGate) process.exitCode = 1;

@@ -9,7 +9,13 @@ interface CommandResult {
 export type CommandRunner = (
   command: string,
   arguments_: string[],
-  options?: { timeoutMs?: number; maxOutputBytes?: number; cwd?: string; signal?: AbortSignal },
+  options?: {
+    timeoutMs?: number;
+    maxOutputBytes?: number;
+    cwd?: string;
+    signal?: AbortSignal;
+    env?: NodeJS.ProcessEnv;
+  },
 ) => Promise<CommandResult>;
 
 function processTable(): Array<{ pid: number; parentPid: number }> {
@@ -96,7 +102,7 @@ export const runCommand: CommandRunner = async (command, arguments_, options = {
     const useProcessGroup = process.platform !== "win32";
     const child = spawn(command, arguments_, {
       cwd: options.cwd,
-      env: process.env,
+      env: options.env ?? process.env,
       stdio: ["ignore", "pipe", "pipe"],
       shell: false,
       detached: useProcessGroup,

@@ -481,13 +481,17 @@ function acquireRepresentableDizFields(
     const entityId = subjectEntries.find((entry) => entry.sequence === sequence)?.id ?? null;
     if (!entityId) {
       summary.missingTargets += 1;
+      summary.preservedFields += 1;
       continue;
     }
 
     const current = getCanonicalField(declaration, mapping.catalogFieldId, entityId);
     if (current) {
       if (String(current.value ?? "") === field.value) summary.unchangedFields += 1;
-      else summary.conflictingFields += 1;
+      else {
+        summary.conflictingFields += 1;
+        summary.preservedFields += 1;
+      }
       continue;
     }
     declaration = setCanonicalField(
