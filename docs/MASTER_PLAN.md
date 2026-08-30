@@ -574,11 +574,12 @@ Il writer/parser supera `TG-DIZ`: round-trip su più pratiche con SuccessioniOnL
 Prima del percorso ordinario:
 
 1. round-trip DIZ qualificato;
-2. ricostruzione end-to-end di 5–10 pratiche storiche;
-3. benchmark OCR/Codex;
-4. prima pratica reale lavorata in parallelo al metodo abituale;
-5. riconciliazione di tutte le divergenze critiche;
-6. approvazione dell'owner al go-live.
+2. qualificazione reale di Codex attraverso Sequent e acquisizione applicativa dei cinque DIZ privati già disponibili;
+3. ricostruzione end-to-end di 5–10 pratiche storiche;
+4. benchmark OCR/Codex finale;
+5. prima pratica reale lavorata in parallelo al metodo abituale;
+6. riconciliazione di tutte le divergenze critiche;
+7. approvazione dell'owner al go-live.
 
 ## 6.5 Successo della conformità ufficiale
 
@@ -3551,7 +3552,17 @@ M2 comprende inoltre Brand Foundation, design token, shell responsive, Dashboard
 
 **Uscita:** round-trip ufficiale, pacchetto allegati conforme, controllo Agenzia/Sogei superato e procedure operative ripetibili; origine HTTPS canonica, health check attraverso Caddy e autenticazione/sessione verificati sull'endpoint personale.
 
-## M7 — Validazione e go-live
+## M7 — Qualificazione Codex e acquisizione del corpus DIZ
+
+**Prerequisito:** M6 chiusa senza trasferirne o ridurne i criteri di uscita.
+
+**Risultato:** Codex viene qualificato realmente attraverso Sequent sulla VPS con autenticazione ChatGPT, SDK, thread e run strutturate, provenienza verificabile, persistenza dopo riavvio, riautenticazione e indisponibilità controllata. I cinque DIZ già presenti nel corpus privato vengono acquisiti nell'archivio applicativo tramite il percorso productizzato in M6, creando o collegando le pratiche pertinenti, importando tutti i dati rappresentabili e preservando integralmente originali e contenuti non interpretati.
+
+**Uscita:** `TG-CODEX` chiuso con almeno una run reale riproducibile e un benchmark privato controllato senza fonti inventate o valori critici errati accettati silenziosamente; cinque DIZ presenti e consultabili in Sequent con hash, provenienza, pratica/dichiarazione e readback verificati; nessun dato reale in Git, CI o artefatti pubblici. Il caricamento usa mapping, round-trip, backup/restore, health e procedure operative già qualificati in M6 e non ne ridefinisce né sposta i requisiti. Il benchmark storico completo su 5–10 pratiche e la prima pratica reale restano in M8.
+
+## M8 — Validazione e go-live
+
+**Prerequisito:** M7.
 
 **Risultato:** ricostruzione delle pratiche storiche, benchmark, regressioni, prima pratica reale parallela sull'endpoint HTTPS qualificato in M6 e release stabile.
 
@@ -3568,11 +3579,12 @@ M2 comprende inoltre Brand Foundation, design token, shell responsive, Dashboard
 | M4        | diretto e bloccante per la chiusura        | calcoli, regole, scadenze, pagamenti e controlli devono essere riconciliati per periodo con `SRC-11`–`SRC-27`; `TG-COMPLIANCE` resta aperto finché i test non sono completi                                    |
 | M5        | nessun impatto diretto                     | l’offline selettivo conserva le versioni delle regole già previste e non richiede una nuova architettura                                                                                                       |
 | M6        | diretto                                    | installer e modulo SUC13 sono già disponibili nel bundle; controllo, uffici, Comuni/Stati esteri, allegati e ricevute devono comunque essere riletti dai servizi ufficiali correnti prima del flusso ufficiale |
-| M7        | diretto                                    | il corpus storico deve comprendere periodi 2025 e 2026 e almeno il caso anteriore alla riforma interessato dalla sentenza 89/2026                                                                              |
+| M7        | indiretto                                  | i cinque DIZ vengono acquisiti senza reinterpretare le regole applicate; Codex resta assistivo e ogni proposta mantiene la provenienza, mentre mapping e flusso ufficiale restano requisiti già chiusi in M6   |
+| M8        | diretto                                    | il corpus storico deve comprendere periodi 2025 e 2026 e almeno il caso anteriore alla riforma interessato dalla sentenza 89/2026                                                                              |
 
 Questa valutazione non anticipa l’esito della riconciliazione fiscale: identifica dove le nuove fonti cambiano i criteri di uscita e dove, invece, non giustificano lavoro aggiuntivo.
 
-Dopo il completamento dello sviluppo, se un ambiente Windows è già disponibile, può essere eseguito un collaudo finale di SuccessioniOnLine. L'assenza dell'ambiente, la mancata esecuzione o un problema esclusivamente ambientale non impediscono l'uscita da M7 né la release. Una divergenza DIZ riproducibile e confermata viene invece trattata come difetto del formato e blocca l'output interessato secondo i criteri ordinari.
+Dopo il completamento dello sviluppo, se un ambiente Windows è già disponibile, può essere eseguito un collaudo finale di SuccessioniOnLine. L'assenza dell'ambiente, la mancata esecuzione o un problema esclusivamente ambientale non impediscono l'uscita da M8 né la release. Una divergenza DIZ riproducibile e confermata viene invece trattata come difetto del formato e blocca l'output interessato secondo i criteri ordinari.
 
 ---
 
