@@ -3510,6 +3510,8 @@ Il collaudo con SuccessioniOnLine su Windows è una verifica finale facoltativa 
 
 Ogni milestone contiene già i propri criteri di uscita; non esistono Definition of Done o epiche parallele.
 
+Gli identificatori delle milestone restano confinati a questo capitolo canonico. Le denominazioni possono essere richiamate nella documentazione di governance, mentre il codice permanente usa esclusivamente termini di dominio o del ciclo di vita applicativo e non incorpora nomi o nomenclatura di roadmap.
+
 ## M0 — Bootstrap VPS, repository, source bundle e DIZ Lab
 
 **Obiettivo:** partendo dall'unico ZIP consegnato all'agente, Codex verifica localmente il pacchetto, individua e valida la VPS, trasferisce autonomamente i file, predispone il layout `/opt/sequent/`, inizializza checkout e repository GitHub, versiona gli artefatti ministeriali pubblici e l'albero XSD, verifica manifest/hash e prepara pipeline del catalogo, corpus DIZ privato e strumenti di analisi.

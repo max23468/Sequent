@@ -109,7 +109,7 @@
       "area": "percorso operativo e pratiche ammesse su modello cartaceo",
       "state": "workflow-reconciled",
       "requiredWork": "confrontare allegati, controlli, ricevute e casi residui del Modello 4 con il percorso della pratica e con la futura verifica ufficiale",
-      "resolution": "Allegati, dichiarazioni sostitutive, ricevute e casi residui del Modello 4 sono classificati nel percorso interno; l’invio e la lettura delle ricevute restano intenzionalmente nelle milestone operative successive."
+      "resolution": "Allegati, dichiarazioni sostitutive, ricevute e casi residui del Modello 4 sono classificati nel percorso interno; l’invio e la lettura delle ricevute restano intenzionalmente nelle fasi operative successive."
     },
     {
       "sourceIds": [

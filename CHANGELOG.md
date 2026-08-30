@@ -4,6 +4,19 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.6
+
+### Added
+
+- qualificazione riproducibile del runtime Codex tramite sessione ChatGPT dedicata e del corpus DIZ privato, con report sanitizzati legati alla release;
+- esito dell’acquisizione DIZ e impronta SHA-256 completa resi visibili nel fascicolo ufficiale.
+
+### Fixed
+
+- controllo dell’autenticazione Codex confinato alla home privata di Sequent, rifiutando API key, configurazioni condivise e stati di logout ambigui;
+- acquisizione e qualificazione DIZ rese fail-closed su conflitti, posizioni mancanti, metadati, evidenze opache e readback canonico;
+- nomenclatura di roadmap rimossa dal codice permanente e gate documentale esteso a identificatori, nomi canonici e termine riservato delle milestone.
+
 ## 0.2.5
 
 ### Changed

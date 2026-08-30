@@ -323,7 +323,7 @@ function createSnapshot(
     );
 }
 
-function ensureMilestoneSnapshots(
+function ensureLifecycleSnapshots(
   database: Database.Database,
   practiceId: string,
   declarationId: string,
@@ -942,7 +942,7 @@ export async function addOfficialArtifact(
       "Acquisito un artefatto del flusso ufficiale.",
       { artifactId: artifact.id, kind: input.kind, metadata: input.metadata ?? {} },
     );
-    ensureMilestoneSnapshots(database, input.practiceId, input.declarationId);
+    ensureLifecycleSnapshots(database, input.practiceId, input.declarationId);
   })();
   return artifact;
 }
@@ -992,7 +992,7 @@ export function confirmPresentation(
       "Confermata manualmente la presentazione perché la seconda ricevuta non è ottenibile.",
       metadata,
     );
-    ensureMilestoneSnapshots(database, input.practiceId, input.declarationId);
+    ensureLifecycleSnapshots(database, input.practiceId, input.declarationId);
   })();
   return { id, eventType: "presentation-confirmed", metadata, createdAt };
 }
@@ -1045,7 +1045,7 @@ export function overrideOfficialStage(
       `Corretto manualmente lo stato del flusso ufficiale in “${OFFICIAL_STAGE_LABELS[input.stage]}”.`,
       { stage: input.stage, reason, derivedStage },
     );
-    ensureMilestoneSnapshots(database, input.practiceId, input.declarationId);
+    ensureLifecycleSnapshots(database, input.practiceId, input.declarationId);
   })();
 }
 
