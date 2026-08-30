@@ -54,10 +54,10 @@ Nel solo passaggio dallo schema precedente, il deploy migra atomicamente entramb
 La migrazione atomica della configurazione esistente si esegue senza riavviare il servizio e senza stampare gli altri valori privati:
 
 ```bash
-scripts/vps/with-node.sh node scripts/vps/configure-runtime-features.mjs --codex false --diz true
+sudo /usr/local/sbin/sequent-configure-runtime-features --codex false --diz true
 ```
 
-Il successivo deploy qualificato applica le flag al container. Non modificare direttamente il file durante un deploy.
+Il comando installato dalla release è `root:root:0755`, acquisisce il lock Docker condiviso, valida layout e contenuto e sostituisce atomicamente il file conservandolo `ubuntu:ubuntu:0600`; non esegue toolchain o file del checkout con privilegi. Il successivo deploy qualificato applica le flag al container. Non modificare direttamente il file durante un deploy.
 
 Il runtime riceve richieste pubbliche esclusivamente da Caddy attraverso il binding di loopback dichiarato in Compose. `ORIGIN` vincola la ricostruzione degli URL e la protezione CSRF all'origine HTTPS dichiarata. Per il rate limit del login, adapter-node legge `X-Forwarded-For` con `XFF_DEPTH=1`: la configurazione Caddy qualificata deve quindi sovrascrivere gli header inoltrati dal client e rappresentare l'unico hop davanti a Sequent. Aggiungere un altro proxy richiede una nuova qualifica esplicita della profondità; non aumentarla preventivamente.
 
