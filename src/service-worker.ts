@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import { build, files, version } from "$service-worker";
+import { documentContentHeaders } from "$lib/document-content-headers";
 import { OFFLINE_DATABASE_NAME } from "$lib/offline/types";
 
 const worker = self as unknown as ServiceWorkerGlobalScope;
@@ -68,11 +69,12 @@ async function offlineDocument(
       resolve(
         document && body
           ? new Response(body, {
-              headers: {
-                "content-type": document.mediaType,
-                "content-length": String(document.byteSize),
-                "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(document.name)}`,
-              },
+              headers: documentContentHeaders({
+                mediaType: document.mediaType,
+                byteSize: document.byteSize,
+                fileName: document.name,
+                fallbackName: "documento",
+              }),
             })
           : null,
       );

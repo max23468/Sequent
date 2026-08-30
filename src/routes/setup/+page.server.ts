@@ -1,4 +1,4 @@
-import { fail, redirect } from "@sveltejs/kit";
+import { error, fail, redirect } from "@sveltejs/kit";
 import { z } from "zod";
 import type { Actions, PageServerLoad } from "./$types";
 import {
@@ -8,7 +8,7 @@ import {
   SESSION_COOKIE,
   SESSION_COOKIE_MAX_AGE,
 } from "$lib/server/auth";
-import { useSecureCookies } from "$lib/server/config";
+import { useSecureCookies, useWebOwnerSetup } from "$lib/server/config";
 import { openDatabase } from "$lib/server/database";
 
 const usernameSchema = z
@@ -24,11 +24,13 @@ const passwordSchema = z
   .max(128, "Usa al massimo 128 caratteri.");
 
 export const load: PageServerLoad = () => {
+  if (!useWebOwnerSetup()) error(503, "Configurazione amministrativa richiesta.");
   if (hasOwner(openDatabase())) redirect(303, "/login");
 };
 
 export const actions = {
   default: async ({ request, cookies }) => {
+    if (!useWebOwnerSetup()) error(503, "Configurazione amministrativa richiesta.");
     const database = openDatabase();
     if (hasOwner(database)) redirect(303, "/login");
     const formData = await request.formData();

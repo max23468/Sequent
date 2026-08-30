@@ -181,8 +181,42 @@ describe("migrazioni della pipeline documentale", () => {
         .get(),
     ).toEqual({ count: 1 });
     expect(database.prepare("SELECT count(*) AS count FROM schema_migrations").get()).toEqual({
-      count: 18,
+      count: 19,
     });
+  });
+
+  it("sostituisce i bucket login legati soltanto al client con chiavi di rate limit", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-login-rate-limit-migration-"));
+    directories.push(directory);
+    openDatabase(directory);
+    closeDatabase(directory);
+    const previous = new Database(join(directory, "sequent.sqlite"));
+    previous.exec(`
+      DELETE FROM schema_migrations WHERE version = 19;
+      DROP TABLE login_attempts;
+      CREATE TABLE login_attempts (
+        client_key TEXT PRIMARY KEY,
+        failed_count INTEGER NOT NULL,
+        blocked_until TEXT,
+        updated_at TEXT NOT NULL
+      );
+      INSERT INTO login_attempts(client_key, failed_count, blocked_until, updated_at)
+      VALUES ('precedente', 4, NULL, '2026-08-31T08:00:00.000Z');
+    `);
+    previous.close();
+
+    const migrated = openDatabase(directory);
+    expect(
+      (migrated.prepare("PRAGMA table_info(login_attempts)").all() as Array<{ name: string }>).map(
+        ({ name }) => name,
+      ),
+    ).toContain("attempt_key");
+    expect(migrated.prepare("SELECT count(*) AS count FROM login_attempts").get()).toEqual({
+      count: 0,
+    });
+    expect(
+      migrated.prepare("SELECT version FROM schema_migrations WHERE version = 19").get(),
+    ).toEqual({ version: 19 });
   });
 
   it("elimina i vecchi calcoli derivati e richiede un nuovo calcolo", () => {

@@ -13,6 +13,10 @@ export function useSecureCookies(): boolean {
   return process.env.NODE_ENV === "production";
 }
 
+export function useWebOwnerSetup(): boolean {
+  return process.env.NODE_ENV !== "production";
+}
+
 export function useDevelopmentAutoLogin(isDevelopment: boolean, clientAddress: string): boolean {
   const loopbackAddresses = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
   return (

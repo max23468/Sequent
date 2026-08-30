@@ -5,6 +5,8 @@ import { SESSION_COOKIE } from "./config.ts";
 
 const SESSION_DAYS = 365;
 const SESSION_TOUCH_INTERVAL_MS = 24 * 60 * 60 * 1_000;
+const DUMMY_PASSWORD_HASH =
+  "$argon2id$v=19$m=65536,p=4,t=3$GwDy6Xfk2T0BID1GRpHQ8A$mYh20m3xzgO/UFld3FWdbY0enfEE55oWHSoM4CkJKHY";
 const developmentOwnerPromises = new WeakMap<Database.Database, Promise<string>>();
 export const MIN_PASSWORD_LENGTH = 8;
 
@@ -28,34 +30,32 @@ function tokenHash(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-function clientKeyHash(clientKey: string): string {
-  return createHash("sha256").update(clientKey).digest("hex");
+function rateLimitKey(scope: "account" | "client", value: string): string {
+  return createHash("sha256").update(`${scope}\0${value}`).digest("hex");
 }
 
-function recordFailedAttempt(
-  database: Database.Database,
-  storedClientKey: string,
-  now: Date,
-): void {
+function recordFailedAttempts(database: Database.Database, attemptKeys: string[], now: Date): void {
   const update = database.transaction(() => {
-    const latest = database
-      .prepare("SELECT failed_count FROM login_attempts WHERE client_key = ?")
-      .get(storedClientKey) as { failed_count: number } | undefined;
-    const failedCount = (latest?.failed_count ?? 0) + 1;
-    const delaySeconds = failedCount < 3 ? 0 : Math.min(60, 2 ** (failedCount - 3));
-    const blockedUntil = delaySeconds
-      ? new Date(now.getTime() + delaySeconds * 1_000).toISOString()
-      : null;
-    database
-      .prepare(
-        `INSERT INTO login_attempts(client_key, failed_count, blocked_until, updated_at)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT(client_key) DO UPDATE SET
-           failed_count = excluded.failed_count,
-           blocked_until = excluded.blocked_until,
-           updated_at = excluded.updated_at`,
-      )
-      .run(storedClientKey, failedCount, blockedUntil, now.toISOString());
+    for (const attemptKey of attemptKeys) {
+      const latest = database
+        .prepare("SELECT failed_count FROM login_attempts WHERE attempt_key = ?")
+        .get(attemptKey) as { failed_count: number } | undefined;
+      const failedCount = (latest?.failed_count ?? 0) + 1;
+      const delaySeconds = failedCount < 3 ? 0 : Math.min(60, 2 ** (failedCount - 3));
+      const blockedUntil = delaySeconds
+        ? new Date(now.getTime() + delaySeconds * 1_000).toISOString()
+        : null;
+      database
+        .prepare(
+          `INSERT INTO login_attempts(attempt_key, failed_count, blocked_until, updated_at)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT(attempt_key) DO UPDATE SET
+             failed_count = excluded.failed_count,
+             blocked_until = excluded.blocked_until,
+             updated_at = excluded.updated_at`,
+        )
+        .run(attemptKey, failedCount, blockedUntil, now.toISOString());
+    }
   });
   update.immediate();
 }
@@ -171,19 +171,28 @@ export async function authenticate(
   clientKey: string,
   now = new Date(),
 ): Promise<string | null> {
-  const storedClientKey = clientKeyHash(clientKey);
-  const attempt = database
-    .prepare("SELECT failed_count, blocked_until FROM login_attempts WHERE client_key = ?")
-    .get(storedClientKey) as { failed_count: number; blocked_until: string | null } | undefined;
-  if (attempt?.blocked_until && new Date(attempt.blocked_until) > now) return null;
+  const normalizedUsername = normalizeUsername(username);
+  const attemptKeys = [
+    rateLimitKey("client", clientKey),
+    rateLimitKey("account", normalizedUsername),
+  ];
+  const attempts = database
+    .prepare(
+      `SELECT failed_count, blocked_until FROM login_attempts
+       WHERE attempt_key IN (?, ?)`,
+    )
+    .all(...attemptKeys) as Array<{ failed_count: number; blocked_until: string | null }>;
+  if (attempts.some((attempt) => attempt.blocked_until && new Date(attempt.blocked_until) > now))
+    return null;
   const owner = database
-    .prepare("SELECT id, password_hash FROM owner WHERE username_normalized = ?")
-    .get(normalizeUsername(username)) as { id: string; password_hash: string } | undefined;
-  if (!owner || !(await verify(owner.password_hash, password))) {
-    recordFailedAttempt(database, storedClientKey, now);
+    .prepare("SELECT id, username_normalized, password_hash FROM owner LIMIT 1")
+    .get() as { id: string; username_normalized: string; password_hash: string } | undefined;
+  const passwordValid = await verify(owner?.password_hash ?? DUMMY_PASSWORD_HASH, password);
+  if (!owner || owner.username_normalized !== normalizedUsername || !passwordValid) {
+    recordFailedAttempts(database, attemptKeys, now);
     return null;
   }
-  database.prepare("DELETE FROM login_attempts WHERE client_key = ?").run(storedClientKey);
+  database.prepare("DELETE FROM login_attempts WHERE attempt_key IN (?, ?)").run(...attemptKeys);
   return owner.id;
 }
 

@@ -17,7 +17,25 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type Database from "better-sqlite3";
 import { Zip, ZipPassThrough } from "fflate";
 import Sqlite from "better-sqlite3";
-import { Open } from "unzipper-esm";
+import { MIN_HEALTHY_FREE_BYTES } from "./health.ts";
+import {
+  extractZipArchive,
+  inspectZipArchive,
+  readZipEntry,
+  type ZipArchiveLimits,
+} from "./zip-archive.ts";
+
+const BACKUP_ARCHIVE_LIMITS = {
+  errorPrefix: "BACKUP_ARCHIVE",
+  maxArchiveBytes: 2 * 1024 * 1024 * 1024,
+  maxEntries: 10_000,
+  maxExpandedBytes: 2 * 1024 * 1024 * 1024,
+  maxEntryBytes: 2 * 1024 * 1024 * 1024,
+  maxCompressionRatio: 100,
+  compressionRatioMinimumBytes: 100 * 1024 * 1024,
+  minimumFreeBytes: Number(MIN_HEALTHY_FREE_BYTES),
+  extractionCopies: 2,
+} satisfies ZipArchiveLimits;
 
 interface BackupEntry {
   path: string;
@@ -105,16 +123,6 @@ async function writeZipArchive(source: string, destination: string): Promise<voi
   }
 }
 
-function safeArchiveEntry(path: string): boolean {
-  const normalized = path.replaceAll("\\", "/");
-  return (
-    normalized.length > 0 &&
-    !normalized.startsWith("/") &&
-    !normalized.includes("\0") &&
-    !normalized.split("/").includes("..")
-  );
-}
-
 async function materializeBackup(
   backupPath: string,
 ): Promise<{ directory: string; cleanup: () => Promise<void> }> {
@@ -122,20 +130,9 @@ async function materializeBackup(
   if (metadata.isSymbolicLink()) throw new Error("BACKUP_SYMLINK_INVALID");
   if (metadata.isDirectory()) return { directory: backupPath, cleanup: async () => {} };
   if (!metadata.isFile()) throw new Error("BACKUP_FORMAT_INVALID");
-  const archive = await Open.file(backupPath);
-  const paths = archive.files.map((entry) => entry.path.replaceAll("\\", "/"));
-  if (
-    paths.length === 0 ||
-    new Set(paths).size !== paths.length ||
-    archive.files.some((entry) => {
-      const unixType = (entry.externalFileAttributes >>> 16) & 0o170000;
-      return !safeArchiveEntry(entry.path) || unixType === 0o120000;
-    })
-  )
-    throw new Error("BACKUP_ARCHIVE_INVALID");
   const temporary = await mkdtemp(join(dirname(resolve(backupPath)), ".backup-extract-"));
   try {
-    await archive.extract({ path: temporary, concurrency: 1 });
+    await extractZipArchive(backupPath, temporary, BACKUP_ARCHIVE_LIMITS);
     return {
       directory: temporary,
       cleanup: () => rm(temporary, { recursive: true, force: true }),
@@ -301,12 +298,12 @@ export async function readBaseBackupMetadata(
     ) as BackupManifest;
   } else {
     if (!metadata.isFile() || metadata.isSymbolicLink()) throw new Error("BACKUP_FORMAT_INVALID");
-    const archive = await Open.file(backupPath);
-    const entry = archive.files.find(
-      (candidate) => candidate.type === "File" && candidate.path === "manifest.json",
-    );
-    if (!entry || entry.uncompressedSize > 1024 * 1024) throw new Error("BACKUP_FORMAT_INVALID");
-    manifest = JSON.parse((await entry.buffer()).toString("utf8")) as BackupManifest;
+    const archive = await inspectZipArchive(backupPath, BACKUP_ARCHIVE_LIMITS);
+    manifest = JSON.parse(
+      (await readZipEntry(archive, "manifest.json", BACKUP_ARCHIVE_LIMITS, 1024 * 1024)).toString(
+        "utf8",
+      ),
+    ) as BackupManifest;
   }
   if (manifest.format !== "sequent-base-backup" || manifest.version !== 1 || !manifest.createdAt)
     throw new Error("BACKUP_FORMAT_INVALID");

@@ -3,6 +3,17 @@ import type Database from "better-sqlite3";
 export const MIN_HEALTHY_FREE_BYTES = 5n * 1024n * 1024n * 1024n;
 export const MAX_HEALTHY_DISK_USED_PERCENT = 90n;
 
+export function isDatabaseResponsive(database: Database.Database): boolean {
+  try {
+    const result = database.prepare("SELECT 1 AS responsive").get() as
+      | { responsive: number }
+      | undefined;
+    return result?.responsive === 1;
+  } catch {
+    return false;
+  }
+}
+
 export function isStorageHealthy(
   stats: Readonly<{
     bavail: bigint | number;

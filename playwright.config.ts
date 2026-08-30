@@ -19,13 +19,14 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `npm run build && npm run preview -- --host 127.0.0.1 --port ${e2ePort}`,
+    command: `node tests/e2e/prepare-owner.ts && npm run build && npm run preview -- --host 127.0.0.1 --port ${e2ePort}`,
     port: e2ePort,
     timeout: 120_000,
     // Un runtime preesistente potrebbe avere codice o dati diversi dall'HEAD sotto test.
     reuseExistingServer: false,
     env: {
       SEQUENT_DATA_DIR: e2eDataDirectory,
+      SEQUENT_E2E_DATA_DIR: e2eDataDirectory,
       SEQUENT_SECURE_COOKIES: "false",
       SEQUENT_DESIGN_LAB: "test",
     },

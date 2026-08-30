@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -16,6 +16,7 @@ import {
   getDevelopmentPassword,
   getDevelopmentUsername,
   useDevelopmentAutoLogin,
+  useWebOwnerSetup,
 } from "../../src/lib/server/config.ts";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
 
@@ -25,6 +26,7 @@ afterEach(() => {
   delete process.env.SEQUENT_DEV_AUTO_LOGIN;
   delete process.env.SEQUENT_DEV_PASSWORD;
   delete process.env.SEQUENT_DEV_USERNAME;
+  vi.unstubAllEnvs();
   for (const directory of directories.splice(0)) {
     closeDatabase(directory);
     rmSync(directory, { recursive: true, force: true });
@@ -65,6 +67,13 @@ describe("difesa del login", () => {
     expect(getDevelopmentUsername()).toBe("Operatore dev");
   });
 
+  it("disabilita il setup web in Production senza flag di riapertura", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    expect(useWebOwnerSetup()).toBe(false);
+    vi.stubEnv("NODE_ENV", "test");
+    expect(useWebOwnerSetup()).toBe(true);
+  });
+
   it("non lascia un owner incompleto se la creazione della sessione iniziale fallisce", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-auth-atomic-"));
     directories.push(directory);
@@ -98,13 +107,54 @@ describe("difesa del login", () => {
       ),
     );
 
-    const attempt = database
+    const attempts = database
       .prepare("SELECT failed_count, blocked_until FROM login_attempts")
-      .get() as { failed_count: number; blocked_until: string };
-    expect(attempt).toEqual({
-      failed_count: 5,
-      blocked_until: new Date(start.getTime() + 4_000).toISOString(),
-    });
+      .all() as Array<{ failed_count: number; blocked_until: string }>;
+    expect(attempts).toHaveLength(2);
+    expect(attempts).toEqual(
+      expect.arrayContaining([
+        {
+          failed_count: 5,
+          blocked_until: new Date(start.getTime() + 4_000).toISOString(),
+        },
+        {
+          failed_count: 5,
+          blocked_until: new Date(start.getTime() + 4_000).toISOString(),
+        },
+      ]),
+    );
+  });
+
+  it("limita lo stesso account quando l'origine cambia senza bloccare username diversi", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-auth-account-limit-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const ownerId = await createOwner(database, "Sviluppo", "SequentSviluppoSicuro2026");
+    const start = new Date("2026-08-24T10:00:00.000Z");
+
+    for (const client of ["client-a", "client-b", "client-c"]) {
+      await authenticate(database, "Sviluppo", "errata", client, start);
+    }
+    await expect(
+      authenticate(database, "Sviluppo", "SequentSviluppoSicuro2026", "client-d", start),
+    ).resolves.toBeNull();
+    await expect(
+      authenticate(
+        database,
+        "Sviluppo",
+        "SequentSviluppoSicuro2026",
+        "client-d",
+        new Date(start.getTime() + 1_001),
+      ),
+    ).resolves.toBe(ownerId);
+
+    const later = new Date(start.getTime() + 2_000);
+    for (const client of ["client-e", "client-f", "client-g"]) {
+      await authenticate(database, "username-inesistente", "errata", client, later);
+    }
+    await expect(
+      authenticate(database, "Sviluppo", "SequentSviluppoSicuro2026", "client-h", later),
+    ).resolves.toBe(ownerId);
   });
 
   it("applica un ritardo progressivo e azzera i tentativi dopo un accesso valido", async () => {
@@ -174,7 +224,7 @@ describe("difesa del login", () => {
     issueSession(database, ownerId);
     database
       .prepare(
-        `INSERT INTO login_attempts(client_key, failed_count, blocked_until, updated_at)
+        `INSERT INTO login_attempts(attempt_key, failed_count, blocked_until, updated_at)
          VALUES ('client-reset', 2, NULL, ?)`,
       )
       .run(new Date().toISOString());

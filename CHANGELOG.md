@@ -4,6 +4,17 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.7
+
+### Fixed
+
+- documenti e allegati ricostruiti offline confinati con gli stessi header `sandbox`, `nosniff` e `no-store` delle risposte online;
+- health check pubblico reso costante, lasciando i controlli SQLite approfonditi ai percorsi amministrativi, backup e deploy;
+- login protetto con bucket atomici per origine e account, verifica Argon2 uniforme anche per username inesistenti e migrazione fail-closed dei vecchi tentativi;
+- creazione dell’owner via web disabilitata in Production, dove resta disponibile soltanto il comando amministrativo fuori banda;
+- parser XLSX preceduto da limiti su numero di entry, dimensione espansa, rapporto di compressione e conteggio reale dei byte;
+- verifica e restore dei backup ZIP resi sequenziali e limitati, con controllo preventivo dello spazio, rifiuto di metadati anomali e pulizia dei temporanei al primo errore.
+
 ## 0.2.6
 
 ### Added
