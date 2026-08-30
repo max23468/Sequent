@@ -4,6 +4,26 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.0
+
+### Added
+
+- offline selettivo per le pratiche scelte, con navigazione e documenti disponibili localmente, modifiche ai campi e allegati accodati;
+- recovery ZIP delle modifiche locali dopo un restore server, gestione fail-closed dei conflitti di revisione e stato di sola lettura per migrazioni non sicure;
+- migrazione versionata di IndexedDB, preflight dello spazio disponibile e matrice Playwright estesa a Chrome, Edge, Safari desktop e Safari mobile.
+
+### Changed
+
+- intestazione della pratica ricomposta in una barra armonica su desktop e in una griglia compatta su mobile, includendo dichiarazione, viste, stato online/offline e azioni;
+- cache delle pratiche aggiornata atomicamente e conservata fra gli aggiornamenti del service worker, senza promuovere copie parziali;
+- sincronizzazione offline resa conservativa rispetto alla revisione server e seguita dal refresh della copia locale.
+
+### Fixed
+
+- serializzazione di documenti e allegati compatibile con WebKit tramite byte binari conservati in IndexedDB;
+- rimozione della copia offline e logout completati soltanto dopo la conferma di cancellazione della cache;
+- rinomina della pratica stabile durante gli aggiornamenti reattivi e sui dispositivi WebKit touch.
+
 ## 0.1.9
 
 ### Added

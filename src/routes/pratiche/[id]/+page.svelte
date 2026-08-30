@@ -15,12 +15,16 @@
   import PracticeWorkspaceHeader from "$lib/components/PracticeWorkspaceHeader.svelte";
   import PracticeWorkspaceNavigation from "$lib/components/PracticeWorkspaceNavigation.svelte";
   import OperationalAreaFields from "$lib/components/OperationalAreaFields.svelte";
+  import OfflinePracticeControls from "$lib/components/OfflinePracticeControls.svelte";
   import QuadroFields from "$lib/components/QuadroFields.svelte";
   import QuadroReferences from "$lib/components/QuadroReferences.svelte";
   import ReviewQueue from "$lib/components/ReviewQueue.svelte";
   import { uploadFilesResumably } from "$lib/client/resumable-upload";
   import { documentStatusLabels } from "$lib/document-status";
   import { practiceDomainSectionByOperationalSection } from "$lib/practice-workspace";
+  import { getOfflinePractice } from "$lib/offline/store";
+  import { isServerReachable, queueAttachment } from "$lib/offline/manager";
+  import { interceptOfflinePracticeForm } from "$lib/offline/forms";
 
   let { data, form } = $props();
   let selectedSection = $derived(page.url.searchParams.get("sezione") ?? "overview");
@@ -34,6 +38,7 @@
   let editedValue = $state("");
   let uploadProgress = $state<number | null>(null);
   let resumableUploadError = $state("");
+  let offlineQueueMessage = $state("");
   let selectedDomainSection = $derived.by(() => {
     const section = selectedSection;
     return practiceDomainSectionByOperationalSection[section] ?? null;
@@ -60,7 +65,14 @@
     search.set("sezione", section);
     if (section !== "documents") search.delete("documento");
     if (section !== "verifications") search.delete("verifica");
-    await goto(`${page.url.pathname}?${search}`, { replaceState: true, invalidateAll: false });
+    await navigatePractice(`${page.url.pathname}?${search}`, false);
+  }
+  async function navigatePractice(url: string, invalidate = true) {
+    if (!(await isServerReachable())) {
+      window.location.assign(url);
+      return;
+    }
+    await goto(url, { replaceState: true, invalidateAll: invalidate });
   }
   async function selectView(mode: "operational" | "quadri") {
     const nextSection = mode === "quadri" ? "quadri" : "overview";
@@ -68,7 +80,7 @@
     search.set("vista", mode);
     search.set("sezione", nextSection);
     if (mode === "quadri" && !search.has("quadro")) search.set("quadro", "EA");
-    await goto(`${page.url.pathname}?${search}`, { replaceState: true });
+    await navigatePractice(`${page.url.pathname}?${search}`);
   }
   function selectOperationalView() {
     return selectView("operational");
@@ -82,20 +94,20 @@
     search.set("vista", "quadri");
     search.set("sezione", "quadri");
     search.set("quadro", quadro);
-    await goto(`${page.url.pathname}?${search}`, { replaceState: true });
+    await navigatePractice(`${page.url.pathname}?${search}`);
   }
   async function selectDeclaration(event: Event) {
     const declarationId = (event.currentTarget as HTMLSelectElement).value;
     const search = new URLSearchParams(page.url.searchParams);
     search.set("dichiarazione", declarationId);
-    await goto(`${page.url.pathname}?${search}`, { replaceState: true });
+    await navigatePractice(`${page.url.pathname}?${search}`);
   }
   async function chooseWorkspaceFile() {
     const search = new URLSearchParams(page.url.searchParams);
     search.set("sezione", "documents");
     search.set("vista", "operational");
     search.delete("documento");
-    await goto(`${page.url.pathname}?${search}`, { replaceState: true });
+    await navigatePractice(`${page.url.pathname}?${search}`);
     document.querySelector<HTMLInputElement>("#workspace-file")?.click();
   }
   function handleWorkspaceFile(event: Event) {
@@ -121,6 +133,19 @@
       resumableUploadError = "Scegli un documento da caricare.";
       return;
     }
+    if (!(await isServerReachable())) {
+      const offlinePractice = await getOfflinePractice(data.practice.id);
+      if (offlinePractice?.status !== "complete") {
+        resumableUploadError = "Questa pratica non è stata preparata per l’uso offline.";
+        return;
+      }
+      await queueAttachment(data.practice.id, file);
+      selectedFileName = "";
+      if (input) input.value = "";
+      offlineQueueMessage = "Allegato conservato sul dispositivo e in attesa di sincronizzazione.";
+      window.dispatchEvent(new Event("sequent:offline-queue"));
+      return;
+    }
     resumableUploadError = "";
     uploadProgress = 0;
     try {
@@ -138,8 +163,14 @@
       uploadProgress = null;
     }
   }
+
+  async function interceptOfflineForm(event: SubmitEvent) {
+    const message = await interceptOfflinePracticeForm(event, data.practice.id);
+    if (message) offlineQueueMessage = message;
+  }
 </script>
 
+<svelte:window onsubmit={interceptOfflineForm} />
 <svelte:head><title>{data.practice.title} · Sequent</title></svelte:head>
 <div class="practice-page page-frame">
   <PracticeWorkspaceHeader
@@ -153,7 +184,10 @@
     onSelectQuadriView={selectQuadriView}
     onSelectDeclaration={selectDeclaration}
     onChooseWorkspaceFile={chooseWorkspaceFile}
-  />
+  >
+    {#snippet offlineControls()}<OfflinePracticeControls {data} />{/snippet}
+  </PracticeWorkspaceHeader>
+  {#if offlineQueueMessage}<p class="offline-practice-message" role="status">{offlineQueueMessage}</p>{/if}
 
   <div class="practice-workspace">
     <PracticeWorkspaceNavigation

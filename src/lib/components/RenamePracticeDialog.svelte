@@ -8,12 +8,17 @@
   }: { actionUrl: string; title: string; error?: string } = $props();
   // oxlint-disable-next-line no-unassigned-vars -- Svelte assegna il nodo tramite bind:this.
   let dialog: HTMLDialogElement;
+  let draftTitle = $state("");
 
   $effect(() => {
-    if (error && dialog && !dialog.open) dialog.showModal();
+    if (error && dialog && !dialog.open) {
+      draftTitle = title;
+      dialog.showModal();
+    }
   });
 
   export function show() {
+    draftTitle = title;
     dialog?.showModal();
   }
 
@@ -37,7 +42,7 @@
     <input
       id="renamed-practice-title"
       name="title"
-      value={title}
+      bind:value={draftTitle}
       maxlength="120"
       required
     />

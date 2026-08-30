@@ -5,6 +5,7 @@
   import SearchBox from "$lib/components/SearchBox.svelte";
   import ThemeSelector from "$lib/components/ThemeSelector.svelte";
   import { resolvePageTitle } from "$lib/page-title";
+  import { clearAllOfflineData } from "$lib/offline/store";
   import "./app.css";
 
   let { children, data } = $props();
@@ -33,6 +34,13 @@
     if (event.key !== "Escape" || !accountMenu?.open) return;
     accountMenu.open = false;
     accountMenu.querySelector<HTMLElement>("summary")?.focus();
+  }
+
+  async function clearOfflineCopiesBeforeLogout(event: SubmitEvent) {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    await clearAllOfflineData();
+    form.submit();
   }
 </script>
 
@@ -72,7 +80,7 @@
           <div class="account-popover">
             <p>Tema</p>
             <ThemeSelector compact />
-            <form method="POST" action="/logout"><button type="submit">Esci</button></form>
+            <form method="POST" action="/logout" onsubmit={clearOfflineCopiesBeforeLogout}><button type="submit">Esci</button></form>
           </div>
         </details>
       </div>
