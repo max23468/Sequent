@@ -109,6 +109,8 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
   const release = read(".github/workflows/release-candidate.yml");
 
   assert.match(compose, /ORIGIN: \$\{SEQUENT_ORIGIN:\?[^}]+\}/);
+  assert.match(compose, /SEQUENT_CODEX_ENABLED: \$\{SEQUENT_CODEX_ENABLED:\?[^}]+\}/);
+  assert.match(compose, /SEQUENT_DIZ_ENABLED: \$\{SEQUENT_DIZ_ENABLED:\?[^}]+\}/);
   assert.match(compose, /ADDRESS_HEADER: X-Forwarded-For/);
   assert.match(compose, /XFF_DEPTH: "1"/);
   assert.match(compose, /127\.0\.0\.1:3300:3000/);

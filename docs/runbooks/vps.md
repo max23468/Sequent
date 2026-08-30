@@ -45,7 +45,17 @@ Il wrapper decifra la chiave soltanto in streaming verso un `ssh-agent` effimero
 
 Il runtime applicativo resta inattivo finché non viene approvata una release. L'utente di sistema `sequent-runtime` non possiede login né home e riserva il confine dei dati operativi. `deploy/compose.example.yml` descrive il singolo servizio isolato, ma non è una configurazione attiva e non autorizza il deploy.
 
-La configurazione privata del runtime valorizza `SEQUENT_RUNTIME_UID` e `SEQUENT_RUNTIME_GID` con gli identificativi numerici reali di `sequent-runtime`. Deve inoltre definire `SEQUENT_ORIGIN` come origine HTTPS completa e canonica dell'applicazione, senza percorso. La corsia di deploy tratta il file esclusivamente come dati: accetta le sole quattro chiavi canoniche, ne valida formato e unicità, confronta UID e GID con l’account di sistema e passa a Compose una copia temporanea `root:root` non scrivibile dall'account SSH; non interpreta mai il file come shell. Compose esegue il processo con questi valori: il bind mount `/opt/sequent/data` resta scrivibile senza allargare i permessi e l’immagine conserva comunque un utente non-root predefinito per gli smoke isolati.
+La configurazione privata del runtime valorizza `SEQUENT_RUNTIME_UID` e `SEQUENT_RUNTIME_GID` con gli identificativi numerici reali di `sequent-runtime`. Deve inoltre definire `SEQUENT_ORIGIN` come origine HTTPS completa e canonica dell'applicazione, senza percorso. La corsia di deploy tratta il file esclusivamente come dati: accetta le sei chiavi canoniche, ne valida formato e unicità, confronta UID e GID con l’account di sistema e passa a Compose una copia temporanea `root:root` non scrivibile dall'account SSH; non interpreta mai il file come shell. Compose esegue il processo con questi valori: il bind mount `/opt/sequent/data` resta scrivibile senza allargare i permessi e l’immagine conserva comunque un utente non-root predefinito per gli smoke isolati.
+
+La configurazione privata dichiara inoltre obbligatoriamente `SEQUENT_CODEX_ENABLED` e `SEQUENT_DIZ_ENABLED` con valore letterale `true` o `false`. Il deploy le valida, le conserva nel rollback e le inoltra al container senza interpretare il file come shell. Codex resta spento finché `TG-CODEX` non è qualificato; DIZ viene acceso soltanto dopo la qualificazione del flusso ufficiale.
+
+La migrazione atomica della configurazione esistente si esegue senza riavviare il servizio e senza stampare gli altri valori privati:
+
+```bash
+scripts/vps/with-node.sh node scripts/vps/configure-runtime-features.mjs --codex false --diz true
+```
+
+Il successivo deploy qualificato applica le flag al container. Non modificare direttamente il file durante un deploy.
 
 Il runtime riceve richieste pubbliche esclusivamente da Caddy attraverso il binding di loopback dichiarato in Compose. `ORIGIN` vincola la ricostruzione degli URL e la protezione CSRF all'origine HTTPS dichiarata. Per il rate limit del login, adapter-node legge `X-Forwarded-For` con `XFF_DEPTH=1`: la configurazione Caddy qualificata deve quindi sovrascrivere gli header inoltrati dal client e rappresentare l'unico hop davanti a Sequent. Aggiungere un altro proxy richiede una nuova qualifica esplicita della profondità; non aumentarla preventivamente.
 

@@ -619,8 +619,55 @@ test("il confronto CLI blocca una divergenza nei byte degli allegati", () => {
     assert.equal(result.status, 2);
     const report = JSON.parse(result.stdout);
     assert.equal(report.result.safety.reconciliationAllowed, false);
-    assert.deepEqual(report.result.safety.blockers, ["attachment-divergence"]);
+    assert.deepEqual(report.result.safety.blockers, [
+      "opaque-xml-divergence",
+      "attachment-divergence",
+    ]);
     assert.doesNotMatch(result.stdout, /allegato modificato/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("il confronto CLI accetta la rinomina opaca degli allegati del salvataggio ufficiale", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "sequent-diz-attachment-rename-"));
+  try {
+    const paths = ["base.diz", "current.diz", "official.diz"].map((name) =>
+      path.join(directory, name),
+    );
+    const input = fixture();
+    const renamedXml = Buffer.from(
+      syntheticXml()
+        .toString()
+        .replace(
+          `<threshold>2</threshold></default><int>2</int><int>2</int>` +
+            `<string>001001</string><string>AAAAAA00A00A000A</string>` +
+            `<string>001005</string><string>ROSSI &amp; FIGLI</string>`,
+          `<threshold>99</threshold></default><int>17</int><int>23</int>` +
+            `<string>001005</string><string>ROSSI &amp; FIGLI</string>` +
+            `<string>001001</string><string>AAAAAA00A00A000A</string>`,
+        )
+        .replace("<path>allegato</path>", "<path>allegato-ufficiale</path>"),
+      "utf8",
+    );
+    const attachment = Buffer.from("%PDF-1.7\nfixture sintetica\n%%EOF", "ascii");
+    const official = makeZip([
+      { name: "allegato-ufficiale", content: attachment },
+      { name: "data.xml", content: renamedXml },
+    ]);
+    writeFileSync(paths[0]!, input);
+    writeFileSync(paths[1]!, input);
+    writeFileSync(paths[2]!, official);
+
+    const result = spawnSync(process.execPath, ["scripts/diz/compare.ts", ...paths], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.result.safety.reconciliationAllowed, true);
+    assert.deepEqual(report.result.safety.blockers, []);
+    assert.deepEqual(opaqueDizEvidence(parseDiz(input)), opaqueDizEvidence(parseDiz(official)));
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

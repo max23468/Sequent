@@ -122,14 +122,20 @@ export function parseDiz(input: Uint8Array): ParsedDiz {
 
 export function opaqueDizEvidence(parsed: ParsedDiz): OpaqueDizEvidence {
   const attachments = [...parsed.attachments]
-    .map(({ name, bytes, sha256: attachmentSha256 }) => ({
-      name,
+    .map(({ bytes, sha256: attachmentSha256 }) => ({
       bytes,
       sha256: attachmentSha256,
     }))
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) => left.sha256.localeCompare(right.sha256) || left.bytes - right.bytes);
+  const stableAttachmentReferences = new Map(
+    parsed.attachments.map((attachment) => [
+      attachment.name,
+      `__SEQUENT_ATTACHMENT_${attachment.sha256}_${attachment.bytes}__`,
+    ]),
+  );
+  const opaqueXml = opaqueXstreamProjection(parsed.xstream, stableAttachmentReferences);
   return {
-    xmlSha256: sha256(Buffer.from(opaqueXstreamProjection(parsed.xstream), "utf8")),
+    xmlSha256: sha256(Buffer.from(opaqueXml, "utf8")),
     attachmentsSha256: sha256(Buffer.from(JSON.stringify(attachments), "utf8")),
     attachmentCount: attachments.length,
   };
