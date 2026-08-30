@@ -13,3 +13,8 @@ export function formatItalianDate(value: string): string {
 export function formatMegabytes(bytes: number): string {
   return `${italianDecimal.format(bytes / 1024 / 1024)} MB`;
 }
+
+export function formatDisplayValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "Non indicato";
+  return typeof value === "string" ? value : JSON.stringify(value);
+}

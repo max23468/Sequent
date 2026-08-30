@@ -1,6 +1,6 @@
 # Contratto del modello dati
 
-Il modello canonico non è ancora congelato: la struttura tecnica è disponibile, ma `TG-COMPLIANCE` resta aperto finché modello visibile, istruzioni, guida di calcolo, XSD e aggiornamenti ufficiali non sono riconciliati integralmente. Ogni campo qualificato deve registrare identificativo stabile, etichetta, Quadro, percorso XSD, tipo, cardinalità, regole, periodo di efficacia, provenienza e livello di supporto.
+Il modello canonico corrente è qualificato per l’ambito dichiarato dal catalogo e dal source bundle registrato. Una nuova fonte, una divergenza o un campo privo di provenienza riapre `TG-COMPLIANCE` e blocca l’output interessato. Ogni campo qualificato registra identificativo stabile, etichetta, Quadro, percorso XSD, tipo, cardinalità, regole, periodo di efficacia, provenienza e livello di supporto.
 
 Nessun componente dell’interfaccia può introdurre costanti fiscali o corrispondenze non presenti nel catalogo. Un aggiornamento delle fonti produce una nuova versione esplicita e rimette i dati precedenti in controllo quando necessario.
 
@@ -19,3 +19,7 @@ La devoluzione è salvata come proposta completa per bene e beneficiario. Quote 
 Ogni calcolo conserva input, versione delle regole, valori intermedi da `QE` a `ISN`, problemi e impronta deterministica. Un calcolo privo dei dati necessari resta bloccato; soltanto un calcolo senza problemi può essere confermato. Una nuova conferma di devoluzione rende non più corrente il calcolo precedente.
 
 La checklist documentale viene derivata dai dati della dichiarazione, conserva le decisioni già prese e si salva in un’unica transazione. Le deroghe richiedono sempre una motivazione.
+
+## Flusso ufficiale
+
+Ogni import o reimport DIZ crea nello stesso commit logico uno snapshot della dichiarazione. Gli artefatti ufficiali sono blob immutabili distinti per dichiarazione e tipo; cicli export/reimport separati conservano revisione di base, campi DIZ, impronta opaca, report di conformità, confronto a tre vie e risoluzione. Per dichiarazione può esistere un solo ciclo non risolto. Le conferme operative prive di file, ammesse soltanto quando la seconda ricevuta non è ottenibile, sono eventi distinti con motivazione ed estremi ufficiali. La prima presentazione e la prima chiusura producono snapshot dedicati. Gli override dello stato sono record append-only auditati e non possono elevare lo stato oltre l’evidenza acquisita. Telematico, diagnostici, ricevute, quietanze ed esiti non vengono sovrascritti da invii successivi.

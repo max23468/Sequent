@@ -386,6 +386,89 @@ CREATE INDEX IF NOT EXISTS official_attachments_practice
   ON official_attachments(practice_id, document_id, created_at);
 `;
 
+const officialFlowMigration = `
+CREATE TABLE IF NOT EXISTS declaration_snapshots (
+  id TEXT PRIMARY KEY,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  declaration_id TEXT NOT NULL REFERENCES declarations(id) ON DELETE CASCADE,
+  reason TEXT NOT NULL CHECK (reason IN ('diz-import', 'diz-reimport', 'presentation', 'closure', 'manual')),
+  name TEXT,
+  declaration_revision INTEGER NOT NULL CHECK (declaration_revision >= 1),
+  declaration_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS official_artifacts (
+  id TEXT PRIMARY KEY,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  declaration_id TEXT NOT NULL REFERENCES declarations(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN (
+    'diz-imported', 'diz-exported', 'diz-reimported', 'telematic', 'official-diagnostic',
+    'print', 'receipt-first', 'receipt-second', 'receipt-third', 'payment-receipt',
+    'cadastral-result', 'other-official'
+  )),
+  original_name TEXT NOT NULL,
+  media_type TEXT NOT NULL,
+  byte_size INTEGER NOT NULL CHECK (byte_size > 0),
+  sha256 TEXT NOT NULL,
+  blob_path TEXT NOT NULL,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS official_flow_events (
+  id TEXT PRIMARY KEY,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  declaration_id TEXT NOT NULL REFERENCES declarations(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL CHECK (event_type IN ('presentation-confirmed')),
+  metadata_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS official_stage_overrides (
+  id TEXT PRIMARY KEY,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  declaration_id TEXT NOT NULL REFERENCES declarations(id) ON DELETE CASCADE,
+  stage TEXT NOT NULL CHECK (stage IN (
+    'draft', 'diz-imported', 'diz-exported', 'diz-reimported', 'telematic-generated',
+    'official-control-passed', 'transmitted', 'presented', 'cadastral-processing', 'closed'
+  )),
+  reason TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS diz_round_trips (
+  id TEXT PRIMARY KEY,
+  practice_id TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+  declaration_id TEXT NOT NULL REFERENCES declarations(id) ON DELETE CASCADE,
+  source_artifact_id TEXT NOT NULL REFERENCES official_artifacts(id) ON DELETE RESTRICT,
+  export_artifact_id TEXT NOT NULL UNIQUE REFERENCES official_artifacts(id) ON DELETE RESTRICT,
+  reimport_artifact_id TEXT UNIQUE REFERENCES official_artifacts(id) ON DELETE RESTRICT,
+  base_declaration_revision INTEGER NOT NULL CHECK (base_declaration_revision >= 1),
+  base_fields_json TEXT NOT NULL,
+  opaque_evidence_json TEXT NOT NULL,
+  compliance_report_json TEXT NOT NULL,
+  comparison_json TEXT,
+  status TEXT NOT NULL CHECK (status IN ('exported', 'conflicts', 'resolved')),
+  created_at TEXT NOT NULL,
+  resolved_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS declaration_snapshots_declaration_created
+  ON declaration_snapshots(declaration_id, created_at);
+CREATE INDEX IF NOT EXISTS official_artifacts_declaration_created
+  ON official_artifacts(declaration_id, created_at);
+CREATE INDEX IF NOT EXISTS official_flow_events_declaration_created
+  ON official_flow_events(declaration_id, created_at);
+CREATE INDEX IF NOT EXISTS official_stage_overrides_declaration_created
+  ON official_stage_overrides(declaration_id, created_at);
+CREATE INDEX IF NOT EXISTS diz_round_trips_declaration_created
+  ON diz_round_trips(declaration_id, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS diz_round_trips_one_pending
+  ON diz_round_trips(declaration_id)
+  WHERE status IN ('exported', 'conflicts');
+`;
+
 function hasColumn(database: Database.Database, table: string, column: string): boolean {
   return (database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some(
     (candidate) => candidate.name === column,
@@ -670,6 +753,15 @@ function applyOwnerUsernameMigration(database: Database.Database): void {
   })();
 }
 
+function applyOfficialFlowMigration(database: Database.Database): void {
+  database.transaction(() => {
+    database.exec(officialFlowMigration);
+    database
+      .prepare("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (18, ?)")
+      .run(new Date().toISOString());
+  })();
+}
+
 function applyMigrations(database: Database.Database): void {
   database.exec(foundationMigration);
   database
@@ -693,6 +785,7 @@ function applyMigrations(database: Database.Database): void {
   applyCalculationRulesMigration(database, 15, "2026.08.11");
   applyCalculationRulesMigration(database, 16, "2026.08.12");
   applyOwnerUsernameMigration(database);
+  applyOfficialFlowMigration(database);
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

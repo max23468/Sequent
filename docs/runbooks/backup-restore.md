@@ -1,6 +1,8 @@
 # Backup e ripristino di base
 
-Il backup di base crea uno snapshot consistente di SQLite tramite Online Backup API e copia il content-addressed blob store in una nuova directory. Il manifest contiene dimensione e SHA-256 di ogni file. Account, password hash, sessioni e segreti sono esclusi; il comando qualifica snapshot, inventario e verificabilità su dati sintetici o su una copia temporanea autorizzata.
+Il backup di base crea uno snapshot consistente di SQLite tramite Online Backup API e racchiude il content-addressed blob store in un unico archivio ZIP non cifrato. Il manifest interno contiene dimensione e SHA-256 di ogni file. La verifica estrae il pacchetto in una directory temporanea, rifiuta percorsi non sicuri e link simbolici e copre anche derivati documentali, allegati preparati, DIZ, telematici, ricevute ed esiti ufficiali referenziati dal database. Account, password hash, sessioni e segreti sono esclusi; il comando qualifica snapshot, inventario e verificabilità su dati sintetici o su una copia temporanea autorizzata.
+
+Nell’istanza applicativa l’owner usa **Impostazioni → Backup manuale**. Sequent apre una breve modalità manutenzione, sospende l’avvio delle attività accodate, attende per un tempo limitato l’eventuale attività già in corso, crea la copia sotto la directory dati, la rilegge integralmente e rimuove sempre il marker di manutenzione. Se l’attività corrente non termina entro la finestra prevista, il backup si arresta senza lasciare il marker. L’interfaccia mostra un promemoria dopo 7 giorni e un avviso più evidente dopo 14 giorni.
 
 Nel checkout, con una directory dati non operativa:
 
@@ -8,7 +10,7 @@ Nel checkout, con una directory dati non operativa:
 SEQUENT_DATA_DIR=/percorso/copia-isolata npm run admin:backup -- /percorso/destinazione
 ```
 
-Il comando stampa il percorso soltanto dopo aver riletto e verificato il manifest. Non eseguire il comando dal checkout contro `/opt/sequent/data`: sul runtime operativo il backup verrà orchestrato dalla release approvata e dalla modalità manutenzione.
+Il comando stampa il percorso del file `.zip` soltanto dopo averlo riaperto e verificato integralmente. Non eseguire il comando dal checkout contro `/opt/sequent/data`: sul runtime operativo il backup viene orchestrato dalla release approvata e dalla modalità manutenzione.
 
 ## Ripristino
 

@@ -78,6 +78,47 @@ async function openPracticeSection(page: import("@playwright/test").Page, name: 
   await section.click();
 }
 
+test("conserva separatamente gli artefatti del flusso ufficiale", async ({ page, browserName }) => {
+  test.skip(
+    browserName !== "chromium",
+    "Il contratto server è coperto dalle regressioni di integrazione.",
+  );
+  const practiceTitle = unique("Pratica flusso ufficiale");
+  await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  await openPracticeSection(page, "Invio e ricevute");
+
+  await expect(page.getByRole("heading", { name: "Pratica modificabile" })).toBeVisible();
+  await expect(page.getByText("DIZ non attivo", { exact: true })).toBeVisible();
+  await page.getByLabel("Tipo").selectOption("receipt-first");
+  const artifactFile = page.locator(".official-artifact-form input[type=file]");
+  await artifactFile.setInputFiles({
+    name: "prima-ricevuta-sintetica.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.7\nricevuta sintetica\n%%EOF", "ascii"),
+  });
+  await expect
+    .poll(() => artifactFile.evaluate((input: HTMLInputElement) => input.files?.length))
+    .toBe(1);
+  await page.getByRole("button", { name: "Acquisisci esito" }).click();
+
+  await expect(
+    page.getByText("Trasmessa; registrazione da verificare", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Prima ricevuta · trasmissione", { exact: true })).toBeVisible();
+  await expect(page.getByText(/prima-ricevuta-sintetica\.pdf/)).toBeVisible();
+});
+
+test("crea un backup manuale verificato dalle impostazioni", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "La copia completa viene provata una volta per runtime.");
+  await authenticate(page);
+  await page.goto("/impostazioni");
+  await page.getByRole("button", { name: "Crea backup" }).click();
+  await expect(page.getByText("Backup creato e verificato.")).toBeVisible({ timeout: 30_000 });
+  await page.reload();
+  await expect(page.getByText(/Ultimo backup:/)).toBeVisible();
+});
+
 test("l’intestazione della pratica resta compatta e consente di rinominarla", async ({ page }) => {
   const initialTitle = unique("Pratica da rinominare");
   const renamedTitle = unique("Pratica rinominata");
@@ -130,6 +171,9 @@ test("rende una pratica selezionata disponibile offline e sincronizza un allegat
   context,
   browserName,
 }) => {
+  // Il caso attraversa due cicli offline/online con reload e può superare il timeout
+  // standard sotto carico, pur avendo già raggiunto lo stato finale verificabile.
+  test.slow();
   const practiceTitle = unique("Pratica offline selettiva");
   await authenticate(page);
   await createPracticeFromDashboard(page, practiceTitle);
@@ -966,6 +1010,9 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await saveDecedent.click();
   await expect(civilStatus).toHaveValue("3");
   await expect(deathDate).toHaveValue("01012025");
+  // Il salvataggio SvelteKit invalida i dati della pagina in background: attendiamo
+  // il completamento prima di iniziare una navigazione esplicita verso la Dashboard.
+  await page.waitForLoadState("networkidle");
   const quadriUrl = page.url();
   await page.goto("/");
   const deadlines = page.getByRole("region", { name: "Scadenze" });
