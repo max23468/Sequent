@@ -61,8 +61,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -2267,8 +2267,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -2354,8 +2354,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -2441,8 +2441,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -2528,8 +2528,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -2615,8 +2615,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -2702,8 +2702,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -2789,8 +2789,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -2876,8 +2876,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -2963,8 +2963,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -3050,8 +3050,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -3137,8 +3137,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -3224,8 +3224,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -3311,8 +3311,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -3398,8 +3398,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -3485,8 +3485,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -3572,8 +3572,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -4796,8 +4796,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -17809,8 +17809,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -17895,8 +17895,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -17981,8 +17981,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -18067,8 +18067,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -18153,8 +18153,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -18239,8 +18239,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -18325,8 +18325,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -18411,8 +18411,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -18497,8 +18497,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -18594,8 +18594,8 @@
     "coverageReason": "Il campo è automatico nelle dichiarazioni ordinarie e nelle sostitutive 2/3; nella sostitutiva 1 è modificabile entro il massimo ufficiale calcolato per le nuove trascrizioni.",
     "currentEvidence": [
       "src/domain/municipality-conservatory.ts#calculateOfficialJurisdictionCounts",
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#calculateAndStore",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#runSuccessionCalculation",
       "src/lib/server/canonical-field-views.ts",
       "tests/unit/municipality-conservatory.test.ts",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -18682,8 +18682,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -18769,8 +18769,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -19384,8 +19384,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -19470,8 +19470,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -19556,8 +19556,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -19642,8 +19642,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -19728,8 +19728,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -19814,8 +19814,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -19900,8 +19900,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -19986,8 +19986,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -20083,8 +20083,8 @@
     "coverageReason": "Il campo è automatico nelle dichiarazioni ordinarie e nelle sostitutive 2/3; nella sostitutiva 1 è modificabile entro il massimo ufficiale calcolato per le nuove trascrizioni.",
     "currentEvidence": [
       "src/domain/municipality-conservatory.ts#calculateOfficialJurisdictionCounts",
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#calculateAndStore",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#runSuccessionCalculation",
       "src/lib/server/canonical-field-views.ts",
       "tests/unit/municipality-conservatory.test.ts",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -20172,8 +20172,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -20785,8 +20785,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -20871,8 +20871,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -20957,8 +20957,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -21043,8 +21043,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -21129,8 +21129,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -21215,8 +21215,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -21301,8 +21301,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -21564,8 +21564,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -21650,8 +21650,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -21736,8 +21736,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -21822,8 +21822,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -21908,8 +21908,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -22170,8 +22170,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -22256,8 +22256,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -22342,8 +22342,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -22428,8 +22428,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -22690,8 +22690,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"
@@ -22952,8 +22952,8 @@
     "currentCoverage": "coperto",
     "coverageReason": "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
     "currentEvidence": [
-      "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-      "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+      "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+      "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
       "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
       "src/lib/components/OfficialFieldControl.svelte",
       "tests/integration/operational-parity-roundtrip.test.ts"

@@ -162,45 +162,27 @@ describe("migrazioni della pipeline documentale", () => {
     }
   });
 
-  it("ripara uno schema parziale anche se contiene versioni successive", () => {
-    const directory = mkdtempSync(join(tmpdir(), "sequent-partial-schema-migration-"));
+  it("non riesegue le migrazioni già registrate a ogni apertura", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-pending-migrations-only-"));
     directories.push(directory);
-    const path = join(directory, "sequent.sqlite");
-    const partial = new Database(path);
-    partial.exec(`
-      CREATE TABLE schema_migrations (
-        version INTEGER PRIMARY KEY,
-        applied_at TEXT NOT NULL
-      );
-      INSERT INTO schema_migrations(version, applied_at)
-      VALUES (1, '2026-08-25T00:00:00.000Z'),
-             (2, '2026-08-25T00:00:01.000Z'),
-             (3, '2026-08-25T00:00:02.000Z');
-    `);
-    partial.close();
+    let database = openDatabase(directory);
+    database
+      .prepare(
+        `INSERT INTO workspace_search(kind, entity_id, practice_id, label, context)
+         VALUES ('migration-probe', 'probe', 'probe', 'Sentinella migrazioni', '')`,
+      )
+      .run();
+    closeDatabase(directory);
 
-    const migrated = openDatabase(directory);
-    const tables = migrated
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
-      .all() as { name: string }[];
-    const documentColumns = migrated.prepare("PRAGMA table_info(documents)").all() as {
-      name: string;
-    }[];
-    const reviewColumns = migrated.prepare("PRAGMA table_info(review_items)").all() as {
-      name: string;
-    }[];
-    const runColumns = migrated.prepare("PRAGMA table_info(codex_runs)").all() as {
-      name: string;
-    }[];
-    const uploadColumns = migrated.prepare("PRAGMA table_info(upload_sessions)").all() as {
-      name: string;
-    }[];
-
-    expect(tables.map(({ name }) => name)).toContain("upload_sessions");
-    expect(documentColumns.map(({ name }) => name)).toContain("status");
-    expect(reviewColumns.map(({ name }) => name)).toContain("source_refs_json");
-    expect(runColumns.map(({ name }) => name)).toContain("output_json");
-    expect(uploadColumns.map(({ name }) => name)).toContain("result_document_id");
+    database = openDatabase(directory);
+    expect(
+      database
+        .prepare("SELECT count(*) AS count FROM workspace_search WHERE kind = 'migration-probe'")
+        .get(),
+    ).toEqual({ count: 1 });
+    expect(database.prepare("SELECT count(*) AS count FROM schema_migrations").get()).toEqual({
+      count: 18,
+    });
   });
 
   it("elimina i vecchi calcoli derivati e richiede un nuovo calcolo", () => {

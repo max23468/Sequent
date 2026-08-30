@@ -1,11 +1,9 @@
 import { error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { openDatabase } from "$lib/server/database";
-import {
-  buildComplianceReport,
-  listDeclarationSubjectEntries,
-  listSharedAssets,
-} from "$lib/server/domain";
+import { listSharedAssets } from "$lib/server/domain-assets";
+import { buildComplianceReport } from "$lib/server/domain-compliance";
+import { listDeclarationSubjectEntries } from "$lib/server/domain-subjects";
 import { createOfficialFacsimilePdf, OfficialFacsimileError } from "$lib/server/official-facsimile";
 import { getDeclaration, getPractice } from "$lib/server/practices";
 

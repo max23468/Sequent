@@ -13,7 +13,7 @@ import type { DizField, DizFieldLocator } from "../../domain/diz/xstream.ts";
 import { getCanonicalField, setCanonicalField } from "../../domain/declaration.ts";
 import { persistUpload, resolveBlobPath, type PersistedUpload } from "./blob-store.ts";
 import { getDataDirectory } from "./config.ts";
-import { buildComplianceReport } from "./domain.ts";
+import { buildComplianceReport } from "./domain-compliance.ts";
 import { listOfficialAttachments } from "./official-attachments.ts";
 import { getDeclaration, saveDeclaration } from "./practices.ts";
 

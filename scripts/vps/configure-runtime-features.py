@@ -16,7 +16,6 @@ ALLOWED_KEYS = (
     "SEQUENT_CODEX_ENABLED",
     "SEQUENT_DIZ_ENABLED",
 )
-BASE_KEYS = ALLOWED_KEYS[:4]
 
 
 def fail(message: str) -> None:
@@ -55,8 +54,8 @@ def parse_configuration(source: str) -> dict[str, str]:
         if key in values:
             fail(f"chiave runtime duplicata: {key}")
         values[key] = value
-    if not all(key in values for key in BASE_KEYS):
-        fail("configurazione runtime di base incompleta")
+    if set(values) != set(ALLOWED_KEYS):
+        fail("configurazione runtime incompleta")
     return values
 
 
@@ -73,8 +72,7 @@ def validate_configuration(values: dict[str, str]) -> None:
     if not re.fullmatch(r"https://[^/]+", values["SEQUENT_ORIGIN"]):
         fail("origine runtime non valida")
     for key in ALLOWED_KEYS[4:]:
-        if key in values:
-            parse_boolean(values[key], key)
+        parse_boolean(values[key], key)
 
 
 def atomic_write(path: str, output: str, owner_uid: int, owner_gid: int) -> None:

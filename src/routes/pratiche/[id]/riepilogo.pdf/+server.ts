@@ -3,13 +3,11 @@ import type { RequestHandler } from "./$types";
 import { OFFICIAL_SOURCE_LABEL } from "../../../../domain/declaration.ts";
 import { createDossierPdf } from "$lib/server/dossier-pdf";
 import { openDatabase } from "$lib/server/database";
-import {
-  buildComplianceReport,
-  listDeclarationDossierSubjects,
-  listCalculationRuns,
-  listDevolutionScenarios,
-  listSharedAssets,
-} from "$lib/server/domain";
+import { listSharedAssets } from "$lib/server/domain-assets";
+import { listCalculationRuns } from "$lib/server/domain-calculations";
+import { buildComplianceReport } from "$lib/server/domain-compliance";
+import { listDevolutionScenarios } from "$lib/server/domain-devolution";
+import { listDeclarationDossierSubjects } from "$lib/server/domain-subjects";
 import { getDeclaration, getPractice } from "$lib/server/practices";
 
 const roleLabels: Record<string, string> = {

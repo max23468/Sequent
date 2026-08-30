@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
-import { listCalculationRuns, listDevolutionScenarios } from "../../src/lib/server/domain.ts";
+import { listCalculationRuns } from "../../src/lib/server/domain-calculations.ts";
+import { listDevolutionScenarios } from "../../src/lib/server/domain-devolution.ts";
 import {
   ensureSyntheticPractice,
   removeSyntheticPractice,

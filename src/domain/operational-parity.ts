@@ -1,6 +1,18 @@
 import { QUADRI, listQuadroFields, type QuadroId } from "./official-catalog/catalog.ts";
 import officialApplicationEvidence from "./official-catalog/successionionline-field-evidence.json" with { type: "json" };
 import type { DeclarationKind } from "./municipality-conservatory.ts";
+import {
+  isOperationalParityEditable,
+  type ConcreteFieldHandling,
+  type FieldHandling,
+  type SemanticReviewStatus,
+} from "./operational-parity-shared.ts";
+
+export {
+  isOperationalParityAutomatic,
+  isOperationalParityEditable,
+  isOperationalParityOfficeReserved,
+} from "./operational-parity-shared.ts";
 
 export const OPERATIONAL_AREAS = [
   "Panoramica",
@@ -29,14 +41,6 @@ export type OperationalSectionId = keyof typeof OPERATIONAL_SECTION_AREAS;
 type OperationalVisibility = "esatta" | "sintetica" | "assente";
 type OperationalEditability = "completa" | "sola-lettura" | "contestuale" | "assente";
 type CoverageStatus = "coperto" | "parziale" | "mancante";
-type FieldHandling =
-  | "inserito"
-  | "derivato"
-  | "gestito-automaticamente"
-  | "riservato-ufficio"
-  | "gestione-contestuale";
-type ConcreteFieldHandling = Exclude<FieldHandling, "gestione-contestuale">;
-type SemanticReviewStatus = "qualificata" | "candidata" | "irrisolta";
 type SemanticCategory =
   | "dato-professionale"
   | "importo-professionale"
@@ -822,8 +826,8 @@ function currentOperationalCoverage(
       coverageReason:
         "Il valore automatico è letto in entrambe le viste dal medesimo calcolo ufficiale confermato e non è modificabile direttamente.",
       currentEvidence: [
-        "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-        "src/lib/server/domain.ts#getAutomaticOfficialFieldValues",
+        "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+        "src/lib/server/domain-calculations.ts#getAutomaticOfficialFieldValues",
         "src/lib/server/canonical-field-views.ts#readCanonicalFieldsFromView",
         "src/lib/components/OfficialFieldControl.svelte",
         "tests/integration/operational-parity-roundtrip.test.ts",
@@ -852,8 +856,8 @@ function currentOperationalCoverage(
         "Il campo è automatico nelle dichiarazioni ordinarie e nelle sostitutive 2/3; nella sostitutiva 1 è modificabile entro il massimo ufficiale calcolato per le nuove trascrizioni.",
       currentEvidence: [
         "src/domain/municipality-conservatory.ts#calculateOfficialJurisdictionCounts",
-        "src/domain/calculation.ts#calculateDeclarationTaxSummary",
-        "src/lib/server/domain.ts#calculateAndStore",
+        "src/domain/declaration-tax.ts#calculateDeclarationTaxSummary",
+        "src/lib/server/domain-calculations.ts#runSuccessionCalculation",
         "src/lib/server/canonical-field-views.ts",
         "tests/unit/municipality-conservatory.test.ts",
         "tests/integration/operational-parity-roundtrip.test.ts",
@@ -874,43 +878,6 @@ function currentOperationalCoverage(
       "src/lib/components/OfficialFieldControl.svelte",
     ],
   };
-}
-
-export function isOperationalParityEditable(
-  parity: Pick<OperationalParityRow, "handling" | "handlingByDeclarationKind" | "semanticReview">,
-  declarationKind?: DeclarationKind,
-): boolean {
-  const handling = declarationKind
-    ? operationalParityHandlingForDeclaration(parity, declarationKind)
-    : parity.handling;
-  return handling === "inserito" && parity.semanticReview.status === "qualificata";
-}
-
-export function operationalParityHandlingForDeclaration(
-  parity: Pick<OperationalParityRow, "handling" | "handlingByDeclarationKind">,
-  declarationKind: DeclarationKind,
-): ConcreteFieldHandling | null {
-  if (parity.handling !== "gestione-contestuale") return parity.handling;
-  return parity.handlingByDeclarationKind?.[declarationKind] ?? null;
-}
-
-export function isOperationalParityAutomatic(
-  parity: Pick<OperationalParityRow, "handling" | "handlingByDeclarationKind">,
-  declarationKind: DeclarationKind,
-): boolean {
-  return (
-    operationalParityHandlingForDeclaration(parity, declarationKind) === "gestito-automaticamente"
-  );
-}
-
-export function isOperationalParityOfficeReserved(
-  parity: Pick<OperationalParityRow, "handling" | "handlingByDeclarationKind">,
-  declarationKind?: DeclarationKind,
-): boolean {
-  const handling = declarationKind
-    ? operationalParityHandlingForDeclaration(parity, declarationKind)
-    : parity.handling;
-  return handling === "riservato-ufficio";
 }
 
 function requiredParityTests(handling: FieldHandling | null, scope: string): string[] {

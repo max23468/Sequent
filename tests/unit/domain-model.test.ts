@@ -2,16 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
   calculateBondAccruedInterestCents,
   calculateBuildingFiscalValueCents,
-  calculateBeneficiaryTax,
   calculateCompanyNetValueCents,
   calculateDeductibleRecentMaintenanceDebtCents,
-  calculateDeclarationTaxSummary,
   calculateLandFiscalValueCents,
   calculateRealRightValueCents,
   calculateSplitRealRightValues,
+} from "../../src/domain/asset-valuation.ts";
+import type { SuccessionAllocation } from "../../src/domain/calculation-types.ts";
+import { calculateDeclarationTaxSummary } from "../../src/domain/declaration-tax.ts";
+import {
+  calculateBeneficiaryTax,
   calculateSuccessionTax,
-  type SuccessionAllocation,
-} from "../../src/domain/calculation.ts";
+} from "../../src/domain/succession-tax.ts";
 import { deriveOfficialFieldValue } from "../../src/domain/derived-fields.ts";
 import { normalizeItalianTypography } from "../../src/domain/italian-typography.ts";
 import {
@@ -31,10 +33,35 @@ import {
 import { validateDeclaration, validateFieldValue } from "../../src/domain/validation.ts";
 
 describe("modello canonico della dichiarazione", () => {
-  it("migra un valore precedente senza dichiararlo confermato", () => {
-    const declaration = parseDeclaration({ schemaVersion: 1, fields: { legacy: "dato" } });
-    expect(declaration.schemaVersion).toBe(7);
-    expect(declaration.fields.legacy).toMatchObject({ value: "dato", state: "to_review" });
+  it("rifiuta versioni precedenti, future e snapshot correnti incompleti", () => {
+    expect(() => parseDeclaration({ schemaVersion: 1, fields: {} })).toThrow(
+      "DECLARATION_SCHEMA_UNSUPPORTED",
+    );
+    expect(() => parseDeclaration({ schemaVersion: 999, fields: {} })).toThrow(
+      "DECLARATION_SCHEMA_UNSUPPORTED",
+    );
+    expect(() => parseDeclaration({ schemaVersion: 7, fields: {} })).toThrow(
+      "DECLARATION_SCHEMA_INVALID",
+    );
+    expect(parseDeclaration(createEmptyDeclaration())).toEqual(createEmptyDeclaration());
+  });
+
+  it("rifiuta date impossibili e chiavi canoniche incoerenti", () => {
+    expect(() =>
+      parseDeclaration({ ...createEmptyDeclaration(), successionOpenedAt: "2026-02-30" }),
+    ).toThrow("DECLARATION_SCHEMA_INVALID");
+    const declaration = setCanonicalField(
+      createEmptyDeclaration(),
+      "quadro-ea.soggetto.codice-fiscale",
+      "RSSMRA80A01H501U",
+      "confirmed",
+      [],
+      "soggetto-sintetico",
+    );
+    const [field] = Object.values(declaration.fields);
+    expect(() =>
+      parseDeclaration({ ...declaration, fields: { "chiave-non-canonica": field } }),
+    ).toThrow("DECLARATION_SCHEMA_INVALID");
   });
 
   it("usa lo stesso identificativo nella vista per quadri e nella dichiarazione", () => {

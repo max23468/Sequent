@@ -485,7 +485,14 @@ function addColumnIfMissing(
     database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${declaration}`);
 }
 
+function migrationApplied(database: Database.Database, version: number): boolean {
+  return Boolean(
+    database.prepare("SELECT 1 FROM schema_migrations WHERE version = ?").get(version),
+  );
+}
+
 function applyDocumentPipelineMigration(database: Database.Database): void {
+  if (migrationApplied(database, 2)) return;
   database.transaction(() => {
     addColumnIfMissing(
       database,
@@ -549,6 +556,7 @@ function applyDocumentPipelineMigration(database: Database.Database): void {
 }
 
 function applyDomainMigration(database: Database.Database): void {
+  if (migrationApplied(database, 3)) return;
   database.transaction(() => {
     database.exec(domainMigration);
     database.exec("DELETE FROM workspace_search");
@@ -577,12 +585,9 @@ function applyDomainMigration(database: Database.Database): void {
 }
 
 function applyDeclarationSubjectEntriesMigration(database: Database.Database): void {
+  if (migrationApplied(database, 4)) return;
   database.transaction(() => {
     database.exec(declarationSubjectEntriesMigration);
-    const alreadyApplied = database
-      .prepare("SELECT 1 FROM schema_migrations WHERE version = 4")
-      .get();
-    if (alreadyApplied) return;
     database.exec(`
       INSERT INTO declaration_subject_entries(
         declaration_id, entry_id, subject_id, sequence, created_at
@@ -606,12 +611,9 @@ function applyDeclarationSubjectEntriesMigration(database: Database.Database): v
 }
 
 function applyDeclarationAssetEntriesMigration(database: Database.Database): void {
+  if (migrationApplied(database, 5)) return;
   database.transaction(() => {
     database.exec(declarationAssetEntriesMigration);
-    const alreadyApplied = database
-      .prepare("SELECT 1 FROM schema_migrations WHERE version = 5")
-      .get();
-    if (alreadyApplied) return;
     database.exec(`
       INSERT INTO declaration_asset_entries(declaration_id, asset_id, created_at)
       SELECT declarations.id, shared_assets.id, shared_assets.created_at
@@ -625,14 +627,11 @@ function applyDeclarationAssetEntriesMigration(database: Database.Database): voi
 }
 
 function applyDeclarationSubjectSnapshotsMigration(database: Database.Database): void {
+  if (migrationApplied(database, 6)) return;
   database.transaction(() => {
     addColumnIfMissing(database, "declaration_subject_entries", "role_snapshot", "TEXT");
     addColumnIfMissing(database, "declaration_subject_entries", "display_name_snapshot", "TEXT");
     addColumnIfMissing(database, "declaration_subject_entries", "tax_code_snapshot", "TEXT");
-    const alreadyApplied = database
-      .prepare("SELECT 1 FROM schema_migrations WHERE version = 6")
-      .get();
-    if (alreadyApplied) return;
     database.exec(`
       UPDATE declaration_subject_entries
       SET role_snapshot = (
@@ -655,6 +654,7 @@ function applyDeclarationSubjectSnapshotsMigration(database: Database.Database):
 }
 
 function applyOfficialAttachmentsMigration(database: Database.Database): void {
+  if (migrationApplied(database, 7)) return;
   database.transaction(() => {
     database.exec(officialAttachmentsMigration);
     database
@@ -664,12 +664,8 @@ function applyOfficialAttachmentsMigration(database: Database.Database): void {
 }
 
 function applyCalculationResultsV2Migration(database: Database.Database): void {
+  if (migrationApplied(database, 8)) return;
   database.transaction(() => {
-    const alreadyApplied = database
-      .prepare("SELECT 1 FROM schema_migrations WHERE version = 8")
-      .get();
-    if (alreadyApplied) return;
-
     // I risultati precedenti non contengono il riepilogo delle imposte né il piano
     // di pagamento del formato corrente. Sono calcoli derivati e riproducibili: eliminarli
     // evita di presentarli come attuali e obbliga a ricalcolarli con le regole vigenti.
@@ -704,12 +700,8 @@ function applyCalculationRulesMigration(
     | "2026.08.11"
     | "2026.08.12",
 ): void {
+  if (migrationApplied(database, version)) return;
   database.transaction(() => {
-    const alreadyApplied = database
-      .prepare("SELECT 1 FROM schema_migrations WHERE version = ?")
-      .get(version);
-    if (alreadyApplied) return;
-
     // I risultati sono derivati e riproducibili: ogni nuova versione fiscale impone il ricalcolo.
     database.exec("DELETE FROM calculation_runs");
     const declarations = database
@@ -732,6 +724,7 @@ function applyCalculationRulesMigration(
 }
 
 function applyOwnerUsernameMigration(database: Database.Database): void {
+  if (migrationApplied(database, 17)) return;
   database.transaction(() => {
     addColumnIfMissing(database, "owner", "username", "TEXT NOT NULL DEFAULT 'Proprietario'");
     addColumnIfMissing(
@@ -754,6 +747,7 @@ function applyOwnerUsernameMigration(database: Database.Database): void {
 }
 
 function applyOfficialFlowMigration(database: Database.Database): void {
+  if (migrationApplied(database, 18)) return;
   database.transaction(() => {
     database.exec(officialFlowMigration);
     database
@@ -767,25 +761,28 @@ function applyMigrations(database: Database.Database): void {
   database
     .prepare("INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (1, ?)")
     .run(new Date().toISOString());
-  // Lo schema è la fonte di verità: riparare anche database provenienti da una
-  // migrazione della pipeline documentale interrotta o da checkout concorrenti con numeri già occupati.
-  applyDocumentPipelineMigration(database);
-  applyDomainMigration(database);
-  applyDeclarationSubjectEntriesMigration(database);
-  applyDeclarationAssetEntriesMigration(database);
-  applyDeclarationSubjectSnapshotsMigration(database);
-  applyOfficialAttachmentsMigration(database);
-  applyCalculationResultsV2Migration(database);
-  applyCalculationRulesMigration(database, 9, "2026.08.5");
-  applyCalculationRulesMigration(database, 10, "2026.08.6");
-  applyCalculationRulesMigration(database, 11, "2026.08.7");
-  applyCalculationRulesMigration(database, 12, "2026.08.8");
-  applyCalculationRulesMigration(database, 13, "2026.08.9");
-  applyCalculationRulesMigration(database, 14, "2026.08.10");
-  applyCalculationRulesMigration(database, 15, "2026.08.11");
-  applyCalculationRulesMigration(database, 16, "2026.08.12");
-  applyOwnerUsernameMigration(database);
-  applyOfficialFlowMigration(database);
+  const migrations: Array<{ version: number; apply: () => void }> = [
+    { version: 2, apply: () => applyDocumentPipelineMigration(database) },
+    { version: 3, apply: () => applyDomainMigration(database) },
+    { version: 4, apply: () => applyDeclarationSubjectEntriesMigration(database) },
+    { version: 5, apply: () => applyDeclarationAssetEntriesMigration(database) },
+    { version: 6, apply: () => applyDeclarationSubjectSnapshotsMigration(database) },
+    { version: 7, apply: () => applyOfficialAttachmentsMigration(database) },
+    { version: 8, apply: () => applyCalculationResultsV2Migration(database) },
+    { version: 9, apply: () => applyCalculationRulesMigration(database, 9, "2026.08.5") },
+    { version: 10, apply: () => applyCalculationRulesMigration(database, 10, "2026.08.6") },
+    { version: 11, apply: () => applyCalculationRulesMigration(database, 11, "2026.08.7") },
+    { version: 12, apply: () => applyCalculationRulesMigration(database, 12, "2026.08.8") },
+    { version: 13, apply: () => applyCalculationRulesMigration(database, 13, "2026.08.9") },
+    { version: 14, apply: () => applyCalculationRulesMigration(database, 14, "2026.08.10") },
+    { version: 15, apply: () => applyCalculationRulesMigration(database, 15, "2026.08.11") },
+    { version: 16, apply: () => applyCalculationRulesMigration(database, 16, "2026.08.12") },
+    { version: 17, apply: () => applyOwnerUsernameMigration(database) },
+    { version: 18, apply: () => applyOfficialFlowMigration(database) },
+  ];
+  for (const migration of migrations) {
+    if (!migrationApplied(database, migration.version)) migration.apply();
+  }
 }
 
 export function openDatabase(dataDirectory = getDataDirectory()): Database.Database {

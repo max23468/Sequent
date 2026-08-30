@@ -1,13 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
-import {
-  confirmDevolutionScenario,
-  createSharedAsset,
-  createSharedSubject,
-  runSuccessionCalculation,
-  saveCanonicalFields,
-  saveDevolutionScenario,
-} from "./domain.ts";
+import { createSharedAsset } from "./domain-assets.ts";
+import { runSuccessionCalculation } from "./domain-calculations.ts";
+import { confirmDevolutionScenario, saveDevolutionScenario } from "./domain-devolution.ts";
+import { saveCanonicalFields } from "./domain-fields.ts";
+import { createSharedSubject } from "./domain-subjects.ts";
 import { createPractice } from "./practices.ts";
 
 const SEED_EVENT = "installation.synthetic_demo.v1";

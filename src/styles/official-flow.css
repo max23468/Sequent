@@ -1,0 +1,235 @@
+.dashboard-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 24px;
+}
+
+.official-flow {
+  display: grid;
+  gap: 1rem;
+}
+
+.official-flow-status,
+.official-flow-card {
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.official-flow-status {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1rem 1.1rem;
+}
+
+.official-flow-status-icon {
+  display: grid;
+  width: 2.7rem;
+  height: 2.7rem;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+}
+
+.official-flow-status div:last-child {
+  display: grid;
+  gap: 0.15rem;
+}
+.official-flow-status span,
+.official-flow-note {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+.official-flow-status strong {
+  font-size: 1.05rem;
+}
+
+.official-flow-card {
+  padding: 1.1rem;
+}
+.official-flow-card-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.official-flow-card-heading > span {
+  display: grid;
+  flex: 0 0 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--teal);
+  background: color-mix(in srgb, var(--teal) 12%, var(--surface));
+  font-weight: 700;
+}
+.official-flow-card-heading h3,
+.official-flow-card-heading p {
+  margin: 0;
+}
+.official-flow-card-heading p {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.official-flow-form,
+.official-flow-actions,
+.official-artifact-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.official-flow-form input[type="file"] {
+  max-width: 19rem;
+}
+.official-flow-form.reimport-form {
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line-soft);
+}
+.official-flow-form.reimport-form > label {
+  display: grid;
+  margin-right: auto;
+}
+.official-flow-form.reimport-form span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.official-flow-actions {
+  align-items: center;
+}
+.official-flow-actions form {
+  margin: 0;
+}
+
+.official-artifact-form > label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.official-artifact-form select,
+.official-artifact-form input,
+.official-artifact-form textarea {
+  min-height: 2.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.55rem 0.65rem;
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+}
+.official-artifact-form textarea {
+  min-height: 6.5rem;
+  resize: vertical;
+}
+.official-manual-confirmation {
+  margin-top: 1rem;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 0.9rem;
+}
+.official-stage-override {
+  margin-top: -0.35rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+}
+.official-stage-override summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+.official-manual-confirmation summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 650;
+}
+.official-confirmation-reason {
+  flex: 1 1 22rem;
+}
+
+.diz-conflicts {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line-soft);
+}
+.diz-conflicts h4 {
+  margin: 0;
+}
+.diz-conflicts fieldset {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  border: 0;
+  padding: 0;
+}
+.diz-conflicts legend {
+  grid-column: 1 / -1;
+  margin-bottom: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.diz-conflicts label {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+}
+.diz-conflicts label span {
+  display: grid;
+  overflow-wrap: anywhere;
+}
+.diz-conflicts small {
+  color: var(--muted);
+}
+.diz-conflicts .button {
+  justify-self: start;
+}
+
+.artifact-history ul {
+  display: grid;
+  gap: 0;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.artifact-history li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--line-soft);
+}
+.artifact-history li div {
+  display: grid;
+  flex: 1;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.artifact-history li span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.artifact-history li a {
+  display: grid;
+  width: 2.2rem;
+  height: 2.2rem;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--teal);
+}

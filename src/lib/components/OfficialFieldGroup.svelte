@@ -4,7 +4,7 @@
     isOperationalParityAutomatic,
     isOperationalParityEditable,
     isOperationalParityOfficeReserved,
-  } from "../../domain/operational-parity";
+  } from "../../domain/operational-parity-shared";
   import OfficialFieldControl from "./OfficialFieldControl.svelte";
 
   type QuadroField = PageData["quadroFields"][number];
