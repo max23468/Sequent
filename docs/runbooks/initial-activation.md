@@ -15,7 +15,7 @@ Il layout applica globalmente `noindex, nofollow, noarchive` sia via meta tag si
 
 ## Owner principale
 
-Il comando accetta lo username come argomento e la password esclusivamente da standard input. Lo username viene confrontato senza distinzione tra maiuscole e minuscole; la password deve avere da 8 a 128 caratteri. Il reset revoca tutte le sessioni e azzera i tentativi di login, senza stampare o salvare la password nel repository:
+In Production `/setup` non crea account: finché l’owner manca, la web app resta bloccata e richiede questa configurazione amministrativa fuori banda. Il comando accetta lo username come argomento e la password esclusivamente da standard input. Lo username viene confrontato senza distinzione tra maiuscole e minuscole; la password deve avere da 8 a 128 caratteri. Il reset revoca tutte le sessioni e azzera i tentativi di login, senza stampare o salvare la password nel repository:
 
 ```bash
 read -r -s SEQUENT_NEW_PASSWORD

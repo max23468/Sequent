@@ -308,5 +308,11 @@ test("non promuove come completa una copia con documenti mancanti", async ({
   await context.setOffline(true);
   const offlineDocument = await page.goto(`/api/documents/${documentId}/content`);
   expect(offlineDocument?.status()).toBe(200);
+  const offlineHeaders = await offlineDocument?.allHeaders();
+  expect(offlineHeaders?.["x-content-type-options"]).toBe("nosniff");
+  expect(offlineHeaders?.["content-security-policy"]).toBe(
+    "sandbox; default-src 'none'; style-src 'unsafe-inline'",
+  );
+  expect(offlineHeaders?.["cache-control"]).toBe("private, no-store");
   await expect(page.getByText("fixture sintetica indipendente")).toBeVisible();
 });

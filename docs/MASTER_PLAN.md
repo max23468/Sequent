@@ -2171,7 +2171,7 @@ Niente e-mail o notifiche push/browser per le pratiche.
 - un solo account;
 - username univoco nell’istanza, conservato nella forma visualizzata e confrontato senza distinzione tra maiuscole e minuscole;
 - nessuna registrazione pubblica, invito o ruolo;
-- creazione al primo avvio;
+- creazione al primo avvio tramite comando amministrativo locale; il setup web resta disponibile soltanto nello sviluppo non esposto;
 - reset d'emergenza tramite comando sulla VPS.
 
 ## 34.2 Metodi di accesso
@@ -2209,6 +2209,7 @@ Backup, diagnostica e normali operazioni amministrative non richiedono una secon
 
 - rate limiting per IP/account;
 - ritardi progressivi dopo errori;
+- una verifica Argon2 uniforme per ogni tentativo non già bloccato, anche quando lo username non coincide;
 - messaggi che non rivelano dettagli inutili;
 - registrazione tecnica di successi e fallimenti;
 - nessun CAPTCHA o Turnstile.
@@ -2319,7 +2320,7 @@ Il disaster recovery completo non ha una UI dedicata. Si esegue dal runbook con 
 docker compose run --rm sequent restore /backup/sequent-backup.zip
 ```
 
-Il comando verifica manifest e checksum, ripristina database/documenti e richiede il nuovo bootstrap dell'account. La web app continua a supportare l'importazione di una singola pratica.
+Il comando limita preventivamente numero di entry, dimensione espansa, rapporto di compressione e spazio disponibile, estrae sequenzialmente contando i byte effettivi, verifica manifest e checksum, ripristina database/documenti e richiede il nuovo bootstrap dell'account. La web app continua a supportare l'importazione di una singola pratica.
 
 ## 37.6 Copie temporanee per test rischiosi
 

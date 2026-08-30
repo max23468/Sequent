@@ -14,7 +14,7 @@ Il comando stampa il percorso del file `.zip` soltanto dopo averlo riaperto e ve
 
 ## Ripristino
 
-Il ripristino verifica nuovamente manifest, inventario, hash, integrità SQLite e blob prima di modificare la destinazione. La sorgente deve trovarsi fuori dalla directory dati. La prima prova va eseguita su una directory isolata:
+Il ripristino verifica prima numero di entry, dimensione espansa massima di 2 GiB, rapporto di compressione e spazio disponibile; estrae poi ogni file in sequenza contando i byte effettivi e rimuove il temporaneo al primo errore. Manifest, inventario, hash, integrità SQLite e blob vengono verificati prima di modificare la destinazione. La sorgente deve trovarsi fuori dalla directory dati. La prima prova va eseguita su una directory isolata:
 
 ```bash
 npm run admin:restore -- --backup /percorso/backup-verificato --data-dir /opt/sequent/tmp/restore-prova

@@ -14,8 +14,25 @@ import {
   type ExtractedPage,
 } from "./documents.ts";
 import { readToolVersion, runCommand, type CommandRunner } from "./process-tools.ts";
+import { inspectZipArchive, verifyZipArchive, type ZipArchiveLimits } from "./zip-archive.ts";
 
 const MAX_TEXT_BYTES = 20 * 1024 * 1024;
+const DOCUMENT_ARCHIVE_LIMITS = {
+  errorPrefix: "ARCHIVE",
+  maxArchiveBytes: 250 * 1024 * 1024,
+  maxEntries: 10_000,
+  maxExpandedBytes: 2 * 1024 * 1024 * 1024,
+  maxEntryBytes: 2 * 1024 * 1024 * 1024,
+  maxCompressionRatio: 100,
+  compressionRatioMinimumBytes: 100 * 1024 * 1024,
+} satisfies ZipArchiveLimits;
+const XLSX_ARCHIVE_LIMITS = {
+  ...DOCUMENT_ARCHIVE_LIMITS,
+  maxEntries: 2_048,
+  maxExpandedBytes: 64 * 1024 * 1024,
+  maxEntryBytes: 64 * 1024 * 1024,
+  compressionRatioMinimumBytes: 20 * 1024 * 1024,
+} satisfies ZipArchiveLimits;
 const SUPPORTED_EXTENSIONS = new Set([
   ".pdf",
   ".jpg",
@@ -143,6 +160,7 @@ function spreadsheetColumn(index: number): string {
 }
 
 async function extractXlsxPages(path: string): Promise<ExtractedPage[]> {
+  await verifyZipArchive(path, XLSX_ARCHIVE_LIMITS);
   const sheets = await readExcelFile(path);
   let extractedBytes = 0;
   return sheets.map(({ sheet, data }, sheetIndex) => {
@@ -176,6 +194,7 @@ async function extractSpreadsheetPages(
   const extension = extname(inputPath).toLowerCase();
   if (extension === ".xlsx") return await extractXlsxPages(inputPath);
   if (extension !== ".xls" && extension !== ".ods") return null;
+  if (extension === ".ods") await inspectZipArchive(inputPath, DOCUMENT_ARCHIVE_LIMITS);
 
   const outputDirectory = join(directory, "spreadsheet-output");
   await mkdir(outputDirectory, { mode: 0o700 });
@@ -611,6 +630,8 @@ async function extractOffice(
   dataDirectory: string,
   runner: CommandRunner,
 ): Promise<ProcessResult> {
+  if ([".docx", ".odt"].includes(extname(inputPath).toLowerCase()))
+    await inspectZipArchive(inputPath, DOCUMENT_ARCHIVE_LIMITS);
   const spreadsheetPages = await extractSpreadsheetPages(inputPath, directory, runner);
   const outputDirectory = join(directory, "office-output");
   await mkdir(outputDirectory, { mode: 0o700 });

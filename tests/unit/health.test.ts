@@ -4,12 +4,32 @@ import {
   MAX_HEALTHY_DISK_USED_PERCENT,
   MIN_HEALTHY_FREE_BYTES,
   getOperationalHealth,
+  isDatabaseResponsive,
   isStorageHealthy,
 } from "../../src/lib/server/health";
 
 const gibibytes = (value: bigint) => value * 1024n * 1024n * 1024n;
 
 describe("health dello storage", () => {
+  it("usa una query di readiness costante e fallisce chiuso", () => {
+    const statements: string[] = [];
+    const responsive = {
+      prepare(statement: string) {
+        statements.push(statement);
+        return { get: () => ({ responsive: 1 }) };
+      },
+    } as unknown as Database.Database;
+    expect(isDatabaseResponsive(responsive)).toBe(true);
+    expect(statements).toEqual(["SELECT 1 AS responsive"]);
+
+    const unavailable = {
+      prepare() {
+        throw new Error("database non disponibile");
+      },
+    } as unknown as Database.Database;
+    expect(isDatabaseResponsive(unavailable)).toBe(false);
+  });
+
   it("accetta spazio libero e percentuale entro soglia", () => {
     expect(isStorageHealthy({ bavail: gibibytes(10n), blocks: gibibytes(47n), bsize: 1n })).toBe(
       true,

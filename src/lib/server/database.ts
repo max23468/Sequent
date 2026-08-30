@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   UNIQUE (type, input_hash)
 );
 CREATE TABLE IF NOT EXISTS login_attempts (
-  client_key TEXT PRIMARY KEY,
+  attempt_key TEXT PRIMARY KEY,
   failed_count INTEGER NOT NULL,
   blocked_until TEXT,
   updated_at TEXT NOT NULL
@@ -756,6 +756,24 @@ function applyOfficialFlowMigration(database: Database.Database): void {
   })();
 }
 
+function applyLoginRateLimitMigration(database: Database.Database): void {
+  if (migrationApplied(database, 19)) return;
+  database.transaction(() => {
+    database.exec(`
+      DROP TABLE login_attempts;
+      CREATE TABLE login_attempts (
+        attempt_key TEXT PRIMARY KEY,
+        failed_count INTEGER NOT NULL,
+        blocked_until TEXT,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    database
+      .prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (19, ?)")
+      .run(new Date().toISOString());
+  })();
+}
+
 function applyMigrations(database: Database.Database): void {
   database.exec(foundationMigration);
   database
@@ -779,6 +797,7 @@ function applyMigrations(database: Database.Database): void {
     { version: 16, apply: () => applyCalculationRulesMigration(database, 16, "2026.08.12") },
     { version: 17, apply: () => applyOwnerUsernameMigration(database) },
     { version: 18, apply: () => applyOfficialFlowMigration(database) },
+    { version: 19, apply: () => applyLoginRateLimitMigration(database) },
   ];
   for (const migration of migrations) {
     if (!migrationApplied(database, migration.version)) migration.apply();

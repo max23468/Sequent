@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,6 +18,26 @@ import { zipSync } from "fflate";
 import { Open } from "unzipper-esm";
 
 const directories: string[] = [];
+const centralDirectorySignature = Buffer.from([0x50, 0x4b, 0x01, 0x02]);
+const endOfCentralDirectorySignature = Buffer.from([0x50, 0x4b, 0x05, 0x06]);
+
+function centralDirectoryOffsets(archive: Buffer): number[] {
+  const offsets: number[] = [];
+  for (let offset = archive.indexOf(centralDirectorySignature); offset >= 0;) {
+    offsets.push(offset);
+    offset = archive.indexOf(centralDirectorySignature, offset + 4);
+  }
+  return offsets;
+}
+
+function forgeEntryCount(archive: Uint8Array, entries: number): Buffer {
+  const forged = Buffer.from(archive);
+  const end = forged.lastIndexOf(endOfCentralDirectorySignature);
+  if (end < 0) throw new Error("END_OF_CENTRAL_DIRECTORY_NOT_FOUND");
+  forged.writeUInt16LE(entries, end + 8);
+  forged.writeUInt16LE(entries, end + 10);
+  return forged;
+}
 
 async function backupEntries(path: string): Promise<Record<string, Uint8Array>> {
   const archive = await Open.file(path);
@@ -47,6 +67,46 @@ afterEach(() => {
 });
 
 describe("backup base", () => {
+  it("rifiuta archivi con count, espansione o rapporto di compressione anomali", async () => {
+    const root = mkdtempSync(join(tmpdir(), "sequent-backup-archive-limits-"));
+    directories.push(root);
+    const backup = join(root, "limiti.zip");
+    const base = zipSync({
+      "manifest.json": Buffer.from("{}"),
+      "sequent.sqlite": Buffer.from("fixture"),
+    });
+
+    writeFileSync(backup, forgeEntryCount(base, 10_001));
+    await expect(verifyBaseBackup(backup)).rejects.toThrow("BACKUP_ARCHIVE_ENTRY_LIMIT");
+
+    const ratio = Buffer.from(base);
+    const firstCentral = centralDirectoryOffsets(ratio)[0];
+    if (firstCentral === undefined) throw new Error("CENTRAL_DIRECTORY_NOT_FOUND");
+    ratio.writeUInt32LE(101 * 1024 * 1024, firstCentral + 24);
+    writeFileSync(backup, ratio);
+    await expect(verifyBaseBackup(backup)).rejects.toThrow(
+      "BACKUP_ARCHIVE_COMPRESSION_RATIO_LIMIT",
+    );
+
+    const expanded = Buffer.from(base);
+    const centralEntries = centralDirectoryOffsets(expanded);
+    expect(centralEntries).toHaveLength(2);
+    for (const central of centralEntries) {
+      expanded.writeUInt32LE(1_200_000_000, central + 24);
+      expanded.writeUInt32LE(20_000_000, central + 20);
+    }
+    writeFileSync(backup, expanded);
+    await expect(verifyBaseBackup(backup)).rejects.toThrow("BACKUP_ARCHIVE_EXPANDED_SIZE_LIMIT");
+
+    const streamMismatch = Buffer.from(base);
+    const streamCentral = centralDirectoryOffsets(streamMismatch)[0];
+    if (streamCentral === undefined) throw new Error("CENTRAL_DIRECTORY_NOT_FOUND");
+    streamMismatch.writeUInt32LE(1, streamCentral + 24);
+    writeFileSync(backup, streamMismatch);
+    await expect(verifyBaseBackup(backup)).rejects.toThrow("BACKUP_ARCHIVE_ENTRY_SIZE_LIMIT");
+    expect(readdirSync(root).some((name) => name.startsWith(".backup-extract-"))).toBe(false);
+  });
+
   it("crea uno snapshot SQLite con inventario verificabile dei blob", async () => {
     const root = mkdtempSync(join(tmpdir(), "sequent-backup-"));
     directories.push(root);
@@ -58,7 +118,7 @@ describe("backup base", () => {
     issueSession(database, ownerId);
     database
       .prepare(
-        `INSERT INTO login_attempts(client_key, failed_count, blocked_until, updated_at)
+        `INSERT INTO login_attempts(attempt_key, failed_count, blocked_until, updated_at)
          VALUES ('client-sintetico', 2, NULL, ?)`,
       )
       .run(new Date().toISOString());

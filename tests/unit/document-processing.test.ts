@@ -9,6 +9,26 @@ import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
 import { getDocument, getDocumentText } from "../../src/lib/server/documents.ts";
 import { ingestDocument } from "../../src/lib/server/document-ingestion.ts";
 
+const centralDirectorySignature = Buffer.from([0x50, 0x4b, 0x01, 0x02]);
+const endOfCentralDirectorySignature = Buffer.from([0x50, 0x4b, 0x05, 0x06]);
+
+function forgeFirstCentralSize(archive: Uint8Array, expandedBytes: number): Buffer {
+  const forged = Buffer.from(archive);
+  const central = forged.indexOf(centralDirectorySignature);
+  if (central < 0) throw new Error("CENTRAL_DIRECTORY_NOT_FOUND");
+  forged.writeUInt32LE(expandedBytes, central + 24);
+  return forged;
+}
+
+function forgeEntryCount(archive: Uint8Array, entries: number): Buffer {
+  const forged = Buffer.from(archive);
+  const end = forged.lastIndexOf(endOfCentralDirectorySignature);
+  if (end < 0) throw new Error("END_OF_CENTRAL_DIRECTORY_NOT_FOUND");
+  forged.writeUInt16LE(entries, end + 8);
+  forged.writeUInt16LE(entries, end + 10);
+  return forged;
+}
+
 describe("pipeline documentale", () => {
   it("riconosce il contenuto PDF senza fidarsi dell'estensione", () => {
     expect(
@@ -145,6 +165,28 @@ describe("pipeline documentale", () => {
     }
   });
 
+  it("rifiuta count e rapporto di compressione XLSX prima del parser", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "sequent-xlsx-limits-"));
+    const path = join(directory, "limiti.xlsx");
+    const archive = zipSync({
+      "[Content_Types].xml": strToU8("<Types />"),
+      "xl/workbook.xml": strToU8("<workbook />"),
+    });
+    try {
+      await writeFile(path, forgeEntryCount(archive, 2_049));
+      await expect(documentProcessingInternals.extractXlsxPages(path)).rejects.toThrow(
+        "ARCHIVE_ENTRY_LIMIT",
+      );
+
+      await writeFile(path, forgeFirstCentralSize(archive, 21 * 1024 * 1024));
+      await expect(documentProcessingInternals.extractXlsxPages(path)).rejects.toThrow(
+        "ARCHIVE_COMPRESSION_RATIO_LIMIT",
+      );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it.each(["xls", "ods"])(
     "converte %s in XLSX prima di leggerne strutturalmente tutte le celle",
     async (extension) => {
@@ -168,7 +210,7 @@ describe("pipeline documentale", () => {
         ),
       });
       try {
-        await writeFile(inputPath, "fixture");
+        await writeFile(inputPath, extension === "ods" ? archive : "fixture");
         const pages = await documentProcessingInternals.extractSpreadsheetPages(
           inputPath,
           directory,
