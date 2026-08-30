@@ -49,6 +49,8 @@ La configurazione privata del runtime valorizza `SEQUENT_RUNTIME_UID` e `SEQUENT
 
 La configurazione privata dichiara inoltre obbligatoriamente `SEQUENT_CODEX_ENABLED` e `SEQUENT_DIZ_ENABLED` con valore letterale `true` o `false`. Il deploy le valida, le conserva nel rollback e le inoltra al container senza interpretare il file come shell. Codex resta spento finché `TG-CODEX` non è qualificato; DIZ viene acceso soltanto dopo la qualificazione del flusso ufficiale.
 
+Nel solo passaggio dallo schema precedente, il deploy migra atomicamente entrambe le flag assenti a `false`, che coincide con il comportamento fail-closed già effettivo. Se ne trova una sola, un valore invalido o una configurazione già esplicita divergente, non applica default e blocca il deploy.
+
 La migrazione atomica della configurazione esistente si esegue senza riavviare il servizio e senza stampare gli altri valori privati:
 
 ```bash
