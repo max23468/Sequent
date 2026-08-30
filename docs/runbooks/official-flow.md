@@ -4,7 +4,7 @@ La sezione **Invio e ricevute** della pratica conserva separatamente ogni passag
 
 ## DIZ e confronto a tre vie
 
-1. acquisire il DIZ qualificato usato come base; Sequent crea prima uno snapshot della dichiarazione e non applica dati privi di mapping qualificato;
+1. creare o collegare la pratica e le posizioni dei soggetti pertinenti, quindi acquisire il DIZ qualificato usato come base; Sequent crea prima uno snapshot, importa come `Da verificare` soltanto i dati con mapping e posizione già qualificati, non sovrascrive valori esistenti divergenti e conserva integralmente tutto il resto;
 2. completare i controlli interni e preparare gli allegati finali;
 3. generare e scaricare il DIZ;
 4. aprirlo in SuccessioniOnLine, salvarlo ed eseguire il controllo obbligatorio Agenzia/Sogei;

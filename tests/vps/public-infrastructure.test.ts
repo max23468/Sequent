@@ -132,6 +132,11 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
   assert.match(dockerfile, /python3 -m venv \/opt\/ocr/);
   assert.match(dockerfile, /COPY --from=build --chown=root:root \/app\/node_modules/);
   assert.match(dockerfile, /find \/ -xdev -type f -perm \/6000 -exec chmod a-s/);
+  assert.ok(
+    dockerfile.indexOf("ARG APP_COMMIT_SHA") >
+      dockerfile.indexOf("find / -xdev -type f -perm /6000"),
+    "il solo SHA non deve invalidare installazione e hardening runtime",
+  );
   assert.doesNotMatch(dockerfile, /codex-launcher|4755/);
   assert.match(dockerfile, /test -z "\$\(find \/ -xdev -type f -perm \/6000 -print -quit\)"/);
   assert.match(dockerfile, /'X-Forwarded-For':'127\.0\.0\.1'/);
@@ -139,7 +144,9 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
   assert.match(runbook, /SEQUENT_ORIGIN/);
   assert.match(runbook, /tmpfs.*stessi UID e GID.*1777/);
   assert.match(runbook, /profilo Production qualificato finché Codex è spento/);
-  assert.match(runbook, /futura attivazione di Codex richiede un profilo runtime separato/);
+  assert.match(runbook, /profilo Codex qualificato mantiene gli stessi confini Linux/);
+  assert.match(compose, /SEQUENT_CODEX_HOME: \/var\/lib\/sequent\/\.codex-sequent/);
+  assert.match(dockerfile, /SEQUENT_CODEX_HOME=\/var\/lib\/sequent\/\.codex-sequent/);
   assert.match(runbook, /sovrascrivere gli header inoltrati dal client/);
   assert.match(runbook, /unico hop davanti a Sequent/);
   assert.match(runbook, /rete esterna dedicata `sequent-proxy`/);

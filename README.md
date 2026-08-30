@@ -12,7 +12,7 @@ La mappa numerica delle release e le regole operative di incremento sono in [`do
 
 La configurazione del repository e i required checks sono descritti nel [`runbook GitHub`](docs/runbooks/github.md).
 
-Flusso DIZ, telematico e ricevute sono descritti nel [`runbook del flusso ufficiale`](docs/runbooks/official-flow.md). Backup, ripristino e preparazione applicativa della prima attivazione sono descritti nei runbook [`backup e restore`](docs/runbooks/backup-restore.md) e [`prima attivazione`](docs/runbooks/initial-activation.md).
+Flusso DIZ, telematico e ricevute sono descritti nel [`runbook del flusso ufficiale`](docs/runbooks/official-flow.md). Backup, ripristino e preparazione applicativa della prima attivazione sono descritti nei runbook [`backup e restore`](docs/runbooks/backup-restore.md) e [`prima attivazione`](docs/runbooks/initial-activation.md). Qualificazione Codex e acquisizione privata dei cinque DIZ seguono il [`runbook dedicato`](docs/runbooks/codex-diz-qualification.md).
 
 Il preflight proporzionato di una pubblicazione GitHub si avvia con `npm run publication:github`. Senza l'opzione esplicita di esecuzione il comando non esegue push, non apre PR e non effettua merge.
 

@@ -6,6 +6,7 @@ import {
   opaqueDizEvidence,
   parseDiz,
   QUALIFIED_DIZ_FIELD_MAPPINGS,
+  qualifiedMappingFor,
   rewriteDizFields,
   type ThreeWayFieldComparison,
 } from "../../domain/diz/index.ts";
@@ -14,6 +15,7 @@ import { getCanonicalField, setCanonicalField } from "../../domain/declaration.t
 import { persistUpload, resolveBlobPath, type PersistedUpload } from "./blob-store.ts";
 import { getDataDirectory } from "./config.ts";
 import { buildComplianceReport } from "./domain-compliance.ts";
+import { listDeclarationSubjectEntries } from "./domain-subjects.ts";
 import { listOfficialAttachments } from "./official-attachments.ts";
 import { getDeclaration, saveDeclaration } from "./practices.ts";
 
@@ -427,6 +429,84 @@ function readArtifactBytes(
   return readFile(resolveBlobPath(dataDirectory, artifact.blobPath));
 }
 
+type DizAcquisitionSummary = {
+  qualifiedFields: number;
+  importedFields: number;
+  unchangedFields: number;
+  conflictingFields: number;
+  missingTargets: number;
+  preservedFields: number;
+};
+
+function dizModuleSequence(module: string): number | null {
+  if (!/^\d{1,8}$/.test(module)) return null;
+  const sequence = Number.parseInt(module, 10);
+  return Number.isSafeInteger(sequence) && sequence > 0 ? sequence : null;
+}
+
+function acquireRepresentableDizFields(
+  database: Database.Database,
+  input: { practiceId: string; declarationId: string },
+  fields: readonly DizField[],
+  sourceSha256: string,
+): DizAcquisitionSummary {
+  const record = assertDeclaration(database, input.practiceId, input.declarationId);
+  const subjectEntries = listDeclarationSubjectEntries(
+    database,
+    input.practiceId,
+    input.declarationId,
+  );
+  let declaration = record.declaration;
+  const summary: DizAcquisitionSummary = {
+    qualifiedFields: 0,
+    importedFields: 0,
+    unchangedFields: 0,
+    conflictingFields: 0,
+    missingTargets: 0,
+    preservedFields: 0,
+  };
+
+  for (const field of fields) {
+    const mapping = qualifiedMappingFor(field);
+    if (!mapping || field.value.length === 0) {
+      summary.preservedFields += 1;
+      continue;
+    }
+    summary.qualifiedFields += 1;
+
+    // I mapping qualificati correnti riguardano il Quadro EA: il modulo DIZ
+    // identifica la posizione del soggetto nella dichiarazione. Altri contesti
+    // restano preservati finché un round-trip ufficiale non ne qualifica il target.
+    const sequence = field.quadro === "EA" ? dizModuleSequence(field.module) : null;
+    const entityId = subjectEntries.find((entry) => entry.sequence === sequence)?.id ?? null;
+    if (!entityId) {
+      summary.missingTargets += 1;
+      continue;
+    }
+
+    const current = getCanonicalField(declaration, mapping.catalogFieldId, entityId);
+    if (current) {
+      if (String(current.value ?? "") === field.value) summary.unchangedFields += 1;
+      else summary.conflictingFields += 1;
+      continue;
+    }
+    declaration = setCanonicalField(
+      declaration,
+      mapping.catalogFieldId,
+      field.value,
+      "to_review",
+      [`DIZ acquisito · SHA-256 ${sourceSha256}`],
+      entityId,
+    );
+    summary.importedFields += 1;
+  }
+
+  if (summary.importedFields > 0) {
+    saveDeclaration(database, input.declarationId, record.revision, declaration);
+  }
+  return summary;
+}
+
 export async function importDiz(
   database: Database.Database,
   input: { practiceId: string; declarationId: string; file: File; dataDirectory?: string },
@@ -443,6 +523,12 @@ export async function importDiz(
   let artifact!: OfficialArtifact;
   database.transaction(() => {
     createSnapshot(database, input.practiceId, input.declarationId, "diz-import");
+    const acquisition = acquireRepresentableDizFields(
+      database,
+      input,
+      parsed.fields,
+      parsed.sha256,
+    );
     artifact = insertArtifact(database, {
       ...input,
       kind: "diz-imported",
@@ -453,6 +539,7 @@ export async function importDiz(
         fields: parsed.fields.length,
         attachments: parsed.attachments.length,
         opaqueEvidence: opaqueDizEvidence(parsed),
+        acquisition,
       },
     });
     recordAudit(
@@ -460,8 +547,8 @@ export async function importDiz(
       input.practiceId,
       input.declarationId,
       "diz.imported",
-      "Acquisito un DIZ di partenza senza sovrascrivere dati della dichiarazione.",
-      { artifactId: artifact.id, sha256: artifact.sha256 },
+      "Acquisito un DIZ di partenza, importando i dati rappresentabili senza sovrascrivere quelli esistenti.",
+      { artifactId: artifact.id, sha256: artifact.sha256, acquisition },
     );
   })();
   return artifact;
