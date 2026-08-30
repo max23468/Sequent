@@ -65,19 +65,19 @@
       (artifact: OfficialArtifact) => artifact.kind === "diz-imported",
     ) ?? null,
   );
+  function isAcquisitionCount(value: unknown): value is number {
+    return Number.isInteger(value) && Number(value) >= 0;
+  }
   let latestAcquisition = $derived.by(() => {
     const acquisition = latestImport?.metadata.acquisition;
     if (!acquisition || typeof acquisition !== "object") return null;
     const candidate = acquisition as Partial<DizAcquisition>;
-    const counts = [
-      candidate.qualifiedFields,
-      candidate.importedFields,
-      candidate.unchangedFields,
-      candidate.conflictingFields,
-      candidate.missingTargets,
-      candidate.preservedFields,
-    ];
-    return counts.every((count) => Number.isInteger(count) && Number(count) >= 0)
+    return isAcquisitionCount(candidate.qualifiedFields) &&
+      isAcquisitionCount(candidate.importedFields) &&
+      isAcquisitionCount(candidate.unchangedFields) &&
+      isAcquisitionCount(candidate.conflictingFields) &&
+      isAcquisitionCount(candidate.missingTargets) &&
+      isAcquisitionCount(candidate.preservedFields)
       ? (candidate as DizAcquisition)
       : null;
   });
