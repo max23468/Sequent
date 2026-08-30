@@ -461,10 +461,10 @@ input[type="file"] {
 
 .practice-heading {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: flex-end;
-  gap: 28px;
-  margin-bottom: 24px;
+  grid-template-columns: minmax(330px, 1fr) auto auto auto auto;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 18px;
 }
 .practice-page.page-frame {
   padding-top: 24px;
@@ -495,28 +495,27 @@ input[type="file"] {
 .practice-meta-row > span {
   white-space: nowrap;
 }
-.practice-heading-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  white-space: nowrap;
-}
 .practice-declaration-selector {
-  display: grid;
-  gap: 3px;
+  position: relative;
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 7px;
+  padding-left: 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
   color: var(--muted);
-  font-size: 0.68rem;
-  font-weight: 700;
 }
 .practice-declaration-selector select {
-  min-height: 36px;
-  max-width: 155px;
-  padding: 0 28px 0 9px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: var(--surface);
+  min-height: 40px;
+  max-width: 190px;
+  padding: 0 28px 0 0;
+  border: 0;
+  background: transparent;
   color: var(--text);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
+  font-weight: 650;
 }
 .breadcrumbs {
   display: flex;
@@ -2209,4 +2208,108 @@ input[type="file"] {
   font-size: 0.8rem;
   font-weight: 700;
   text-decoration: none;
+}
+.offline-practice-controls,
+.offline-conflict {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.75rem 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+
+.practice-heading .offline-practice-controls {
+  flex: 0 1 auto;
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.practice-heading > .offline-conflict,
+.practice-heading > .offline-practice-message {
+  grid-column: 1 / -1;
+}
+
+.practice-heading .offline-practice-status {
+  gap: 7px;
+  padding-inline: 4px;
+}
+
+.practice-heading .offline-practice-status span {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.practice-heading .offline-practice-status small {
+  display: none;
+  white-space: nowrap;
+}
+
+.practice-heading .offline-practice-status small.pending {
+  display: inline;
+}
+
+.practice-heading .offline-practice-actions {
+  gap: 6px;
+}
+
+.practice-heading .offline-practice-actions .button {
+  min-height: 42px;
+  padding-inline: 12px;
+  font-size: 0.78rem;
+}
+
+.offline-practice-status,
+.offline-practice-actions,
+.offline-conflict > div {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.offline-practice-status span,
+.offline-conflict > div:first-child {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.offline-practice-status small,
+.offline-conflict p,
+.offline-practice-message {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.offline-conflict {
+  align-items: flex-start;
+  border-color: var(--warning-border, #c88728);
+  background: var(--warning-surface, #fff7e8);
+}
+
+.offline-conflict p,
+.offline-practice-message {
+  margin: 0;
+}
+
+.offline-practice-message {
+  padding: 0 0.25rem 0.75rem;
+}
+
+@media (max-width: 760px) {
+  .offline-practice-controls,
+  .offline-conflict,
+  .offline-practice-actions,
+  .offline-conflict > div:last-child {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }

@@ -32,6 +32,12 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "edge", use: { ...devices["Desktop Edge"] } },
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
+    {
+      name: "mobile-safari",
+      grep: /intestazione della pratica|rende una pratica selezionata disponibile offline|su mobile|design lab mobile|chiude la sessione/,
+      use: { ...devices["iPhone 15"] },
+    },
   ],
 });

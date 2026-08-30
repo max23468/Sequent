@@ -31,20 +31,11 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .practice-heading {
-    align-items: flex-start;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(260px, 1fr) auto auto auto auto;
+    gap: 12px;
   }
-  .practice-heading-actions {
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
-  .practice-declaration-selector {
-    flex: 1 1 180px;
-  }
-  .practice-declaration-selector select {
-    width: 100%;
-    max-width: none;
+  .practice-heading .offline-practice-actions .button {
+    padding-inline: 10px;
   }
 }
 
@@ -398,6 +389,8 @@
   }
   .practice-heading {
     align-items: flex-start;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
   }
   .practice-title-line {
     width: 100%;
@@ -408,14 +401,27 @@
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
   }
-  .practice-heading-actions {
-    position: relative;
+  .practice-heading {
+    grid-template-areas:
+      "copy copy"
+      "declaration actions"
+      "view view"
+      "offline offline";
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .practice-heading-copy {
+    grid-area: copy;
+  }
+  .practice-declaration-selector {
+    grid-area: declaration;
+  }
+  .practice-declaration-selector select {
     width: 100%;
-    flex-wrap: wrap;
-    justify-content: flex-start;
+    max-width: none;
   }
   .practice-view-switch {
-    order: -1;
+    grid-area: view;
     width: 100%;
   }
   .practice-view-switch button {
@@ -445,7 +451,18 @@
     gap: 18px;
   }
   .workspace-actions-menu {
+    grid-area: actions;
     position: static;
+  }
+  .practice-heading .offline-practice-controls {
+    grid-area: offline;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .practice-heading .offline-practice-status small {
+    display: inline;
   }
   .workspace-actions-popover {
     top: calc(100% + 8px);

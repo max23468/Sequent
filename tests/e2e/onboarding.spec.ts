@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { saveCanonicalFieldsFromView } from "../../src/lib/server/canonical-field-views.ts";
 import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
@@ -14,6 +14,7 @@ import {
   saveDevolutionScenario,
 } from "../../src/lib/server/domain.ts";
 import { createSuccessiveDeclaration, getDeclaration } from "../../src/lib/server/practices.ts";
+import { strFromU8, unzipSync } from "fflate";
 
 test.describe.configure({ mode: "serial" });
 
@@ -69,13 +70,21 @@ async function createPracticeFromDashboard(
   await expect(page.getByRole("heading", { name: practiceTitle })).toBeVisible();
 }
 
+async function openPracticeSection(page: import("@playwright/test").Page, name: string) {
+  const section = page.getByRole("button", { name, exact: true });
+  if (!(await section.isVisible())) {
+    await page.getByRole("button", { name: /Apri il menu Sezioni/ }).click();
+  }
+  await section.click();
+}
+
 test("l’intestazione della pratica resta compatta e consente di rinominarla", async ({ page }) => {
   const initialTitle = unique("Pratica da rinominare");
   const renamedTitle = unique("Pratica rinominata");
   await authenticate(page);
   await createPracticeFromDashboard(page, initialTitle);
-  await page.getByRole("button", { name: "Panoramica" }).click();
-  await expect(page).toHaveURL(/sezione=overview/);
+  await openPracticeSection(page, "Panoramica");
+  await expect(page.getByRole("heading", { name: "Panoramica", exact: true })).toBeVisible();
 
   const practiceHeading = page.locator(".practice-heading");
   await expect(practiceHeading.getByRole("link", { name: "Dashboard", exact: true })).toHaveCount(
@@ -96,7 +105,7 @@ test("l’intestazione della pratica resta compatta e consente di rinominarla", 
 
   await expect(page.getByRole("heading", { name: renamedTitle })).toBeVisible();
   await expect(page).toHaveTitle(`${renamedTitle} · Sequent`);
-  await expect(page).toHaveURL(/sezione=overview/);
+  await expect(page.getByRole("heading", { name: "Panoramica", exact: true })).toBeVisible();
   await expect(page.getByText("Salvato", { exact: true })).toBeVisible();
 });
 
@@ -105,11 +114,7 @@ async function uploadFromWorkspace(
   documentName: string,
   content = "fixture sintetica indipendente",
 ) {
-  const documentsSection = page.getByRole("button", { name: "Documenti", exact: true });
-  if (!(await documentsSection.isVisible())) {
-    await page.getByRole("button", { name: /Apri il menu Sezioni/ }).click();
-  }
-  await documentsSection.click();
+  await openPracticeSection(page, "Documenti");
   await page.getByLabel("Aggiungi un documento").setInputFiles({
     name: documentName,
     mimeType: "text/plain",
@@ -119,6 +124,226 @@ async function uploadFromWorkspace(
   await expect(page).toHaveURL(/documento=/);
   await expect(page.getByRole("heading", { name: documentName })).toBeVisible();
 }
+
+test("rende una pratica selezionata disponibile offline e sincronizza un allegato in coda", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  const practiceTitle = unique("Pratica offline selettiva");
+  await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  await openPracticeSection(page, "Documenti");
+  await page.getByRole("button", { name: "Scarica offline" }).click();
+  await expect(page.getByText("Pratica disponibile offline su questo dispositivo.")).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(page.getByRole("button", { name: "Rimuovi offline" })).toBeVisible();
+  const offlineUrl = page.url();
+  await context.setOffline(true);
+  if (browserName === "webkit") {
+    await page.evaluate(() => window.location.reload()).catch(() => undefined);
+    await page.waitForLoadState("domcontentloaded");
+  } else {
+    await page.goto(offlineUrl, { waitUntil: "domcontentloaded" });
+  }
+  await expect(page.getByRole("heading", { name: practiceTitle })).toBeVisible();
+  await expect(page.getByText("Offline", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Salva documenti richiesti" }).click();
+  await expect(
+    page.getByText(
+      "Questa funzione richiede la connessione. I dati già conservati offline non sono stati modificati.",
+    ),
+  ).toBeVisible();
+  if (browserName === "webkit") {
+    await context.setOffline(false);
+  }
+  await page.getByLabel("Aggiungi un documento").setInputFiles({
+    name: "allegato-offline.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("allegato sintetico accodato offline"),
+  });
+  if (browserName === "webkit") {
+    await page.evaluate(() =>
+      Object.defineProperty(navigator, "onLine", { configurable: true, get: () => false }),
+    );
+  }
+  await page.getByRole("button", { name: "Carica", exact: true }).click();
+  await expect(
+    page.getByText("Allegato conservato sul dispositivo e in attesa di sincronizzazione."),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/1 modifica in coda/)).toBeVisible();
+
+  if (browserName === "webkit") {
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, "onLine", { configurable: true, get: () => true });
+      window.dispatchEvent(new Event("online"));
+    });
+  } else {
+    await context.setOffline(false);
+  }
+  await expect(page.getByText("Copia offline aggiornata.")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "allegato-offline.txt" })).toBeVisible();
+
+  await openPracticeSection(page, "Panoramica");
+  await expect(page).toHaveURL(/sezione=overview/);
+  const field = page.getByRole("checkbox", {
+    name: /Dichiaro di non voler dar corso alle conseguenti volture catastali/,
+  });
+  const fieldForm = field.locator("xpath=ancestor::form");
+  const fieldOfflineUrl = page.url();
+  await context.setOffline(true);
+  if (browserName === "webkit") {
+    await page.evaluate(() => window.location.reload()).catch(() => undefined);
+    await page.waitForLoadState("domcontentloaded");
+  } else {
+    await page.goto(fieldOfflineUrl, { waitUntil: "domcontentloaded" });
+  }
+  await field.check();
+  await fieldForm
+    .getByRole("checkbox", { name: "Confermo di aver verificato queste indicazioni" })
+    .check();
+  await fieldForm.getByRole("button", { name: "Salva questi dati" }).click();
+  await expect(
+    page.getByText("Modifica conservata sul dispositivo e in attesa di sincronizzazione."),
+  ).toBeVisible({ timeout: 15_000 });
+
+  await context.setOffline(false);
+  await expect(page.getByText("Copia offline aggiornata.")).toBeVisible({ timeout: 30_000 });
+  await expect(field).toBeChecked();
+  await context.setOffline(true);
+  if (browserName === "webkit") {
+    await page.evaluate(() => window.location.reload()).catch(() => undefined);
+    await page.waitForLoadState("domcontentloaded");
+  } else {
+    await page.reload({ waitUntil: "domcontentloaded" });
+  }
+  await expect(field).toBeChecked();
+  await context.setOffline(false);
+});
+
+test("protegge spazio locale, restore del server, recovery export e rimozione della copia", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(
+    browserName !== "chromium",
+    "I casi trasversali girano una volta; WebKit è coperto dal flusso offline completo.",
+  );
+  const practiceTitle = unique("Pratica recovery offline");
+  await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator.storage, "estimate", {
+      configurable: true,
+      value: async () => ({ quota: 1, usage: 0 }),
+    });
+  });
+  await page.getByRole("button", { name: "Scarica offline" }).click();
+  await expect(page.getByText(/Spazio locale insufficiente/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Scarica offline" })).toBeVisible();
+
+  await page.reload();
+  const seedField = page.getByRole("checkbox", {
+    name: /Dichiaro di non voler dar corso alle conseguenti volture catastali/,
+  });
+  const seedForm = seedField.locator("xpath=ancestor::form");
+  await seedField.check();
+  await seedForm
+    .getByRole("checkbox", { name: "Confermo di aver verificato queste indicazioni" })
+    .check();
+  await seedForm.getByRole("button", { name: "Salva questi dati" }).click();
+  await expect(seedField).toBeChecked();
+  await page.getByRole("button", { name: "Scarica offline" }).click();
+  await expect(page.getByText("Pratica disponibile offline su questo dispositivo.")).toBeVisible({
+    timeout: 60_000,
+  });
+  const practiceId = page.url().match(/\/pratiche\/([^?]+)/)?.[1];
+  if (!practiceId) throw new Error("Identificativo della pratica recovery non disponibile");
+
+  const field = page.getByRole("checkbox", {
+    name: /Dichiaro di non voler dar corso alle conseguenti volture catastali/,
+  });
+  const fieldForm = field.locator("xpath=ancestor::form");
+  await context.setOffline(true);
+  await field.uncheck();
+  await fieldForm
+    .getByRole("checkbox", { name: "Confermo di aver verificato queste indicazioni" })
+    .check();
+  await fieldForm.getByRole("button", { name: "Salva questi dati" }).click();
+  await expect(page.getByText(/1 modifica in coda/)).toBeVisible();
+
+  const databasePath = join(process.env.SEQUENT_E2E_DATA_DIR ?? ".test-data/e2e", "sequent.sqlite");
+  const database = new Database(databasePath);
+  database
+    .prepare("UPDATE declarations SET revision = revision - 1 WHERE practice_id = ?")
+    .run(practiceId);
+  database.close();
+
+  await context.setOffline(false);
+  await expect(page.getByText("Conflitto tra server e modifiche locali")).toBeVisible({
+    timeout: 30_000,
+  });
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Esporta copia locale" }).click();
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+  if (!downloadPath) throw new Error("Archivio recovery non disponibile");
+  const archive = unzipSync(readFileSync(downloadPath));
+  const manifest = JSON.parse(strFromU8(archive["manifest.json"]!)) as {
+    format: string;
+    practice: { id: string };
+    mutations: unknown[];
+  };
+  expect(manifest).toMatchObject({
+    format: "sequent-offline-recovery",
+    practice: { id: practiceId },
+  });
+  expect(manifest.mutations).toHaveLength(1);
+
+  await page.getByRole("button", { name: "Mantieni versione server" }).click();
+  await expect(page.getByText("Conflitto tra server e modifiche locali")).toHaveCount(0);
+  await page.getByRole("button", { name: "Rimuovi offline" }).click();
+  await expect(page.getByRole("button", { name: "Scarica offline" })).toBeVisible();
+  await context.setOffline(true);
+  const unavailable = await page.goto(page.url(), { waitUntil: "domcontentloaded" });
+  expect(unavailable?.status()).toBe(503);
+  await expect(page.getByText("Questa pagina non è disponibile offline.")).toBeVisible();
+});
+
+test("non promuove come completa una copia con documenti mancanti", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "Il caso di errore di download è indipendente dal motore.");
+  const practiceTitle = unique("Pratica offline parziale");
+  await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  await uploadFromWorkspace(page, "fonte-offline.txt");
+  const documentId = new URL(page.url()).searchParams.get("documento");
+  if (!documentId) throw new Error("Documento sintetico offline non disponibile");
+  await context.route("**/api/documents/*/content", (route) => route.abort("failed"));
+  await page.getByRole("button", { name: "Scarica offline" }).click();
+  await expect(
+    page.getByText(
+      "Download incompleto. La copia parziale non viene indicata come disponibile offline.",
+    ),
+  ).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("button", { name: "Scarica offline" })).toBeVisible();
+
+  await context.unroute("**/api/documents/*/content");
+  await page.getByRole("button", { name: "Scarica offline" }).click();
+  await expect(page.getByText("Pratica disponibile offline su questo dispositivo.")).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(page.getByRole("button", { name: "Rimuovi offline" })).toBeVisible();
+  await context.setOffline(true);
+  const offlineDocument = await page.goto(`/api/documents/${documentId}/content`);
+  expect(offlineDocument?.status()).toBe(200);
+  await expect(page.getByText("fixture sintetica indipendente")).toBeVisible();
+});
 
 async function confirmOfficialInstructions(button: import("@playwright/test").Locator) {
   const confirmation = button
@@ -1125,6 +1350,10 @@ test("su mobile la ricerca è compatta e richiudibile, la barra è ridotta e il 
   }
 
   await page.goto("/pratiche");
+  if ((await page.locator(".index-list a").count()) === 0) {
+    await createPracticeFromDashboard(page, unique("Pratica navigazione mobile"));
+    await page.goto("/pratiche");
+  }
   const practiceHref = await page.locator(".index-list a").first().getAttribute("href");
   expect(practiceHref).toBeTruthy();
   for (const route of [practiceHref!, `${practiceHref}/riepilogo`]) {
