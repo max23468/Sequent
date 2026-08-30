@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { Cloud, CloudOff, Download, LoaderCircle, RefreshCw, Trash2 } from "@lucide/svelte";
   import {
     discardLocalChanges,
@@ -29,7 +28,7 @@
     await restoreQueuedFieldValues(data.practice.id);
   }
 
-  onMount(() => {
+  $effect(() => {
     const queueListener = () => void refresh();
     window.addEventListener("sequent:offline-queue", queueListener);
     const connectivityTimer = window.setInterval(() => {

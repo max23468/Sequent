@@ -107,10 +107,6 @@ export function putOfflinePractice(practice: OfflinePractice) {
   return database().then((db) => db.put("practices", practice));
 }
 
-export async function listOfflinePractices() {
-  return (await database()).getAll("practices");
-}
-
 export async function putOfflineDocument(document: Omit<OfflineDocument, "key">) {
   return (await database()).put("documents", {
     ...document,

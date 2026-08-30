@@ -23,7 +23,8 @@
   import { documentStatusLabels } from "$lib/document-status";
   import { practiceDomainSectionByOperationalSection } from "$lib/practice-workspace";
   import { getOfflinePractice } from "$lib/offline/store";
-  import { isServerReachable, queueAttachment, queueFieldForm } from "$lib/offline/manager";
+  import { isServerReachable, queueAttachment } from "$lib/offline/manager";
+  import { interceptOfflinePracticeForm } from "$lib/offline/forms";
 
   let { data, form } = $props();
   let selectedSection = $derived(page.url.searchParams.get("sezione") ?? "overview");
@@ -164,47 +165,8 @@
   }
 
   async function interceptOfflineForm(event: SubmitEvent) {
-    const formElement = event.target;
-    if (
-      !(formElement instanceof HTMLFormElement) ||
-      formElement.action.endsWith("/logout") ||
-      formElement.action.includes("/upload")
-    ) return;
-    event.preventDefault();
-    const submittedData = new FormData(formElement, event.submitter);
-    if (await isServerReachable()) {
-      const submittedForm = document.createElement("form");
-      submittedForm.method = formElement.method;
-      submittedForm.action = formElement.action;
-      submittedForm.enctype = formElement.enctype;
-      submittedForm.hidden = true;
-      for (const [name, value] of submittedData) {
-        if (typeof value !== "string") continue;
-        const hidden = document.createElement("input");
-        hidden.type = "hidden";
-        hidden.name = name;
-        hidden.value = value;
-        submittedForm.append(hidden);
-      }
-      document.body.append(submittedForm);
-      submittedForm.submit();
-      return;
-    }
-    const offlinePractice = await getOfflinePractice(data.practice.id);
-    if (offlinePractice?.status !== "complete") {
-      offlineQueueMessage = "Questa pratica non è stata preparata per le modifiche offline.";
-      return;
-    }
-    if (formElement.action.includes("/saveFields")) {
-      const queued = await queueFieldForm(data.practice.id, formElement);
-      offlineQueueMessage = queued
-        ? "Modifica conservata sul dispositivo e in attesa di sincronizzazione."
-        : "Non è stato possibile conservare questa modifica offline.";
-      window.dispatchEvent(new Event("sequent:offline-queue"));
-      return;
-    }
-    offlineQueueMessage =
-      "Questa funzione richiede la connessione. I dati già conservati offline non sono stati modificati.";
+    const message = await interceptOfflinePracticeForm(event, data.practice.id);
+    if (message) offlineQueueMessage = message;
   }
 </script>
 
