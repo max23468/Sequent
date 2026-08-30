@@ -13,8 +13,13 @@ export async function interceptOfflinePracticeForm(
   )
     return null;
 
-  event.preventDefault();
   const submittedData = new FormData(form, event.submitter);
+  const includesFile = Array.from(submittedData.values()).some(
+    (value) => value instanceof File && value.size > 0,
+  );
+  if (includesFile && navigator.onLine) return null;
+
+  event.preventDefault();
   if (await isServerReachable()) {
     const submittedForm = document.createElement("form");
     submittedForm.method = form.method;

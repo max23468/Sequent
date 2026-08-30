@@ -14,8 +14,30 @@ import { ingestDocument } from "../../src/lib/server/document-ingestion.ts";
 import { createPractice } from "../../src/lib/server/practices.ts";
 import { createOwner, issueSession } from "../../src/lib/server/auth.ts";
 import Sqlite from "better-sqlite3";
+import { zipSync } from "fflate";
+import { Open } from "unzipper-esm";
 
 const directories: string[] = [];
+
+async function backupEntries(path: string): Promise<Record<string, Uint8Array>> {
+  const archive = await Open.file(path);
+  return Object.fromEntries(
+    await Promise.all(
+      archive.files
+        .filter((entry) => entry.type === "File")
+        .map(async (entry) => [entry.path, new Uint8Array(await entry.buffer())] as const),
+    ),
+  );
+}
+
+async function rewriteBackup(
+  path: string,
+  mutate: (entries: Record<string, Uint8Array>) => void | Promise<void>,
+): Promise<void> {
+  const entries = await backupEntries(path);
+  await mutate(entries);
+  writeFileSync(path, zipSync(entries));
+}
 
 afterEach(() => {
   for (const directory of directories.splice(0)) {
@@ -47,8 +69,12 @@ describe("backup base", () => {
       dataDirectory,
     );
     const backup = await createBaseBackup(database, dataDirectory, destination);
+    expect(backup).toMatch(/\.zip$/u);
     await expect(verifyBaseBackup(backup)).resolves.toBeUndefined();
-    const snapshot = new Sqlite(join(backup, "sequent.sqlite"), { readonly: true });
+    const entries = await backupEntries(backup);
+    const snapshotPath = join(root, "snapshot.sqlite");
+    writeFileSync(snapshotPath, entries["sequent.sqlite"]!);
+    const snapshot = new Sqlite(snapshotPath, { readonly: true });
     expect(
       (snapshot.prepare("SELECT count(*) AS count FROM practices").get() as { count: number })
         .count,
@@ -73,16 +99,19 @@ describe("backup base", () => {
     const database = openDatabase(dataDirectory);
     createPractice(database, "Pratica nel backup incompleto");
     const backup = await createBaseBackup(database, dataDirectory, join(root, "backups"));
-    const manifestPath = join(backup, "manifest.json");
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
-      files: Array<{ path: string }>;
-    };
-    manifest.files = manifest.files.filter(({ path }) => path !== "sequent.sqlite");
-    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    await rewriteBackup(backup, (entries) => {
+      const manifest = JSON.parse(Buffer.from(entries["manifest.json"]!).toString("utf8")) as {
+        files: Array<{ path: string }>;
+      };
+      manifest.files = manifest.files.filter(({ path }) => path !== "sequent.sqlite");
+      entries["manifest.json"] = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
+    });
     await expect(verifyBaseBackup(backup)).rejects.toThrow("BACKUP_INVENTORY_INVALID");
 
     const validBackup = await createBaseBackup(database, dataDirectory, join(root, "backups-2"));
-    writeFileSync(join(validBackup, "non-inventariato.txt"), "contenuto estraneo");
+    await rewriteBackup(validBackup, (entries) => {
+      entries["non-inventariato.txt"] = Buffer.from("contenuto estraneo");
+    });
     await expect(verifyBaseBackup(validBackup)).rejects.toThrow("BACKUP_INVENTORY_MISMATCH");
   });
 
@@ -93,7 +122,9 @@ describe("backup base", () => {
     const database = openDatabase(dataDirectory);
     createPractice(database, "Pratica senza credenziali nel backup");
     const backup = await createBaseBackup(database, dataDirectory, join(root, "backups"));
-    const databasePath = join(backup, "sequent.sqlite");
+    const entries = await backupEntries(backup);
+    const databasePath = join(root, "credentials.sqlite");
+    writeFileSync(databasePath, entries["sequent.sqlite"]!);
     const snapshot = new Sqlite(databasePath);
     snapshot
       .prepare(
@@ -103,14 +134,15 @@ describe("backup base", () => {
       )
       .run(new Date().toISOString(), new Date().toISOString());
     snapshot.close();
-    const manifestPath = join(backup, "manifest.json");
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+    const manifest = JSON.parse(Buffer.from(entries["manifest.json"]!).toString("utf8")) as {
       files: Array<{ path: string; bytes: number; sha256: string }>;
     };
     const entry = manifest.files.find(({ path }) => path === "sequent.sqlite")!;
     entry.bytes = statSync(databasePath).size;
     entry.sha256 = createHash("sha256").update(readFileSync(databasePath)).digest("hex");
-    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    entries["sequent.sqlite"] = readFileSync(databasePath);
+    entries["manifest.json"] = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
+    writeFileSync(backup, zipSync(entries));
     await expect(verifyBaseBackup(backup)).rejects.toThrow("BACKUP_CREDENTIALS_PRESENT");
   });
 

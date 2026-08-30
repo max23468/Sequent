@@ -1,14 +1,35 @@
 import { createHash, randomUUID } from "node:crypto";
-import { createReadStream, type Stats } from "node:fs";
-import { cp, lstat, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { once } from "node:events";
+import { createReadStream, createWriteStream, type Stats } from "node:fs";
+import {
+  cp,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type Database from "better-sqlite3";
+import { Zip, ZipPassThrough } from "fflate";
 import Sqlite from "better-sqlite3";
+import { Open } from "unzipper-esm";
 
 interface BackupEntry {
   path: string;
   bytes: number;
   sha256: string;
+}
+
+interface BackupManifest {
+  format: string;
+  version: number;
+  createdAt: string;
+  files: BackupEntry[];
 }
 
 async function checksum(path: string): Promise<string> {
@@ -36,6 +57,95 @@ async function inventory(root: string, current = root): Promise<BackupEntry[]> {
   return entries.sort((left, right) => left.path.localeCompare(right.path));
 }
 
+async function writeZipArchive(source: string, destination: string): Promise<void> {
+  const entries = await inventory(source);
+  const manifestPath = join(source, "manifest.json");
+  const manifestMetadata = await stat(manifestPath);
+  entries.push({
+    path: "manifest.json",
+    bytes: manifestMetadata.size,
+    sha256: await checksum(manifestPath),
+  });
+  entries.sort((left, right) => left.path.localeCompare(right.path));
+  const output = createWriteStream(destination, { flags: "wx", mode: 0o600 });
+  let archiveError: Error | null = null;
+  let drain: Promise<unknown> = Promise.resolve();
+  const completed = new Promise<void>((resolveCompleted, rejectCompleted) => {
+    output.once("close", resolveCompleted);
+    output.once("error", rejectCompleted);
+  });
+  const archive = new Zip((error, chunk, final) => {
+    if (error) {
+      archiveError = error;
+      output.destroy(error);
+      return;
+    }
+    if (chunk.length > 0 && !output.write(chunk)) drain = once(output, "drain");
+    if (final) output.end();
+  });
+  try {
+    for (const entry of entries) {
+      const zipEntry = new ZipPassThrough(entry.path.split(sep).join("/"));
+      archive.add(zipEntry);
+      for await (const chunk of createReadStream(join(source, entry.path))) {
+        zipEntry.push(new Uint8Array(chunk as Buffer));
+        await drain;
+        if (archiveError) throw archiveError;
+      }
+      zipEntry.push(new Uint8Array(), true);
+      await drain;
+      if (archiveError) throw archiveError;
+    }
+    archive.end();
+    await completed;
+  } catch (error) {
+    archive.terminate();
+    output.destroy();
+    throw error;
+  }
+}
+
+function safeArchiveEntry(path: string): boolean {
+  const normalized = path.replaceAll("\\", "/");
+  return (
+    normalized.length > 0 &&
+    !normalized.startsWith("/") &&
+    !normalized.includes("\0") &&
+    !normalized.split("/").includes("..")
+  );
+}
+
+async function materializeBackup(
+  backupPath: string,
+): Promise<{ directory: string; cleanup: () => Promise<void> }> {
+  const metadata = await lstat(backupPath);
+  if (metadata.isSymbolicLink()) throw new Error("BACKUP_SYMLINK_INVALID");
+  if (metadata.isDirectory()) return { directory: backupPath, cleanup: async () => {} };
+  if (!metadata.isFile()) throw new Error("BACKUP_FORMAT_INVALID");
+  const archive = await Open.file(backupPath);
+  const paths = archive.files.map((entry) => entry.path.replaceAll("\\", "/"));
+  if (
+    paths.length === 0 ||
+    new Set(paths).size !== paths.length ||
+    archive.files.some((entry) => {
+      const unixType = (entry.externalFileAttributes >>> 16) & 0o170000;
+      return !safeArchiveEntry(entry.path) || unixType === 0o120000;
+    })
+  )
+    throw new Error("BACKUP_ARCHIVE_INVALID");
+  const temporary = await mkdtemp(join(dirname(resolve(backupPath)), ".backup-extract-"));
+  try {
+    await archive.extract({ path: temporary, concurrency: 1 });
+    return {
+      directory: temporary,
+      cleanup: () => rm(temporary, { recursive: true, force: true }),
+    };
+  } catch (error) {
+    await rm(temporary, { recursive: true, force: true });
+    throw error;
+  }
+}
+
 export async function createBaseBackup(
   database: Database.Database,
   dataDirectory: string,
@@ -44,9 +154,10 @@ export async function createBaseBackup(
   await mkdir(destinationDirectory, { recursive: true, mode: 0o700 });
   const finalPath = join(
     destinationDirectory,
-    `sequent-backup-${new Date().toISOString().replaceAll(":", "-")}`,
+    `sequent-backup-${new Date().toISOString().replaceAll(":", "-")}-${randomUUID()}.zip`,
   );
   const temporaryPath = join(destinationDirectory, `.backup-${randomUUID()}`);
+  const temporaryArchive = join(destinationDirectory, `.backup-${randomUUID()}.zip`);
   await mkdir(temporaryPath, { recursive: false, mode: 0o700 });
   try {
     const databaseBackupPath = join(temporaryPath, "sequent.sqlite");
@@ -67,7 +178,7 @@ export async function createBaseBackup(
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     const files = await inventory(temporaryPath);
-    const manifest = {
+    const manifest: BackupManifest = {
       format: "sequent-base-backup",
       version: 1,
       createdAt: new Date().toISOString(),
@@ -78,21 +189,21 @@ export async function createBaseBackup(
       `${JSON.stringify(manifest, null, 2)}\n`,
       { mode: 0o600 },
     );
-    await rename(temporaryPath, finalPath);
+    await writeZipArchive(temporaryPath, temporaryArchive);
+    await rename(temporaryArchive, finalPath);
+    await rm(temporaryPath, { recursive: true, force: true });
     return finalPath;
   } catch (error) {
     await rm(temporaryPath, { recursive: true, force: true });
+    await rm(temporaryArchive, { force: true });
     throw error;
   }
 }
 
-export async function verifyBaseBackup(backupPath: string): Promise<void> {
-  if ((await lstat(backupPath)).isSymbolicLink()) throw new Error("BACKUP_SYMLINK_INVALID");
-  const manifest = JSON.parse(await readFile(join(backupPath, "manifest.json"), "utf8")) as {
-    format: string;
-    version: number;
-    files: BackupEntry[];
-  };
+async function verifyBackupDirectory(backupPath: string): Promise<BackupManifest> {
+  const manifest = JSON.parse(
+    await readFile(join(backupPath, "manifest.json"), "utf8"),
+  ) as BackupManifest;
   if (manifest.format !== "sequent-base-backup" || manifest.version !== 1)
     throw new Error("BACKUP_FORMAT_INVALID");
   const declaredPaths = manifest.files.map(({ path }) => path);
@@ -128,18 +239,26 @@ export async function verifyBaseBackup(backupPath: string): Promise<void> {
       };
       if (row.count !== 0) throw new Error("BACKUP_CREDENTIALS_PRESENT");
     }
-    const documents = database
-      .prepare("SELECT blob_path, byte_size, sha256 FROM documents")
-      .all() as Array<{ blob_path: string; byte_size: number; sha256: string }>;
-    for (const document of documents) {
+    const blobReferences = database
+      .prepare(
+        `SELECT 'documents' AS source, blob_path, byte_size, sha256 FROM documents
+         UNION ALL
+         SELECT 'document_artifacts', blob_path, byte_size, sha256 FROM document_artifacts
+         UNION ALL
+         SELECT 'official_attachments', blob_path, byte_size, sha256 FROM official_attachments
+         UNION ALL
+         SELECT 'official_artifacts', blob_path, byte_size, sha256 FROM official_artifacts`,
+      )
+      .all() as Array<{ source: string; blob_path: string; byte_size: number; sha256: string }>;
+    for (const reference of blobReferences) {
       if (
-        isAbsolute(document.blob_path) ||
-        !document.blob_path.startsWith("blobs/") ||
-        document.blob_path.split("/").includes("..")
+        isAbsolute(reference.blob_path) ||
+        !reference.blob_path.startsWith("blobs/") ||
+        reference.blob_path.split("/").includes("..")
       ) {
         throw new Error("BACKUP_BLOB_PATH_INVALID");
       }
-      const blobPath = join(backupPath, document.blob_path);
+      const blobPath = join(backupPath, reference.blob_path);
       let metadata: Stats;
       try {
         metadata = await stat(blobPath);
@@ -150,8 +269,8 @@ export async function verifyBaseBackup(backupPath: string): Promise<void> {
       }
       if (
         !metadata.isFile() ||
-        metadata.size !== document.byte_size ||
-        (await checksum(blobPath)) !== document.sha256
+        metadata.size !== reference.byte_size ||
+        (await checksum(blobPath)) !== reference.sha256
       ) {
         throw new Error("BACKUP_BLOB_MISMATCH");
       }
@@ -159,6 +278,39 @@ export async function verifyBaseBackup(backupPath: string): Promise<void> {
   } finally {
     database.close();
   }
+  return manifest;
+}
+
+export async function verifyBaseBackup(backupPath: string): Promise<void> {
+  const materialized = await materializeBackup(backupPath);
+  try {
+    await verifyBackupDirectory(materialized.directory);
+  } finally {
+    await materialized.cleanup();
+  }
+}
+
+export async function readBaseBackupMetadata(
+  backupPath: string,
+): Promise<Pick<BackupManifest, "format" | "version" | "createdAt">> {
+  const metadata = await lstat(backupPath);
+  let manifest: BackupManifest;
+  if (metadata.isDirectory()) {
+    manifest = JSON.parse(
+      await readFile(join(backupPath, "manifest.json"), "utf8"),
+    ) as BackupManifest;
+  } else {
+    if (!metadata.isFile() || metadata.isSymbolicLink()) throw new Error("BACKUP_FORMAT_INVALID");
+    const archive = await Open.file(backupPath);
+    const entry = archive.files.find(
+      (candidate) => candidate.type === "File" && candidate.path === "manifest.json",
+    );
+    if (!entry || entry.uncompressedSize > 1024 * 1024) throw new Error("BACKUP_FORMAT_INVALID");
+    manifest = JSON.parse((await entry.buffer()).toString("utf8")) as BackupManifest;
+  }
+  if (manifest.format !== "sequent-base-backup" || manifest.version !== 1 || !manifest.createdAt)
+    throw new Error("BACKUP_FORMAT_INVALID");
+  return { format: manifest.format, version: manifest.version, createdAt: manifest.createdAt };
 }
 
 export async function restoreBaseBackup(
@@ -174,59 +326,64 @@ export async function restoreBaseBackup(
     target.startsWith(`${source}${sep}`)
   )
     throw new Error("BACKUP_TARGET_OVERLAP");
-  await verifyBaseBackup(source);
-
-  const parent = dirname(target);
-  await mkdir(parent, { recursive: true, mode: 0o700 });
-  const temporary = join(parent, `.sequent-restore-${randomUUID()}`);
-  const previous = join(parent, `.sequent-before-restore-${randomUUID()}`);
-  await mkdir(temporary, { mode: 0o700 });
+  const materialized = await materializeBackup(source);
   try {
-    await cp(join(source, "sequent.sqlite"), join(temporary, "sequent.sqlite"), {
-      errorOnExist: true,
-    });
+    await verifyBackupDirectory(materialized.directory);
+
+    const parent = dirname(target);
+    await mkdir(parent, { recursive: true, mode: 0o700 });
+    const temporary = join(parent, `.sequent-restore-${randomUUID()}`);
+    const previous = join(parent, `.sequent-before-restore-${randomUUID()}`);
+    await mkdir(temporary, { mode: 0o700 });
     try {
-      await cp(join(source, "blobs"), join(temporary, "blobs"), {
-        recursive: true,
+      await cp(join(materialized.directory, "sequent.sqlite"), join(temporary, "sequent.sqlite"), {
         errorOnExist: true,
       });
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    }
-    const restoredDatabase = new Sqlite(join(temporary, "sequent.sqlite"), {
-      readonly: true,
-      fileMustExist: true,
-    });
-    try {
-      if (restoredDatabase.pragma("quick_check", { simple: true }) !== "ok")
-        throw new Error("RESTORE_DATABASE_INVALID");
-    } finally {
-      restoredDatabase.close();
-    }
+      try {
+        await cp(join(materialized.directory, "blobs"), join(temporary, "blobs"), {
+          recursive: true,
+          errorOnExist: true,
+        });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+      const restoredDatabase = new Sqlite(join(temporary, "sequent.sqlite"), {
+        readonly: true,
+        fileMustExist: true,
+      });
+      try {
+        if (restoredDatabase.pragma("quick_check", { simple: true }) !== "ok")
+          throw new Error("RESTORE_DATABASE_INVALID");
+      } finally {
+        restoredDatabase.close();
+      }
 
-    let targetExists = true;
-    try {
-      await stat(target);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-      targetExists = false;
-    }
-    if (targetExists && !options.replace) throw new Error("RESTORE_TARGET_EXISTS");
-    if (!targetExists) {
-      await rename(temporary, target);
-      return { dataDirectory: target, previousDataDirectory: null };
-    }
+      let targetExists = true;
+      try {
+        await stat(target);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        targetExists = false;
+      }
+      if (targetExists && !options.replace) throw new Error("RESTORE_TARGET_EXISTS");
+      if (!targetExists) {
+        await rename(temporary, target);
+        return { dataDirectory: target, previousDataDirectory: null };
+      }
 
-    await rename(target, previous);
-    try {
-      await rename(temporary, target);
+      await rename(target, previous);
+      try {
+        await rename(temporary, target);
+      } catch (error) {
+        await rename(previous, target);
+        throw error;
+      }
+      return { dataDirectory: target, previousDataDirectory: previous };
     } catch (error) {
-      await rename(previous, target);
+      await rm(temporary, { recursive: true, force: true });
       throw error;
     }
-    return { dataDirectory: target, previousDataDirectory: previous };
-  } catch (error) {
-    await rm(temporary, { recursive: true, force: true });
-    throw error;
+  } finally {
+    await materialized.cleanup();
   }
 }

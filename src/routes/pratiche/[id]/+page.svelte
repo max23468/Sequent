@@ -16,9 +16,11 @@
   import PracticeWorkspaceNavigation from "$lib/components/PracticeWorkspaceNavigation.svelte";
   import OperationalAreaFields from "$lib/components/OperationalAreaFields.svelte";
   import OfflinePracticeControls from "$lib/components/OfflinePracticeControls.svelte";
+  import OfficialFlow from "$lib/components/OfficialFlow.svelte";
   import QuadroFields from "$lib/components/QuadroFields.svelte";
   import QuadroReferences from "$lib/components/QuadroReferences.svelte";
   import ReviewQueue from "$lib/components/ReviewQueue.svelte";
+  import { formatDisplayValue } from "$lib/format";
   import { uploadFilesResumably } from "$lib/client/resumable-upload";
   import { documentStatusLabels } from "$lib/document-status";
   import { practiceDomainSectionByOperationalSection } from "$lib/practice-workspace";
@@ -55,10 +57,6 @@
     return () => window.clearInterval(timer);
   });
 
-  function displayValue(value: unknown): string {
-    if (value === null || value === undefined || value === "") return "Non indicato";
-    return typeof value === "string" ? value : JSON.stringify(value);
-  }
   async function selectSection(event: MouseEvent) {
     const section = (event.currentTarget as HTMLButtonElement).dataset.section ?? "documents";
     const search = new URLSearchParams(page.url.searchParams);
@@ -254,8 +252,8 @@
           <div class="review-workspace">
             <section class="review-card current-review">
               <div class="review-card-heading"><span>{data.selectedReview.label}</span><small>{data.selectedReview.documentName ?? "Fonte non disponibile"}</small></div>
-              <div class="review-values single-proposal"><div><span>Valore proposto</span><strong>{displayValue(data.selectedReview.proposedValue)}</strong></div></div>
-              {#if data.selectedReview.alternatives.length > 0}<div class="review-alternatives"><span>Alternative</span><ul>{#each data.selectedReview.alternatives as alternative}<li>{displayValue(alternative)}</li>{/each}</ul></div>{/if}
+              <div class="review-values single-proposal"><div><span>Valore proposto</span><strong>{formatDisplayValue(data.selectedReview.proposedValue)}</strong></div></div>
+              {#if data.selectedReview.alternatives.length > 0}<div class="review-alternatives"><span>Alternative</span><ul>{#each data.selectedReview.alternatives as alternative}<li>{formatDisplayValue(alternative)}</li>{/each}</ul></div>{/if}
               <dl>
                 <div><dt>Metodo</dt><dd>{data.selectedReview.method === "codex" ? "Codex" : data.selectedReview.method === "ocr" ? "OCR" : data.selectedReview.method}</dd></div>
                 <div><dt>Affidabilità</dt><dd>{data.selectedReview.confidence === null ? "Non dichiarata" : `${Math.round(data.selectedReview.confidence * 100)}%`}</dd></div>
@@ -263,7 +261,7 @@
                 {#if selectedSourceRef?.excerpt ?? data.selectedReview.sourceExcerpt}<div><dt>Estratto</dt><dd class="source-excerpt">{selectedSourceRef?.excerpt ?? data.selectedReview.sourceExcerpt}</dd></div>{/if}
               </dl>
               <form class="review-decision-form" method="POST" action={formAction("review", "verifications")}>
-                <input type="hidden" name="itemId" value={data.selectedReview.id} /><label for="review-edit">Correggi prima di confermare</label><input id="review-edit" name="value" value={editedValue} oninput={handleEditedValue} placeholder={displayValue(data.selectedReview.proposedValue)} maxlength="2000" />
+                <input type="hidden" name="itemId" value={data.selectedReview.id} /><label for="review-edit">Correggi prima di confermare</label><input id="review-edit" name="value" value={editedValue} oninput={handleEditedValue} placeholder={formatDisplayValue(data.selectedReview.proposedValue)} maxlength="2000" />
                 <div class="review-actions"><button class="button primary" type="submit" name="decision" value="confirmed" disabled={data.selectedReview.proposedValue === null}><Check size={17} />Conferma</button><button class="button secondary" type="submit" name="decision" value="edited" disabled={!editedValue.trim()}><Pencil size={17} />Conferma correzione</button><button class="button secondary" type="submit" name="decision" value="rejected"><X size={17} />Rifiuta</button><button class="button text" type="submit" name="decision" value="ignored">Ignora</button></div>
               </form>
             </section>
@@ -273,6 +271,8 @@
         {#if data.selectedDocument || data.selectedReview}
           <section class="workspace-inline-support"><DocumentSourcePanel {data} {form} statusLabels={documentStatusLabels} {selectedSourceRef} /></section>
         {/if}
+      {:else if selectedSection === "official"}
+        <OfficialFlow {data} {form} actionUrl={(action) => formAction(action, "official")} />
       {:else if !selectedDomainSection}
         <div class="panel-empty workspace-empty"><LayoutDashboard size={27} /><p>Sezione non disponibile.</p><span>Torna alla panoramica della pratica.</span></div>
       {/if}

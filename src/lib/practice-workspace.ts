@@ -1,6 +1,7 @@
 import {
   Building2,
   Calculator,
+  FileCheck2,
   FileOutput,
   FolderOpen,
   LayoutDashboard,
@@ -19,6 +20,7 @@ export const practiceSections = [
   { id: "devolution", label: "Devoluzione", available: true, icon: Scale },
   { id: "taxes", label: "Imposte e pagamenti", available: true, icon: Calculator },
   { id: "checks", label: "Controlli finali", available: true, icon: ShieldCheck },
+  { id: "official", label: "Invio e ricevute", available: true, icon: FileCheck2 },
   { id: "final", label: "Riepilogo finale", available: true, icon: FileOutput },
 ] as const;
 

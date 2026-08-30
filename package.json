@@ -1,6 +1,6 @@
 {
   "name": "sequent",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -58,6 +58,7 @@
     "pdf-lib": "^1.17.1",
     "read-excel-file": "9.3.10",
     "svelte": "5.56.10",
+    "unzipper-esm": "0.13.3",
     "zod": "4.4.3"
   },
   "devDependencies": {

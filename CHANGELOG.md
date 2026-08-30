@@ -4,6 +4,20 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.2
+
+### Added
+
+- flusso ufficiale persistente per acquisizione, export e reimport DIZ, confronto a tre vie, telematici, diagnostici, ricevute, quietanze ed esiti volture;
+- snapshot preventivi e di milestone della dichiarazione, fascicolo di artefatti immutabili e conferma motivata della presentazione quando la seconda ricevuta non è ottenibile;
+- backup manuale ZIP dall’interfaccia con breve modalità manutenzione, verifica integrale e promemoria temporale.
+
+### Changed
+
+- backup esteso alla verifica dei blob referenziati da derivati, allegati preparati e artefatti del flusso ufficiale;
+- cicli DIZ resi atomici e serializzati, con evidenza esplicita delle variazioni opache non promosse nel modello canonico;
+- workspace della pratica esteso con la sezione “Invio e ricevute” e download autenticato senza cache dei file ufficiali.
+
 ## 0.2.1
 
 ### Fixed
