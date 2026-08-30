@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 const DIZ_ROOT = "finanze.IDAC.structSUC.SavedDataSUC13";
 const SAVED_DATA = "finanze.IDAC.struct.SavedData";
 const DIC_QUADRO_SUFFIX = ".DicQuadro";
@@ -29,6 +31,8 @@ export type ParsedXstreamDiz = {
   readonly rootName: typeof DIZ_ROOT;
   readonly attachmentReferences: readonly string[];
   readonly source: string;
+  readonly root: XmlElement;
+  readonly fieldKeyElements: ReadonlyMap<string, XmlElement>;
   readonly fieldElements: ReadonlyMap<string, XmlElement>;
 };
 
@@ -228,6 +232,7 @@ function extractFields(
   root: XmlElement,
 ): {
   fields: DizField[];
+  fieldKeyElements: ReadonlyMap<string, XmlElement>;
   fieldElements: ReadonlyMap<string, XmlElement>;
 } {
   const savedData = directChild(root, SAVED_DATA);
@@ -240,6 +245,7 @@ function extractFields(
   if (!quadroTable) throw new Error("DIZ XML non valido: tabella dei quadri assente");
 
   const fields: DizField[] = [];
+  const fieldKeyElements = new Map<string, XmlElement>();
   const fieldElements = new Map<string, XmlElement>();
   for (const quadroEntry of quadroTable.children.filter((child) => child.name === "entry")) {
     const [quadroKey, quadroObject] = quadroEntry.children;
@@ -268,12 +274,13 @@ function extractFields(
         if (fieldElements.has(key)) {
           throw new Error("DIZ XML non valido: localizzatore campo duplicato");
         }
+        fieldKeyElements.set(key, keyElement);
         fieldElements.set(key, valueElement);
         fields.push({ ...locator, value });
       }
     }
   }
-  return { fields, fieldElements };
+  return { fields, fieldKeyElements, fieldElements };
 }
 
 function descendants(element: XmlElement): XmlElement[] {
@@ -291,7 +298,7 @@ export function parseXstreamDiz(input: Uint8Array): ParsedXstreamDiz {
   if (root.name !== DIZ_ROOT) {
     throw new Error(`DIZ XML non supportato: radice ${root.name}`);
   }
-  const { fields, fieldElements } = extractFields(source, root);
+  const { fields, fieldKeyElements, fieldElements } = extractFields(source, root);
   const attachmentReferences = descendants(root)
     .filter((element) => element.name.endsWith(".AllegatiBean"))
     .flatMap((element) => element.children.filter((child) => child.name === "path"))
@@ -301,24 +308,106 @@ export function parseXstreamDiz(input: Uint8Array): ParsedXstreamDiz {
     rootName: DIZ_ROOT,
     attachmentReferences,
     source,
+    root,
+    fieldKeyElements,
     fieldElements,
   };
 }
 
-export function opaqueXstreamProjection(parsed: ParsedXstreamDiz): string {
-  const ranges = [...parsed.fieldElements.values()]
-    .map((element) => ({ start: element.contentStart, end: element.endTagStart }))
-    .sort((left, right) => left.start - right.start);
-  let cursor = 0;
-  let projection = "";
-  for (const range of ranges) {
-    if (range.start < cursor || range.end < range.start) {
-      throw new Error("DIZ XML non valido: intervalli dei campi sovrapposti");
-    }
-    projection += parsed.source.slice(cursor, range.start) + "\u0000DIZ-FIELD-VALUE\u0000";
-    cursor = range.end;
+export function opaqueXstreamProjection(
+  parsed: ParsedXstreamDiz,
+  scalarReplacements: ReadonlyMap<string, string> = new Map(),
+): string {
+  const maskedValues = new Map<number, string>([
+    ...[...parsed.fieldKeyElements.values()].map(
+      (element) => [element.start, "\u0000DIZ-FIELD-KEY\u0000"] as const,
+    ),
+    ...[...parsed.fieldElements.values()].map(
+      (element) => [element.start, "\u0000DIZ-FIELD-VALUE\u0000"] as const,
+    ),
+  ]);
+  return canonicalOpaqueElement(parsed.source, parsed.root, maskedValues, scalarReplacements);
+}
+
+function canonicalOpaqueElement(
+  source: string,
+  element: XmlElement,
+  maskedValues: ReadonlyMap<number, string>,
+  scalarReplacements: ReadonlyMap<string, string>,
+): string {
+  const attributes = [...element.attributes.entries()].sort(([left], [right]) =>
+    left.localeCompare(right),
+  );
+  const masked = maskedValues.get(element.start);
+  if (masked !== undefined) return opaqueDigest([element.name, attributes, masked]);
+  if (element.children.length === 0) {
+    const rawValue = source.slice(element.contentStart, element.endTagStart);
+    const decodedValue = rawValue.includes("<") ? rawValue : decodeXml(rawValue);
+    const value = scalarReplacements.get(decodedValue) ?? decodedValue;
+    return opaqueDigest([element.name, attributes, element.selfClosing, value]);
   }
-  return projection + parsed.source.slice(cursor);
+
+  const gaps: string[] = [];
+  let cursor = element.contentStart;
+  for (const child of element.children) {
+    gaps.push(source.slice(cursor, child.start));
+    cursor = child.end;
+  }
+  gaps.push(source.slice(cursor, element.endTagStart));
+  const children = element.children.map((child) =>
+    canonicalOpaqueElement(source, child, maskedValues, scalarReplacements),
+  );
+  const hasOnlyFormattingGaps = gaps.every((gap) => gap.trim() === "");
+  let content: unknown = hasOnlyFormattingGaps
+    ? children
+    : children.flatMap((child, index) => [gaps[index], child]).concat(gaps.at(-1));
+
+  if (element.name === "hashtable" && hasOnlyFormattingGaps) {
+    if (element.children.every((child) => child.name === "entry")) {
+      content = [...children].sort();
+    } else if (
+      element.children.length >= 3 &&
+      element.children[0]?.name === "default" &&
+      element.children[1]?.name === "int" &&
+      element.children[2]?.name === "int"
+    ) {
+      if ((element.children.length - 3) % 2 === 0) {
+        const pairs: string[] = [];
+        for (let index = 3; index < children.length; index += 2) {
+          pairs.push(JSON.stringify([children[index], children[index + 1]]));
+        }
+        content = ["\u0000XSTREAM-HASHTABLE-METADATA\u0000", ...pairs.sort()];
+      } else {
+        const normalizedChildren: string[] = ["\u0000XSTREAM-HASHTABLE-METADATA\u0000"];
+        for (let index = 3; index < children.length;) {
+          const fieldPairs: string[] = [];
+          while (
+            maskedValues.get(element.children[index]?.start ?? -1) ===
+              "\u0000DIZ-FIELD-KEY\u0000" &&
+            maskedValues.get(element.children[index + 1]?.start ?? -1) ===
+              "\u0000DIZ-FIELD-VALUE\u0000"
+          ) {
+            fieldPairs.push(JSON.stringify([children[index], children[index + 1]]));
+            index += 2;
+          }
+          if (fieldPairs.length > 0) {
+            normalizedChildren.push(
+              JSON.stringify(["\u0000DIZ-FIELDS\u0000", ...fieldPairs.sort()]),
+            );
+          } else {
+            normalizedChildren.push(children[index]!);
+            index += 1;
+          }
+        }
+        content = normalizedChildren;
+      }
+    }
+  }
+  return opaqueDigest([element.name, attributes, element.selfClosing, content]);
+}
+
+function opaqueDigest(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
 export function rewriteXstreamFields(
