@@ -102,6 +102,12 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /fail\(\) \{[^}]*return 1[^}]*\}/);
   assert.doesNotMatch(deploy, /fail\(\) \{[^}]*exit 1[^}]*\}/);
   assert.match(deploy, /load_runtime_env\(\)/);
+  assert.match(deploy, /python3.*migrate-runtime-features\.py/s);
+  assert.ok(
+    deploy.indexOf("migrate-runtime-features.py") <
+      deploy.indexOf('load_runtime_env "$runtime_env"'),
+  );
+  assert.doesNotMatch(deploy, /\/usr\/bin\/node/);
   assert.match(deploy, /chiave runtime non ammessa/);
   assert.match(deploy, /id -u sequent-runtime/);
   assert.match(deploy, /id -g sequent-runtime/);

@@ -179,6 +179,8 @@ chmod 0750 "$root/runtime"
 
 runtime_uid="$(id -u sequent-runtime)" || fail "account runtime assente"
 runtime_gid="$(id -g sequent-runtime)" || fail "gruppo runtime assente"
+/usr/bin/python3 "$repository/scripts/vps/migrate-runtime-features.py" \
+  "$runtime_env" "$(id -u ubuntu)" "$(id -g ubuntu)" "$runtime_uid" "$runtime_gid"
 load_runtime_env "$runtime_env"
 previous_runtime_image="$SEQUENT_IMAGE"
 trusted_runtime_env="$(mktemp /run/sequent-runtime-env.XXXXXX)"

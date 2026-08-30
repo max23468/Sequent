@@ -9,6 +9,7 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 ### Fixed
 
 - configurazione di deploy resa fail-closed e persistente per le feature flag operative Codex e DIZ, senza riabilitazioni implicite durante gli aggiornamenti;
+- migrazione automatica della configurazione runtime precedente con entrambe le feature flag assenti verso lo stato esplicito e disabilitato, rifiutando stati parziali;
 - confronto DIZ a tre vie reso stabile rispetto a rinomina opaca degli allegati, riordino delle mappe e metadati interni prodotti dal salvataggio ufficiale, mantenendo bloccanti le divergenze di campi, contenuti e byte.
 
 ## 0.2.2

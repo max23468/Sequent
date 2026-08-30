@@ -6,6 +6,8 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const script = "scripts/vps/configure-runtime-features.mjs";
+const migrationScript = "scripts/vps/migrate-runtime-features.py";
+const migrationIdentity = [`${process.getuid?.()}`, `${process.getgid?.()}`, "1001", "1001"];
 
 function createRuntime(extra = "") {
   const root = mkdtempSync(join(tmpdir(), "sequent-runtime-features-"));
@@ -51,6 +53,64 @@ test("configura atomicamente entrambe le feature flag senza alterare le altre ch
     );
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("migra fail-closed la configurazione precedente soltanto quando entrambe le flag mancano", () => {
+  const legacy = createRuntime();
+  const current = createRuntime("SEQUENT_CODEX_ENABLED=true\nSEQUENT_DIZ_ENABLED=false");
+  const partial = createRuntime("SEQUENT_CODEX_ENABLED=true");
+  const invalid = createRuntime("SEQUENT_CODEX_ENABLED=true\nSEQUENT_DIZ_ENABLED=forse");
+  try {
+    const migration = spawnSync(
+      "python3",
+      [migrationScript, legacy.environment, ...migrationIdentity],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+    assert.equal(migration.status, 0, migration.stderr);
+    assert.match(readFileSync(legacy.environment, "utf8"), /SEQUENT_CODEX_ENABLED=false/);
+    assert.match(readFileSync(legacy.environment, "utf8"), /SEQUENT_DIZ_ENABLED=false/);
+
+    const before = readFileSync(current.environment, "utf8");
+    const noOp = spawnSync(
+      "python3",
+      [migrationScript, current.environment, ...migrationIdentity],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+    assert.equal(noOp.status, 0, noOp.stderr);
+    assert.equal(readFileSync(current.environment, "utf8"), before);
+
+    const partialBefore = readFileSync(partial.environment, "utf8");
+    const rejected = spawnSync(
+      "python3",
+      [migrationScript, partial.environment, ...migrationIdentity],
+      {
+        cwd: process.cwd(),
+        encoding: "utf8",
+      },
+    );
+    assert.notEqual(rejected.status, 0);
+    assert.equal(readFileSync(partial.environment, "utf8"), partialBefore);
+
+    const invalidBefore = readFileSync(invalid.environment, "utf8");
+    const invalidResult = spawnSync(
+      "python3",
+      [migrationScript, invalid.environment, ...migrationIdentity],
+      { cwd: process.cwd(), encoding: "utf8" },
+    );
+    assert.notEqual(invalidResult.status, 0);
+    assert.equal(readFileSync(invalid.environment, "utf8"), invalidBefore);
+  } finally {
+    rmSync(legacy.root, { recursive: true, force: true });
+    rmSync(current.root, { recursive: true, force: true });
+    rmSync(partial.root, { recursive: true, force: true });
+    rmSync(invalid.root, { recursive: true, force: true });
   }
 });
 
