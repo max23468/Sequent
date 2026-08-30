@@ -260,6 +260,11 @@ Rollback tramite revert dello squash merge; nessuna mutazione di dati operativi.
 
 async function main() {
   const execute = process.argv.includes("--execute");
+  if (execute && process.env.SEQUENT_PUBLICATION_WRAPPER !== "1") {
+    throw new Error(
+      "L'esecuzione remota deve passare da npm run publication:github per garantire la pulizia finale",
+    );
+  }
   const branch = output("git", ["branch", "--show-current"]);
   ensureLocalPreconditions(branch);
   const headSha = output("git", ["rev-parse", "HEAD"]);

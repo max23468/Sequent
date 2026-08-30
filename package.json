@@ -1,6 +1,6 @@
 {
   "name": "sequent",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -31,7 +31,7 @@
     "verify:public": "npm run verify:rapid && npm run verify:application",
     "verify:publication": "node scripts/github/verify-publication.mjs",
     "publication:classify": "node scripts/github/publication-policy.mjs",
-    "publication:github": "node scripts/github/publish.mjs",
+    "publication:github": "node scripts/github/publication-command.mjs",
     "verify:sources": "node scripts/official-sources/verify.ts",
     "verify:suc13-control": "node scripts/official-sources/qualify-suc13-control.mjs",
     "generate:facsimile-layout": "node scripts/official-sources/generate-facsimile-layout.mjs",

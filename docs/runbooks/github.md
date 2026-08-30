@@ -44,6 +44,8 @@ Soltanto dopo una richiesta affermativa `Pubblica`, l'opzione `--execute` esegue
 npm run publication:github -- --execute
 ```
 
+Il wrapper verifica prima delle mutazioni remote che la chiusura locale sia possibile. Dopo tutti i passaggi applicabili riallinea `main`, elimina il branch locale e l'eventuale worktree del ciclo corrente già assorbiti, verifica che il branch remoto sia assente e stampa l'inventario di branch, worktree e stash estranei preservati intenzionalmente. L'esecuzione diretta di `scripts/github/publish.mjs --execute` è rifiutata, perché salterebbe questo gate. Una working tree concorrente non pulita viene preservata ma, se impedisce l'allineamento di `main`, blocca la pubblicazione prima del push.
+
 La riconciliazione della ruleset è idempotente, preserva le altre protezioni e viene riletta dopo l'applicazione. Un preflight già riuscito può essere riusato per 24 ore soltanto se la ricevuta esterna a Git coincide per HEAD, tree, lockfile, Node, npm, piattaforma, architettura e lista dei comandi. Per sole modifiche documentali, di test o di governance il comando termina qui. Per una modifica runtime avvia e attende la candidata di release exact-SHA; dopo il merge e prima di candidata e deploy rilegge anche una Production concorrente e ricalcola il diff dall'ultimo deployment riuscito. Se rileva una Production già distribuita con successo e il workflow Production qualificato, avvia e attende anche deploy e readback, quindi crea tag e GitHub Release. In assenza di una release attiva si ferma alla candidata perché la prima attivazione richiede un'autorizzazione separata.
 
 ## Candidata di release
@@ -64,4 +66,4 @@ Dependabot apre settimanalmente pull request raggruppate per npm e GitHub Action
 
 ## Chiusura di una pubblicazione
 
-Prima del merge verificare required checks, conversazioni e confine pubblico. Dopo il merge rileggere `main`, identità dell'albero approvato, stato della pull request, branch remoti, ruleset e working tree. Per una modifica runtime rileggere anche candidata, artefatto e, se già applicabile, deployment, release e stato live. `Pubblica` autorizza questi passaggi tecnici sull'istanza già attiva, ma non la prima attivazione né modifiche a Caddy, Dynu o firewall.
+Prima del merge verificare required checks, conversazioni e confine pubblico. Dopo il merge rileggere `main`, identità dell'albero approvato, stato della pull request, branch remoti, ruleset e working tree. La chiusura richiede inoltre la rimozione verificata di branch e worktree temporanei del ciclo corrente e l'inventario esplicito di stash, branch e worktree estranei preservati. Per una modifica runtime rileggere anche candidata, artefatto e, se già applicabile, deployment, release e stato live. `Pubblica` autorizza questi passaggi tecnici sull'istanza già attiva, ma non la prima attivazione né modifiche a Caddy, Dynu o firewall.
