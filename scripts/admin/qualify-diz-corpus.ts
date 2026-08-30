@@ -57,6 +57,7 @@ try {
     fields: number;
     qualifiedFields: number;
     attachments: number;
+    materializedAttachments: number;
     archiveArtifacts: number;
     readbackVerified: boolean;
   }> = [];
@@ -146,6 +147,18 @@ try {
     }
     const declarationId = String(row.declaration_id);
     const practiceId = String(row.practice_id);
+    const materializedAttachmentHashes = new Set(
+      (
+        database
+          .prepare("SELECT sha256 FROM documents WHERE practice_id = ?")
+          .all(practiceId) as Array<{ sha256: string }>
+      ).map((document) => document.sha256),
+    );
+    if (
+      parsed.attachments.some((attachment) => !materializedAttachmentHashes.has(attachment.sha256))
+    ) {
+      throw new Error(`DIZ_CORPUS_QUALIFICATION_ATTACHMENTS_NOT_MATERIALIZED:${index + 1}`);
+    }
     const declaration = getDeclaration(database, declarationId, practiceId)?.declaration;
     if (!declaration) throw new Error(`DIZ_CORPUS_QUALIFICATION_DECLARATION_MISSING:${index + 1}`);
     const entries = database
@@ -171,6 +184,7 @@ try {
       fields: parsed.fields.length,
       qualifiedFields: qualifiedFields.length,
       attachments: parsed.attachments.length,
+      materializedAttachments: parsed.attachments.length,
       archiveArtifacts: rows.length,
       readbackVerified: true,
     });

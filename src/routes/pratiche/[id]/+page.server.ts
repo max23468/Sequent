@@ -69,7 +69,7 @@ import {
   listOfficialAttachments,
   prepareOfficialAttachment,
 } from "$lib/server/official-attachments";
-import { getOfficialFlowSummary } from "$lib/server/official-flow";
+import { getImportedDizContent, getOfficialFlowSummary } from "$lib/server/official-flow";
 import { officialFlowActions } from "$lib/server/official-flow-actions";
 
 const shortLabel = z.string().trim().min(1, "Inserisci una descrizione.").max(160);
@@ -133,7 +133,7 @@ function nonNegativeInteger(value: unknown): bigint | null {
   return /^\d+$/.test(normalized) ? BigInt(normalized) : null;
 }
 
-export const load: PageServerLoad = ({ locals, params, url }) => {
+export const load: PageServerLoad = async ({ locals, params, url }) => {
   if (!locals.ownerId) redirect(303, "/login");
   const database = openDatabase();
   const practice = getPractice(database, params.id);
@@ -255,6 +255,7 @@ export const load: PageServerLoad = ({ locals, params, url }) => {
     codexEnabled: isCodexEnabled(),
     dizEnabled: isDizEnabled(),
     officialFlow: getOfficialFlowSummary(database, params.id, declaration.id),
+    importedDizContent: await getImportedDizContent(database, params.id, declaration.id),
   };
 };
 

@@ -14,6 +14,7 @@ import type { DizField, DizFieldLocator } from "../../domain/diz/xstream.ts";
 import { getCanonicalField, setCanonicalField } from "../../domain/declaration.ts";
 import { persistUpload, resolveBlobPath, type PersistedUpload } from "./blob-store.ts";
 import { getDataDirectory } from "./config.ts";
+import { ingestPersistedUploadInTransaction } from "./document-ingestion.ts";
 import { buildComplianceReport } from "./domain-compliance.ts";
 import { listDeclarationSubjectEntries } from "./domain-subjects.ts";
 import { listOfficialAttachments } from "./official-attachments.ts";
@@ -50,6 +51,19 @@ export interface OfficialArtifact {
   blobPath: string;
   metadata: Record<string, unknown>;
   createdAt: string;
+}
+
+export interface ImportedDizContent {
+  artifactId: string;
+  integratedFields: number;
+  preservedFields: number;
+  fieldCount: number;
+  sections: Array<{ quadro: string; fields: DizField[] }>;
+  attachments: Array<{
+    name: string;
+    bytes: number;
+    kind: "pdf" | "tiff" | "jpeg" | "png" | "unknown";
+  }>;
 }
 
 export interface DizRoundTrip {
@@ -164,6 +178,76 @@ function listArtifacts(
       )
       .all(practiceId, declarationId) as Array<Record<string, unknown>>
   ).map(mapArtifact);
+}
+
+function attachmentMediaType(kind: ImportedDizContent["attachments"][number]["kind"]): string {
+  if (kind === "pdf") return "application/pdf";
+  if (kind === "tiff") return "image/tiff";
+  if (kind === "jpeg") return "image/jpeg";
+  if (kind === "png") return "image/png";
+  return "application/octet-stream";
+}
+
+export async function getImportedDizContent(
+  database: Database.Database,
+  practiceId: string,
+  declarationId: string,
+  dataDirectory = getDataDirectory(),
+): Promise<ImportedDizContent | null> {
+  const artifact = listArtifacts(database, practiceId, declarationId).find(
+    (candidate) => candidate.kind === "diz-imported",
+  );
+  if (!artifact) return null;
+  const parsed = parseDiz(await readArtifactBytes(artifact, dataDirectory));
+  const acquisition = artifact.metadata.acquisition as Partial<DizAcquisitionSummary> | undefined;
+  const importedFields = Number.isInteger(acquisition?.importedFields)
+    ? Number(acquisition?.importedFields)
+    : 0;
+  const unchangedFields = Number.isInteger(acquisition?.unchangedFields)
+    ? Number(acquisition?.unchangedFields)
+    : 0;
+  const preservedFields = Number.isInteger(acquisition?.preservedFields)
+    ? Number(acquisition?.preservedFields)
+    : parsed.fields.length - importedFields - unchangedFields;
+  const fields = parsed.fields
+    .filter((field) => field.value.length > 0)
+    .map((field) => ({ ...field }));
+  const sectionMap = new Map<string, DizField[]>();
+  for (const field of fields) {
+    const section = sectionMap.get(field.quadro) ?? [];
+    section.push(field);
+    sectionMap.set(field.quadro, section);
+  }
+  return {
+    artifactId: artifact.id,
+    integratedFields: importedFields + unchangedFields,
+    preservedFields,
+    fieldCount: fields.length,
+    sections: [...sectionMap].map(([quadro, sectionFields]) => ({
+      quadro,
+      fields: sectionFields,
+    })),
+    attachments: parsed.attachments.map(({ name, bytes, kind }) => ({ name, bytes, kind })),
+  };
+}
+
+async function persistDizAttachments(
+  parsed: ReturnType<typeof parseDiz>,
+  dataDirectory: string,
+): Promise<PersistedUpload[]> {
+  const entries = new Map(parsed.source.entries.map((entry) => [entry.name, entry.content]));
+  return Promise.all(
+    parsed.attachments.map((attachment) => {
+      const content = entries.get(attachment.name);
+      if (!content) throw new Error("DIZ_ATTACHMENT_ENTRY_MISSING");
+      return persistUpload(
+        new File([new Uint8Array(content)], attachment.name, {
+          type: attachmentMediaType(attachment.kind),
+        }),
+        dataDirectory,
+      );
+    }),
+  );
 }
 
 function listRoundTrips(
@@ -523,7 +607,9 @@ export async function importDiz(
     throw new Error("DIZ_ROUND_TRIP_PENDING");
   const bytes = Buffer.from(await input.file.arrayBuffer());
   const parsed = parseDiz(bytes);
-  const upload = await persistUpload(input.file, input.dataDirectory ?? getDataDirectory());
+  const dataDirectory = input.dataDirectory ?? getDataDirectory();
+  const upload = await persistUpload(input.file, dataDirectory);
+  const attachmentUploads = await persistDizAttachments(parsed, dataDirectory);
   let artifact!: OfficialArtifact;
   database.transaction(() => {
     createSnapshot(database, input.practiceId, input.declarationId, "diz-import");
@@ -546,6 +632,9 @@ export async function importDiz(
         acquisition,
       },
     });
+    for (const attachment of attachmentUploads) {
+      ingestPersistedUploadInTransaction(database, attachment, input.practiceId);
+    }
     recordAudit(
       database,
       input.practiceId,
@@ -556,6 +645,34 @@ export async function importDiz(
     );
   })();
   return artifact;
+}
+
+export async function materializeImportedDizAttachments(
+  database: Database.Database,
+  input: { practiceId: string; artifactId: string; dataDirectory?: string },
+): Promise<{ attachments: number; documents: number }> {
+  const artifact = getOfficialArtifact(database, input.artifactId, input.practiceId);
+  if (!artifact || artifact.kind !== "diz-imported") throw new Error("DIZ_IMPORT_NOT_FOUND");
+  const dataDirectory = input.dataDirectory ?? getDataDirectory();
+  const parsed = parseDiz(await readArtifactBytes(artifact, dataDirectory));
+  const uploads = await persistDizAttachments(parsed, dataDirectory);
+  const documentIds = database
+    .transaction(() => {
+      const ids = uploads.map(
+        (upload) => ingestPersistedUploadInTransaction(database, upload, input.practiceId).id,
+      );
+      recordAudit(
+        database,
+        artifact.practiceId,
+        artifact.declarationId,
+        "diz.attachments-materialized",
+        "Resi consultabili nella pratica gli allegati incorporati nel DIZ acquisito.",
+        { artifactId: artifact.id, attachments: parsed.attachments.length },
+      );
+      return ids;
+    })
+    .immediate();
+  return { attachments: parsed.attachments.length, documents: new Set(documentIds).size };
 }
 
 function latestDizSource(artifacts: OfficialArtifact[]): OfficialArtifact | null {

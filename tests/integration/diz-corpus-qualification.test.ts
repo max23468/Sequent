@@ -28,7 +28,15 @@ describe("qualificazione privata del corpus DIZ", () => {
     const database = openDatabase(directory);
     for (let index = 0; index < 5; index += 1) {
       const practice = createPractice(database, `Pratica sintetica ${index + 1}`);
-      const bytes = syntheticDiz(`COGNOME${index + 1}`);
+      const bytes = syntheticDiz(
+        `COGNOME${index + 1}`,
+        index === 0
+          ? {
+              name: "allegato-sintetico.pdf",
+              content: Buffer.from("%PDF-1.7\nAllegato sintetico\n%%EOF", "ascii"),
+            }
+          : undefined,
+      );
       writeFileSync(join(corpus, `campione-${index + 1}.diz`), bytes);
       if (index === 0) {
         await importDiz(database, {
@@ -81,6 +89,7 @@ describe("qualificazione privata del corpus DIZ", () => {
       samples: expect.arrayContaining([
         expect.objectContaining({
           qualifiedFields: 1,
+          materializedAttachments: 1,
           archiveArtifacts: 2,
           readbackVerified: true,
         }),

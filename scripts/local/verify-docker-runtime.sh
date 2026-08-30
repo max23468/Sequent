@@ -19,6 +19,9 @@ test -z "$(find /lib /usr/lib -iname "*musl*" -print -quit 2>/dev/null)"
 ! dpkg-query -W gcompat >/dev/null 2>&1
 test "$(node --version)" = v26.7.0
 test "$(npm --version)" = 12.0.2
+for script in backup qualify-codex-runtime qualify-diz-corpus reset-owner restore seed-synthetic; do
+  test -r "/app/scripts/admin/$script.ts"
+done
 for tool in file gs jbig2 libreoffice magick ocrmypdf openssl pdftoppm pngquant \
   python3 qpdf tesseract unpaper unzip; do
   command -v "$tool" >/dev/null

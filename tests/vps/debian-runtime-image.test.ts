@@ -66,6 +66,26 @@ test("il runtime conserva i converter e separa gli strumenti di build", () => {
   assert.match(dockerfile, /find \/app\/node_modules\/@openai -perm \/022/);
 });
 
+test("l'immagine include tutti gli strumenti amministrativi dichiarati", () => {
+  const dockerfile = read("Dockerfile");
+  const verifier = read("scripts/local/verify-docker-runtime.sh");
+
+  assert.match(
+    dockerfile,
+    /COPY --from=build --chown=root:root \/app\/scripts\/admin \.\/scripts\/admin/,
+  );
+  for (const script of [
+    "backup",
+    "qualify-codex-runtime",
+    "qualify-diz-corpus",
+    "reset-owner",
+    "restore",
+    "seed-synthetic",
+  ]) {
+    assert.match(verifier, new RegExp(`(?:^| )${script}(?: |;)`));
+  }
+});
+
 test("Dependabot aggiorna settimanalmente il digest Docker senza auto-merge", () => {
   const dependabot = read(".github/dependabot.yml");
 

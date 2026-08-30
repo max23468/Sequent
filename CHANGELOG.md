@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.8
+
+### Fixed
+
+- immagine Production completata con tutti gli strumenti amministrativi dichiarati, inclusi backup e restore, e gate ARM64 esteso alla loro presenza effettiva.
+- import DIZ completato con consultazione in sola lettura di tutti i valori originali e materializzazione degli allegati incorporati nella sezione Documenti; la qualificazione privata ora blocca allegati conservati ma non consultabili.
+
 ## 0.2.7
 
 ### Fixed

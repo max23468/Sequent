@@ -1,5 +1,6 @@
 <script lang="ts">
   import { CheckCircle2, CircleAlert } from "@lucide/svelte";
+  import ImportedDizContent from "$lib/components/ImportedDizContent.svelte";
   import type { PageData } from "../../routes/pratiche/[id]/$types";
   let { data } = $props<{ data: PageData }>();
 </script>
@@ -16,3 +17,4 @@
     <div>{#if data.catalogStatus.status === "qualified"}<CheckCircle2 size={22} />{:else}<CircleAlert size={22} />{/if}<div><strong>{data.catalogStatus.status === "qualified" ? "Fonti ministeriali pronte" : "Fonti ministeriali da completare"}</strong><p>{data.catalogStatus.status === "qualified" ? "Tutti i Quadri e i controlli collegati alle fonti sono disponibili." : "Alcune corrispondenze con le fonti ministeriali devono ancora essere risolte."}</p></div></div>
   </section>
 </div>
+{#if data.importedDizContent}<ImportedDizContent content={data.importedDizContent} />{/if}
