@@ -146,7 +146,9 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
   assert.match(runbook, /profilo Production qualificato finché Codex è spento/);
   assert.match(runbook, /profilo Codex qualificato mantiene gli stessi confini Linux/);
   assert.match(compose, /SEQUENT_CODEX_HOME: \/var\/lib\/sequent\/\.codex-sequent/);
+  assert.match(compose, /CODEX_HOME: \/var\/lib\/sequent\/\.codex-sequent/);
   assert.match(dockerfile, /SEQUENT_CODEX_HOME=\/var\/lib\/sequent\/\.codex-sequent/);
+  assert.match(dockerfile, /CODEX_HOME=\/var\/lib\/sequent\/\.codex-sequent/);
   assert.match(runbook, /sovrascrivere gli header inoltrati dal client/);
   assert.match(runbook, /unico hop davanti a Sequent/);
   assert.match(runbook, /rete esterna dedicata `sequent-proxy`/);

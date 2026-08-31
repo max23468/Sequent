@@ -10,6 +10,7 @@ services:
     environment:
       NODE_ENV: production
       BODY_SIZE_LIMIT: 260M
+      CODEX_HOME: /var/lib/sequent/.codex-sequent
       SEQUENT_DATA_DIR: /var/lib/sequent
       SEQUENT_CODEX_HOME: /var/lib/sequent/.codex-sequent
       SEQUENT_CODEX_MODEL: gpt-5.6-terra

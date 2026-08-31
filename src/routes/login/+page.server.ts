@@ -1,15 +1,9 @@
 import { fail, redirect } from "@sveltejs/kit";
 import { z } from "zod";
 import type { Actions, PageServerLoad } from "./$types";
-import {
-  authenticate,
-  hasOwner,
-  issueSession,
-  SESSION_COOKIE,
-  SESSION_COOKIE_MAX_AGE,
-} from "$lib/server/auth";
-import { useSecureCookies } from "$lib/server/config";
+import { authenticate, hasOwner, issueSession } from "$lib/server/auth";
 import { openDatabase } from "$lib/server/database";
+import { setSessionCookie } from "$lib/server/session-cookie";
 
 export const load: PageServerLoad = ({ locals }) => {
   if (!hasOwner(openDatabase())) redirect(303, "/setup");
@@ -27,13 +21,7 @@ export const actions = {
     const ownerId = await authenticate(database, username.data, password.data, getClientAddress());
     if (!ownerId) return fail(400, { error: "Credenziali non valide." });
     const session = issueSession(database, ownerId);
-    cookies.set(SESSION_COOKIE, session.token, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "strict",
-      secure: useSecureCookies(),
-      maxAge: SESSION_COOKIE_MAX_AGE,
-    });
+    setSessionCookie(cookies, session.token);
     redirect(303, "/");
   },
 } satisfies Actions;
