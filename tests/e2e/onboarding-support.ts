@@ -73,8 +73,10 @@ export async function openPracticeSection(page: import("@playwright/test").Page,
   if (!(await section.isVisible())) {
     await page.getByRole("button", { name: /Apri il menu Sezioni/ }).click();
   }
+  const sectionId = await section.getAttribute("data-section");
+  if (!sectionId) throw new Error(`La sezione ${name} non espone il proprio identificativo`);
   await section.click();
-  await expect(section).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => new URL(page.url()).searchParams.get("sezione")).toBe(sectionId);
 }
 
 export async function submitOnlinePracticeForm(button: import("@playwright/test").Locator) {
