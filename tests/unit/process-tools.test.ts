@@ -11,17 +11,18 @@ afterEach(() => {
     rmSync(directory, { recursive: true, force: true });
 });
 
-async function waitForFile(path: string): Promise<void> {
+async function waitForProcessId(path: string): Promise<number> {
   const deadline = Date.now() + 4_000;
   while (Date.now() < deadline) {
     try {
-      readFileSync(path, "utf8");
-      return;
+      const pid = Number(readFileSync(path, "utf8"));
+      if (Number.isInteger(pid) && pid > 0) return pid;
     } catch {
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      // Il file può non esistere ancora mentre il processo figlio viene avviato.
     }
+    await new Promise((resolve) => setTimeout(resolve, 10));
   }
-  throw new Error("PID_FILE_MISSING");
+  throw new Error("PID_FILE_INVALID");
 }
 
 async function waitForProcessExit(pid: number): Promise<void> {
@@ -54,8 +55,7 @@ describe("esecuzione strumenti documentali", () => {
       ].join("\n");
       const command = runCommand(process.execPath, ["-e", parentScript], { timeoutMs: 5_000 });
       const timedOut = expect(command).rejects.toThrow("TOOL_TIMEOUT");
-      await waitForFile(pidPath);
-      const descendantPid = Number(readFileSync(pidPath, "utf8"));
+      const descendantPid = await waitForProcessId(pidPath);
 
       await timedOut;
       await waitForProcessExit(descendantPid);
@@ -80,8 +80,7 @@ describe("esecuzione strumenti documentali", () => {
         timeoutMs: 10_000,
         signal: controller.signal,
       });
-      await waitForFile(pidPath);
-      const descendantPid = Number(readFileSync(pidPath, "utf8"));
+      const descendantPid = await waitForProcessId(pidPath);
       controller.abort();
 
       await expect(command).rejects.toThrow("TOOL_CANCELLED");

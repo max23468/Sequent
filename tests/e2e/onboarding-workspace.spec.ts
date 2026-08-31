@@ -17,6 +17,22 @@ import {
 test.describe.configure({ mode: "serial" });
 test.afterEach(resetFailedBlobVerification);
 
+test("limita i box della Dashboard e mantiene le scorciatoie", async ({ page }) => {
+  await authenticate(page);
+  for (let index = 1; index <= 6; index += 1) {
+    await createPracticeFromDashboard(page, unique(`Pratica Dashboard ${index}`));
+  }
+  await page.goto("/");
+
+  await expect(page.locator(".attention-panel .verification-list li")).toHaveCount(4);
+  await expect(page.locator(".recent-panel .practice-row")).toHaveCount(5);
+  await expect(page.locator(".dashboard-panel .panel-shortcut")).toHaveCount(3);
+  await expect(page.locator(".deadlines-panel .panel-shortcut")).toHaveCSS(
+    "border-top-style",
+    "solid",
+  );
+});
+
 test("mostra gli automatici confermati dalla stessa fonte e in sola lettura nelle due viste", async ({
   page,
 }) => {
@@ -113,7 +129,22 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
     "noindex, nofollow, noarchive",
   );
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Da verificare" })).toBeVisible();
+  const attentionPanel = page.getByRole("region", { name: "Da verificare" });
+  const deadlinesPanel = page.getByRole("region", { name: "Scadenze" });
+  const recentPanel = page.getByRole("region", { name: "Pratiche recenti" });
+  await expect(attentionPanel).toBeVisible();
+  await expect(attentionPanel.getByRole("link", { name: "Apri Documenti" })).toHaveAttribute(
+    "href",
+    "/documenti",
+  );
+  await expect(deadlinesPanel.getByRole("link", { name: "Apri Pratiche" })).toHaveAttribute(
+    "href",
+    "/pratiche",
+  );
+  await expect(recentPanel.getByRole("link", { name: "Vedi tutte le pratiche" })).toHaveAttribute(
+    "href",
+    "/pratiche",
+  );
   await expect(page.locator(".topbar-divider")).toBeVisible();
   await expect(page.locator(".attention-panel")).toHaveCSS("min-height", "0px");
   await expect(page.locator(".recent-panel")).toHaveCSS("min-height", "0px");

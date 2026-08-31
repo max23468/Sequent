@@ -111,6 +111,26 @@
   grid-column: 1 / -1;
   min-height: 0;
 }
+.panel-shortcut {
+  display: flex;
+  min-height: 45px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding-inline: 10px;
+  border-radius: 5px;
+  color: var(--teal);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+.panel-shortcut:hover {
+  background: var(--surface-soft);
+}
+.panel-shortcut:hover svg {
+  transform: translateX(2px);
+}
 .panel-title {
   display: flex;
   align-items: center;
@@ -133,7 +153,7 @@
 }
 .panel-empty {
   display: grid;
-  min-height: 220px;
+  min-height: 175px;
   place-content: center;
   justify-items: center;
   padding: 28px;
@@ -205,6 +225,12 @@
 .deadline-list .deadline-overdue time,
 .deadline-list .deadline-overdue small {
   color: var(--danger);
+}
+.deadline-list li:last-child {
+  border-bottom: 0;
+}
+.deadlines-panel .panel-shortcut {
+  border-top: 1px solid var(--line-soft);
 }
 .technical-alert {
   margin: 16px var(--workspace-content-gutter);

@@ -4,6 +4,12 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.12
+
+### Changed
+
+- box della Dashboard limitati agli elementi operativi più recenti, con scorciatoie permanenti verso Documenti e Pratiche e separatore coerente per le scadenze.
+
 ## 0.2.11
 
 ### Added
