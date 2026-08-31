@@ -1,7 +1,9 @@
 <script lang="ts">
   import { CalendarClock, ChevronRight, ExternalLink, FolderOpen, History, MoreVertical, Plus, Upload, X } from "@lucide/svelte";
+  import { fly } from "svelte/transition";
   import { formatItalianDate } from "$lib/format";
   import { uploadFilesResumably } from "$lib/client/resumable-upload";
+  import { closeDialog, dialogMotion } from "$lib/client/dialog-motion";
 
   let { data, form } = $props();
   let createDialog: HTMLDialogElement | undefined = undefined;
@@ -39,7 +41,7 @@
   }
 
   function closeCreateDialog() {
-    createDialog?.close();
+    return closeDialog(createDialog);
   }
 
   function showUploadDialog() {
@@ -52,7 +54,7 @@
   }
 
   function closeUploadDialog() {
-    uploadDialog?.close();
+    return closeDialog(uploadDialog);
   }
 
   function toggleQuickActions() {
@@ -72,7 +74,7 @@
   }
 
   function closeLauncherDialog() {
-    launcherDialog?.close();
+    return closeDialog(launcherDialog);
   }
 
   function domainSummary(practiceId: string) {
@@ -146,7 +148,7 @@
         <button class="button icon-only" type="button" aria-label="Azioni rapide" aria-expanded={quickActionsOpen} onclick={toggleQuickActions}><MoreVertical size={25} aria-hidden="true" /></button>
         <span>Azioni rapide</span>
         {#if quickActionsOpen}
-          <div class="quick-actions-popover">
+          <div class="quick-actions-popover" transition:fly={{ y: -6, duration: 150 }}>
             <button type="button" onclick={showUploadFromQuickActions}><Upload size={18} />Carica documenti</button>
             {#if data.lastPractice}<a href={`/pratiche/${data.lastPractice.id}`}><History size={18} />Riprendi ultima pratica</a>{/if}
           </div>
@@ -245,7 +247,7 @@
   </div>
 </div>
 
-<dialog class="app-dialog" bind:this={createDialog} aria-labelledby="create-title">
+<dialog class="app-dialog" bind:this={createDialog} use:dialogMotion aria-labelledby="create-title">
   <form method="POST" action="?/create">
     <div class="dialog-heading"><div><p class="dialog-kicker">Nuova pratica</p><h2 id="create-title">Assegna un nome alla pratica</h2></div><button class="icon-button" type="button" aria-label="Chiudi" onclick={closeCreateDialog}><X size={20} /></button></div>
     <label for="practice-title">Nome della pratica</label><input id="practice-title" name="title" maxlength="120" required />
@@ -254,7 +256,7 @@
   </form>
 </dialog>
 
-<dialog class="app-dialog wide" bind:this={uploadDialog} aria-labelledby="upload-title">
+<dialog class="app-dialog wide" bind:this={uploadDialog} use:dialogMotion aria-labelledby="upload-title">
   <form method="POST" action="?/upload" enctype="multipart/form-data" onsubmit={uploadFromDashboard}>
     <div class="dialog-heading"><div><p class="dialog-kicker">Carica documenti</p><h2 id="upload-title">Scegli la pratica di destinazione</h2></div><button class="icon-button" type="button" aria-label="Chiudi" onclick={closeUploadDialog}><X size={20} /></button></div>
     {#if data.practices.length > 0}
@@ -269,7 +271,7 @@
   </form>
 </dialog>
 
-<dialog class="app-dialog" bind:this={launcherDialog} aria-labelledby="launcher-title">
+<dialog class="app-dialog" bind:this={launcherDialog} use:dialogMotion aria-labelledby="launcher-title">
   {#if selectedLauncher}
     <div class="dialog-heading"><div><p class="dialog-kicker">Scorciatoia locale</p><h2 id="launcher-title">{selectedLauncher.label}</h2></div><button class="icon-button" type="button" aria-label="Chiudi" onclick={closeLauncherDialog}><X size={20} /></button></div>
     <div class="launcher-instructions"><FolderOpen size={24} aria-hidden="true" /><p>{selectedLauncher.instructions}</p></div>

@@ -52,6 +52,35 @@ test("persiste i temi chiaro e scuro e ripristina il tema di sistema", async ({ 
   await expect(page.locator("body")).toHaveCSS("background-color", "rgb(15, 18, 20)");
 });
 
+test("anima le superfici e azzera il movimento quando richiesto dal sistema", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "no-preference" });
+  await authenticate(page);
+  const panel = page.locator(".dashboard-panel").first();
+  expect(await panel.evaluate((element) => getComputedStyle(element).animationName)).toContain(
+    "surface-enter",
+  );
+
+  await page.getByRole("button", { name: "Nuova pratica" }).click();
+  const dialog = page.getByRole("dialog", { name: "Assegna un nome alla pratica" });
+  await expect(dialog).toBeVisible();
+  expect(await dialog.evaluate((element) => getComputedStyle(element).animationName)).toContain(
+    "dialog-enter",
+  );
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  const reducedDuration = await page
+    .locator(".dashboard-panel")
+    .first()
+    .evaluate((element) => {
+      const value = getComputedStyle(element).animationDuration;
+      return value.endsWith("ms") ? Number.parseFloat(value) : Number.parseFloat(value) * 1_000;
+    });
+  expect(reducedDuration).toBeLessThanOrEqual(0.01);
+});
+
 test("su mobile nasconde i launcher e mantiene soltanto le azioni interne", async ({ page }) => {
   const practiceTitle = unique("Pratica azioni mobile");
   await page.setViewportSize({ width: 402, height: 874 });
@@ -75,9 +104,9 @@ test("su mobile nasconde i launcher e mantiene soltanto le azioni interne", asyn
   await expect(quickActions).toBeHidden();
 
   await openAccountMenu(page);
-  await expect(page.locator(".account-menu")).toHaveAttribute("open", "");
+  await expect(page.locator(".account-menu-trigger")).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Escape");
-  await expect(page.locator(".account-menu")).not.toHaveAttribute("open", "");
+  await expect(page.locator(".account-menu-trigger")).toHaveAttribute("aria-expanded", "false");
 
   await page.goto(workspaceUrl);
   expect((await page.locator(".workspace-sections").boundingBox())?.height).toBeLessThan(120);

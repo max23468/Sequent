@@ -4,6 +4,18 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.10
+
+### Changed
+
+- interfaccia resa più leggibile e coerente con un sistema di movimento breve per pagine, sezioni, menu, ricerca, stati e dialoghi, disattivato quando il browser richiede movimento ridotto;
+- gerarchia visiva di Dashboard e workspace affinata con superfici più sobrie, titoli completi, controlli compatti e navigazione mobile progressiva.
+
+### Fixed
+
+- menu utente e azioni della pratica resi accessibili da tastiera, richiudibili con `Esc` o clic esterno e correttamente sovrapposti al contenuto;
+- navigazione mobile delle sezioni nascosta anche per puntatore e focus durante l’uscita, senza interferire con caricamento documenti e altri controlli.
+
 ## 0.2.9
 
 ### Added

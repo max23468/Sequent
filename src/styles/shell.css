@@ -11,7 +11,7 @@
   gap: 28px;
   padding: 0 46px;
   border-bottom: 1px solid var(--line-soft);
-  background: color-mix(in srgb, var(--page) 96%, transparent);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   backdrop-filter: blur(14px);
 }
 .brand-logo {
@@ -126,6 +126,7 @@
 .search-box:focus-within {
   border-color: var(--teal);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 18%, transparent);
+  transform: translateY(-1px);
 }
 .search-clear {
   position: absolute;
@@ -186,17 +187,16 @@
 .account-menu {
   position: relative;
 }
-.account-menu summary {
+.account-menu-trigger {
   display: flex;
   align-items: center;
   gap: 7px;
   min-height: 46px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   cursor: pointer;
-  list-style: none;
   color: var(--text);
-}
-.account-menu summary::-webkit-details-marker {
-  display: none;
 }
 .account-avatar {
   display: inline-grid;
@@ -213,6 +213,10 @@
 }
 .account-chevron {
   color: var(--muted);
+  transition: transform var(--motion-standard) var(--ease-emphasized);
+}
+.account-chevron.open {
+  transform: rotate(180deg);
 }
 .account-mobile-menu {
   display: none;
@@ -227,6 +231,7 @@
   border-radius: 7px;
   background: var(--surface);
   box-shadow: var(--shadow);
+  transform-origin: top right;
 }
 .account-popover p {
   margin-bottom: 10px;

@@ -73,7 +73,49 @@ export async function openPracticeSection(page: import("@playwright/test").Page,
   if (!(await section.isVisible())) {
     await page.getByRole("button", { name: /Apri il menu Sezioni/ }).click();
   }
+  const sectionId = await section.getAttribute("data-section");
+  if (!sectionId) throw new Error(`La sezione ${name} non espone il proprio identificativo`);
   await section.click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("sezione")).toBe(sectionId);
+  await expect(page.locator(".practice-page")).not.toHaveAttribute("aria-busy", "true");
+}
+
+export async function openPracticeQuadro(page: import("@playwright/test").Page, name: string) {
+  const quadro = page.getByRole("button", { name, exact: true });
+  if (!(await quadro.isVisible())) {
+    await page.getByRole("button", { name: /Apri il menu Quadri/ }).click();
+  }
+  const quadroId = await quadro.getAttribute("data-quadro");
+  if (!quadroId) throw new Error(`Il quadro ${name} non espone il proprio identificativo`);
+  await quadro.click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("quadro")).toBe(quadroId);
+  await expect(page.locator(".practice-page")).not.toHaveAttribute("aria-busy", "true");
+}
+
+export async function selectPracticeView(
+  page: import("@playwright/test").Page,
+  view: "operational" | "quadri",
+) {
+  await page
+    .getByRole("button", { name: view === "quadri" ? "Vista Quadri" : "Vista operativa" })
+    .click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("vista")).toBe(view);
+  await expect(page.locator(".practice-page")).not.toHaveAttribute("aria-busy", "true");
+}
+
+export async function submitOnlinePracticeForm(button: import("@playwright/test").Locator) {
+  const page = button.page();
+  const navigation = page.waitForEvent("framenavigated", (frame) => frame === page.mainFrame());
+  await button.click();
+  await navigation;
+  await page.waitForLoadState("domcontentloaded");
+}
+
+export async function openDetails(details: import("@playwright/test").Locator) {
+  const target = details.first();
+  if ((await target.getAttribute("open")) === null)
+    await target.locator(":scope > summary").click();
+  await expect(target).toHaveAttribute("open", "");
 }
 
 export async function uploadFromWorkspace(

@@ -6,7 +6,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .practice-heading {
-    grid-template-columns: minmax(260px, 1fr) auto auto auto auto;
+    grid-template-columns: minmax(260px, 1fr) auto auto auto;
     gap: 12px;
   }
   .practice-heading .offline-practice-actions .button {
@@ -82,6 +82,7 @@
     grid-area: offline;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    justify-self: stretch;
     padding-top: 8px;
     border-top: 1px solid var(--line-soft);
   }
@@ -154,6 +155,9 @@
     border-top: 1px solid var(--line-soft);
     scrollbar-width: thin;
   }
+  .workspace-sections nav.mobile-open {
+    animation: mobile-sections-enter var(--motion-fast) var(--ease-standard) both;
+  }
   .workspace-sections nav:not(.mobile-open) {
     display: none;
   }
@@ -190,6 +194,12 @@
   .export-grid,
   .calculation-summary-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@keyframes mobile-sections-enter {
+  from {
+    opacity: 0;
   }
 }
 

@@ -1,0 +1,174 @@
+:root {
+  --motion-instant: 90ms;
+  --motion-fast: 140ms;
+  --motion-standard: 190ms;
+  --motion-slow: 280ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.route-stage {
+  min-width: 0;
+}
+
+.dashboard-heading,
+.page-heading,
+.practice-heading {
+  position: relative;
+  z-index: 2;
+  animation: surface-enter var(--motion-standard) var(--ease-emphasized) both;
+}
+
+.dashboard-panel,
+.index-panel,
+.settings-panel,
+.practice-workspace {
+  animation: surface-enter var(--motion-slow) var(--ease-emphasized) both;
+}
+
+.dashboard-panel:nth-child(2),
+.settings-panel:nth-child(2) {
+  animation-delay: 35ms;
+}
+
+.dashboard-panel:nth-child(3),
+.settings-panel:nth-child(3) {
+  animation-delay: 70ms;
+}
+
+.button,
+.action-link,
+.icon-button,
+.desktop-navigation a,
+.mobile-navigation a,
+.theme-selector button,
+.practice-view-switch button,
+.workspace-sections nav button,
+.search-box,
+.search-results a,
+.account-menu-trigger,
+.workspace-actions-trigger,
+.verification-list a,
+.practice-row,
+.index-list a,
+.file-picker,
+input,
+select {
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-emphasized),
+    opacity var(--motion-fast) var(--ease-standard);
+}
+
+.button:active,
+.icon-button:active,
+.account-menu-trigger:active,
+.workspace-actions-trigger:active {
+  transform: scale(0.975);
+}
+
+.desktop-navigation a::after {
+  transform: scaleX(0);
+  transform-origin: center;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-standard) var(--ease-emphasized);
+}
+
+.desktop-navigation a.active::after {
+  transform: scaleX(1);
+}
+
+.verification-list a > svg,
+.practice-row > svg,
+.index-list a > svg:last-child,
+.lab-table-row > .mobile-row-chevron,
+.lab-see-all > svg {
+  transition: transform var(--motion-fast) var(--ease-emphasized);
+}
+
+.verification-list a:hover > svg,
+.practice-row:hover > svg,
+.index-list a:hover > svg:last-child,
+.lab-table-row:hover > .mobile-row-chevron,
+.lab-see-all:hover > svg {
+  transform: translateX(3px);
+}
+
+.dashboard-panel,
+.settings-panel,
+.index-panel,
+.practice-workspace,
+.workspace-sections,
+.workspace-main {
+  transition:
+    border-color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    background-color var(--motion-standard) var(--ease-standard);
+}
+
+.app-dialog[open] {
+  animation: dialog-enter var(--motion-standard) var(--ease-emphasized) both;
+}
+
+.app-dialog[open]::backdrop {
+  animation: backdrop-enter var(--motion-standard) var(--ease-standard) both;
+}
+
+.app-dialog[data-closing] {
+  animation: dialog-exit var(--motion-fast) var(--ease-standard) both;
+}
+
+.app-dialog[data-closing]::backdrop {
+  animation: backdrop-exit var(--motion-fast) var(--ease-standard) both;
+}
+
+.form-error,
+.workspace-form-error,
+.offline-practice-message,
+.technical-alert {
+  animation: status-enter var(--motion-standard) var(--ease-emphasized) both;
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
+@keyframes dialog-exit {
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+}
+
+@keyframes backdrop-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-exit {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes status-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes surface-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}

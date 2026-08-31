@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick, type Snippet } from "svelte";
+  import { fly } from "svelte/transition";
   import { CheckCircle2, ChevronDown, FileText, History, Pencil, Upload } from "@lucide/svelte";
   import RenamePracticeDialog from "$lib/components/RenamePracticeDialog.svelte";
   import { formatItalianDate } from "$lib/format";
@@ -36,27 +37,38 @@
     offlineControls?: Snippet;
   }>();
 
-  let actionsMenu = $state<HTMLDetailsElement>();
+  let actionsMenuOpen = $state(false);
   // oxlint-disable-next-line no-unassigned-vars -- Svelte assegna il componente tramite bind:this.
   let renameDialog: { show: () => void };
 
   async function chooseWorkspaceFile() {
-    actionsMenu?.removeAttribute("open");
+    actionsMenuOpen = false;
     await onChooseWorkspaceFile();
     await tick();
   }
 
   function openRenameDialog() {
     renameDialog?.show();
-    actionsMenu?.removeAttribute("open");
+    actionsMenuOpen = false;
   }
 
   function dismissActions(event: PointerEvent | KeyboardEvent) {
-    if (!actionsMenu?.open) return;
-    if (event.type === "pointerdown" && actionsMenu.contains(event.target as Node)) return;
+    if (!actionsMenuOpen) return;
+    const insideActionsMenu = event
+      .composedPath()
+      .some(
+        (target) =>
+          target instanceof Element && target.classList.contains("workspace-actions-menu"),
+      );
+    if (event.type === "pointerdown" && insideActionsMenu) return;
     if (event.type === "keydown" && (event as KeyboardEvent).key !== "Escape") return;
-    actionsMenu.open = false;
-    if (event.type === "keydown") actionsMenu.querySelector<HTMLElement>("summary")?.focus();
+    actionsMenuOpen = false;
+    if (event.type === "keydown")
+      document.querySelector<HTMLElement>(".workspace-actions-trigger")?.focus();
+  }
+
+  function toggleActionsMenu() {
+    actionsMenuOpen = !actionsMenuOpen;
   }
 </script>
 
@@ -81,10 +93,17 @@
     <button type="button" class:active={viewMode === "quadri"} aria-pressed={viewMode === "quadri"} onclick={onSelectQuadriView}>Vista Quadri</button>
   </div>
   {#if offlineControls}{@render offlineControls()}{/if}
-  <details class="workspace-actions-menu" bind:this={actionsMenu}>
-    <summary class="button secondary">Azioni <ChevronDown size={17} /></summary>
-    <div class="workspace-actions-popover"><button type="button" onclick={openRenameDialog}><Pencil size={17} />Rinomina pratica</button><button type="button" onclick={chooseWorkspaceFile}><Upload size={17} />Carica documento</button><a href={`?sezione=history&vista=operational&dichiarazione=${selectedDeclarationId}`}><History size={17} />Apri la cronologia</a><a href={`/pratiche/${practice.id}/riepilogo`} target="_blank"><FileText size={17} />Apri il riepilogo</a></div>
-  </details>
+  <div class="workspace-actions-menu">
+    <button
+      class="button secondary workspace-actions-trigger"
+      type="button"
+      aria-expanded={actionsMenuOpen}
+      onclick={toggleActionsMenu}
+    >Azioni <ChevronDown class={actionsMenuOpen ? "open" : ""} size={17} /></button>
+    {#if actionsMenuOpen}
+      <div class="workspace-actions-popover" transition:fly={{ y: -6, duration: 150 }}><button type="button" onclick={openRenameDialog}><Pencil size={17} />Rinomina pratica</button><button type="button" onclick={chooseWorkspaceFile}><Upload size={17} />Carica documento</button><a href={`?sezione=history&vista=operational&dichiarazione=${selectedDeclarationId}`}><History size={17} />Apri la cronologia</a><a href={`/pratiche/${practice.id}/riepilogo`} target="_blank"><FileText size={17} />Apri il riepilogo</a></div>
+    {/if}
+  </div>
 </div>
 
 <RenamePracticeDialog
