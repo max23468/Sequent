@@ -12,6 +12,7 @@ import {
   remoteDeletionFailed,
   selectWorkflowRun,
   shouldWaitForActiveProduction,
+  waitForWorkflowCompletion,
   waitForPrHead,
 } from "./publish.mjs";
 
@@ -153,4 +154,41 @@ test("lega il dispatch alla run con titolo e finestra corretti", () => {
     "2026-08-27T10:00:00Z",
   );
   assert.equal(selected.databaseId, 3);
+});
+
+test("riprende l'attesa del workflow dopo errori temporanei di lettura", async () => {
+  const snapshots = [
+    new Error("timeout API"),
+    { status: "in_progress", conclusion: "" },
+    { status: "completed", conclusion: "success", databaseId: 42 },
+  ];
+  const pauses = [];
+  const reports = [];
+  const result = await waitForWorkflowCompletion(
+    () => {
+      const snapshot = snapshots.shift();
+      if (snapshot instanceof Error) throw snapshot;
+      return snapshot;
+    },
+    42,
+    {
+      attempts: 3,
+      intervalMs: 10,
+      pause: (milliseconds) => pauses.push(milliseconds),
+      report: (message) => reports.push(message),
+    },
+  );
+
+  assert.equal(result.databaseId, 42);
+  assert.deepEqual(pauses, [10, 10]);
+  assert.equal(reports.length, 1);
+});
+
+test("propaga l'esito negativo conclusivo del workflow", async () => {
+  await assert.rejects(
+    waitForWorkflowCompletion(() => ({ status: "completed", conclusion: "failure" }), 43, {
+      attempts: 1,
+    }),
+    /Run 43 conclusa con esito failure/,
+  );
 });
