@@ -107,6 +107,14 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
   const dockerfile = read("Dockerfile");
   const runbook = read("docs/runbooks/vps.md");
   const release = read(".github/workflows/release-candidate.yml");
+  const webService = compose.slice(
+    compose.indexOf("  sequent:\n"),
+    compose.indexOf("  sequent-codex:\n"),
+  );
+  const codexService = compose.slice(
+    compose.indexOf("  sequent-codex:\n"),
+    compose.indexOf("\nnetworks:\n"),
+  );
 
   assert.match(compose, /ORIGIN: \$\{SEQUENT_ORIGIN:\?[^}]+\}/);
   assert.match(compose, /SEQUENT_CODEX_ENABLED: \$\{SEQUENT_CODEX_ENABLED:\?[^}]+\}/);
@@ -121,10 +129,26 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
     compose,
     /\/tmp:size=256m,mode=1777,uid=\$\{SEQUENT_RUNTIME_UID:\?[^}]+\},gid=\$\{SEQUENT_RUNTIME_GID:\?[^}]+\}/,
   );
-  assert.match(compose, /no-new-privileges:true/);
-  assert.doesNotMatch(compose, /apparmor=unconfined|seccomp=unconfined/);
-  assert.match(compose, /cap_drop:\s*\n\s*- ALL/);
-  assert.doesNotMatch(compose, /cap_add:|SYS_ADMIN|NET_ADMIN|SETUID/);
+  assert.match(webService, /no-new-privileges:true/);
+  assert.doesNotMatch(webService, /apparmor=unconfined|seccomp=unconfined|cap_add:/);
+  assert.match(webService, /cap_drop:\s*\n\s*- ALL/);
+  assert.doesNotMatch(webService, /CODEX_HOME|SEQUENT_CODEX_HOME/);
+  assert.match(codexService, /profiles:\s*\n\s*- codex/);
+  assert.match(codexService, /seccomp=unconfined/);
+  assert.match(codexService, /apparmor=unconfined/);
+  assert.match(codexService, /cap_drop:\s*\n\s*- ALL/);
+  for (const capability of [
+    "SYS_ADMIN",
+    "SYS_CHROOT",
+    "SETUID",
+    "SETGID",
+    "SYS_PTRACE",
+    "NET_ADMIN",
+  ])
+    assert.match(codexService, new RegExp(`- ${capability}`));
+  assert.doesNotMatch(codexService, /NET_RAW|sequent-proxy|\/opt\/sequent\/data/);
+  assert.match(codexService, /\/opt\/sequent\/private\/codex:\/var\/lib\/sequent/);
+  assert.match(codexService, /\/opt\/sequent\/tmp\/codex-runtime:\/var\/run\/sequent-codex/);
   assert.match(dockerfile, /ca-certificates/);
   assert.match(dockerfile, /^FROM node:26\.7\.0-trixie-slim@sha256:[0-9a-f]{64} AS node-base$/m);
   assert.match(dockerfile, /COPY requirements-ocr\.txt/);
@@ -137,16 +161,17 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
       dockerfile.indexOf("find / -xdev -type f -perm /6000"),
     "il solo SHA non deve invalidare installazione e hardening runtime",
   );
-  assert.doesNotMatch(dockerfile, /codex-launcher|4755/);
-  assert.match(dockerfile, /test -z "\$\(find \/ -xdev -type f -perm \/6000 -print -quit\)"/);
+  assert.doesNotMatch(dockerfile, /codex-launcher/);
+  assert.match(dockerfile, /chmod 4755 \/usr\/bin\/bwrap/);
+  assert.match(dockerfile, /find \/ -xdev -type f -perm \/6000 -print\).*\/usr\/bin\/bwrap/);
   assert.match(dockerfile, /'X-Forwarded-For':'127\.0\.0\.1'/);
   assert.match(release, /scripts\/local\/verify-docker-runtime\.sh/);
   assert.match(runbook, /SEQUENT_ORIGIN/);
   assert.match(runbook, /tmpfs.*stessi UID e GID.*1777/);
-  assert.match(runbook, /profilo Production qualificato finché Codex è spento/);
-  assert.match(runbook, /profilo Codex qualificato mantiene gli stessi confini Linux/);
-  assert.match(compose, /SEQUENT_CODEX_HOME: \/var\/lib\/sequent\/\.codex-sequent/);
-  assert.match(compose, /CODEX_HOME: \/var\/lib\/sequent\/\.codex-sequent/);
+  assert.match(runbook, /runner non esposto e senza mount operativi/);
+  assert.match(runbook, /sandbox interno Codex resta obbligatorio/);
+  assert.match(codexService, /SEQUENT_CODEX_HOME: \/var\/lib\/sequent\/\.codex-sequent/);
+  assert.match(codexService, /CODEX_HOME: \/var\/lib\/sequent\/\.codex-sequent/);
   assert.match(dockerfile, /SEQUENT_CODEX_HOME=\/var\/lib\/sequent\/\.codex-sequent/);
   assert.match(dockerfile, /CODEX_HOME=\/var\/lib\/sequent\/\.codex-sequent/);
   assert.match(runbook, /sovrascrivere gli header inoltrati dal client/);

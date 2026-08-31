@@ -6,23 +6,29 @@ Questa procedura qualifica Codex attraverso Sequent e acquisisce i cinque DIZ gi
 
 - il flusso ufficiale e le operations devono essere chiusi sull'HEAD esatto candidato;
 - `SEQUENT_DIZ_ENABLED=true` e origine HTTPS devono risultare già qualificate;
-- Codex parte da `SEQUENT_CODEX_ENABLED=false` e usa soltanto `/var/lib/sequent/.codex-sequent`;
+- Codex parte da `SEQUENT_CODEX_ENABLED=false`; il runner usa soltanto `/opt/sequent/private/codex/.codex-sequent`, montata internamente come `/var/lib/sequent/.codex-sequent`;
 - la home dedicata non contiene `config.toml`, `requirements.toml` o `plugins` e non usa API key;
 - attivazione della flag, deploy, restart deliberati e reautenticazione richiedono la finestra operativa autorizzata;
 - l'archivio operativo non viene mai aperto dalla working tree: i comandi girano nella release identificata.
 
 ## Qualificazione Codex
 
-1. Dalla release candidata, entrare nel container come utente applicativo e avviare il comando amministrativo vincolato alla sola home dedicata:
+1. Dalla release candidata, entrare nel container `sequent-sequent-codex-1` come utente applicativo e avviare il comando amministrativo vincolato alla sola home dedicata:
 
    ```bash
    npm run admin:connect-codex
    ```
 
-   Il comando crea la directory privata con modalità `0700`, forza `CODEX_HOME` sul percorso dedicato, non eredita eventuali API key e verifica esplicitamente l’accesso tramite ChatGPT. Per il solo readback successivo usare `npm run admin:connect-codex -- --status-only`. Una sessione presente nella home amministrativa generale non viene accettata né copiata.
+   Il comando crea la directory privata con modalità `0700`, forza `CODEX_HOME` sul percorso dedicato, non eredita eventuali API key e verifica esplicitamente l’accesso tramite ChatGPT. Per il solo readback successivo usare `npm run admin:connect-codex -- --status-only`. Il container web non monta questa home e una sessione presente nella home amministrativa generale non viene accettata né copiata. Al primo deploy del runner la corsia copia esclusivamente l’eventuale home dedicata precedente; dopo che `--status-only` ha confermato la sessione nel runner, spostare atomicamente la copia precedente fuori da `/opt/sequent/data` e conservarla nella directory privata soltanto fino alla fine della qualifica:
+
+   ```bash
+   sudo mv /opt/sequent/data/.codex-sequent /opt/sequent/private/codex/.legacy-web-home-disabled
+   ```
+
+   Il comando si applica soltanto se la sorgente esiste e la destinazione è assente. Il readback finale deve provare che `/opt/sequent/data/.codex-sequent` non esiste più; al termine della finestra, la copia disabilitata può essere eliminata dopo avere verificato di nuovo login e report dalla home canonica.
 
 2. Applicare `SEQUENT_CODEX_ENABLED=true` soltanto attraverso il configuratore installato e il deploy deliberato della release qualificata.
-3. Nel container della release eseguire il controllo sintetico, scrivendo il risultato sanitizzato in una directory privata:
+3. Nel runner della release eseguire il controllo sintetico, scrivendo il risultato sanitizzato nella sua directory privata:
 
    ```bash
    npm run qualify:codex-runtime -- --output /var/lib/sequent/qualification/codex.json
@@ -30,7 +36,7 @@ Questa procedura qualifica Codex attraverso Sequent e acquisisce i cinque DIZ gi
 
    Il comando usa il vero SDK e la vera sessione ChatGPT, ma crea database, pratica, documento testuale e immagine neutra sintetici sotto `/tmp`; verifica input immagine, output strutturato, provenienza letterale, persistenza del thread nel database temporaneo e benchmark fail-closed, poi rimuove il workspace. Crea la directory privata del report con permessi `0700`, forza il file a `0600` e rifiuta esecuzioni non legate allo SHA completo della release. Non stampa contenuti o credenziali.
 
-4. Nell'app creare una pratica sintetica controllata, elaborare un documento testuale e un'immagine controllata, quindi avviare una run. Rileggere proposte, fonti e stato; riavviare il container attraverso la corsia operativa, rileggere la stessa run e avviare una seconda analisi che riprenda il thread persistito.
+4. Nell'app creare una pratica sintetica controllata, elaborare un documento testuale e un'immagine controllata, quindi avviare una run. Rileggere proposte, fonti e stato; riavviare il runner attraverso la corsia operativa, rileggere la stessa run e avviare una seconda analisi che riprenda il thread persistito. Il runner non deve avere mount di `/opt/sequent/data`, accesso alla rete `sequent-proxy` o porte pubblicate; il container web deve conservare seccomp/AppArmor predefiniti, capability azzerate e `no-new-privileges`.
 5. Verificare l'indisponibilità controllata con la flag spenta e, in una finestra concordata, completare logout e nuovo device login della sola home dedicata. Non cancellare o sostituire la sessione amministrativa generale.
 
 Un timeout, una fonte non letterale, un valore inventato, una API key, un plugin/configurazione estranea o la perdita del thread blocca `TG-CODEX`.

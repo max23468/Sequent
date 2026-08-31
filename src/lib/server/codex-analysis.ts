@@ -3,22 +3,27 @@ import type Database from "better-sqlite3";
 import { chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
-import {
-  Codex,
-  type CodexOptions,
-  type Input,
-  type ThreadEvent,
-  type Usage,
-} from "@openai/codex-sdk";
+import type { Input } from "@openai/codex-sdk";
 import { z } from "zod";
 import { resolveBlobPath } from "./blob-store.ts";
-import { getCodexModel, getDataDirectory, isCodexEnabled } from "./config.ts";
+import {
+  getCodexModel,
+  getCodexRunnerSocket,
+  getCodexWorkspaceRoot,
+  getDataDirectory,
+  isCodexEnabled,
+} from "./config.ts";
 import { requireDedicatedCodexHome } from "./codex-home.ts";
+import { RunnerCodexAnalysisAdapter } from "./codex-runner-client.ts";
+import type { CodexAnalysisAdapter } from "./codex-runner-protocol.ts";
+import {
+  buildCodexRuntimeOptions,
+  createCodexRunSignal,
+  SdkCodexAnalysisAdapter,
+} from "./codex-sdk-adapter.ts";
 import { createReviewItem, getDocumentText } from "./documents.ts";
 
 const CODEX_PROMPT_VERSION = "practice-analysis-v3";
-const CODEX_PERMISSION_PROFILE = "sequent_practice";
-const CODEX_RUN_TIMEOUT_MS = 15 * 60_000;
 
 const proposalSchema = z.object({
   subjectId: z.string().trim().min(1).max(200),
@@ -55,69 +60,6 @@ const analysisSchema = z.object({
 
 type AnalysisOutput = z.infer<typeof analysisSchema>;
 
-const outputSchema = {
-  type: "object",
-  properties: {
-    summary: { type: "string" },
-    proposals: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          subjectId: { type: "string", minLength: 1 },
-          label: { type: "string" },
-          value: { type: ["string", "null"] },
-          documentId: { type: "string" },
-          pageNumber: { type: "integer", minimum: 1 },
-          excerpt: { type: "string", minLength: 1, pattern: "\\S" },
-          confidence: { type: "number", minimum: 0, maximum: 1 },
-          alternatives: { type: "array", items: { type: "string" } },
-        },
-        required: [
-          "subjectId",
-          "label",
-          "value",
-          "documentId",
-          "pageNumber",
-          "excerpt",
-          "confidence",
-          "alternatives",
-        ],
-        additionalProperties: false,
-      },
-    },
-    conflicts: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          subjectId: { type: "string", minLength: 1 },
-          label: { type: "string" },
-          sources: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                documentId: { type: "string" },
-                pageNumber: { type: "integer", minimum: 1 },
-                excerpt: { type: "string", minLength: 1, pattern: "\\S" },
-                value: { type: "string" },
-              },
-              required: ["documentId", "pageNumber", "excerpt", "value"],
-              additionalProperties: false,
-            },
-          },
-          explanation: { type: "string" },
-        },
-        required: ["subjectId", "label", "sources", "explanation"],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["summary", "proposals", "conflicts"],
-  additionalProperties: false,
-} as const;
-
 interface PracticeSnapshotDocument {
   id: string;
   originalName: string;
@@ -126,134 +68,6 @@ interface PracticeSnapshotDocument {
   sha256: string;
   blobPath: string;
   pages: Array<{ pageNumber: number; text: string; confidence: number | null; method: string }>;
-}
-
-interface CodexRunRequest {
-  workingDirectory: string;
-  input: Input;
-  threadId: string | null;
-  model: string;
-  effort: "high";
-  signal?: AbortSignal;
-  onEvent?: (event: ThreadEvent) => void;
-}
-
-interface CodexRunResponse {
-  threadId: string;
-  finalResponse: string;
-  usage: Usage | null;
-}
-
-export interface CodexAnalysisAdapter {
-  run(request: CodexRunRequest): Promise<CodexRunResponse>;
-}
-
-function createCodexRunSignal(
-  requestSignal: AbortSignal | undefined,
-  timeoutSignal = AbortSignal.timeout(CODEX_RUN_TIMEOUT_MS),
-): { signal: AbortSignal; timedOut: () => boolean } {
-  return {
-    signal: requestSignal ? AbortSignal.any([requestSignal, timeoutSignal]) : timeoutSignal,
-    timedOut: () => timeoutSignal.aborted && !requestSignal?.aborted,
-  };
-}
-
-function buildCodexRuntimeOptions(workingDirectory: string, codexHome: string): CodexOptions {
-  const environmentEntries = [
-    "HOME",
-    "LANG",
-    "LC_ALL",
-    "LC_CTYPE",
-    "NODE_EXTRA_CA_CERTS",
-    "PATH",
-    "SSL_CERT_DIR",
-    "SSL_CERT_FILE",
-    "TEMP",
-    "TMP",
-    "TMPDIR",
-  ]
-    .map((name) => [name, process.env[name]] as const)
-    .filter((entry): entry is readonly [string, string] => entry[1] !== undefined);
-  const environment: Record<string, string> = Object.fromEntries(environmentEntries);
-  environment.CODEX_HOME = codexHome;
-  const workspacePath = JSON.stringify(workingDirectory);
-  return {
-    env: environment,
-    config: {
-      forced_login_method: "chatgpt",
-      cli_auth_credentials_store: "file",
-      default_permissions: CODEX_PERMISSION_PROFILE,
-      features: {
-        apps: false,
-        browser_use: false,
-        browser_use_external: false,
-        code_mode_host: false,
-        computer_use: false,
-        hooks: false,
-        image_generation: false,
-        memories: false,
-        multi_agent: false,
-        plugins: false,
-        remote_plugin: false,
-        skill_search: false,
-        tool_suggest: false,
-        view_image: false,
-      },
-    },
-    configOverrides: [
-      `permissions.${CODEX_PERMISSION_PROFILE}.filesystem={":minimal"="read",":root"="deny",${workspacePath}="read"}`,
-      `permissions.${CODEX_PERMISSION_PROFILE}.network={enabled=false}`,
-      "mcp_servers={}",
-      "hooks={}",
-    ],
-  };
-}
-
-class SdkCodexAnalysisAdapter implements CodexAnalysisAdapter {
-  async run(request: CodexRunRequest): Promise<CodexRunResponse> {
-    const codexHome = await requireDedicatedCodexHome();
-    const codex = new Codex(buildCodexRuntimeOptions(request.workingDirectory, codexHome));
-    const options = {
-      model: request.model,
-      modelReasoningEffort: request.effort,
-      workingDirectory: request.workingDirectory,
-      skipGitRepoCheck: true,
-      approvalPolicy: "never" as const,
-      webSearchMode: "disabled" as const,
-      threadSource: "sequent-practice-analysis",
-    };
-    const thread = request.threadId
-      ? codex.resumeThread(request.threadId, options)
-      : codex.startThread(options);
-    const runSignal = createCodexRunSignal(request.signal);
-    const streamed = await thread.runStreamed(request.input, {
-      outputSchema,
-      signal: runSignal.signal,
-    });
-    let finalResponse = "";
-    let usage: Usage | null = null;
-    let observedThreadId = request.threadId;
-    try {
-      for await (const event of streamed.events) {
-        request.onEvent?.(event);
-        if (event.type === "thread.started") observedThreadId = event.thread_id;
-        if (event.type === "item.completed" && event.item.type === "agent_message") {
-          finalResponse = event.item.text;
-        }
-        if (event.type === "turn.completed") usage = event.usage;
-        if (event.type === "turn.failed")
-          throw new Error(`CODEX_TURN_FAILED:${event.error.message}`);
-        if (event.type === "error") throw new Error(`CODEX_STREAM_FAILED:${event.message}`);
-      }
-    } catch (error) {
-      if (runSignal.timedOut()) throw new Error("CODEX_TIMEOUT");
-      throw error;
-    }
-    const threadId = observedThreadId ?? thread.id;
-    if (!threadId) throw new Error("CODEX_THREAD_ID_MISSING");
-    if (!finalResponse) throw new Error("CODEX_EMPTY_RESPONSE");
-    return { threadId, finalResponse, usage };
-  }
 }
 
 function getPracticeSnapshot(
@@ -360,7 +174,7 @@ async function prepareWorkspace(
   documents: PracticeSnapshotDocument[],
   dataDirectory: string,
 ): Promise<{ directory: string; input: Input }> {
-  const root = join(tmpdir(), "sequent-codex");
+  const root = getCodexWorkspaceRoot() ?? join(tmpdir(), "sequent-codex");
   await mkdir(root, { recursive: true, mode: 0o755 });
   await chmod(root, 0o755);
   const directory = await mkdtemp(join(root, "practice-"));
@@ -451,7 +265,10 @@ export async function analyzePracticeWithCodex(
   if (documents.every((document) => document.pages.length === 0))
     throw new Error("CODEX_NO_EXTRACTED_TEXT");
   const dataDirectory = options.dataDirectory ?? getDataDirectory();
-  const adapter = options.adapter ?? new SdkCodexAnalysisAdapter();
+  const runnerSocket = getCodexRunnerSocket();
+  const adapter =
+    options.adapter ??
+    (runnerSocket ? new RunnerCodexAnalysisAdapter(runnerSocket) : new SdkCodexAnalysisAdapter());
   const model = getCodexModel();
   const hash = snapshotHash(documents);
   const runId = randomUUID();
@@ -649,3 +466,5 @@ export const codexAnalysisInternals = {
   requireDedicatedCodexHome,
   validateAnalysisEvidence,
 };
+
+export type { CodexAnalysisAdapter } from "./codex-runner-protocol.ts";

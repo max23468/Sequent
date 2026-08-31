@@ -4,6 +4,18 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.16
+
+### Added
+
+- runner Codex dedicato, raggiungibile dal processo web soltanto tramite socket Unix e workspace effimeri, con home ChatGPT separata dai dati operativi;
+- verifica live del confine del runner, del sandbox Bubblewrap e dell’assenza di mount, reti e capability operative non necessarie.
+
+### Changed
+
+- esecuzione delle analisi Codex spostata fuori dal container web, che conserva seccomp, AppArmor, capability azzerate e `no-new-privileges`;
+- migrazione controllata della precedente home Codex dedicata nella directory privata del runner e qualificazione Codex aggiornata al nuovo confine.
+
 ## 0.2.15
 
 ### Fixed

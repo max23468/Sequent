@@ -205,6 +205,9 @@ cd "$checkout_repository"
 
 candidate_compose=(docker compose --project-name sequent --env-file "$trusted_runtime_env" \
   --file "$repository/deploy/compose.example.yml")
+if [[ "$SEQUENT_CODEX_ENABLED" == true ]]; then
+  candidate_compose+=(--profile codex)
+fi
 current_container="$("${candidate_compose[@]}" ps --quiet sequent)"
 [[ -n "$current_container" ]] || fail "runtime precedente assente"
 [[ "$(docker inspect --format '{{.State.Health.Status}}' "$current_container")" == healthy ]] ||
@@ -229,6 +232,9 @@ chown root:root "$rollback_compose_file"
 chmod 0600 "$rollback_compose_file"
 rollback_compose=(docker compose --project-name sequent --env-file "$trusted_runtime_env" \
   --file "$rollback_compose_file")
+if [[ "$SEQUENT_CODEX_ENABLED" == true ]]; then
+  rollback_compose+=(--profile codex)
+fi
 "${rollback_compose[@]}" config --quiet
 
 check_database() {
@@ -302,6 +308,7 @@ SEQUENT_IMAGE="$candidate_image_id" bash "$repository/scripts/local/verify-docke
 deployment_stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 migration_copy=
 migration_container="sequent-migration-$commit-$$"
+runner_home_stage=
 snapshot=
 release_dir="$root/releases/$commit"
 maintenance_marker="$root/data/.deployment-maintenance"
@@ -316,6 +323,9 @@ cleanup() {
   cleanup_trusted_runtime_env
   if [[ "$migration_copy" == "$root/snapshots/.migration-$commit."* ]]; then
     rm -rf --one-file-system "$migration_copy"
+  fi
+  if [[ "$runner_home_stage" == "$root/private/codex/.codex-home."* ]]; then
+    rm -rf --one-file-system "$runner_home_stage"
   fi
   if [[ "$transaction_complete" == false && "$snapshot_started" == true \
     && "$rollback_armed" == false && "$snapshot" == "$root/snapshots/"* ]]; then
@@ -485,6 +495,25 @@ chmod 0640 "$previous_release_dir/image-id"
 touch "$previous_release_dir"
 
 install -o ubuntu -g ubuntu -m 0640 "$repository/deploy/compose.example.yml" "$runtime_compose"
+codex_runtime_dir="$root/tmp/codex-runtime"
+codex_state_dir="$root/private/codex"
+install -d -o "$runtime_uid" -g "$runtime_gid" -m 0700 "$codex_runtime_dir"
+install -d -o "$runtime_uid" -g "$runtime_gid" -m 0700 "$codex_state_dir"
+if [[ "$SEQUENT_CODEX_ENABLED" == true ]]; then
+  legacy_codex_home="$root/data/.codex-sequent"
+  runner_codex_home="$codex_state_dir/.codex-sequent"
+  if [[ -e "$legacy_codex_home" && ! -e "$runner_codex_home" ]]; then
+    [[ -d "$legacy_codex_home" && ! -L "$legacy_codex_home" ]] ||
+      fail "home Codex dedicata precedente non conforme"
+    [[ "$(stat -c '%u:%g:%a' "$legacy_codex_home")" == "$runtime_uid:$runtime_gid:700" ]] ||
+      fail "permessi della home Codex precedente non conformi"
+    runner_home_stage="$(mktemp -d "$codex_state_dir/.codex-home.XXXXXX")"
+    rsync --archive "$legacy_codex_home/" "$runner_home_stage/"
+    chown -R "$runtime_uid:$runtime_gid" "$runner_home_stage"
+    chmod 0700 "$runner_home_stage"
+    mv "$runner_home_stage" "$runner_codex_home"
+  fi
+fi
 runtime_env_next="$(mktemp "$root/runtime/runtime.env.next.XXXXXX")"
 printf 'SEQUENT_IMAGE=%s\nSEQUENT_RUNTIME_UID=%s\nSEQUENT_RUNTIME_GID=%s\nSEQUENT_ORIGIN=%s\nSEQUENT_CODEX_ENABLED=%s\nSEQUENT_DIZ_ENABLED=%s\n' \
   "$candidate_image_id" "$SEQUENT_RUNTIME_UID" "$SEQUENT_RUNTIME_GID" "$SEQUENT_ORIGIN" \
@@ -533,8 +562,45 @@ curl --fail --silent --header 'X-Forwarded-For: 127.0.0.1' http://127.0.0.1:3300
   fail "security options live divergenti"
 [[ "$(docker inspect --format '{{.AppArmorProfile}}' "$candidate_container")" != unconfined ]] ||
   fail "profilo AppArmor live non confinato"
+[[ "$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$candidate_container")" != *$'CODEX_HOME='* ]] ||
+  fail "home Codex esposta al container web"
 [[ "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$candidate_container")" == sequent ]] ||
   fail "progetto Compose live divergente"
+if [[ "$SEQUENT_CODEX_ENABLED" == true ]]; then
+  candidate_runner="$("${candidate_compose[@]}" ps --quiet sequent-codex)"
+  [[ -n "$candidate_runner" ]] || fail "runner Codex candidato assente"
+  for _attempt in $(seq 1 60); do
+    [[ "$(docker inspect --format '{{.State.Health.Status}}' "$candidate_runner")" == healthy ]] && break
+    sleep 1
+  done
+  [[ "$(docker inspect --format '{{.State.Health.Status}}' "$candidate_runner")" == healthy ]] ||
+    fail "runner Codex candidato non healthy"
+  [[ "$(docker inspect --format '{{.Image}}' "$candidate_runner")" == "$candidate_image_id" ]] ||
+    fail "image ID del runner Codex divergente"
+  [[ "$(docker inspect --format '{{.Config.User}}' "$candidate_runner")" == "$SEQUENT_RUNTIME_UID:$SEQUENT_RUNTIME_GID" ]] ||
+    fail "utente del runner Codex divergente"
+  [[ "$(docker inspect --format '{{.HostConfig.ReadonlyRootfs}}' "$candidate_runner")" == true ]] ||
+    fail "root filesystem del runner Codex scrivibile"
+  [[ "$(docker inspect --format '{{json .HostConfig.CapDrop}}' "$candidate_runner")" == '["ALL"]' ]] ||
+    fail "capability drop del runner Codex divergente"
+  runner_cap_add="$(docker inspect --format '{{json .HostConfig.CapAdd}}' "$candidate_runner")"
+  for capability in SYS_ADMIN SYS_CHROOT SETUID SETGID SYS_PTRACE NET_ADMIN; do
+    [[ "$runner_cap_add" == *\"$capability\"* ]] ||
+      fail "capability richiesta assente dal runner Codex: $capability"
+  done
+  [[ "$runner_cap_add" != *NET_RAW* ]] || fail "capability NET_RAW non ammessa nel runner Codex"
+  runner_security="$(docker inspect --format '{{json .HostConfig.SecurityOpt}}' "$candidate_runner")"
+  [[ "$runner_security" == *'seccomp=unconfined'* && "$runner_security" == *'apparmor=unconfined'* ]] ||
+    fail "profilo esterno del runner Codex divergente"
+  runner_mounts="$(docker inspect --format '{{range .Mounts}}{{println .Source "=>" .Destination}}{{end}}' "$candidate_runner")"
+  [[ "$runner_mounts" != *"$root/data=>"* ]] ||
+    fail "dati operativi esposti al runner Codex"
+  runner_networks="$(docker inspect --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$candidate_runner")"
+  [[ "$runner_networks" == sequent ]] || fail "reti del runner Codex divergenti"
+else
+  [[ -z "$("${candidate_compose[@]}" ps --quiet sequent-codex)" ]] ||
+    fail "runner Codex attivo con flag spenta"
+fi
 [[ -f "$database" ]] && check_database "$database"
 read_public_health_status() {
   local health_url="$1"

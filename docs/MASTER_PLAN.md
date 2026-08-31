@@ -316,7 +316,7 @@ Il prodotto sarà:
 - ospitato sulla VPS OCI Ampere A1 esistente con Ubuntu 24.04 LTS;
 - fortemente separato da Hub Fatture, condividendo soltanto host e Caddy;
 - sviluppato con SvelteKit, TypeScript e Node, con SQLite e filesystem locale;
-- eseguito in un solo processo/container applicativo, con OCR, conversioni e Codex come processi figli;
+- eseguito in un container applicativo per web, API, coda, OCR e conversioni, affiancato soltanto dal runner Codex isolato richiesto dal sandbox Linux;
 - dotato di OCR locale sul server e Codex SDK autenticato con la subscription ChatGPT/Codex;
 - privo di API OpenAI a consumo e di fallback automatici a modelli locali;
 - gratuito al netto della subscription Codex e delle risorse già possedute;
@@ -1012,9 +1012,11 @@ Codex opera:
 
 La stabilità del login headless è un Technical Gate. Se fallisce, Sequent continua senza le funzioni Codex.
 
+La CLI e la home ChatGPT dedicate risiedono esclusivamente nel runner Codex. Il container web non monta la home, non esegue la CLI e comunica attraverso un socket Unix privato disponibile soltanto quando la flag Codex è attiva.
+
 ## 15.3 Accesso ai dati
 
-Codex può vedere l'intera pratica, compresi originali, OCR, DIZ, dati strutturati, regole e decisioni pertinenti, quando l'operazione applicativa lo richiede. Per lo sviluppo lavora nel checkout Git della VPS e nei workspace temporanei, senza segreti di deploy, dati Hub Fatture o accesso diretto al database operativo. Non cancella originali e non scrive direttamente sullo stato canonico: migrazioni, import rischiosi e prove distruttive usano copie temporanee isolate.
+Codex può vedere l'intera pratica, compresi originali, OCR, DIZ, dati strutturati, regole e decisioni pertinenti, quando l'operazione applicativa lo richiede. Il container web prepara per ogni run un workspace temporaneo minimo; il runner lo monta senza database operativo, archivio documentale generale, segreti di deploy, dati Hub Fatture o rete proxy. Il runner restituisce soltanto l'output strutturato al processo applicativo, che esegue validazione e persistenza. Non cancella originali e non scrive direttamente sullo stato canonico: migrazioni, import rischiosi e prove distruttive usano copie temporanee isolate.
 
 ## 15.4 Rete e fonti esterne
 
@@ -2382,9 +2384,9 @@ I moduli hanno confini chiari e test, ma non diventano microservizi.
 
 ## 38.4 Processo unico e lavori pesanti
 
-Il processo SvelteKit gestisce web, API e coda persistente. OCRmyPDF, Tesseract, ImageMagick, LibreOffice e Codex vengono avviati come processi figli con timeout e limiti di risorse. Un solo lavoro pesante viene eseguito alla volta.
+Il processo SvelteKit gestisce web, API e coda persistente. OCRmyPDF, Tesseract, ImageMagick e LibreOffice vengono avviati come processi figli con timeout e limiti di risorse. Codex viene eseguito nel runner dedicato della stessa istanza, raggiungibile soltanto tramite socket Unix e privo dei mount operativi. Un solo lavoro pesante viene eseguito alla volta.
 
-Se il processo applicativo si riavvia, i job `running` vengono marcati come interrotti e ripresi o ritentati in modo idempotente. La separazione in un worker dedicato resta una futura ottimizzazione basata su misure, non una fondazione del perimetro iniziale.
+Se il processo applicativo si riavvia, i job `running` vengono marcati come interrotti e ripresi o ritentati in modo idempotente. La separazione in un worker applicativo generale resta una futura ottimizzazione basata su misure. Il runner Codex non è un worker applicativo: è un confine di sicurezza necessario affinché Bubblewrap possa creare il proprio sandbox senza rilassare il container web.
 
 ## 38.5 Browser-first
 
@@ -2741,6 +2743,7 @@ Prima dell'attivazione autorizzata il servizio può rimanere non pubblicato e ra
 Docker Compose dedicato con:
 
 - un servizio applicativo `sequent`;
+- un servizio `sequent-codex` attivato soltanto dal profilo Codex;
 - volumi dati separati dal checkout;
 - network dedicata;
 - health check;
@@ -2749,6 +2752,8 @@ Docker Compose dedicato con:
 - configurazione e segreti non versionati.
 
 Il runtime attivo usa esclusivamente un'immagine o una build identificata da commit e digest. Le modifiche nel checkout `repo/` non cambiano il comportamento live finché non viene approvata e installata una nuova release.
+
+Il servizio web conserva utente non root, capability azzerate, `no-new-privileges`, seccomp e AppArmor predefiniti. Il runner non pubblica porte, non entra nella rete proxy e non monta `/opt/sequent/data`; usa la home privata sotto `/opt/sequent/private/codex` e il solo workspace effimero sotto `/opt/sequent/tmp/codex-runtime`. Le eccezioni esterne richieste da Bubblewrap — binario setuid, capability di namespace compresa `NET_ADMIN` ma non `NET_RAW`, e profili seccomp/AppArmor non applicati due volte — sono confinate al runner e compensate dal sandbox Codex interno, dai mount minimi, dall'assenza di dati operativi e dai limiti di processo e risorse. Con la flag spenta il runner non esiste.
 
 ## 43.6 Storage e ARM64
 
@@ -2785,7 +2790,7 @@ Sequent e Hub Fatture condividono soltanto host fisico e Caddy.
 /opt/sequent/
 ```
 
-Devono avere Compose, network, utente, volumi, hostname, segreti, pipeline, limiti risorse, log e procedure di restore separati. Il container Sequent non accede ai dati o ai segreti di Hub Fatture. Il checkout Codex di Sequent non riceve credenziali o mount di Hub Fatture. Un restore Sequent non tocca Hub Fatture; il guasto dell'host resta l'unico rischio comune inevitabile.
+Devono avere Compose, network, utente, volumi, hostname, segreti, pipeline, limiti risorse, log e procedure di restore separati. I container Sequent, incluso il runner Codex, non accedono ai dati o ai segreti di Hub Fatture. Il runner non entra nelle reti di Hub Fatture o nella rete proxy pubblica e non monta il database o l'archivio Sequent. Il checkout Codex di sviluppo non riceve credenziali o mount di Hub Fatture. Un restore Sequent non tocca Hub Fatture; il guasto dell'host resta l'unico rischio comune inevitabile.
 
 OCR, LibreOffice e Codex eseguono un solo job pesante alla volta con limiti misurati sulla VPS reale. Se si osserva degrado di Hub Fatture, il job Sequent viene sospeso o lanciato in finestre controllate.
 
@@ -3323,7 +3328,7 @@ Dopo approvazione:
 4. attiva una breve modalità manutenzione e blocca nuove mutazioni;
 5. attende o interrompe in sicurezza il job attivo;
 6. crea lo snapshot tecnico previsto;
-7. esegue il pull del digest GHCR prima della manutenzione, poi migrazioni e aggiornamento del servizio `sequent`;
+7. esegue il pull del digest GHCR prima della manutenzione, poi migrazioni e aggiornamento del servizio `sequent` e, soltanto con la flag attiva, del runner `sequent-codex`;
 8. esegue health check e smoke test;
 9. riapre l'applicazione;
 10. ripristina immagine e snapshot precedenti se uno dei controlli fallisce;
@@ -3493,7 +3498,7 @@ Il collaudo con SuccessioniOnLine su Windows è una verifica finale facoltativa 
 
 ## TG-CODEX — Subscription sulla VPS
 
-**Criteri:** login headless, persistenza credenziali, SDK, thread, run strutturate, immagini, output schema, riavvio, riautenticazione e assenza di API key.
+**Criteri:** runner dedicato senza mount operativi o rete proxy; container web ancora confinato; login headless, persistenza credenziali, SDK, thread, run strutturate, immagini, output schema, riavvio, riautenticazione, indisponibilità controllata e assenza di API key.
 
 ## TG-DOCUMENTS — Pipeline documentale ARM64
 
@@ -3764,7 +3769,8 @@ La chiusura richiede una prova e, se la scelta è difficile da invertire, un ADR
 | OPFS/Dexie                                               | IndexedDB Blob tramite `idb`                                                                                                                                                              |
 | Redis/BullMQ/ORM                                         | coda SQLite e SQL diretto                                                                                                                                                                 |
 | Python/Go/Rust generalizzati                             | TypeScript principale; eccezione DIZ solo dopo prova                                                                                                                                      |
-| due processi `web` + `worker`                            | un solo processo/container con processi figli                                                                                                                                             |
+| due processi applicativi `web` + `worker`                | un processo applicativo per web/API/coda e un runner Codex isolato, non applicativo, necessario al sandbox Linux                                                                          |
+| Codex come processo figlio del container web             | runner Codex senza database o archivio operativo, attivo solo su flag e collegato tramite workspace temporaneo e socket Unix                                                             |
 | API OpenAI o modello locale fallback                     | subscription Codex senza fallback                                                                                                                                                         |
 | Codex avviato su ogni upload                             | Codex su comando                                                                                                                                                                          |
 | rete Codex sempre disponibile                            | analisi pratica senza rete; ricerca normativa esplicita online                                                                                                                            |

@@ -10,11 +10,11 @@ services:
     environment:
       NODE_ENV: production
       BODY_SIZE_LIMIT: 260M
-      CODEX_HOME: /var/lib/sequent/.codex-sequent
       SEQUENT_DATA_DIR: /var/lib/sequent
-      SEQUENT_CODEX_HOME: /var/lib/sequent/.codex-sequent
       SEQUENT_CODEX_MODEL: gpt-5.6-terra
       SEQUENT_CODEX_ENABLED: ${SEQUENT_CODEX_ENABLED:?Flag Codex obbligatoria}
+      SEQUENT_CODEX_RUNNER_SOCKET: /var/run/sequent-codex/runner.sock
+      SEQUENT_CODEX_WORKSPACE_ROOT: /var/run/sequent-codex/workspaces
       SEQUENT_DIZ_ENABLED: ${SEQUENT_DIZ_ENABLED:?Flag DIZ obbligatoria}
       SEQUENT_SECURE_COOKIES: "true"
       ORIGIN: ${SEQUENT_ORIGIN:?Origine HTTPS pubblica obbligatoria}
@@ -22,6 +22,7 @@ services:
       XFF_DEPTH: "1"
     volumes:
       - /opt/sequent/data:/var/lib/sequent
+      - /opt/sequent/tmp/codex-runtime:/var/run/sequent-codex
     networks:
       - sequent
       - sequent-proxy
@@ -34,6 +35,61 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+
+  sequent-codex:
+    profiles:
+      - codex
+    image: ${SEQUENT_IMAGE:?Immagine Sequent identificata per digest obbligatoria}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    user: ${SEQUENT_RUNTIME_UID:?UID runtime obbligatorio}:${SEQUENT_RUNTIME_GID:?GID runtime obbligatorio}
+    command:
+      - node
+      - src/lib/server/codex-runner-server.ts
+    tmpfs:
+      - /tmp:size=256m,mode=1777,uid=${SEQUENT_RUNTIME_UID:?UID runtime obbligatorio},gid=${SEQUENT_RUNTIME_GID:?GID runtime obbligatorio}
+    environment:
+      NODE_ENV: production
+      HOME: /var/lib/sequent
+      CODEX_HOME: /var/lib/sequent/.codex-sequent
+      SEQUENT_CODEX_HOME: /var/lib/sequent/.codex-sequent
+      SEQUENT_CODEX_MODEL: gpt-5.6-terra
+      SEQUENT_CODEX_ENABLED: "true"
+      SEQUENT_CODEX_RUNNER_LOCAL: "true"
+      SEQUENT_CODEX_RUNNER_SOCKET: /var/run/sequent-codex/runner.sock
+      SEQUENT_CODEX_WORKSPACE_ROOT: /var/run/sequent-codex/workspaces
+    volumes:
+      - /opt/sequent/private/codex:/var/lib/sequent
+      - /opt/sequent/tmp/codex-runtime:/var/run/sequent-codex
+    networks:
+      - sequent
+    mem_limit: 2g
+    cpus: 1
+    pids_limit: 192
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_ADMIN
+      - SYS_CHROOT
+      - SETUID
+      - SETGID
+      - SYS_PTRACE
+      - NET_ADMIN
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          const http=require('node:http');const r=http.get({socketPath:'/var/run/sequent-codex/runner.sock',path:'/health'},x=>process.exit(x.statusCode===200?0:1));r.on('error',()=>process.exit(1));r.setTimeout(3000,()=>process.exit(1));
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
 
 networks:
   sequent:

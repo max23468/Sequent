@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
-import { isCodexEnabled } from "./config.ts";
+import { getCodexRunnerSocket, isCodexEnabled } from "./config.ts";
 import { requireDedicatedCodexHome } from "./codex-home.ts";
+import { getRunnerCodexCapability } from "./codex-runner-client.ts";
 import { runCommand, type CommandRunner } from "./process-tools.ts";
 
 export interface CodexCapability {
@@ -26,6 +27,19 @@ export async function getCodexCapability(
       instructions:
         "Sequent usa l’accesso ChatGPT compreso nell’abbonamento; rimuovi la API key dall’ambiente del servizio.",
     };
+  }
+  const runnerSocket =
+    process.env.SEQUENT_CODEX_RUNNER_LOCAL === "true" ? undefined : getCodexRunnerSocket();
+  if (runnerSocket) {
+    try {
+      return await getRunnerCodexCapability(runnerSocket);
+    } catch {
+      return {
+        state: "unavailable",
+        label: "Collegamento non disponibile",
+        instructions: "Il runner Codex dedicato non è raggiungibile.",
+      };
+    }
   }
   let codexHome: string;
   try {

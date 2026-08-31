@@ -202,6 +202,15 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /HostConfig\.CapAdd.*== null/);
   assert.match(deploy, /HostConfig\.SecurityOpt.*no-new-privileges:true/);
   assert.match(deploy, /AppArmorProfile.*!= unconfined/);
+  assert.match(deploy, /candidate_compose\+=\(--profile codex\)/);
+  assert.match(deploy, /ps --quiet sequent-codex/);
+  assert.match(deploy, /runner Codex candidato non healthy/);
+  assert.match(deploy, /dati operativi esposti al runner Codex/);
+  assert.match(deploy, /reti del runner Codex divergenti/);
+  assert.match(deploy, /capability NET_RAW non ammessa nel runner Codex/);
+  assert.match(deploy, /home Codex esposta al container web/);
+  assert.match(deploy, /\$root\/private\/codex/);
+  assert.match(deploy, /\$root\/tmp\/codex-runtime/);
   assert.match(deploy, /prune_old_directories "\$root\/releases"/);
   assert.match(deploy, /prune_old_directories "\$root\/snapshots"/);
   assert.match(deploy, /sequent-production-deployment\/v1/);
