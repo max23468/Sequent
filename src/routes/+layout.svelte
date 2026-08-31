@@ -9,7 +9,6 @@
   import "./app.css";
 
   let { children, data } = $props();
-  let accountMenu: HTMLDivElement;
   let accountMenuOpen = $state(false);
 
   const navItems = [
@@ -29,13 +28,16 @@
   }
 
   function handleShellPointerDown(event: PointerEvent) {
-    if (accountMenuOpen && !accountMenu?.contains(event.target as Node)) accountMenuOpen = false;
+    const insideAccountMenu = event
+      .composedPath()
+      .some((target) => target instanceof Element && target.classList.contains("account-menu"));
+    if (accountMenuOpen && !insideAccountMenu) accountMenuOpen = false;
   }
 
   function handleShellKeydown(event: KeyboardEvent) {
     if (event.key !== "Escape" || !accountMenuOpen) return;
     accountMenuOpen = false;
-    accountMenu?.querySelector<HTMLElement>(".account-menu-trigger")?.focus();
+    document.querySelector<HTMLElement>(".account-menu-trigger")?.focus();
   }
 
   function toggleAccountMenu() {
@@ -77,7 +79,7 @@
       </nav>
       <div class="topbar-tools">
         <SearchBox />
-        <div class="account-menu" bind:this={accountMenu}>
+        <div class="account-menu">
           <button
             class="account-menu-trigger"
             type="button"

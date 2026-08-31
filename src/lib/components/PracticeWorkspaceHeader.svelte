@@ -37,7 +37,6 @@
     offlineControls?: Snippet;
   }>();
 
-  let actionsMenu: HTMLDivElement;
   let actionsMenuOpen = $state(false);
   // oxlint-disable-next-line no-unassigned-vars -- Svelte assegna il componente tramite bind:this.
   let renameDialog: { show: () => void };
@@ -55,10 +54,17 @@
 
   function dismissActions(event: PointerEvent | KeyboardEvent) {
     if (!actionsMenuOpen) return;
-    if (event.type === "pointerdown" && actionsMenu?.contains(event.target as Node)) return;
+    const insideActionsMenu = event
+      .composedPath()
+      .some(
+        (target) =>
+          target instanceof Element && target.classList.contains("workspace-actions-menu"),
+      );
+    if (event.type === "pointerdown" && insideActionsMenu) return;
     if (event.type === "keydown" && (event as KeyboardEvent).key !== "Escape") return;
     actionsMenuOpen = false;
-    if (event.type === "keydown") actionsMenu?.querySelector<HTMLElement>(".workspace-actions-trigger")?.focus();
+    if (event.type === "keydown")
+      document.querySelector<HTMLElement>(".workspace-actions-trigger")?.focus();
   }
 
   function toggleActionsMenu() {
@@ -87,7 +93,7 @@
     <button type="button" class:active={viewMode === "quadri"} aria-pressed={viewMode === "quadri"} onclick={onSelectQuadriView}>Vista Quadri</button>
   </div>
   {#if offlineControls}{@render offlineControls()}{/if}
-  <div class="workspace-actions-menu" bind:this={actionsMenu}>
+  <div class="workspace-actions-menu">
     <button
       class="button secondary workspace-actions-trigger"
       type="button"
