@@ -22,7 +22,8 @@
   </div>
 
   <p class="imported-diz-note">
-    I valori senza mapping ufficialmente qualificato non vengono trasformati in campi modificabili:
+    I valori riconosciuti dalle proprietà ufficiali di SuccessioniOnLine sono integrati nei relativi
+    soggetti, beni e posizioni. I valori storici o opachi senza destinazione nello schema corrente
     restano visibili qui e invariati nel file originale.
   </p>
 
@@ -47,8 +48,8 @@
 
   <div class="imported-diz-attachments">
     <FileArchive size={18} />
-    {#if content.attachments.length === 0}
-      <span>Il DIZ originale non contiene allegati.</span>
+    {#if content.attachmentEvidence.status === "none-in-source"}
+      <span>L’archivio DIZ originale non contiene file incorporati. Eventuali documenti consegnati separatamente devono essere caricati nella sezione Documenti.</span>
     {:else}
       <span>{content.attachments.length} allegati incorporati sono disponibili anche nella sezione Documenti.</span>
     {/if}

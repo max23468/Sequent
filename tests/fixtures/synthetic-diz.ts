@@ -50,23 +50,51 @@ export function syntheticDiz(
   cognome = "ROSSI",
   attachment?: { name: string; content: Buffer },
 ): Buffer {
+  return syntheticDizFromFields(
+    [{ quadro: "EA", module: "00000001", field: "001005", value: cognome }],
+    attachment,
+  );
+}
+
+export function syntheticDizFromFields(
+  fields: readonly { quadro: string; module: string; field: string; value: string }[],
+  attachment?: { name: string; content: Buffer },
+): Buffer {
   const attachments = attachment
     ? `<hashtable><entry><string>00000001</string><hashtable><entry><string>0001</string>` +
       `<finanze.IDAC.struct.AllegatiBean><path>${attachment.name}</path></finanze.IDAC.struct.AllegatiBean>` +
       `</entry></hashtable></entry></hashtable>`
     : `<hashtable></hashtable>`;
+  const quadroEntries = [...new Set(fields.map((field) => field.quadro))]
+    .map((quadro) => {
+      const modules = [
+        ...new Set(fields.filter((field) => field.quadro === quadro).map((field) => field.module)),
+      ]
+        .map((module) => {
+          const pairs = fields
+            .filter((field) => field.quadro === quadro && field.module === module)
+            .map((field) => `<string>${field.field}</string><string>${field.value}</string>`)
+            .join("");
+          return (
+            `<entry><string>${module}</string><it.finanze.entrate.sco.generale2013.DicModulo>` +
+            `<subElements class="it.finanze.entrate.sco.generale2013.DicElement$1" serialization="custom">` +
+            `<unserializable-parents/><hashtable><default><loadFactor>0.75</loadFactor>` +
+            `<threshold>${fields.length}</threshold></default><int>${fields.length}</int><int>${fields.length}</int>` +
+            `${pairs}</hashtable></subElements></it.finanze.entrate.sco.generale2013.DicModulo></entry>`
+          );
+        })
+        .join("");
+      return (
+        `<entry><string>${quadro}</string>` +
+        `<it.finanze.entrate.sco.generale2013.DicQuadro><subElements>${modules}</subElements>` +
+        `</it.finanze.entrate.sco.generale2013.DicQuadro></entry>`
+      );
+    })
+    .join("");
   const xml = Buffer.from(
     `<finanze.IDAC.structSUC.SavedDataSUC13 serialization="custom">` +
-      `<finanze.IDAC.struct.SavedData><hashtable><entry><string>EA</string>` +
-      `<it.finanze.entrate.sco.generale2013.DicQuadro><subElements><entry>` +
-      `<string>00000001</string><it.finanze.entrate.sco.generale2013.DicModulo>` +
-      `<subElements class="it.finanze.entrate.sco.generale2013.DicElement$1" serialization="custom">` +
-      `<unserializable-parents/><hashtable><default><loadFactor>0.75</loadFactor>` +
-      `<threshold>1</threshold></default><int>1</int><int>1</int>` +
-      `<string>001005</string><string>${cognome}</string>` +
-      `</hashtable></subElements></it.finanze.entrate.sco.generale2013.DicModulo>` +
-      `</entry></subElements></it.finanze.entrate.sco.generale2013.DicQuadro></entry>` +
-      `</hashtable>${attachments}</finanze.IDAC.struct.SavedData>` +
+      `<finanze.IDAC.struct.SavedData><hashtable>${quadroEntries}</hashtable>` +
+      `${attachments}</finanze.IDAC.struct.SavedData>` +
       `</finanze.IDAC.structSUC.SavedDataSUC13>`,
     "utf8",
   );

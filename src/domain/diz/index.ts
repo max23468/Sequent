@@ -21,6 +21,17 @@ export {
   qualifiedMappingFor,
   type QualifiedDizFieldMapping,
 } from "./qualified-mappings.ts";
+export {
+  DIZ_IMPORT_MAPPING_COUNTS,
+  DIZ_IMPORT_MAPPING_SOURCE,
+  dizMappingIdentity,
+  dizMappingOccurrenceId,
+  dizModuleSequence,
+  dizRecordCode,
+  importMappingFor,
+  isKnownConverterOnlyField,
+  type DizImportMapping,
+} from "./import-mappings.ts";
 
 export type DizFieldChange = DizFieldLocator & {
   readonly expectedValue: string;

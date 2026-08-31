@@ -8,6 +8,7 @@ import {
   importDiz,
   OFFICIAL_ARTIFACT_KINDS,
   overrideOfficialStage,
+  repairImportedDizAcquisition,
   reimportDiz,
   resolveDizConflicts,
   type OfficialStage,
@@ -36,11 +37,38 @@ const importDizAction: PracticeAction = async ({ locals, params, request }) => {
       return fail(409, {
         officialFlowError: "Completa il ciclo DIZ già aperto prima di acquisire una nuova base.",
       });
+    if (flowError instanceof Error && flowError.message === "DIZ_IMPORT_MAPPING_AMBIGUOUS")
+      return fail(409, {
+        officialFlowError:
+          "Il DIZ contiene un codice che il convertitore ufficiale associa a più posizioni. L’acquisizione è bloccata per evitare un collegamento arbitrario.",
+      });
     if (flowError instanceof Error)
       return fail(400, {
         officialFlowError: flowError.message.startsWith("DIZ ")
           ? flowError.message
           : "Il file non è un DIZ qualificato e integro.",
+      });
+    throw flowError;
+  }
+  redirect(303, officialFlowLocation(params.id, declarationId));
+};
+
+const repairImportedDizAction: PracticeAction = async ({ locals, params, request }) => {
+  if (!locals.ownerId) redirect(303, "/login");
+  if (!isDizEnabled())
+    return fail(403, { officialFlowError: "Il flusso DIZ è disattivato in questo ambiente." });
+  const formData = await request.formData();
+  const declarationId = String(formData.get("declarationId") ?? "");
+  const artifactId = String(formData.get("artifactId") ?? "");
+  try {
+    await repairImportedDizAcquisition(openDatabase(), { practiceId: params.id, artifactId });
+  } catch (flowError) {
+    if (flowError instanceof Error && flowError.message === "DIZ_IMPORT_NOT_FOUND")
+      return fail(404, { officialFlowError: "Il DIZ acquisito non è più disponibile." });
+    if (flowError instanceof Error && flowError.message === "DIZ_IMPORT_MAPPING_AMBIGUOUS")
+      return fail(409, {
+        officialFlowError:
+          "Il DIZ contiene un codice che il convertitore ufficiale associa a più posizioni. La riparazione è bloccata senza scegliere per analogia.",
       });
     throw flowError;
   }
@@ -232,6 +260,7 @@ const overrideOfficialStageAction: PracticeAction = async ({ locals, params, req
 
 export const officialFlowActions = {
   importDiz: importDizAction,
+  repairImportedDiz: repairImportedDizAction,
   exportDiz: exportDizAction,
   reimportDiz: reimportDizAction,
   resolveDiz: resolveDizAction,

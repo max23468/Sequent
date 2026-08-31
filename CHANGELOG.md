@@ -4,6 +4,18 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.13
+
+### Added
+
+- mappatura di acquisizione DIZ generata dalle proprietà del convertitore ufficiale SuccessioniOnLine, distinta dai mapping autorizzati alla scrittura;
+- riparazione amministrativa idempotente delle acquisizioni DIZ pregresse, con conteggio atteso, snapshot e qualificazione completa del corpus privato.
+
+### Fixed
+
+- importazione DIZ estesa a tutti i campi rappresentabili, inclusi soggetti, cespiti e posizioni multiple nello stesso modulo, senza sovrascrivere divergenze già presenti;
+- allegati incorporati rimaterializzati per hash e assenza di allegati nell’archivio sorgente resa esplicita nel fascicolo.
+
 ## 0.2.12
 
 ### Changed
