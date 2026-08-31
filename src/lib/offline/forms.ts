@@ -1,13 +1,6 @@
 import { isServerReachable, queueFieldForm } from "./manager";
 import { getOfflinePractice } from "./store";
-
-function setPracticeSubmissionPending(form: HTMLFormElement, pending: boolean) {
-  const practicePage = form.closest<HTMLElement>(".practice-page");
-  if (!practicePage) return;
-  practicePage.inert = pending;
-  if (pending) practicePage.setAttribute("aria-busy", "true");
-  else practicePage.removeAttribute("aria-busy");
-}
+import { setPracticePending } from "$lib/client/practice-pending";
 
 export async function interceptOfflinePracticeForm(
   event: SubmitEvent,
@@ -28,7 +21,8 @@ export async function interceptOfflinePracticeForm(
   if (includesFile && navigator.onLine) return null;
 
   event.preventDefault();
-  setPracticeSubmissionPending(form, true);
+  const practicePage = form.closest<HTMLElement>(".practice-page");
+  setPracticePending(true, practicePage);
   let navigationStarted = false;
   try {
     if (await isServerReachable()) {
@@ -63,6 +57,6 @@ export async function interceptOfflinePracticeForm(
       ? "Modifica conservata sul dispositivo e in attesa di sincronizzazione."
       : "Non è stato possibile conservare questa modifica offline.";
   } finally {
-    if (!navigationStarted) setPracticeSubmissionPending(form, false);
+    if (!navigationStarted) setPracticePending(false, practicePage);
   }
 }

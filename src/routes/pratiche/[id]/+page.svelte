@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { goto, invalidateAll } from "$app/navigation";
+  import { invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import {
     Bot, Check, FileText, LayoutDashboard, ListChecks, LoaderCircle, Pencil, Upload, X,
@@ -22,6 +22,7 @@
   import ReviewQueue from "$lib/components/ReviewQueue.svelte";
   import { formatDisplayValue } from "$lib/format";
   import { uploadFilesResumably } from "$lib/client/resumable-upload";
+  import { navigatePractice } from "$lib/client/practice-navigation";
   import { documentStatusLabels } from "$lib/document-status";
   import { practiceDomainSectionByOperationalSection } from "$lib/practice-workspace";
   import { getOfflinePractice } from "$lib/offline/store";
@@ -65,13 +66,6 @@
     if (section !== "documents") search.delete("documento");
     if (section !== "verifications") search.delete("verifica");
     await navigatePractice(`${page.url.pathname}?${search}`, false);
-  }
-  async function navigatePractice(url: string, invalidate = true) {
-    if (!(await isServerReachable())) {
-      window.location.assign(url);
-      return;
-    }
-    await goto(url, { replaceState: true, invalidateAll: invalidate });
   }
   async function selectView(mode: "operational" | "quadri") {
     const nextSection = mode === "quadri" ? "quadri" : "overview";

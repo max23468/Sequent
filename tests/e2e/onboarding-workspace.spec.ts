@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   authenticate,
   createPracticeFromDashboard,
+  openDetails,
   createSubstituteOneForE2e,
   prepareConfirmedAutomaticFields,
   resetFailedBlobVerification,
@@ -53,7 +54,7 @@ test("mostra gli automatici confermati dalla stessa fonte e in sola lettura nell
   const operationalAutomatic = page.locator("details.operational-fields-group").filter({
     hasText: "Liquidazione e importi da versare",
   });
-  await operationalAutomatic.locator(":scope > summary").click();
+  await openDetails(operationalAutomatic);
   const operationalAutomaticOutput = operationalAutomatic.getByRole("status", {
     name: automaticName,
   });
@@ -93,7 +94,7 @@ test("rende modificabili le circoscrizioni soltanto nella sostitutiva di tipo 1"
   const group = page.locator("details.operational-fields-group").filter({
     hasText: "Liquidazione e importi da versare",
   });
-  await group.locator(":scope > summary").click();
+  await openDetails(group);
   const operationalJurisdiction = group
     .locator(".official-field")
     .filter({ hasText: "EF15 - Tassa ipotecaria - Valore" });
