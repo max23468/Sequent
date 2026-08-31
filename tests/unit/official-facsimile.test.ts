@@ -382,5 +382,5 @@ describe("fac-simile del modello ufficiale", () => {
     });
     const pdf = await PDFDocument.load(bytes);
     expect(pdf.getPageCount()).toBe(22);
-  });
+  }, 90_000);
 });

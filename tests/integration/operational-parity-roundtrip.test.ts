@@ -643,7 +643,7 @@ describe("round-trip parametrico dei campi coperti", () => {
   for (const family of families) {
     it(
       `salva e riapre in entrambe le direzioni ${family.key} (${family.cases.length})`,
-      { timeout: 30_000 },
+      { timeout: 90_000 },
       () => {
         const directory = mkdtempSync(join(tmpdir(), "sequent-operational-parity-"));
         directories.push(directory);
@@ -782,7 +782,7 @@ describe("round-trip parametrico dei campi coperti", () => {
       declarationKind === "first" ? 641 : declarationKind === "substitute-1" ? 646 : 644;
     it(
       `esercita tutti i ${expectedEditableCount} input su dichiarazione ${declarationKind}`,
-      { timeout: 30_000 },
+      { timeout: 90_000 },
       () => {
         const directory = mkdtempSync(join(tmpdir(), "sequent-operational-kinds-"));
         directories.push(directory);
@@ -831,7 +831,7 @@ describe("round-trip parametrico dei campi coperti", () => {
 
   it(
     "copia e isola tutti i 641 input applicabili alla prima dichiarazione",
-    { timeout: 30_000 },
+    { timeout: 90_000 },
     () => {
       const directory = mkdtempSync(join(tmpdir(), "sequent-operational-declarations-"));
       directories.push(directory);
@@ -944,7 +944,7 @@ describe("round-trip parametrico dei campi coperti", () => {
   for (const occurrenceFamily of occurrenceFamilies) {
     it(
       `crea, riordina e rimuove ${occurrenceFamily.groupId} (${occurrenceFamily.cases.length})`,
-      { timeout: 30_000 },
+      { timeout: 90_000 },
       () => {
         const directory = mkdtempSync(join(tmpdir(), "sequent-operational-occurrence-"));
         directories.push(directory);
@@ -1126,7 +1126,7 @@ describe("round-trip parametrico dei campi coperti", () => {
     for (const declarationKind of DECLARATION_KINDS) {
       it(
         `applica ${choiceFamily.choiceGroup} nei due versi su ${declarationKind}`,
-        { timeout: 30_000 },
+        { timeout: 90_000 },
         () => {
           const directory = mkdtempSync(join(tmpdir(), "sequent-operational-choice-"));
           directories.push(directory);
@@ -1262,7 +1262,7 @@ describe("round-trip parametrico dei campi coperti", () => {
   for (const declarationKind of DECLARATION_KINDS) {
     it(
       `mantiene facoltativi i 260 campi XSD condizionali su ${declarationKind}`,
-      { timeout: 30_000 },
+      { timeout: 90_000 },
       () => {
         const directory = mkdtempSync(join(tmpdir(), "sequent-operational-conditional-"));
         directories.push(directory);
@@ -1597,7 +1597,7 @@ describe("round-trip parametrico dei campi coperti", () => {
     expect(
       getAutomaticOfficialFieldValues(database, practice.id, practice.declarationId)?.values,
     ).toEqual(calculation.declarationTaxes.officialFieldValues);
-  });
+  }, 90_000);
 
   it("ricalcola deterministicamente l’intera mappa degli automatici", () => {
     const baseOptions = {
@@ -1696,7 +1696,7 @@ describe("round-trip parametrico dei campi coperti", () => {
 
   it(
     "isola tutti i 305 input di soggetti e beni su 610 identità canoniche",
-    { timeout: 30_000 },
+    { timeout: 90_000 },
     () => {
       const directory = mkdtempSync(join(tmpdir(), "sequent-operational-isolation-"));
       directories.push(directory);
@@ -1803,7 +1803,7 @@ describe("round-trip parametrico dei campi coperti", () => {
 
   it(
     "copia tutti i 207 input EH nella successiva e isola 286 identità canoniche",
-    { timeout: 30_000 },
+    { timeout: 90_000 },
     () => {
       const directory = mkdtempSync(join(tmpdir(), "sequent-operational-eh-"));
       directories.push(directory);

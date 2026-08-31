@@ -74,6 +74,30 @@ function attachUpload(
   };
 }
 
+export function ingestPersistedUploadInTransaction(
+  database: Database.Database,
+  upload: PersistedUpload,
+  practiceId: string,
+): IngestedDocument {
+  if (!getPractice(database, practiceId)) throw new Error("PRACTICE_NOT_FOUND");
+  const attached = attachUpload(database, practiceId, upload);
+  const { document } = attached;
+  if (attached.reused) resetJobsAfterBlobRepair(database, document.id);
+  enqueueJob(
+    database,
+    "foundation.verify_blob",
+    { sha256: document.sha256 },
+    { practiceId, documentId: document.id },
+  );
+  enqueueJob(
+    database,
+    "document.process",
+    { sha256: document.sha256, pipelineVersion: 1 },
+    { practiceId, documentId: document.id },
+  );
+  return document;
+}
+
 export function ingestPersistedUpload(
   database: Database.Database,
   upload: PersistedUpload,
@@ -87,22 +111,7 @@ export function ingestPersistedUpload(
       "practiceId" in destination
         ? destination.practiceId
         : createPractice(database, destination.newPracticeTitle).id;
-    const attached = attachUpload(database, practiceId, upload);
-    const { document } = attached;
-    if (attached.reused) resetJobsAfterBlobRepair(database, document.id);
-    enqueueJob(
-      database,
-      "foundation.verify_blob",
-      { sha256: document.sha256 },
-      { practiceId, documentId: document.id },
-    );
-    enqueueJob(
-      database,
-      "document.process",
-      { sha256: document.sha256, pipelineVersion: 1 },
-      { practiceId, documentId: document.id },
-    );
-    return document;
+    return ingestPersistedUploadInTransaction(database, upload, practiceId);
   });
   return commit.immediate();
 }

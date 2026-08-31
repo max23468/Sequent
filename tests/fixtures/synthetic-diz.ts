@@ -46,7 +46,15 @@ function makeZip(entries: readonly { name: string; content: Buffer }[]): Buffer 
   return Buffer.concat([...localRecords, ...centralRecords, eocd]);
 }
 
-export function syntheticDiz(cognome = "ROSSI"): Buffer {
+export function syntheticDiz(
+  cognome = "ROSSI",
+  attachment?: { name: string; content: Buffer },
+): Buffer {
+  const attachments = attachment
+    ? `<hashtable><entry><string>00000001</string><hashtable><entry><string>0001</string>` +
+      `<finanze.IDAC.struct.AllegatiBean><path>${attachment.name}</path></finanze.IDAC.struct.AllegatiBean>` +
+      `</entry></hashtable></entry></hashtable>`
+    : `<hashtable></hashtable>`;
   const xml = Buffer.from(
     `<finanze.IDAC.structSUC.SavedDataSUC13 serialization="custom">` +
       `<finanze.IDAC.struct.SavedData><hashtable><entry><string>EA</string>` +
@@ -58,9 +66,12 @@ export function syntheticDiz(cognome = "ROSSI"): Buffer {
       `<string>001005</string><string>${cognome}</string>` +
       `</hashtable></subElements></it.finanze.entrate.sco.generale2013.DicModulo>` +
       `</entry></subElements></it.finanze.entrate.sco.generale2013.DicQuadro></entry>` +
-      `</hashtable><hashtable></hashtable></finanze.IDAC.struct.SavedData>` +
+      `</hashtable>${attachments}</finanze.IDAC.struct.SavedData>` +
       `</finanze.IDAC.structSUC.SavedDataSUC13>`,
     "utf8",
   );
-  return makeZip([{ name: "data.xml", content: xml }]);
+  return makeZip([
+    ...(attachment ? [{ name: attachment.name, content: attachment.content }] : []),
+    { name: "data.xml", content: xml },
+  ]);
 }

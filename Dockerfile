@@ -51,8 +51,7 @@ COPY --from=ocr --chown=root:root /opt/ocr /opt/ocr
 COPY --from=build --chown=root:root /app/build ./build
 COPY --from=build --chown=root:root /app/node_modules ./node_modules
 COPY --from=build --chown=root:root /app/package.json ./package.json
-COPY --from=build --chown=root:root /app/scripts/admin/qualify-codex-runtime.ts ./scripts/admin/qualify-codex-runtime.ts
-COPY --from=build --chown=root:root /app/scripts/admin/qualify-diz-corpus.ts ./scripts/admin/qualify-diz-corpus.ts
+COPY --from=build --chown=root:root /app/scripts/admin ./scripts/admin
 COPY --from=build --chown=root:root /app/src ./src
 COPY --from=build --chown=root:root /app/private/official-sources/modello-dichiarazione-successione-2025.pdf ./official-sources/modello-dichiarazione-successione-2025.pdf
 RUN find / -xdev -type f -perm /6000 -exec chmod a-s {} + \

@@ -6,12 +6,18 @@ import { closeDatabase, openDatabase } from "../../src/lib/server/database.ts";
 import {
   addOfficialArtifact,
   confirmPresentation,
+  getImportedDizContent,
   getOfficialFlowSummary,
   importDiz,
+  materializeImportedDizAttachments,
   overrideOfficialStage,
 } from "../../src/lib/server/official-flow.ts";
 import { createSharedSubject } from "../../src/lib/server/domain-subjects.ts";
-import { getDeclaration, createPractice } from "../../src/lib/server/practices.ts";
+import {
+  getDeclaration,
+  createPractice,
+  listPracticeDocuments,
+} from "../../src/lib/server/practices.ts";
 import { syntheticDiz } from "../fixtures/synthetic-diz.ts";
 
 const directories: string[] = [];
@@ -111,6 +117,62 @@ describe("flusso ufficiale persistente", () => {
         .prepare("SELECT revision FROM declarations WHERE id = ?")
         .get(practice.declarationId),
     ).toEqual({ revision: 2 });
+  });
+
+  it("rende consultabili i valori preservati e materializza gli allegati incorporati", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-official-flow-content-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica DIZ completa");
+    createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Soggetto da DIZ",
+      declarationId: practice.declarationId,
+    });
+    const attachment = Buffer.from("%PDF-1.7\nAllegato sintetico\n%%EOF", "ascii");
+
+    const artifact = await importDiz(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      file: new File(
+        [new Uint8Array(syntheticDiz("VERDI", { name: "allegato.pdf", content: attachment }))],
+        "pratica-con-allegato.diz",
+        { type: "application/zip" },
+      ),
+      dataDirectory: directory,
+    });
+
+    expect(listPracticeDocuments(database, practice.id)).toEqual([
+      expect.objectContaining({
+        originalName: "allegato.pdf",
+        mediaType: "application/pdf",
+        byteSize: attachment.length,
+      }),
+    ]);
+    await expect(
+      getImportedDizContent(database, practice.id, practice.declarationId, directory),
+    ).resolves.toMatchObject({
+      integratedFields: 1,
+      preservedFields: 0,
+      fieldCount: 1,
+      sections: [
+        expect.objectContaining({
+          quadro: "EA",
+          fields: [expect.objectContaining({ field: "001005", value: "VERDI" })],
+        }),
+      ],
+      attachments: [expect.objectContaining({ name: "allegato.pdf", kind: "pdf" })],
+    });
+
+    database.prepare("DELETE FROM documents WHERE practice_id = ?").run(practice.id);
+    await expect(
+      materializeImportedDizAttachments(database, {
+        practiceId: practice.id,
+        artifactId: artifact.id,
+        dataDirectory: directory,
+      }),
+    ).resolves.toEqual({ attachments: 1, documents: 1 });
+    expect(listPracticeDocuments(database, practice.id)).toHaveLength(1);
   });
 
   it("non sovrascrive un valore già presente quando il DIZ diverge", async () => {
