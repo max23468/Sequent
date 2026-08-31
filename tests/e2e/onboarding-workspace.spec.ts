@@ -143,7 +143,7 @@ test("crea una pratica e usa il workspace minimo", async ({ page }) => {
     page.getByRole("heading", { name: "Aggiungi una dichiarazione successiva" }),
   ).toBeVisible();
 
-  const workspaceActions = page.locator(".workspace-actions-menu summary");
+  const workspaceActions = page.locator(".workspace-actions-trigger");
   await workspaceActions.click();
   await expect(
     page.locator(".workspace-actions-popover").getByRole("link", { name: "Apri il riepilogo" }),

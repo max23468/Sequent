@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { ChevronDown, FileText, Folder, Home, Menu, Settings, UserRound } from "@lucide/svelte";
+  import { fade, fly } from "svelte/transition";
   import BrandLogo from "$lib/components/BrandLogo.svelte";
   import SearchBox from "$lib/components/SearchBox.svelte";
   import ThemeSelector from "$lib/components/ThemeSelector.svelte";
@@ -8,7 +9,8 @@
   import "./app.css";
 
   let { children, data } = $props();
-  let accountMenu = $state<HTMLDetailsElement>();
+  let accountMenu = $state<HTMLDivElement>();
+  let accountMenuOpen = $state(false);
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: Home },
@@ -18,6 +20,7 @@
   ];
 
   let browserTitle = $derived(resolvePageTitle(page.url.pathname));
+  let routeKey = $derived(page.url.pathname);
 
   function isActive(href: string) {
     return href === "/"
@@ -26,13 +29,17 @@
   }
 
   function handleShellPointerDown(event: PointerEvent) {
-    if (accountMenu?.open && !accountMenu.contains(event.target as Node)) accountMenu.open = false;
+    if (accountMenuOpen && !accountMenu?.contains(event.target as Node)) accountMenuOpen = false;
   }
 
   function handleShellKeydown(event: KeyboardEvent) {
-    if (event.key !== "Escape" || !accountMenu?.open) return;
-    accountMenu.open = false;
-    accountMenu.querySelector<HTMLElement>("summary")?.focus();
+    if (event.key !== "Escape" || !accountMenuOpen) return;
+    accountMenuOpen = false;
+    accountMenu?.querySelector<HTMLElement>(".account-menu-trigger")?.focus();
+  }
+
+  function toggleAccountMenu() {
+    accountMenuOpen = !accountMenuOpen;
   }
 
   async function clearOfflineCopiesBeforeLogout(event: SubmitEvent) {
@@ -70,22 +77,36 @@
       </nav>
       <div class="topbar-tools">
         <SearchBox />
-        <details class="account-menu" bind:this={accountMenu}>
-          <summary aria-label="Apri menu utente">
+        <div class="account-menu" bind:this={accountMenu}>
+          <button
+            class="account-menu-trigger"
+            type="button"
+            aria-label="Apri menu utente"
+            aria-expanded={accountMenuOpen}
+            onclick={toggleAccountMenu}
+          >
             <span class="account-avatar"><UserRound size={19} aria-hidden="true" /></span>
             <span class="account-label">{data.username ?? "Utente"}</span>
-            <ChevronDown class="account-chevron" size={16} aria-hidden="true" />
+            <ChevronDown class={`account-chevron${accountMenuOpen ? " open" : ""}`} size={16} aria-hidden="true" />
             <Menu class="account-mobile-menu" size={18} aria-hidden="true" />
-          </summary>
-          <div class="account-popover">
-            <p>Tema</p>
-            <ThemeSelector compact />
-            <form method="POST" action="/logout" onsubmit={clearOfflineCopiesBeforeLogout}><button type="submit">Esci</button></form>
-          </div>
-        </details>
+          </button>
+          {#if accountMenuOpen}
+            <div class="account-popover" transition:fly={{ y: -6, duration: 150 }}>
+              <p>Tema</p>
+              <ThemeSelector compact />
+              <form method="POST" action="/logout" onsubmit={clearOfflineCopiesBeforeLogout}><button type="submit">Esci</button></form>
+            </div>
+          {/if}
+        </div>
       </div>
     </header>
-    <main class="main-content">{@render children()}</main>
+    <main class="main-content">
+      {#key routeKey}
+        <div class="route-stage" in:fly={{ y: 7, duration: 190 }} out:fade={{ duration: 90 }}>
+          {@render children()}
+        </div>
+      {/key}
+    </main>
     <nav class="mobile-navigation" aria-label="Navigazione principale mobile">
       {#each navItems as item (item.href)}
         <a class:active={isActive(item.href)} href={item.href} aria-current={isActive(item.href) ? "page" : undefined}>

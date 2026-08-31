@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Check, X } from "@lucide/svelte";
+  import { closeDialog, dialogMotion } from "$lib/client/dialog-motion";
 
   let {
     actionUrl,
@@ -23,11 +24,11 @@
   }
 
   function close() {
-    dialog?.close();
+    return closeDialog(dialog);
   }
 </script>
 
-<dialog class="app-dialog" bind:this={dialog} aria-labelledby="rename-practice-title">
+<dialog class="app-dialog" bind:this={dialog} use:dialogMotion aria-labelledby="rename-practice-title">
   <form method="POST" action={actionUrl}>
     <div class="dialog-heading">
       <div>

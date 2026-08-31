@@ -4,6 +4,7 @@
   import {
     Bot, Check, FileText, LayoutDashboard, ListChecks, LoaderCircle, Pencil, Upload, X,
   } from "@lucide/svelte";
+  import { fade, fly } from "svelte/transition";
   import ProcessingErrors from "$lib/components/ProcessingErrors.svelte";
   import ActiveProcessing from "$lib/components/ActiveProcessing.svelte";
   import CodexRunHistory from "$lib/components/CodexRunHistory.svelte";
@@ -200,6 +201,8 @@
     />
 
     <section class="workspace-main">
+      {#key `${viewMode}:${selectedSection}:${data.selectedQuadro}:${data.declaration.id}`}
+      <div class="workspace-section-stage" in:fly={{ y: 7, duration: 180 }} out:fade={{ duration: 90 }}>
       {#if data.activeJobs.length > 0}
         <ActiveProcessing jobs={data.activeJobs} />
       {/if}
@@ -302,6 +305,8 @@
         {#if form?.fieldError}<p class="workspace-form-error" role="alert">{form.fieldError}</p>{/if}
       {/if}
       {#if form?.domainError}<p class="workspace-form-error" role="alert">{form.domainError}</p>{/if}
+      </div>
+      {/key}
     </section>
   </div>
 </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Building2, FileText, Folder, Search, UsersRound, X } from "@lucide/svelte";
+  import { fly } from "svelte/transition";
   import { searchSequent, type SearchResult } from "$lib/client/search";
 
   let query = $state("");
@@ -160,6 +161,7 @@
       id="global-search-results"
       class="search-results"
       aria-live="polite"
+      transition:fly={{ y: -6, duration: 150 }}
     >
       {#if loading}
         <p class="search-message">Ricerca…</p>

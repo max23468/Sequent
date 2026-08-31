@@ -1,8 +1,11 @@
 .practice-heading {
   display: grid;
-  grid-template-columns: minmax(330px, 1fr) auto auto auto auto;
+  grid-template-areas:
+    "copy declaration view actions"
+    "copy offline offline offline";
+  grid-template-columns: minmax(330px, 1fr) auto auto auto;
   align-items: center;
-  gap: 20px;
+  gap: 10px 16px;
   margin-bottom: 18px;
 }
 .practice-page.page-frame {
@@ -17,6 +20,7 @@
   letter-spacing: -0.025em;
 }
 .practice-heading-copy {
+  grid-area: copy;
   min-width: 0;
 }
 .practice-title-line {
@@ -35,6 +39,7 @@
   white-space: nowrap;
 }
 .practice-declaration-selector {
+  grid-area: declaration;
   position: relative;
   display: flex;
   min-height: 42px;
@@ -81,13 +86,14 @@
   font-size: 0.86rem;
 }
 .workspace-actions-menu {
+  grid-area: actions;
   position: relative;
 }
-.workspace-actions-menu summary {
-  list-style: none;
+.workspace-actions-trigger svg {
+  transition: transform var(--motion-standard) var(--ease-emphasized);
 }
-.workspace-actions-menu summary::-webkit-details-marker {
-  display: none;
+.workspace-actions-trigger svg.open {
+  transform: rotate(180deg);
 }
 .workspace-actions-popover {
   position: absolute;
@@ -139,9 +145,10 @@
   display: grid;
   grid-template-columns: minmax(220px, 0.3fr) minmax(0, 1.7fr);
   min-height: 660px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
   background: var(--surface);
+  box-shadow: var(--shadow-soft);
   overflow: hidden;
 }
 
@@ -166,6 +173,7 @@
   justify-content: space-between;
   padding: 0 17px;
   border-bottom: 1px solid var(--line-soft);
+  background: color-mix(in srgb, var(--surface-soft) 48%, var(--surface));
 }
 .workspace-panel-heading h2 {
   margin: 0;
@@ -198,6 +206,7 @@
   padding: 0 13px;
   border: 0;
   border-left: 3px solid transparent;
+  border-radius: 5px;
   background: transparent;
   color: var(--text);
   cursor: pointer;
@@ -215,6 +224,7 @@
 }
 .workspace-sections nav button:hover {
   background: var(--surface-soft);
+  transform: translateX(2px);
 }
 .workspace-sections nav button.active {
   border-left-color: var(--teal);

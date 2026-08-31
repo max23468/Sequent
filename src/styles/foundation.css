@@ -22,13 +22,14 @@
   --line: #c6ccd5;
   --line-soft: #dce1e8;
   --surface: #fff;
-  --surface-soft: #f7f8fa;
-  --page: #fff;
+  --surface-soft: #f3f5f7;
+  --page: #f7f8fa;
   --success: #23884b;
   --error: #a23030;
   --danger-line: #e0b9b9;
   --danger-soft: #fff5f5;
-  --shadow: 0 16px 42px rgb(0 30 66 / 10%);
+  --shadow: 0 18px 48px rgb(0 30 66 / 12%);
+  --shadow-soft: 0 1px 2px rgb(0 30 66 / 5%);
   --header-height: 94px;
 }
 
@@ -56,6 +57,7 @@
   --danger-line: #74454b;
   --danger-soft: #2a1c1e;
   --shadow: 0 18px 48px rgb(0 0 0 / 32%);
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 28%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -83,6 +85,7 @@
     --danger-line: #74454b;
     --danger-soft: #2a1c1e;
     --shadow: 0 18px 48px rgb(0 0 0 / 32%);
+    --shadow-soft: 0 1px 2px rgb(0 0 0 / 28%);
   }
   :root:not([data-theme="light"]) .brand-symbol-light {
     display: none;

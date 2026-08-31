@@ -97,10 +97,10 @@
   .search-clear {
     display: none;
   }
-  .account-menu summary .account-label {
+  .account-menu-trigger .account-label {
     display: none;
   }
-  .account-menu summary {
+  .account-menu-trigger {
     width: 62px;
     min-height: 48px;
     justify-content: center;
@@ -274,12 +274,12 @@
     padding-inline: 20px;
   }
   .search-box,
-  .account-menu summary {
+  .account-menu-trigger {
     width: 44px;
     height: 44px;
     min-height: 44px;
   }
-  .account-menu summary {
+  .account-menu-trigger {
     width: 58px;
   }
   .brand-symbol {
@@ -344,7 +344,9 @@
   *::before,
   *::after {
     scroll-behavior: auto !important;
+    transition-delay: 0s !important;
     transition-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-duration: 0.01ms !important;
   }
 }

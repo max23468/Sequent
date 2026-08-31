@@ -6,7 +6,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .practice-heading {
-    grid-template-columns: minmax(260px, 1fr) auto auto auto auto;
+    grid-template-columns: minmax(260px, 1fr) auto auto auto;
     gap: 12px;
   }
   .practice-heading .offline-practice-actions .button {
@@ -82,6 +82,7 @@
     grid-area: offline;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    justify-self: stretch;
     padding-top: 8px;
     border-top: 1px solid var(--line-soft);
   }
@@ -152,10 +153,28 @@
     overflow-y: auto;
     padding: 10px 12px 12px;
     border-top: 1px solid var(--line-soft);
+    opacity: 1;
     scrollbar-width: thin;
+    transform: translateY(0);
+    visibility: visible;
+    transition:
+      max-height var(--motion-standard) var(--ease-emphasized),
+      padding var(--motion-standard) var(--ease-emphasized),
+      opacity var(--motion-fast) var(--ease-standard),
+      transform var(--motion-standard) var(--ease-emphasized),
+      border-color var(--motion-fast) var(--ease-standard),
+      visibility 0s linear;
   }
   .workspace-sections nav:not(.mobile-open) {
-    display: none;
+    max-height: 0;
+    padding-block: 0;
+    border-top-color: transparent;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transform: translateY(-5px);
+    visibility: hidden;
+    transition-delay: 0s, 0s, 0s, 0s, 0s, var(--motion-standard);
   }
   .workspace-sections nav button {
     width: 100%;

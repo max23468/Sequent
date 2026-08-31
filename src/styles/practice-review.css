@@ -53,6 +53,7 @@
   background: var(--surface-soft);
 }
 .practice-view-switch {
+  grid-area: view;
   display: inline-flex;
   padding: 3px;
   border: 1px solid var(--line);
@@ -92,6 +93,7 @@
   grid-template-columns: repeat(4, 1fr);
   border: 1px solid var(--line-soft);
   border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-soft) 38%, var(--surface));
 }
 .domain-summary > div {
   display: grid;
@@ -107,8 +109,10 @@
   font-size: 0.75rem;
 }
 .domain-summary strong {
-  font-size: 1.35rem;
-  font-weight: 550;
+  color: var(--navy);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.55rem;
+  font-weight: 500;
 }
 .readiness-panel {
   margin-top: 16px;
@@ -159,7 +163,7 @@
   margin-top: 16px;
   padding: 16px 18px;
   border-left: 3px solid var(--teal);
-  background: var(--surface-soft);
+  background: color-mix(in srgb, var(--teal) 6%, var(--surface));
 }
 .declaration-list,
 .domain-entity-list,

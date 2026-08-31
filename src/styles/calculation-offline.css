@@ -292,8 +292,10 @@
 }
 
 .practice-heading .offline-practice-controls {
+  grid-area: offline;
   flex: 0 1 auto;
   justify-content: flex-start;
+  justify-self: end;
   gap: 8px;
   min-width: 0;
   margin: 0;
