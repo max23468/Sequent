@@ -1,6 +1,6 @@
 {
   "name": "sequent",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,6 +14,7 @@
     "test:e2e": "playwright test",
     "image:local": "bash scripts/local/build-docker-image.sh",
     "admin:backup": "node scripts/admin/backup.ts",
+    "admin:connect-codex": "node scripts/admin/connect-codex.ts",
     "admin:restore": "node scripts/admin/restore.ts",
     "admin:reset-owner": "node scripts/admin/reset-owner.ts",
     "admin:seed-synthetic": "node scripts/admin/seed-synthetic.ts",

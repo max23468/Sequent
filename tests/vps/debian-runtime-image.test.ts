@@ -76,6 +76,7 @@ test("l'immagine include tutti gli strumenti amministrativi dichiarati", () => {
   );
   for (const script of [
     "backup",
+    "connect-codex",
     "qualify-codex-runtime",
     "qualify-diz-corpus",
     "reset-owner",

@@ -1,15 +1,10 @@
 import { error, fail, redirect } from "@sveltejs/kit";
 import { z } from "zod";
 import type { Actions, PageServerLoad } from "./$types";
-import {
-  createOwnerSession,
-  hasOwner,
-  MIN_PASSWORD_LENGTH,
-  SESSION_COOKIE,
-  SESSION_COOKIE_MAX_AGE,
-} from "$lib/server/auth";
-import { useSecureCookies, useWebOwnerSetup } from "$lib/server/config";
+import { createOwnerSession, hasOwner, MIN_PASSWORD_LENGTH } from "$lib/server/auth";
+import { useWebOwnerSetup } from "$lib/server/config";
 import { openDatabase } from "$lib/server/database";
+import { setSessionCookie } from "$lib/server/session-cookie";
 
 const usernameSchema = z
   .string()
@@ -41,13 +36,7 @@ export const actions = {
     if (formData.get("passwordConfirm") !== parsed.data)
       return fail(400, { error: "Le password non coincidono." });
     const session = await createOwnerSession(database, username.data, parsed.data);
-    cookies.set(SESSION_COOKIE, session.token, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "strict",
-      secure: useSecureCookies(),
-      maxAge: SESSION_COOKIE_MAX_AGE,
-    });
+    setSessionCookie(cookies, session.token);
     redirect(303, "/");
   },
 } satisfies Actions;

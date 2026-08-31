@@ -8,7 +8,6 @@ import {
   issueSession,
   readSession,
   SESSION_COOKIE,
-  SESSION_COOKIE_MAX_AGE,
 } from "$lib/server/auth";
 import { cleanupStaleUploads } from "$lib/server/blob-store";
 import {
@@ -16,11 +15,11 @@ import {
   getDevelopmentUsername,
   getDataDirectory,
   useDevelopmentAutoLogin,
-  useSecureCookies,
 } from "$lib/server/config";
 import { recoverInterruptedJobs } from "$lib/server/jobs";
 import { startJobRunner } from "$lib/server/job-runner";
 import { cleanupExpiredUploadSessions } from "$lib/server/resumable-uploads";
+import { setSessionCookie } from "$lib/server/session-cookie";
 
 const PRIVATE_ROBOTS_DIRECTIVE = "noindex, nofollow, noarchive";
 
@@ -50,13 +49,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   const sessionToken = event.cookies.get(SESSION_COOKIE);
   let session = readSession(database, sessionToken);
   if (session?.renewed && sessionToken) {
-    event.cookies.set(SESSION_COOKIE, sessionToken, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "strict",
-      secure: useSecureCookies(),
-      maxAge: SESSION_COOKIE_MAX_AGE,
-    });
+    setSessionCookie(event.cookies, sessionToken);
   }
   if (!session && useDevelopmentAutoLogin(dev, event.getClientAddress())) {
     const ownerId = await ensureDevelopmentOwner(
@@ -65,13 +58,7 @@ export const handle: Handle = async ({ event, resolve }) => {
       getDevelopmentPassword(),
     );
     const issued = issueSession(database, ownerId);
-    event.cookies.set(SESSION_COOKIE, issued.token, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "strict",
-      secure: useSecureCookies(),
-      maxAge: SESSION_COOKIE_MAX_AGE,
-    });
+    setSessionCookie(event.cookies, issued.token);
     session = {
       id: issued.id,
       ownerId,

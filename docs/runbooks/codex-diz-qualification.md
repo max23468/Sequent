@@ -13,15 +13,13 @@ Questa procedura qualifica Codex attraverso Sequent e acquisisce i cinque DIZ gi
 
 ## Qualificazione Codex
 
-1. Dalla release candidata, entrare nel container come utente applicativo e inizializzare la sola home dedicata:
+1. Dalla release candidata, entrare nel container come utente applicativo e avviare il comando amministrativo vincolato alla sola home dedicata:
 
    ```bash
-   install -d -m 700 "$SEQUENT_CODEX_HOME"
-   CODEX_HOME="$SEQUENT_CODEX_HOME" node node_modules/@openai/codex/bin/codex.js login --device-auth
-   CODEX_HOME="$SEQUENT_CODEX_HOME" node node_modules/@openai/codex/bin/codex.js login status
+   npm run admin:connect-codex
    ```
 
-   Lo stato deve riportare esplicitamente l’accesso tramite ChatGPT, non una API key. La verifica applicativa usa la stessa `CODEX_HOME`; una sessione presente nella home amministrativa generale non viene accettata come prova.
+   Il comando crea la directory privata con modalità `0700`, forza `CODEX_HOME` sul percorso dedicato, non eredita eventuali API key e verifica esplicitamente l’accesso tramite ChatGPT. Per il solo readback successivo usare `npm run admin:connect-codex -- --status-only`. Una sessione presente nella home amministrativa generale non viene accettata né copiata.
 
 2. Applicare `SEQUENT_CODEX_ENABLED=true` soltanto attraverso il configuratore installato e il deploy deliberato della release qualificata.
 3. Nel container della release eseguire il controllo sintetico, scrivendo il risultato sanitizzato in una directory privata:

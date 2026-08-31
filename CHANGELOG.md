@@ -4,6 +4,16 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.11
+
+### Added
+
+- comando amministrativo per collegare Codex alla sessione ChatGPT confinata nella home privata di Sequent, con verifica fail-closed del metodo di accesso.
+
+### Fixed
+
+- sessione web resa esplicitamente persistente per dodici mesi in locale e Production, con una sola policy condivisa da login, setup, auto-login e rinnovo.
+
 ## 0.2.10
 
 ### Changed
