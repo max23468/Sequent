@@ -72,10 +72,8 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOME=/var/lib/sequent \
     PATH=/opt/ocr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    CODEX_HOME=/var/lib/sequent/.codex-sequent \
     SEQUENT_COMMIT_SHA=$APP_COMMIT_SHA \
-    SEQUENT_DATA_DIR=/var/lib/sequent \
-    SEQUENT_CODEX_HOME=/var/lib/sequent/.codex-sequent
+    SEQUENT_DATA_DIR=/var/lib/sequent
 USER 10001:10001
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD ["node", "-e", "fetch('http://127.0.0.1:3000/api/health',{headers:{'X-Forwarded-For':'127.0.0.1'}}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
