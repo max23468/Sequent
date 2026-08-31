@@ -56,7 +56,7 @@ describe("flusso ufficiale persistente", () => {
       format: "xstream-zip-v1",
       fields: 1,
       acquisition: {
-        version: 2,
+        version: 3,
         mappedFields: 1,
         importedFields: 1,
         missingTargets: 0,
@@ -100,7 +100,7 @@ describe("flusso ufficiale persistente", () => {
 
     expect(artifact.metadata).toMatchObject({
       acquisition: {
-        version: 2,
+        version: 3,
         mappedFields: 1,
         importedFields: 1,
         unchangedFields: 0,
@@ -277,6 +277,73 @@ describe("flusso ufficiale persistente", () => {
       listDeclarationSubjectEntries(database, practice.id, practice.declarationId),
     ).toHaveLength(1);
     expect(listPracticeDocuments(database, practice.id)).toHaveLength(1);
+  });
+
+  it("riallinea l’identità duplicata di un soggetto riusato da una vecchia acquisizione", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-official-flow-identity-repair-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica DIZ con identità storica");
+    const bytes = syntheticDizFromFields([
+      { quadro: "EA", module: "00000001", field: "001001", value: "RSSMRA80A01H501U" },
+      { quadro: "EA", module: "00000001", field: "001005", value: "ROSSI" },
+      { quadro: "EA", module: "00000001", field: "001006", value: "MARIO" },
+    ]);
+    const artifact = await importDiz(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      file: new File([new Uint8Array(bytes)], "identita.diz"),
+      dataDirectory: directory,
+    });
+    const entry = listDeclarationSubjectEntries(database, practice.id, practice.declarationId)[0]!;
+    database
+      .prepare(`UPDATE shared_subjects SET display_name = 'ROSSI', tax_code = NULL WHERE id = ?`)
+      .run(entry.subjectId);
+    database
+      .prepare(
+        `UPDATE declaration_subject_entries
+         SET display_name_snapshot = 'ROSSI', tax_code_snapshot = NULL
+         WHERE declaration_id = ? AND entry_id = ?`,
+      )
+      .run(practice.declarationId, entry.id);
+
+    const repaired = await repairImportedDizAcquisition(database, {
+      practiceId: practice.id,
+      artifactId: artifact.id,
+      dataDirectory: directory,
+    });
+    const repeated = await repairImportedDizAcquisition(database, {
+      practiceId: practice.id,
+      artifactId: artifact.id,
+      dataDirectory: directory,
+    });
+
+    expect(repaired).toMatchObject({
+      synchronizedSubjectEntries: 1,
+      synchronizedSharedSubjects: 1,
+      subjectIdentityConflicts: 0,
+    });
+    expect(repeated).toMatchObject({
+      synchronizedSubjectEntries: 0,
+      synchronizedSharedSubjects: 0,
+      subjectIdentityConflicts: 0,
+    });
+    expect(
+      database
+        .prepare(
+          `SELECT entries.display_name_snapshot, entries.tax_code_snapshot,
+                  subjects.display_name, subjects.tax_code
+           FROM declaration_subject_entries AS entries
+           JOIN shared_subjects AS subjects ON subjects.id = entries.subject_id
+           WHERE entries.entry_id = ?`,
+        )
+        .get(entry.id),
+    ).toEqual({
+      display_name_snapshot: "ROSSI MARIO",
+      tax_code_snapshot: "RSSMRA80A01H501U",
+      display_name: "ROSSI MARIO",
+      tax_code: "RSSMRA80A01H501U",
+    });
   });
 
   it("non sovrascrive un valore già presente quando il DIZ diverge", async () => {

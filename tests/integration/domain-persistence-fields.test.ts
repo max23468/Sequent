@@ -11,6 +11,7 @@ import {
   createDeclarationSubjectEntry,
   createSharedSubject,
   listSharedSubjects,
+  listSharedSubjectsForDeclaration,
 } from "../../src/lib/server/domain-subjects.ts";
 import { listPracticeDeadlines } from "../../src/lib/server/domain-read-models.ts";
 import {
@@ -387,6 +388,54 @@ describe("persistenza del procedimento", () => {
     const declaration = getDeclaration(database, practice.declarationId)!.declaration;
     expect(getCanonicalField(declaration, fieldId, first.id)?.value).toBe("RSSMRA80A01H501U");
     expect(getCanonicalField(declaration, fieldId, second.id)?.value).toBe("VRDLGI80A01H501U");
+  });
+
+  it("usa l’identità canonica e l’ordine EA anche nella vista operativa", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-subject-identity-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Procedimento sintetico");
+    const first = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Zeta provvisoria",
+    });
+    const second = createSharedSubject(database, practice.id, {
+      role: "beneficiary",
+      displayName: "Alfa provvisoria",
+    });
+
+    const result = saveCanonicalFields(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      expectedRevision: 1,
+      entityId: first.id,
+      fields: [
+        { fieldId: "quadro-ea.soggetto.dati-anagrafici.cognome", value: "ROSSI" },
+        { fieldId: "quadro-ea.soggetto.nome", value: "MARIO" },
+        { fieldId: "quadro-ea.soggetto.codice-fiscale", value: "RSSMRA80A01H501U" },
+      ],
+    });
+
+    expect(result.issues).toEqual([]);
+    expect(
+      listSharedSubjectsForDeclaration(database, practice.id, practice.declarationId).map(
+        (subject) => ({ id: subject.id, name: subject.displayName, taxCode: subject.taxCode }),
+      ),
+    ).toEqual([
+      { id: first.id, name: "ROSSI MARIO", taxCode: "RSSMRA80A01H501U" },
+      { id: second.id, name: "Alfa provvisoria", taxCode: null },
+    ]);
+    expect(
+      database
+        .prepare(
+          `SELECT display_name_snapshot, tax_code_snapshot
+           FROM declaration_subject_entries WHERE entry_id = ?`,
+        )
+        .get(first.id),
+    ).toEqual({
+      display_name_snapshot: "ROSSI MARIO",
+      tax_code_snapshot: "RSSMRA80A01H501U",
+    });
   });
 
   it("consente più posizioni per lo stesso soggetto e controlla le incoerenze ufficiali", () => {

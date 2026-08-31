@@ -11,6 +11,7 @@ import {
   parseDiz,
 } from "../../src/domain/diz/index.ts";
 import { resolveBlobPath } from "../../src/lib/server/blob-store.ts";
+import { canonicalSubjectIdentity } from "../../src/lib/server/domain-subjects.ts";
 import { getDeclaration } from "../../src/lib/server/practices.ts";
 
 function argument(name: string): string | null {
@@ -104,6 +105,9 @@ try {
               converterOnlyFields?: unknown;
               opaqueFields?: unknown;
               preservedFields?: unknown;
+              synchronizedSubjectEntries?: unknown;
+              synchronizedSharedSubjects?: unknown;
+              subjectIdentityConflicts?: unknown;
               targetBindings?: unknown;
             };
           };
@@ -120,11 +124,14 @@ try {
                 acquisition.converterOnlyFields,
                 acquisition.opaqueFields,
                 acquisition.preservedFields,
+                acquisition.synchronizedSubjectEntries,
+                acquisition.synchronizedSharedSubjects,
+                acquisition.subjectIdentityConflicts,
               ]
             : [];
           if (
             !acquisition ||
-            acquisition.version !== 2 ||
+            acquisition.version !== 3 ||
             counts.some((count) => !Number.isInteger(count) || Number(count) < 0) ||
             metadata.format !== parsed.format ||
             metadata.fields !== parsed.fields.length ||
@@ -138,6 +145,7 @@ try {
               mappedFields.length ||
             acquisition.conflictingFields !== 0 ||
             acquisition.missingTargets !== 0 ||
+            acquisition.subjectIdentityConflicts !== 0 ||
             acquisition.preservedFields !==
               Number(acquisition.converterOnlyFields) + Number(acquisition.opaqueFields) ||
             !acquisition.targetBindings ||
@@ -195,6 +203,45 @@ try {
         ) !== field.value
       ) {
         throw new Error(`DIZ_CORPUS_QUALIFICATION_CANONICAL_READBACK:${index + 1}`);
+      }
+    }
+    const subjectTargetIds = new Set(
+      mappedFields
+        .filter((field) => importMappingFor(field)?.entityScope === "subject")
+        .map((field) => {
+          const mapping = importMappingFor(field)!;
+          return acquisition.targetBindings[dizMappingIdentity(field, mapping)] ?? null;
+        })
+        .filter((targetId): targetId is string => Boolean(targetId)),
+    );
+    for (const entryId of subjectTargetIds) {
+      const identity = canonicalSubjectIdentity(declaration, entryId);
+      const stored = database
+        .prepare(
+          `SELECT entries.display_name_snapshot, entries.tax_code_snapshot,
+                  subjects.display_name, subjects.tax_code
+           FROM declaration_subject_entries AS entries
+           JOIN shared_subjects AS subjects ON subjects.id = entries.subject_id
+           WHERE entries.declaration_id = ? AND entries.entry_id = ?
+             AND subjects.practice_id = ?`,
+        )
+        .get(declarationId, entryId, practiceId) as
+        | {
+            display_name_snapshot: string | null;
+            tax_code_snapshot: string | null;
+            display_name: string;
+            tax_code: string | null;
+          }
+        | undefined;
+      if (
+        !stored ||
+        (identity.displayName !== null &&
+          (stored.display_name_snapshot !== identity.displayName ||
+            stored.display_name !== identity.displayName)) ||
+        (identity.hasTaxCode &&
+          (stored.tax_code_snapshot !== identity.taxCode || stored.tax_code !== identity.taxCode))
+      ) {
+        throw new Error(`DIZ_CORPUS_QUALIFICATION_SUBJECT_IDENTITY:${index + 1}`);
       }
     }
     samples.push({

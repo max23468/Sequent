@@ -15,11 +15,12 @@ import {
   createSharedSubject,
   listDeclarationSubjectEntries,
   listSharedSubjects,
+  synchronizeCanonicalSubjectIdentities,
 } from "./domain-subjects.ts";
 import { getDeclaration, saveDeclaration } from "./practices.ts";
 
 export interface DizAcquisitionSummary {
-  version: 2;
+  version: 3;
   sourceFields: number;
   nonEmptyFields: number;
   mappedFields: number;
@@ -33,6 +34,9 @@ export interface DizAcquisitionSummary {
   createdSubjects: number;
   createdAssets: number;
   createdDecedent: boolean;
+  synchronizedSubjectEntries: number;
+  synchronizedSharedSubjects: number;
+  subjectIdentityConflicts: number;
   targetBindings: Record<string, string>;
 }
 
@@ -296,9 +300,14 @@ export function acquireDizFields(
   }
   if (importedFields > 0)
     saveDeclaration(database, input.declarationId, record.revision, declaration);
+  const identitySynchronization = synchronizeCanonicalSubjectIdentities(
+    database,
+    input.practiceId,
+    input.declarationId,
+  );
   const preservedFields = converterOnlyFields + opaqueFields + conflictingFields + missingTargets;
   return {
-    version: 2,
+    version: 3,
     sourceFields: fields.length,
     nonEmptyFields: nonEmptyFields.length,
     mappedFields: mapped.length,
@@ -312,6 +321,9 @@ export function acquireDizFields(
     createdSubjects: targets.createdSubjects,
     createdAssets: targets.createdAssets,
     createdDecedent: targets.createdDecedent,
+    synchronizedSubjectEntries: identitySynchronization.synchronizedEntries,
+    synchronizedSharedSubjects: identitySynchronization.synchronizedSubjects,
+    subjectIdentityConflicts: identitySynchronization.conflictingSubjects,
     targetBindings: targets.bindings,
   };
 }

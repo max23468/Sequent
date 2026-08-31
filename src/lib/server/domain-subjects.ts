@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
-import { setCanonicalField } from "../../domain/declaration.ts";
+import {
+  getCanonicalField,
+  setCanonicalField,
+  type DeclarationSnapshot,
+} from "../../domain/declaration.ts";
 import { getDeclaration, saveDeclaration } from "./practices.ts";
 import type {
   DeclarationDossierSubject,
@@ -37,6 +41,162 @@ export function listSharedSubjects(
     revision: Number(row.revision),
     updatedAt: String(row.updated_at),
   }));
+}
+
+interface CanonicalSubjectIdentity {
+  displayName: string | null;
+  hasTaxCode: boolean;
+  taxCode: string | null;
+}
+
+export interface SubjectIdentitySynchronization {
+  synchronizedEntries: number;
+  synchronizedSubjects: number;
+  conflictingSubjects: number;
+}
+
+function fieldText(
+  declaration: DeclarationSnapshot,
+  fieldId: string,
+  entityId: string,
+): { present: boolean; value: string } {
+  const field = getCanonicalField(declaration, fieldId, entityId);
+  return {
+    present: Boolean(field),
+    value: field ? String(field.value ?? "").trim() : "",
+  };
+}
+
+export function canonicalSubjectIdentity(
+  declaration: DeclarationSnapshot,
+  entityId: string,
+  scope: "subject" | "decedent" = "subject",
+): CanonicalSubjectIdentity {
+  const prefix = scope === "decedent" ? "frontespizio.defunto" : "quadro-ea.soggetto";
+  const surname = fieldText(
+    declaration,
+    scope === "decedent" ? `${prefix}.cognome` : `${prefix}.dati-anagrafici.cognome`,
+    entityId,
+  );
+  const name = fieldText(declaration, `${prefix}.nome`, entityId);
+  const denomination =
+    scope === "subject"
+      ? fieldText(declaration, `${prefix}.denominazione`, entityId)
+      : { present: false, value: "" };
+  const taxCode = fieldText(declaration, `${prefix}.codice-fiscale`, entityId);
+  return {
+    displayName:
+      denomination.value || [surname.value, name.value].filter(Boolean).join(" ") || null,
+    hasTaxCode: taxCode.present,
+    taxCode: taxCode.value || null,
+  };
+}
+
+export function synchronizeCanonicalSubjectIdentities(
+  database: Database.Database,
+  practiceId: string,
+  declarationId: string,
+): SubjectIdentitySynchronization {
+  const record = getDeclaration(database, declarationId, practiceId);
+  if (!record) throw new Error("DECLARATION_NOT_FOUND");
+  const rows = database
+    .prepare(
+      `SELECT entries.entry_id, entries.subject_id, entries.display_name_snapshot,
+              entries.tax_code_snapshot
+       FROM declaration_subject_entries AS entries
+       JOIN shared_subjects AS subjects ON subjects.id = entries.subject_id
+       WHERE entries.declaration_id = ? AND subjects.practice_id = ?
+       ORDER BY entries.sequence`,
+    )
+    .all(declarationId, practiceId) as Array<{
+    entry_id: string;
+    subject_id: string;
+    display_name_snapshot: string | null;
+    tax_code_snapshot: string | null;
+  }>;
+  const candidates = new Map<
+    string,
+    Array<{ displayName: string | null; hasTaxCode: boolean; taxCode: string | null }>
+  >();
+  let synchronizedEntries = 0;
+  const now = new Date().toISOString();
+  for (const row of rows) {
+    const identity = canonicalSubjectIdentity(record.declaration, row.entry_id);
+    const nextDisplayName = identity.displayName ?? row.display_name_snapshot;
+    const nextTaxCode = identity.hasTaxCode ? identity.taxCode : row.tax_code_snapshot;
+    if (nextDisplayName !== row.display_name_snapshot || nextTaxCode !== row.tax_code_snapshot) {
+      database
+        .prepare(
+          `UPDATE declaration_subject_entries
+           SET display_name_snapshot = ?, tax_code_snapshot = ?
+           WHERE declaration_id = ? AND entry_id = ?`,
+        )
+        .run(nextDisplayName, nextTaxCode, declarationId, row.entry_id);
+      synchronizedEntries += 1;
+    }
+    const subjectCandidates = candidates.get(row.subject_id) ?? [];
+    subjectCandidates.push(identity);
+    candidates.set(row.subject_id, subjectCandidates);
+  }
+
+  const decedent = database
+    .prepare(
+      `SELECT id FROM shared_subjects
+       WHERE practice_id = ? AND role = 'decedent'`,
+    )
+    .get(practiceId) as { id: string } | undefined;
+  if (decedent) {
+    candidates.set(decedent.id, [
+      canonicalSubjectIdentity(record.declaration, decedent.id, "decedent"),
+    ]);
+  }
+
+  let synchronizedSubjects = 0;
+  let conflictingSubjects = 0;
+  for (const [subjectId, identities] of candidates) {
+    const displayNames = new Set(
+      identities
+        .map((identity) => identity.displayName)
+        .filter((value): value is string => Boolean(value)),
+    );
+    const taxCodes = new Set(
+      identities
+        .filter((identity) => identity.hasTaxCode)
+        .map((identity) => identity.taxCode ?? ""),
+    );
+    if (displayNames.size > 1 || taxCodes.size > 1) {
+      conflictingSubjects += 1;
+      continue;
+    }
+    const displayName = displayNames.values().next().value as string | undefined;
+    const hasTaxCode = taxCodes.size === 1;
+    const taxCodeValue = taxCodes.values().next().value as string | undefined;
+    if (!displayName && !hasTaxCode) continue;
+    const result = database
+      .prepare(
+        `UPDATE shared_subjects
+         SET display_name = CASE WHEN ? THEN ? ELSE display_name END,
+             tax_code = CASE WHEN ? THEN ? ELSE tax_code END,
+             revision = revision + 1, updated_at = ?
+         WHERE id = ? AND practice_id = ?
+           AND ((? AND display_name IS NOT ?) OR (? AND tax_code IS NOT ?))`,
+      )
+      .run(
+        displayName ? 1 : 0,
+        displayName ?? null,
+        hasTaxCode ? 1 : 0,
+        hasTaxCode ? taxCodeValue || null : null,
+        now,
+        subjectId,
+        practiceId,
+        displayName ? 1 : 0,
+        displayName ?? null,
+        hasTaxCode ? 1 : 0,
+        hasTaxCode ? taxCodeValue || null : null,
+      );
+    synchronizedSubjects += result.changes;
+  }
+  return { synchronizedEntries, synchronizedSubjects, conflictingSubjects };
 }
 
 export function createSharedSubject(
@@ -126,6 +286,8 @@ export function listDeclarationSubjectEntries(
   practiceId: string,
   declarationId: string,
 ): DeclarationSubjectEntry[] {
+  const record = getDeclaration(database, declarationId, practiceId);
+  if (!record) return [];
   const rows = database
     .prepare(
       `SELECT declaration_subject_entries.entry_id,
@@ -150,6 +312,7 @@ export function listDeclarationSubjectEntries(
   const occurrences = new Map<string, number>();
   return rows.map((row) => {
     const subjectId = String(row.subject_id);
+    const identity = canonicalSubjectIdentity(record.declaration, String(row.entry_id));
     const occurrence = (occurrences.get(subjectId) ?? 0) + 1;
     occurrences.set(subjectId, occurrence);
     return {
@@ -159,10 +322,48 @@ export function listDeclarationSubjectEntries(
       sequence: Number(row.sequence),
       occurrence,
       role: String(row.role) as SubjectRole,
-      displayName: String(row.display_name),
-      taxCode: row.tax_code === null ? null : String(row.tax_code),
+      displayName: identity.displayName ?? String(row.display_name),
+      taxCode: identity.hasTaxCode
+        ? identity.taxCode
+        : row.tax_code === null
+          ? null
+          : String(row.tax_code),
     };
   });
+}
+
+export function listSharedSubjectsForDeclaration(
+  database: Database.Database,
+  practiceId: string,
+  declarationId: string,
+): SharedSubject[] {
+  const shared = listSharedSubjects(database, practiceId);
+  const sharedById = new Map(shared.map((subject) => [subject.id, subject]));
+  const record = getDeclaration(database, declarationId, practiceId);
+  const entries = listDeclarationSubjectEntries(database, practiceId, declarationId);
+  const ordered: SharedSubject[] = [];
+  const seen = new Set<string>();
+  const decedent = shared.find((subject) => subject.role === "decedent");
+  if (decedent) {
+    const identity = record
+      ? canonicalSubjectIdentity(record.declaration, decedent.id, "decedent")
+      : null;
+    ordered.push({
+      ...decedent,
+      displayName: identity?.displayName ?? decedent.displayName,
+      taxCode: identity?.hasTaxCode ? identity.taxCode : decedent.taxCode,
+    });
+    seen.add(decedent.id);
+  }
+  for (const entry of entries) {
+    if (seen.has(entry.subjectId)) continue;
+    const subject = sharedById.get(entry.subjectId);
+    if (!subject) continue;
+    ordered.push({ ...subject, displayName: entry.displayName, taxCode: entry.taxCode });
+    seen.add(entry.subjectId);
+  }
+  ordered.push(...shared.filter((subject) => !seen.has(subject.id)));
+  return ordered;
 }
 
 export function listDeclarationDossierSubjects(
@@ -170,7 +371,7 @@ export function listDeclarationDossierSubjects(
   practiceId: string,
   declarationId: string,
 ): DeclarationDossierSubject[] {
-  const decedent = listSharedSubjects(database, practiceId).find(
+  const decedent = listSharedSubjectsForDeclaration(database, practiceId, declarationId).find(
     (subject) => subject.role === "decedent",
   );
   const entries = listDeclarationSubjectEntries(database, practiceId, declarationId);
