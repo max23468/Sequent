@@ -37,7 +37,7 @@
     offlineControls?: Snippet;
   }>();
 
-  let actionsMenu = $state<HTMLDivElement>();
+  let actionsMenu: HTMLDivElement;
   let actionsMenuOpen = $state(false);
   // oxlint-disable-next-line no-unassigned-vars -- Svelte assegna il componente tramite bind:this.
   let renameDialog: { show: () => void };

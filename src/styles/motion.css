@@ -7,8 +7,7 @@
   --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.route-stage,
-.workspace-section-stage {
+.route-stage {
   min-width: 0;
 }
 

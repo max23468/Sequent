@@ -9,7 +9,7 @@
   import "./app.css";
 
   let { children, data } = $props();
-  let accountMenu = $state<HTMLDivElement>();
+  let accountMenu: HTMLDivElement;
   let accountMenuOpen = $state(false);
 
   const navItems = [
