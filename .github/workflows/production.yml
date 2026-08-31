@@ -78,6 +78,18 @@ jobs:
           printf '%s\n' "$SSH_KNOWN_HOSTS" >"$RUNNER_TEMP/sequent-ssh/known_hosts"
           chmod 0600 "$RUNNER_TEMP/sequent-ssh/key" "$RUNNER_TEMP/sequent-ssh/known_hosts"
 
+      - name: Libera spazio Sequent prima del deploy
+        env:
+          SSH_HOST: ${{ secrets.SEQUENT_SSH_HOST }}
+          SSH_USER: ${{ secrets.SEQUENT_SSH_USER }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2029
+          ssh -i "$RUNNER_TEMP/sequent-ssh/key" -o IdentitiesOnly=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/sequent-ssh/known_hosts" \
+            -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "test -f /usr/local/sbin/sequent-prune-docker-images && test ! -L /usr/local/sbin/sequent-prune-docker-images && test \"\$(stat -c '%U:%G:%a' /usr/local/sbin/sequent-prune-docker-images)\" = root:root:755 && sudo /usr/local/sbin/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0"
+
       - name: Distribuisce, verifica e registra il deployment
         env:
           CANDIDATE_COMMIT: ${{ inputs.commit }}
@@ -135,6 +147,19 @@ jobs:
           deployment_status success
           trap - ERR
 
+      - name: Rimuove le immagini Sequent superate
+        env:
+          SSH_HOST: ${{ secrets.SEQUENT_SSH_HOST }}
+          SSH_USER: ${{ secrets.SEQUENT_SSH_USER }}
+        run: |
+          # La release è già attiva e verificata: una pulizia differita non la invalida.
+          if ! ssh -i "$RUNNER_TEMP/sequent-ssh/key" -o IdentitiesOnly=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/sequent-ssh/known_hosts" \
+            -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
+            "test -f /usr/local/sbin/sequent-prune-docker-images && test ! -L /usr/local/sbin/sequent-prune-docker-images && test \"\$(stat -c '%U:%G:%a' /usr/local/sbin/sequent-prune-docker-images)\" = root:root:755 && sudo /usr/local/sbin/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0"; then
+            echo "::warning title=Pulizia dopo il deploy differita::Il timer di manutenzione ritenterà la pulizia selettiva sulla VPS"
+          fi
+
       - name: Crea e rilegge tag e GitHub Release
         env:
           CANDIDATE_COMMIT: ${{ inputs.commit }}
@@ -190,7 +215,7 @@ jobs:
                 if ssh -i "$RUNNER_TEMP/sequent-ssh/key" -o IdentitiesOnly=yes \
                   -o UserKnownHostsFile="$RUNNER_TEMP/sequent-ssh/known_hosts" \
                   -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
-                  "test \"\$(stat -c '%U:%G:%a' /usr/local/sbin/sequent-prune-docker-images)\" = root:root:755 && sudo /usr/local/sbin/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0"; then
+                  "test -f /usr/local/sbin/sequent-prune-docker-images && test ! -L /usr/local/sbin/sequent-prune-docker-images && test \"\$(stat -c '%U:%G:%a' /usr/local/sbin/sequent-prune-docker-images)\" = root:root:755 && sudo /usr/local/sbin/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0"; then
                   cleanup_complete=true
                   break
                 fi

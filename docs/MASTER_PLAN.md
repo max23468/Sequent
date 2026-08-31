@@ -3318,20 +3318,22 @@ Non serve un ambiente staging permanente.
 Dopo approvazione:
 
 1. GitHub Actions costruisce o seleziona l'immagine ARM64 per digest;
-2. verifica la VPS e la release attualmente attiva;
-3. attiva una breve modalità manutenzione e blocca nuove mutazioni;
-4. attende o interrompe in sicurezza il job attivo;
-5. crea lo snapshot tecnico previsto;
-6. esegue il pull del digest GHCR prima della manutenzione, poi migrazioni e aggiornamento del servizio `sequent`;
-7. esegue health check e smoke test;
-8. riapre l'applicazione;
-9. ripristina immagine e snapshot precedenti se uno dei controlli fallisce.
+2. rimuove selettivamente le sole immagini Sequent non protette e verifica il margine disco;
+3. verifica la VPS e la release attualmente attiva;
+4. attiva una breve modalità manutenzione e blocca nuove mutazioni;
+5. attende o interrompe in sicurezza il job attivo;
+6. crea lo snapshot tecnico previsto;
+7. esegue il pull del digest GHCR prima della manutenzione, poi migrazioni e aggiornamento del servizio `sequent`;
+8. esegue health check e smoke test;
+9. riapre l'applicazione;
+10. ripristina immagine e snapshot precedenti se uno dei controlli fallisce;
+11. rimuove le generazioni Sequent divenute obsolete, conservando runtime e rollback.
 
 Non è richiesto zero downtime. Non viene creato un evidence pack formale per ogni deploy. L'app non possiede credenziali GitHub o accesso al socket Docker.
 
 ## 52.6 Aggiornamenti automatici
 
-Una release stabile approvata viene distribuita senza SSH manuale. Dopo il readback Production riuscito l'orchestratore crea e rilegge automaticamente tag e GitHub Release della versione candidata. La pulizia Docker ordinaria resta fuori dal percorso critico ed è demandata al timer selettivo; soltanto un deploy annullato tenta una pulizia immediata di recupero. `Pubblica` autorizza la distribuzione tecnica applicabile di una modifica runtime su un'istanza già attiva, ma non esiste auto-pubblicazione a ogni merge e una PR documentale, di test o di governance non avvia il deploy. Non esiste promozione Development → Production: si sostituisce soltanto la release attiva dell'unica istanza. La prima attivazione resta separata.
+Una release stabile approvata viene distribuita senza SSH manuale. Nei deploy successivi alla prima attivazione, la corsia Production esegue prima di creare il Deployment GitHub una pulizia selettiva bloccante delle sole immagini Sequent non protette, usando il tool installato root-owned e il lock Docker condiviso; l'immagine attiva, il rollback, i container e gli identificativi trattenuti restano protetti. Dopo il readback riuscito ripete la pulizia in forma non bloccante, così elimina anche la generazione che non è più necessaria al rollback; il timer selettivo resta il recupero periodico e un deploy annullato tenta una pulizia immediata dopo il rollback. L'immagine appena distribuita non viene eliminata perché è il runtime attivo. Dopo il readback Production riuscito l'orchestratore crea e rilegge automaticamente tag e GitHub Release della versione candidata. `Pubblica` autorizza la distribuzione tecnica applicabile di una modifica runtime su un'istanza già attiva, ma non esiste auto-pubblicazione a ogni merge e una PR documentale, di test o di governance non avvia il deploy. Non esiste promozione Development → Production: si sostituisce soltanto la release attiva dell'unica istanza. La prima attivazione resta separata.
 
 ## 52.7 Dipendenze
 
