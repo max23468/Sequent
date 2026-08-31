@@ -216,8 +216,8 @@
           <div class="table-row table-header" aria-hidden="true"><span>Pratica</span><span>Stato</span><span>Documenti</span><span>Aggiornato</span><span></span></div>
           {#each data.practices.slice(0, 5) as practice (practice.id)}
             <a class="table-row practice-row" href={`/pratiche/${practice.id}`}>
-              <strong>{practice.title}</strong><span class="status-cell"><i></i>{domainSummary(practice.id)?.label ?? "Da impostare"}</span><span>{practice.documentCount}</span>
-              <time datetime={practice.updatedAt}>{formatItalianDate(practice.updatedAt)}</time><ChevronRight size={19} aria-hidden="true" />
+              <strong>{practice.title}</strong><span class="status-cell"><i></i>{domainSummary(practice.id)?.label ?? "Da impostare"}</span><span class="document-count">{practice.documentCount}<span class="mobile-document-label">{" "}{practice.documentCount === 1 ? "documento" : "documenti"}</span></span>
+              <time class="recent-date" datetime={practice.updatedAt}>{formatItalianDate(practice.updatedAt)}</time><ChevronRight class="recent-chevron" size={19} aria-hidden="true" />
             </a>
           {/each}
         </div>

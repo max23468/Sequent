@@ -31,6 +31,33 @@ test("limita i box della Dashboard e mantiene le scorciatoie", async ({ page }) 
     "border-top-style",
     "solid",
   );
+
+  const documentShortcut = await page.locator(".attention-panel .panel-shortcut").boundingBox();
+  const practiceShortcut = await page.locator(".deadlines-panel .panel-shortcut").boundingBox();
+  expect(documentShortcut).not.toBeNull();
+  expect(practiceShortcut).not.toBeNull();
+  await expect
+    .poll(async () => {
+      const currentDocumentShortcut = await page
+        .locator(".attention-panel .panel-shortcut")
+        .boundingBox();
+      const currentPracticeShortcut = await page
+        .locator(".deadlines-panel .panel-shortcut")
+        .boundingBox();
+      return Math.abs((currentDocumentShortcut?.y ?? 0) - (currentPracticeShortcut?.y ?? 0));
+    })
+    .toBeLessThanOrEqual(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const recentRow = page.locator(".recent-panel .practice-row").first();
+  const recentDate = await recentRow.locator(".recent-date").boundingBox();
+  const recentChevron = await recentRow.locator(".recent-chevron").boundingBox();
+  expect(recentDate).not.toBeNull();
+  expect(recentChevron).not.toBeNull();
+  const dateCenter = (recentDate?.y ?? 0) + (recentDate?.height ?? 0) / 2;
+  const chevronCenter = (recentChevron?.y ?? 0) + (recentChevron?.height ?? 0) / 2;
+  expect(Math.abs(dateCenter - chevronCenter)).toBeLessThanOrEqual(1);
+  await expect(recentRow.locator(".document-count")).toHaveText(/^\d+\sdocumenti?$/);
+  await expect(recentRow.locator(".status-cell")).not.toContainText("documenti");
 });
 
 test("mostra gli automatici confermati dalla stessa fonte e in sola lettura nelle due viste", async ({
