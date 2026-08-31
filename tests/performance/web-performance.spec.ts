@@ -51,11 +51,10 @@ test("misura Dashboard, ricerca e apertura pratica sulla build di produzione", a
   context,
 }) => {
   await page.goto("/");
-  if (page.url().endsWith("/setup")) {
+  if (page.url().endsWith("/login")) {
     await page.getByLabel("Nome utente").fill("Benchmark");
-    await page.getByLabel("Password", { exact: true }).fill(password);
-    await page.getByLabel("Ripeti la password").fill(password);
-    await page.getByRole("button", { name: "Crea account" }).click();
+    await page.getByLabel("Password").fill(password);
+    await page.getByRole("button", { name: "Accedi" }).click();
   }
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 

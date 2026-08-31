@@ -16,12 +16,13 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `npm run build && npm run preview -- --host 127.0.0.1 --port ${port}`,
+    command: `node tests/performance/prepare-owner.ts && npm run build && npm run preview -- --host 127.0.0.1 --port ${port}`,
     port,
     timeout: 180_000,
     reuseExistingServer: false,
     env: {
       SEQUENT_DATA_DIR: dataDirectory,
+      SEQUENT_PERFORMANCE_DATA_DIR: dataDirectory,
       SEQUENT_SECURE_COOKIES: "false",
       SEQUENT_CODEX_ENABLED: "false",
       SEQUENT_DIZ_ENABLED: "false",
