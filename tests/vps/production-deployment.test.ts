@@ -39,7 +39,9 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /install -o root -g root -m 0600.*run-trusted-deploy\.sh/);
   assert.match(workflow, /sha256sum --check --strict/);
   assert.match(workflow, /install -o root -g root -m 0755.*sequent-run-trusted-deploy/);
-  assert.doesNotMatch(workflow, /name: Pulisce le immagini dopo il deploy/);
+  assert.match(workflow, /name: Libera spazio Sequent prima del deploy/);
+  assert.match(workflow, /name: Rimuove le immagini Sequent superate/);
+  assert.match(workflow, /::warning title=Pulizia dopo il deploy differita::/);
   assert.match(workflow, /SEQUENT_GHCR_USERNAME/);
   assert.match(workflow, /SEQUENT_GHCR_TOKEN/);
   assert.match(workflow, /docker login ghcr\.io.*--password-stdin/);
@@ -55,13 +57,37 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /state: "failure"/);
   assert.match(workflow, /if \[\[ "\$JOB_STATUS" == cancelled \]\]/);
   assert.match(workflow, /::warning title=Pulizia dopo annullamento differita::/);
+  const preDeployCleanup = workflow.indexOf("name: Libera spazio Sequent prima del deploy");
+  const deploymentCreation = workflow.indexOf('deployment_id="$(jq');
+  const trustedDeploy = workflow.indexOf(
+    "sudo /usr/local/sbin/sequent-run-trusted-deploy --commit",
+  );
+  const postDeployCleanup = workflow.indexOf("name: Rimuove le immagini Sequent superate");
+  const releaseCreation = workflow.indexOf("name: Crea e rilegge tag e GitHub Release");
+  assert.ok(preDeployCleanup > workflow.indexOf("name: Prepara il canale SSH effimero"));
+  assert.ok(preDeployCleanup < deploymentCreation);
+  assert.ok(deploymentCreation < trustedDeploy);
+  assert.ok(trustedDeploy < postDeployCleanup);
+  assert.ok(postDeployCleanup < releaseCreation);
+  assert.match(workflow.slice(preDeployCleanup, deploymentCreation), /test .*stat -c '%U:%G:%a'/);
+  assert.match(
+    workflow.slice(preDeployCleanup, deploymentCreation),
+    /test -f \/usr\/local\/sbin\/sequent-prune-docker-images && test ! -L \/usr\/local\/sbin\/sequent-prune-docker-images/,
+  );
+  assert.match(
+    workflow.slice(preDeployCleanup, deploymentCreation),
+    /sudo \/usr\/local\/sbin\/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0/,
+  );
+  assert.match(
+    workflow.slice(postDeployCleanup, releaseCreation),
+    /sudo \/usr\/local\/sbin\/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0/,
+  );
   const cancellationCleanup = workflow.indexOf('if [[ "$JOB_STATUS" == cancelled ]]');
   assert.ok(cancellationCleanup > workflow.indexOf("deployment_status success"));
   assert.match(
     workflow.slice(cancellationCleanup),
     /sudo \/usr\/local\/sbin\/sequent-prune-docker-images --minimum-age-hours 0 --dangling-age-hours 0/,
   );
-  assert.doesNotMatch(workflow.slice(0, cancellationCleanup), /sequent-prune-docker-images/);
   assert.doesNotMatch(workflow, /sudo \/opt\/sequent\/repo\/scripts/);
   assert.doesNotMatch(workflow, /docker build|continue-on-error/);
 });
@@ -76,6 +102,8 @@ test("il runbook qualifica la finalizzazione di un deploy annullato", () => {
     runbook,
     /runtime corrente, rollback, container e immagini trattenute restano protetti/,
   );
+  assert.match(runbook, /prima di creare il Deployment GitHub/);
+  assert.match(runbook, /[Dd]opo il readback riuscito/);
 });
 
 test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
