@@ -41,7 +41,7 @@ RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
       ca-certificates file fonts-dejavu-core ghostscript icc-profiles-free imagemagick jbig2 libcap2-bin \
       libreoffice-calc-nogui libreoffice-core-nogui libreoffice-writer-nogui openssl pngquant \
-      poppler-utils python3 qpdf tesseract-ocr tesseract-ocr-ita unpaper unzip \
+      bubblewrap poppler-utils python3 qpdf tesseract-ocr tesseract-ocr-ita unpaper unzip \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 sequent \
     && useradd --uid 10001 --gid 10001 --home-dir /var/lib/sequent \
@@ -60,8 +60,9 @@ RUN find / -xdev -type f -perm /6000 -exec chmod a-s {} + \
           capability_path="${capability_line%% *}"; \
           test -z "$capability_path" || setcap -r "$capability_path"; \
         done \
+    && chmod 4755 /usr/bin/bwrap \
     && test -z "$(getcap -r / 2>/dev/null)" \
-    && test -z "$(find / -xdev -type f -perm /6000 -print -quit)" \
+    && test "$(find / -xdev -type f -perm /6000 -print)" = /usr/bin/bwrap \
     && test -z "$(find /app/node_modules/@openai -perm /022 -print -quit)"
 ARG APP_COMMIT_SHA=unversioned
 LABEL org.opencontainers.image.source="https://github.com/max23468/Sequent" \

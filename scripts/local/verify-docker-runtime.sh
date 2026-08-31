@@ -22,6 +22,7 @@ test "$(npm --version)" = 12.0.2
 for script in backup connect-codex qualify-codex-runtime qualify-diz-corpus repair-diz-acquisitions reset-owner restore seed-synthetic; do
   test -r "/app/scripts/admin/$script.ts"
 done
+test -r /app/src/lib/server/codex-runner-server.ts
 for tool in file gs jbig2 libreoffice magick ocrmypdf openssl pdftoppm pngquant \
   python3 qpdf tesseract unpaper unzip; do
   command -v "$tool" >/dev/null
@@ -34,6 +35,7 @@ test -z "$(find /app/node_modules/@openai -writable -print -quit)"
 bwrap_path="$(find /app/node_modules/@openai -type f -name bwrap -print -quit)"
 test -n "$bwrap_path"
 test -x "$bwrap_path"
+test -u /usr/bin/bwrap
 printf "runtime_packages=%s\n" "$(dpkg-query -W | wc -l | tr -d " ")"
 '
 
@@ -41,7 +43,8 @@ docker run --rm --platform linux/arm64 --user 0:0 --entrypoint /bin/sh "$image" 
 set -eu
 test -z "$(getcap -r / 2>/dev/null)"
 setid_files="$(find / -xdev -type f -perm /6000 -print 2>/dev/null)"
-test -z "$setid_files"
+test "$setid_files" = /usr/bin/bwrap
+test "$(stat -c %a /usr/bin/bwrap)" = 4755
 '
 
 printf 'Runtime Docker qualificato: immagine=%s piattaforma=linux/arm64 utente=10001:10001\n' \

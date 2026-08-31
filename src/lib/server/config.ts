@@ -45,6 +45,14 @@ export function getCodexHome(): string | undefined {
   return process.env.SEQUENT_CODEX_HOME;
 }
 
+export function getCodexRunnerSocket(): string | undefined {
+  return process.env.SEQUENT_CODEX_RUNNER_SOCKET;
+}
+
+export function getCodexWorkspaceRoot(): string | undefined {
+  return process.env.SEQUENT_CODEX_WORKSPACE_ROOT;
+}
+
 function featureEnabled(environmentName: string): boolean {
   const configured = process.env[environmentName];
   if (configured === "true") return true;
