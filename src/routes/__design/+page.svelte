@@ -1,5 +1,7 @@
 <script lang="ts">
   import { CalendarClock, ChevronRight, ExternalLink, FileText, History, Home, MoreVertical, Plus, Upload, UserRound } from "@lucide/svelte";
+  import "../../styles/design-lab.css";
+  import "../../styles/design-lab-responsive.css";
 
   const checks = [
     { id: "PR-2026-048", item: "Documento illeggibile", source: "Documento · p. 1", updated: "24 ago 2026", icon: UserRound },

@@ -1,3 +1,11 @@
+.dashboard-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 24px;
+}
+
 .dashboard-heading h1,
 .page-heading h1,
 .practice-heading h1 {

@@ -4,6 +4,17 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.9
+
+### Added
+
+- benchmark browser ripetibile della Dashboard con budget su payload, stabilità visiva e richieste di ricerca.
+
+### Changed
+
+- fogli di stile e capacità offline caricati soltanto nelle route che li utilizzano, riducendo il payload iniziale della Dashboard;
+- ricerca interattiva accorpata con debounce e cancellazione delle richieste superate, mantenendo soltanto il risultato più recente.
+
 ## 0.2.8
 
 ### Fixed

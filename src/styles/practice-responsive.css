@@ -1,0 +1,349 @@
+@media (max-width: 1180px) {
+  .practice-workspace {
+    grid-template-columns: 190px minmax(0, 1fr);
+  }
+  .export-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .practice-heading {
+    grid-template-columns: minmax(260px, 1fr) auto auto auto auto;
+    gap: 12px;
+  }
+  .practice-heading .offline-practice-actions .button {
+    padding-inline: 10px;
+  }
+}
+
+@media (max-width: 820px) {
+  .practice-heading {
+    align-items: flex-start;
+    grid-template-areas:
+      "copy copy"
+      "declaration actions"
+      "view view"
+      "offline offline";
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .practice-title-line,
+  .practice-meta {
+    width: 100%;
+  }
+  .practice-heading h1 {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .practice-heading-copy {
+    grid-area: copy;
+  }
+  .practice-declaration-selector {
+    grid-area: declaration;
+  }
+  .practice-declaration-selector select {
+    width: 100%;
+    max-width: none;
+  }
+  .practice-view-switch {
+    grid-area: view;
+    width: 100%;
+  }
+  .practice-view-switch button {
+    flex: 1;
+  }
+  .domain-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+  .domain-summary > div + div {
+    border-left: 0;
+  }
+  .domain-summary > div:nth-child(even) {
+    border-left: 1px solid var(--line-soft);
+  }
+  .domain-summary > div:nth-child(n + 3) {
+    border-top: 1px solid var(--line-soft);
+  }
+  .practice-meta {
+    flex-wrap: wrap;
+  }
+  .practice-workspace {
+    grid-template-columns: 1fr;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    gap: 18px;
+  }
+  .workspace-actions-menu {
+    grid-area: actions;
+    position: static;
+  }
+  .practice-heading .offline-practice-controls {
+    grid-area: offline;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .practice-heading .offline-practice-status small {
+    display: inline;
+  }
+  .workspace-actions-popover {
+    top: calc(100% + 8px);
+    left: 0;
+    right: auto;
+    width: min(240px, 100%);
+  }
+  .workspace-sections,
+  .workspace-main {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface);
+  }
+  .workspace-sections > .workspace-panel-heading {
+    display: none;
+  }
+  .workspace-sections-toggle {
+    display: flex;
+    width: 100%;
+    min-height: 66px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 11px 16px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+  }
+  .workspace-sections-toggle > span {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+  }
+  .workspace-sections-toggle small {
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .workspace-sections-toggle strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .workspace-sections-toggle svg {
+    flex: 0 0 auto;
+    transition: transform 160ms ease;
+  }
+  .workspace-sections-toggle[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+  .workspace-sections nav {
+    display: grid;
+    width: 100%;
+    max-width: 100%;
+    max-height: 330px;
+    box-sizing: border-box;
+    gap: 6px;
+    overflow-y: auto;
+    padding: 10px 12px 12px;
+    border-top: 1px solid var(--line-soft);
+    scrollbar-width: thin;
+  }
+  .workspace-sections nav:not(.mobile-open) {
+    display: none;
+  }
+  .workspace-sections nav button {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 12px;
+    white-space: nowrap;
+  }
+  .source-empty {
+    min-height: 250px;
+  }
+  .source-viewer {
+    max-height: 480px;
+  }
+  .checklist-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .checklist-row label,
+  .checklist-note {
+    grid-column: 2;
+  }
+  .devolution-beneficiary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .devolution-beneficiary > strong {
+    grid-column: 1 / -1;
+  }
+  .calculation-actions,
+  .decision-confirmation {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .export-grid,
+  .calculation-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .inline-upload > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .workspace-main {
+    --workspace-content-gutter: 16px;
+  }
+  .workspace-main > .workspace-panel-heading {
+    min-height: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+  .workspace-main > .workspace-panel-heading h2 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .workspace-main .button {
+    max-width: 100%;
+    padding: 9px 14px;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+  }
+  .official-field > div,
+  .official-fields-actions,
+  .official-occurrence-actions,
+  .qualification-notice {
+    flex-direction: column;
+  }
+  .official-occurrence-actions {
+    align-items: stretch;
+  }
+  .official-occurrence-actions .button,
+  .official-occurrence-actions .button.text {
+    width: 100%;
+    margin-left: 0;
+  }
+  .checklist-form > .official-fields-actions,
+  .devolution-form > .official-fields-actions {
+    align-items: stretch;
+    padding-bottom: 14px;
+  }
+  .checklist-form > .official-fields-actions .button,
+  .devolution-form > .official-fields-actions .button,
+  .official-fields .button,
+  .calculation-actions form,
+  .calculation-actions .button,
+  .decision-confirmation form,
+  .decision-confirmation .button,
+  .export-actions .button,
+  .duplicate-subject-entry .button,
+  .analysis-toolbar form,
+  .analysis-toolbar .button,
+  .processing-errors form,
+  .processing-errors .button,
+  .processing-active form,
+  .processing-active .button,
+  .processing-active progress,
+  .practice-meta .button {
+    width: 100%;
+  }
+  .official-fields {
+    padding-inline: 16px;
+  }
+  .official-fields-group {
+    padding-inline: 12px;
+  }
+  .official-fields-group-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .operational-canonical-heading,
+  .operational-fields-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .operational-fields-meta {
+    text-align: left;
+  }
+  .official-fields .button {
+    width: 100%;
+  }
+  .devolution-beneficiary,
+  .calculation-beneficiary dl {
+    grid-template-columns: 1fr;
+  }
+  .devolution-asset > header,
+  .calculation-result > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .calculation-actions form,
+  .calculation-actions .button,
+  .decision-confirmation form,
+  .decision-confirmation .button {
+    width: 100%;
+  }
+  .export-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .export-actions .button {
+    width: 100%;
+  }
+  .duplicate-subject-entry {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .duplicate-subject-entry .button {
+    width: 100%;
+    padding-block: 10px;
+    white-space: normal;
+  }
+  .audit-list li {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .review-values {
+    grid-template-columns: 1fr;
+  }
+  .review-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .analysis-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    padding-block: 15px;
+  }
+  .analysis-toolbar form,
+  .analysis-toolbar .button {
+    width: 100%;
+  }
+  .codex-history-heading,
+  .codex-history summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .processing-errors > div,
+  .processing-active > div {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .source-viewer iframe {
+    min-height: 430px;
+  }
+  .practice-meta > i {
+    display: none;
+  }
+}

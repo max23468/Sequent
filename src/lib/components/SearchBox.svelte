@@ -8,6 +8,9 @@
   let mobileOpen = $state(false);
   let loading = $state(false);
   let requestId = 0;
+  let debounceTimer: number | undefined;
+  let searchController: AbortController | undefined;
+  const searchDelayMs = 250;
   const resultIcons = {
     practice: Folder,
     document: FileText,
@@ -15,23 +18,43 @@
     asset: Building2,
   } as const;
 
-  async function search() {
+  async function runSearch(current: string, id: number) {
+    searchController?.abort();
+    const controller = new AbortController();
+    searchController = controller;
+    try {
+      const nextResults = await searchSequent(current, controller.signal);
+      if (id !== requestId) return;
+      results = nextResults;
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      if (id === requestId) results = [];
+    } finally {
+      if (id === requestId) loading = false;
+    }
+  }
+
+  function scheduleSearch() {
+    window.clearTimeout(debounceTimer);
+    searchController?.abort();
     const current = query.trim();
     const id = ++requestId;
     if (!current) {
+      searchController?.abort();
       results = [];
       open = false;
+      loading = false;
       return;
     }
     loading = true;
     open = true;
-    const nextResults = await searchSequent(current);
-    if (id !== requestId) return;
-    results = nextResults;
-    loading = false;
+    debounceTimer = window.setTimeout(() => void runSearch(current, id), searchDelayMs);
   }
 
   function clear() {
+    window.clearTimeout(debounceTimer);
+    searchController?.abort();
+    requestId += 1;
     query = "";
     results = [];
     open = false;
@@ -86,6 +109,13 @@
       if (query.trim()) open = true;
     }
   }
+
+  $effect(() => {
+    return () => {
+      window.clearTimeout(debounceTimer);
+      searchController?.abort();
+    };
+  });
 </script>
 
 <svelte:window onkeydown={handleGlobalKeydown} />
@@ -108,7 +138,7 @@
     placeholder="Cerca in Sequent"
     autocomplete="off"
     bind:value={query}
-    oninput={search}
+    oninput={scheduleSearch}
     onfocus={handleFocus}
     onkeydown={handleKeydown}
   />

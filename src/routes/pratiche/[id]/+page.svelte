@@ -27,6 +27,7 @@
   import { getOfflinePractice } from "$lib/offline/store";
   import { isServerReachable, queueAttachment } from "$lib/offline/manager";
   import { interceptOfflinePracticeForm } from "$lib/offline/forms";
+  import "../../../styles/practice.css";
 
   let { data, form } = $props();
   let selectedSection = $derived(page.url.searchParams.get("sezione") ?? "overview");
