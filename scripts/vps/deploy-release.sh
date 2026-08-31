@@ -584,11 +584,10 @@ if [[ "$SEQUENT_CODEX_ENABLED" == true ]]; then
   [[ "$(docker inspect --format '{{json .HostConfig.CapDrop}}' "$candidate_runner")" == '["ALL"]' ]] ||
     fail "capability drop del runner Codex divergente"
   runner_cap_add="$(docker inspect --format '{{json .HostConfig.CapAdd}}' "$candidate_runner")"
-  for capability in SYS_ADMIN SYS_CHROOT SETUID SETGID SYS_PTRACE NET_ADMIN; do
-    [[ "$runner_cap_add" == *\"$capability\"* ]] ||
-      fail "capability richiesta assente dal runner Codex: $capability"
-  done
-  [[ "$runner_cap_add" != *NET_RAW* ]] || fail "capability NET_RAW non ammessa nel runner Codex"
+  runner_cap_add="$(jq -c 'sort' <<<"$runner_cap_add")"
+  expected_runner_cap_add='["CAP_NET_ADMIN","CAP_SETGID","CAP_SETUID","CAP_SYS_ADMIN","CAP_SYS_CHROOT","CAP_SYS_PTRACE"]'
+  [[ "$runner_cap_add" == "$expected_runner_cap_add" ]] ||
+    fail "capability del runner Codex divergenti"
   runner_security="$(docker inspect --format '{{json .HostConfig.SecurityOpt}}' "$candidate_runner")"
   [[ "$runner_security" == *'seccomp=unconfined'* && "$runner_security" == *'apparmor=unconfined'* ]] ||
     fail "profilo esterno del runner Codex divergente"

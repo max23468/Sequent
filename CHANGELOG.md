@@ -4,6 +4,12 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.18
+
+### Fixed
+
+- readback Production delle capability del runner allineato ai nomi canonici `CAP_*` restituiti da Docker, mantenendo il confronto esatto e il rifiuto di capability aggiuntive.
+
 ## 0.2.17
 
 ### Changed
