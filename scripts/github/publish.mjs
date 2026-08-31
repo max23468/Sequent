@@ -175,14 +175,61 @@ async function waitForWorkflowRun(workflow, displayTitle, notBefore) {
   throw new Error(`Run ${displayTitle} non rilevata dopo il dispatch`);
 }
 
+export async function waitForWorkflowCompletion(
+  readRun,
+  runId,
+  {
+    attempts = 360,
+    intervalMs = 10_000,
+    maxConsecutiveReadErrors = 12,
+    pause = sleep,
+    report = console.log,
+  } = {},
+) {
+  let consecutiveReadErrors = 0;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    let workflowRun;
+    try {
+      workflowRun = readRun();
+      consecutiveReadErrors = 0;
+    } catch (error) {
+      consecutiveReadErrors += 1;
+      if (consecutiveReadErrors > maxConsecutiveReadErrors) throw error;
+      report(
+        `Lettura temporaneamente non disponibile per la run ${runId}; nuovo tentativo ${consecutiveReadErrors}/${maxConsecutiveReadErrors}`,
+      );
+    }
+    if (workflowRun?.status === "completed") {
+      if (workflowRun.conclusion !== "success") {
+        throw new Error(
+          `Run ${runId} conclusa con esito ${workflowRun.conclusion ?? "sconosciuto"}`,
+        );
+      }
+      return workflowRun;
+    }
+    if (attempt < attempts) await pause(intervalMs);
+  }
+  throw new Error(`Timeout durante l'attesa della run ${runId}`);
+}
+
 async function dispatchAndWait(workflow, displayTitle, fields) {
   const dispatchedAt = new Date().toISOString();
   const args = ["workflow", "run", workflow, "--ref", "main"];
   for (const [name, value] of Object.entries(fields)) args.push("--field", `${name}=${value}`);
   run("gh", args);
   const workflowRun = await waitForWorkflowRun(workflow, displayTitle, dispatchedAt);
-  run("gh", ["run", "watch", String(workflowRun.databaseId), "--exit-status"]);
-  return workflowRun;
+  const completedRun = await waitForWorkflowCompletion(
+    () =>
+      json("gh", [
+        "run",
+        "view",
+        String(workflowRun.databaseId),
+        "--json",
+        "databaseId,displayTitle,status,conclusion,url",
+      ]),
+    workflowRun.databaseId,
+  );
+  return { ...workflowRun, ...completedRun };
 }
 
 function latestSuccessfulProductionDeployment(repository) {
