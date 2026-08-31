@@ -5,6 +5,7 @@ import {
   createPracticeFromDashboard,
   expectOfficialCheckboxesAligned,
   resetFailedBlobVerification,
+  submitOnlinePracticeForm,
   unique,
 } from "./onboarding-support.ts";
 
@@ -75,13 +76,13 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await subjectForm.getByLabel("Ruolo").selectOption("decedent");
   await subjectForm.getByLabel("Nome o denominazione").fill(decedentName);
   await subjectForm.getByLabel("Codice fiscale").fill(decedentTaxCode);
-  await subjectForm.getByRole("button", { name: "Aggiungi" }).click();
+  await submitOnlinePracticeForm(subjectForm.getByRole("button", { name: "Aggiungi" }));
   await expect(page.getByText(decedentName, { exact: true }).first()).toBeVisible();
 
   await subjectForm.getByLabel("Ruolo").selectOption("beneficiary");
   await subjectForm.getByLabel("Nome o denominazione").fill(beneficiaryName);
   await subjectForm.getByLabel("Codice fiscale").fill(taxCode);
-  await subjectForm.getByRole("button", { name: "Aggiungi" }).click();
+  await submitOnlinePracticeForm(subjectForm.getByRole("button", { name: "Aggiungi" }));
   await expect(page.getByText(beneficiaryName, { exact: true }).first()).toBeVisible();
 
   const operationalSubjectGroup = page
@@ -93,14 +94,14 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     name: "Salva questa scheda",
   });
   await confirmOfficialInstructions(saveOperationalSubject);
-  await saveOperationalSubject.click();
+  await submitOnlinePracticeForm(saveOperationalSubject);
 
   await page.getByRole("button", { name: "Patrimonio" }).click();
   const assetForm = page.locator("form.domain-inline-form");
   await assetForm.getByLabel("Tipo").selectOption("building");
   await assetForm.getByLabel("Descrizione").fill(assetName);
   await assetForm.getByLabel("Valore").fill("200000,00");
-  await assetForm.getByRole("button", { name: "Aggiungi" }).click();
+  await submitOnlinePracticeForm(assetForm.getByRole("button", { name: "Aggiungi" }));
   await expect(page.getByText(assetName, { exact: true }).first()).toBeVisible();
 
   await page.getByRole("button", { name: "Vista Quadri" }).click();
@@ -121,7 +122,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     .selectOption("10");
   const saveOfficialSubject = page.getByRole("button", { name: "Salva questa posizione" });
   await confirmOfficialInstructions(saveOfficialSubject);
-  await saveOfficialSubject.click();
+  await submitOnlinePracticeForm(saveOfficialSubject);
   await page.getByRole("button", { name: "Frontespizio", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Frontespizio", level: 2 })).toBeVisible();
   await expect(page.getByRole("textbox", { name: /Località di residenza estera$/ })).toBeVisible();
@@ -140,7 +141,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await legalDevolution.check();
   const saveGeneralData = page.getByRole("button", { name: "Salva dati generali" });
   await confirmOfficialInstructions(saveGeneralData);
-  await saveGeneralData.click();
+  await submitOnlinePracticeForm(saveGeneralData);
   await expect(legalDevolution).toBeChecked();
   await expect(page.getByRole("textbox", { name: "Codice fiscale del defunto" })).toHaveValue(
     decedentTaxCode,
@@ -156,7 +157,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await deathDate.fill("01012025");
   const saveDecedent = page.getByRole("button", { name: "Salva dati del defunto" });
   await confirmOfficialInstructions(saveDecedent);
-  await saveDecedent.click();
+  await submitOnlinePracticeForm(saveDecedent);
   await expect(civilStatus).toHaveValue("3");
   await expect(deathDate).toHaveValue("01012025");
   // Il salvataggio SvelteKit invalida i dati della pagina in background: attendiamo
@@ -189,9 +190,9 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     page.locator(".official-fields").getByRole("button", { name: /^Salva/ }),
   ).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Salva questa posizione" })).toBeVisible();
-  await page
-    .getByRole("button", { name: "Aggiungi un’altra posizione per questo soggetto" })
-    .click();
+  await submitOnlinePracticeForm(
+    page.getByRole("button", { name: "Aggiungi un’altra posizione per questo soggetto" }),
+  );
   await expect(page.getByRole("link", { name: `${beneficiaryName} · posizione 1` })).toBeVisible();
   await expect(
     page.getByRole("link", { name: `${beneficiaryName} · posizione 2` }),
@@ -215,7 +216,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     .filter({ has: officialAssetValue })
     .getByRole("button", { name: "Salva questo bene" });
   await confirmOfficialInstructions(saveOfficialAsset);
-  await saveOfficialAsset.click();
+  await submitOnlinePracticeForm(saveOfficialAsset);
   await expect(officialAssetValue).toHaveValue("200000");
 
   await page.getByRole("button", { name: "Quadro EH", exact: true }).click();
@@ -226,7 +227,9 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     }),
   });
   await newOccurrenceGroup.getByRole("textbox", { name: "3 Certificatore" }).fill("CERT1");
-  await newOccurrenceGroup.getByRole("button", { name: "Aggiungi questa posizione" }).click();
+  await submitOnlinePracticeForm(
+    newOccurrenceGroup.getByRole("button", { name: "Aggiungi questa posizione" }),
+  );
   const savedOccurrenceGroup = page.locator("section.official-fields-group").filter({
     has: page.getByRole("heading", { name: "Presenza interdetti · posizione 1", exact: true }),
   });
@@ -240,7 +243,9 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     }),
   });
   await secondOccurrenceGroup.getByRole("textbox", { name: "3 Certificatore" }).fill("CERT2");
-  await secondOccurrenceGroup.getByRole("button", { name: "Aggiungi questa posizione" }).click();
+  await submitOnlinePracticeForm(
+    secondOccurrenceGroup.getByRole("button", { name: "Aggiungi questa posizione" }),
+  );
 
   await page.getByRole("button", { name: "Vista operativa" }).click();
   await page.getByRole("button", { name: "Panoramica" }).click();
@@ -265,7 +270,9 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await expect(
     secondOperationalOccurrence.getByRole("textbox", { name: "3 Certificatore" }),
   ).toHaveValue("CERT2");
-  await secondOperationalOccurrence.getByRole("button", { name: "Sposta prima" }).click();
+  await submitOnlinePracticeForm(
+    secondOperationalOccurrence.getByRole("button", { name: "Sposta prima" }),
+  );
 
   operationalOccurrenceGroup = page.locator("details.operational-fields-group").filter({
     has: page.getByText(
@@ -287,7 +294,9 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await expect(movedSecondOccurrence.getByRole("textbox", { name: "3 Certificatore" })).toHaveValue(
     "CERT1",
   );
-  await movedSecondOccurrence.getByRole("button", { name: "Rimuovi posizione" }).click();
+  await submitOnlinePracticeForm(
+    movedSecondOccurrence.getByRole("button", { name: "Rimuovi posizione" }),
+  );
   await expect(
     page.getByText(
       "Indicatori generali del Quadro EH della dichiarazione selezionata · posizione 2",
@@ -306,7 +315,9 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     name: "3 Certificatore",
   });
   await survivingOccurrenceValue.fill("CERT3");
-  await operationalOccurrenceGroup.getByRole("button", { name: "Salva questa posizione" }).click();
+  await submitOnlinePracticeForm(
+    operationalOccurrenceGroup.getByRole("button", { name: "Salva questa posizione" }),
+  );
   await page.getByRole("button", { name: "Vista Quadri" }).click();
   await page.getByRole("button", { name: "Quadro EH", exact: true }).click();
   await expect(
@@ -347,13 +358,15 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   });
   await devolutionForm.getByLabel("Numeratore", { exact: true }).fill("1");
   await devolutionForm.getByLabel("Denominatore", { exact: true }).fill("1");
-  await devolutionForm.getByRole("button", { name: "Salva proposta di devoluzione" }).click();
+  await submitOnlinePracticeForm(
+    devolutionForm.getByRole("button", { name: "Salva proposta di devoluzione" }),
+  );
   await expect(page.getByText("Proposta pronta per la conferma")).toBeVisible();
-  await page.getByRole("button", { name: "Conferma professionalmente" }).click();
+  await submitOnlinePracticeForm(page.getByRole("button", { name: "Conferma professionalmente" }));
   await expect(page.getByText("Devoluzione confermata")).toBeVisible();
 
   await page.getByRole("button", { name: "Imposte e pagamenti" }).click();
-  await page.getByRole("button", { name: "Esegui il calcolo" }).click();
+  await submitOnlinePracticeForm(page.getByRole("button", { name: "Esegui il calcolo" }));
   await expect(page.getByText(/Imposta di successione:/)).toBeVisible();
   await expect(page.getByText("Dati da completare")).toBeVisible();
   await expect(page.getByRole("button", { name: "Conferma il calcolo" })).toHaveCount(0);

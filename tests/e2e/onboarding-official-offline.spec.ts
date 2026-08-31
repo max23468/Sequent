@@ -156,6 +156,7 @@ test("rende una pratica selezionata disponibile offline e sincronizza un allegat
   const field = page.getByRole("checkbox", {
     name: /Dichiaro di non voler dar corso alle conseguenti volture catastali/,
   });
+  await expect(field).toBeVisible();
   const fieldForm = field.locator("xpath=ancestor::form");
   const fieldOfflineUrl = page.url();
   await context.setOffline(true);
@@ -165,6 +166,7 @@ test("rende una pratica selezionata disponibile offline e sincronizza un allegat
   } else {
     await page.goto(fieldOfflineUrl, { waitUntil: "domcontentloaded" });
   }
+  await expect(field).toBeVisible();
   await field.check();
   await fieldForm
     .getByRole("checkbox", { name: "Confermo di aver verificato queste indicazioni" })

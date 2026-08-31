@@ -74,6 +74,15 @@ export async function openPracticeSection(page: import("@playwright/test").Page,
     await page.getByRole("button", { name: /Apri il menu Sezioni/ }).click();
   }
   await section.click();
+  await expect(section).toHaveAttribute("aria-pressed", "true");
+}
+
+export async function submitOnlinePracticeForm(button: import("@playwright/test").Locator) {
+  const page = button.page();
+  const navigation = page.waitForEvent("framenavigated", (frame) => frame === page.mainFrame());
+  await button.click();
+  await navigation;
+  await page.waitForLoadState("domcontentloaded");
 }
 
 export async function uploadFromWorkspace(
