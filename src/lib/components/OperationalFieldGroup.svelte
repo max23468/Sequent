@@ -36,10 +36,6 @@
     occurrenceActionUrl: string;
     returnSection: string;
   }>();
-  function initializeDisclosure(node: HTMLDetailsElement, initiallyOpen: boolean) {
-    node.open = initiallyOpen;
-  }
-
   function isEditable(field: OperationalField): boolean {
     return isOperationalParityEditable(
       field.operationalParity,
@@ -95,7 +91,7 @@
 <details
   id={group.anchorId ?? undefined}
   class="official-fields-group operational-fields-group"
-  use:initializeDisclosure={group.initiallyOpen}
+  open={group.initiallyOpen}
 >
   <summary class="operational-fields-summary">
     <span><strong>{group.label}</strong><small>{group.context}</small></span>

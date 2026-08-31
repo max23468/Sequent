@@ -109,6 +109,7 @@ export async function submitOnlinePracticeForm(button: import("@playwright/test"
   await button.click();
   await navigation;
   await page.waitForLoadState("domcontentloaded");
+  await page.waitForLoadState("networkidle");
 }
 
 export async function openDetails(details: import("@playwright/test").Locator) {
