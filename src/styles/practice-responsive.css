@@ -277,6 +277,21 @@
     flex-direction: column;
     gap: 4px;
   }
+  .field-necessity-legend {
+    margin-inline: 16px;
+  }
+  .field-necessity-legend ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .field-necessity-legend li small {
+    display: none;
+  }
+  .official-field > .official-field-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
   .operational-canonical-heading,
   .operational-fields-summary {
     align-items: flex-start;
@@ -284,6 +299,10 @@
   }
   .operational-fields-meta {
     text-align: left;
+  }
+  .field-group-summary-meta {
+    width: 100%;
+    justify-content: space-between;
   }
   .official-fields .button {
     width: 100%;

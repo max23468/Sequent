@@ -1,9 +1,12 @@
 <script lang="ts">
   import { FileText } from "@lucide/svelte";
   import type { PageData } from "../../routes/pratiche/[id]/$types";
+  import { isConditionallyApplicableGroup, isMissingRequiredField } from "../field-necessity";
+  import FieldNecessityLegend from "./FieldNecessityLegend.svelte";
   import OperationalFieldGroup from "./OperationalFieldGroup.svelte";
 
   type OperationalField = PageData["operationalFields"][number];
+  type DeclarationIssue = PageData["declarationIssues"][number];
   interface FieldGroup {
     key: string;
     label: string;
@@ -167,13 +170,27 @@
       }];
     });
     const anchoredEntities = new Set<string>();
-    return expanded.map((group, index) => {
+    return expanded.map((group) => {
       const anchorId =
         group.entityId && !anchoredEntities.has(group.entityId)
           ? `operational-entity-${group.entityId}`
           : null;
       if (group.entityId) anchoredEntities.add(group.entityId);
-      return { ...group, initiallyOpen: index === 0, anchorId };
+      const hasMissingRequired = group.fields.some((field: OperationalField) =>
+        data.declarationIssues.some((issue: DeclarationIssue) =>
+          isMissingRequiredField(
+            issue,
+            field.canonicalId,
+            group.entityId,
+            group.occurrenceId,
+          ),
+        ),
+      );
+      return {
+        ...group,
+        initiallyOpen: hasMissingRequired || !isConditionallyApplicableGroup(group.fields),
+        anchorId,
+      };
     });
   }
 
@@ -198,6 +215,7 @@
       <div><h2 id={`operational-fields-${returnSection}`}>Dati della dichiarazione</h2><p>{areaDescription()}</p></div>
       <span>{visibleFieldCount()} campi pertinenti</span>
     </div>
+    <FieldNecessityLegend />
     <div class="official-fields">
       {#each fieldGroups() as group (group.key)}
         <OperationalFieldGroup {data} {group} {actionUrl} {occurrenceActionUrl} {returnSection} />

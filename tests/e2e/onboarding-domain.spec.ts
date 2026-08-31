@@ -32,6 +32,20 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await authenticate(page);
   await createPracticeFromDashboard(page, practiceTitle);
 
+  const fieldLegend = page.locator(".field-necessity-legend");
+  await expect(fieldLegend.getByText("Come leggere i campi", { exact: true })).toBeVisible();
+  await expect(fieldLegend.getByText("Obbligatorio", { exact: true })).toBeVisible();
+  await expect(fieldLegend.getByText("Alternativa", { exact: true })).toBeVisible();
+  await expect(fieldLegend.getByText("Solo se pertinente", { exact: true })).toBeVisible();
+  await expect(fieldLegend.getByText("Automatico", { exact: true })).toBeVisible();
+  const conditionalField = page.locator(".official-field").filter({ hasText: "Lingua di stampa" });
+  await expect(conditionalField.getByText("Solo se pertinente", { exact: true })).toBeVisible();
+  const optionalGroup = page.locator("details.operational-fields-group").filter({
+    hasText: "Indicatori generali del Quadro EH della dichiarazione selezionata · nuova posizione",
+  });
+  await expect(optionalGroup.first()).not.toHaveAttribute("open", "");
+  await expect(optionalGroup.first().locator("summary")).toContainText("Blocco solo se pertinente");
+
   await openPracticeSection(page, "Devoluzione");
   const professionalGroup = page
     .locator("details.operational-fields-group")
@@ -39,6 +53,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   const professionalField = professionalGroup
     .locator(".official-field")
     .filter({ hasText: "Testamento estero" });
+  await openDetails(professionalGroup);
   await expect(professionalField).toBeVisible();
   await expect(professionalField.locator("input:not([type=hidden]), select, textarea")).toHaveCount(
     1,
@@ -51,6 +66,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   const automaticField = automaticGroup
     .locator(".official-field")
     .filter({ hasText: "Casella quadri compilati: 'EA'" });
+  await openDetails(automaticGroup);
   await expect(automaticField).toBeVisible();
   await expect(automaticField.locator("output")).toHaveText("Non indicato");
   await expect(automaticField.locator("input:not([type=hidden]), select, textarea")).toHaveCount(0);
@@ -67,6 +83,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   const officeField = officeGroup
     .locator(".official-field")
     .filter({ hasText: "Flag 1 (presentazione di doppie prime dichiarazioni)" });
+  await openDetails(officeGroup);
   await expect(officeField).toBeVisible();
   await expect(officeField.locator("input:not([type=hidden]), select, textarea")).toHaveCount(0);
   await expect(
@@ -129,6 +146,10 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await submitOnlinePracticeForm(saveOfficialSubject);
   await openPracticeQuadro(page, "Frontespizio");
   await expect(page.getByRole("heading", { name: "Frontespizio", level: 2 })).toBeVisible();
+  const foreignResidentGroup = page
+    .locator("details.official-fields-group")
+    .filter({ hasText: "Residente estero" });
+  await openDetails(foreignResidentGroup);
   await expect(page.getByRole("textbox", { name: /Località di residenza estera$/ })).toBeVisible();
   await expect(page.getByText(decedentName, { exact: true })).toBeVisible();
   await expect(page.locator('output[id="field-frontespizio.beneficiari.numero-eredi"]')).toHaveText(
@@ -155,7 +176,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     name: "Data del decesso, assenza o morte presunta",
   });
   await expect(
-    page.locator(".official-fields").getByRole("button", { name: /^Salva/ }),
+    page.locator('.official-fields button[type="submit"]').filter({ hasText: /^Salva/ }),
   ).toHaveCount(13);
   await civilStatus.selectOption("3");
   await deathDate.fill("01012025");
@@ -215,6 +236,10 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await openPracticeQuadro(page, "Quadro EC");
   await expect(page.getByRole("heading", { name: "Quadro EC", level: 2 })).toBeVisible();
   await expect(page.getByRole("link", { name: assetName })).toHaveAttribute("aria-current", "page");
+  const buildingsGroup = page
+    .locator("details.official-fields-group")
+    .filter({ has: page.getByRole("heading", { name: "Fabbricati", exact: true, level: 3 }) });
+  await openDetails(buildingsGroup);
   const officialAssetValue = page.getByRole("textbox", { name: /^\d+ Valore$/ });
   await officialAssetValue.fill("200000");
   const saveOfficialAsset = page
@@ -223,31 +248,35 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     .getByRole("button", { name: "Salva questo bene" });
   await confirmOfficialInstructions(saveOfficialAsset);
   await submitOnlinePracticeForm(saveOfficialAsset);
+  await openDetails(buildingsGroup);
   await expect(officialAssetValue).toHaveValue("200000");
 
   await openPracticeQuadro(page, "Quadro EH");
-  const newOccurrenceGroup = page.locator("section.official-fields-group").filter({
+  const newOccurrenceGroup = page.locator("details.official-fields-group").filter({
     has: page.getByRole("heading", {
       name: "Presenza interdetti · nuova posizione",
       exact: true,
     }),
   });
+  await openDetails(newOccurrenceGroup);
   await newOccurrenceGroup.getByRole("textbox", { name: "3 Certificatore" }).fill("CERT1");
   await submitOnlinePracticeForm(
     newOccurrenceGroup.getByRole("button", { name: "Aggiungi questa posizione" }),
   );
-  const savedOccurrenceGroup = page.locator("section.official-fields-group").filter({
+  const savedOccurrenceGroup = page.locator("details.official-fields-group").filter({
     has: page.getByRole("heading", { name: "Presenza interdetti · posizione 1", exact: true }),
   });
+  await openDetails(savedOccurrenceGroup);
   await expect(savedOccurrenceGroup.getByRole("textbox", { name: "3 Certificatore" })).toHaveValue(
     "CERT1",
   );
-  const secondOccurrenceGroup = page.locator("section.official-fields-group").filter({
+  const secondOccurrenceGroup = page.locator("details.official-fields-group").filter({
     has: page.getByRole("heading", {
       name: "Presenza interdetti · nuova posizione",
       exact: true,
     }),
   });
+  await openDetails(secondOccurrenceGroup);
   await secondOccurrenceGroup.getByRole("textbox", { name: "3 Certificatore" }).fill("CERT2");
   await submitOnlinePracticeForm(
     secondOccurrenceGroup.getByRole("button", { name: "Aggiungi questa posizione" }),
@@ -326,16 +355,15 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   );
   await selectPracticeView(page, "quadri");
   await openPracticeQuadro(page, "Quadro EH");
+  const reloadedOccurrenceGroup = page.locator("details.official-fields-group").filter({
+    has: page.getByRole("heading", {
+      name: "Presenza interdetti · posizione 1",
+      exact: true,
+    }),
+  });
+  await openDetails(reloadedOccurrenceGroup);
   await expect(
-    page
-      .locator("section.official-fields-group")
-      .filter({
-        has: page.getByRole("heading", {
-          name: "Presenza interdetti · posizione 1",
-          exact: true,
-        }),
-      })
-      .getByRole("textbox", { name: "3 Certificatore" }),
+    reloadedOccurrenceGroup.getByRole("textbox", { name: "3 Certificatore" }),
   ).toHaveValue("CERT3");
   await selectPracticeView(page, "operational");
   await openPracticeSection(page, "Devoluzione");

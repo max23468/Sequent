@@ -76,6 +76,10 @@ test("mostra gli automatici confermati dalla stessa fonte e in sola lettura nell
   const automaticName =
     "5 EF18bis - Imposta di successione - Imposta calcolata - Imposta da versare";
   const quadriAutomaticOutput = page.getByRole("status", { name: automaticName });
+  const quadriAutomaticGroup = page.locator("details.official-fields-group").filter({
+    has: quadriAutomaticOutput,
+  });
+  await openDetails(quadriAutomaticGroup);
   const quadriAutomatic = quadriAutomaticOutput.locator("xpath=../..");
   await expect(quadriAutomaticOutput).toHaveText("6600");
   await expect(quadriAutomatic.locator("input, select, textarea")).toHaveCount(0);
