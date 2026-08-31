@@ -13,6 +13,8 @@ describe("DTO dei campi della pratica", () => {
     expect(serialized).not.toContain("currentEvidence");
     expect(serialized).not.toContain("sourcePointer");
     expect(serialized).not.toContain("technicalPath");
+    expect(fields[0]?.operationalParity.applicability.xsdPresence).toBeDefined();
+    expect(fields[0]?.operationalParity.cardinality.effectiveMin).toBeDefined();
     expect(Buffer.byteLength(serialized)).toBeLessThan(350_000);
   });
 

@@ -2,6 +2,7 @@
   import { page } from "$app/state";
   import { FileText } from "@lucide/svelte";
   import type { ActionData, PageData } from "../../routes/pratiche/[id]/$types";
+  import FieldNecessityLegend from "./FieldNecessityLegend.svelte";
   import OfficialFieldGroup from "./OfficialFieldGroup.svelte";
 
   type QuadroField = PageData["quadroFields"][number];
@@ -164,6 +165,7 @@
 {#if data.quadroFields.length === 0}
   <div class="panel-empty workspace-empty"><FileText size={27} /><p>Questo quadro non è ancora compilabile.</p><span>Etichette e corrispondenze con il modello ministeriale devono essere verificate prima di mostrare i campi.</span></div>
 {:else}
+  <FieldNecessityLegend />
   <div class="official-fields">
     {#each fieldGroups() as group (group.key)}
       <OfficialFieldGroup {data} {group} {actionUrl} {occurrenceActionUrl} />

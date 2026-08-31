@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.17
+
+### Changed
+
+- campi della Vista operativa e della Vista Quadri distinti fra obbligatori, alternativi, pertinenti al caso, automatici e in sola lettura, con evidenza immediata degli obblighi attivi ancora vuoti;
+- gruppi composti esclusivamente da campi pertinenti al caso raccolti in accordion chiusi in partenza, mantenendo aperti i blocchi con dati obbligatori da completare.
+
 ## 0.2.16
 
 ### Added

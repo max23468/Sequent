@@ -1,14 +1,21 @@
 <script lang="ts">
+  import { ChevronDown } from "@lucide/svelte";
   import type { PageData } from "../../routes/pratiche/[id]/$types";
   import {
     isOperationalParityAutomatic,
     isOperationalParityEditable,
     isOperationalParityOfficeReserved,
   } from "../../domain/operational-parity-shared";
+  import {
+    fieldRequirementSummary,
+    isConditionallyApplicableGroup,
+    isMissingRequiredField,
+  } from "../field-necessity";
   import OfficialFieldControl from "./OfficialFieldControl.svelte";
 
   type QuadroField = PageData["quadroFields"][number];
   type OfficialInstruction = QuadroField["instructions"][number];
+  type DeclarationIssue = PageData["declarationIssues"][number];
 
   let { data, group, actionUrl, occurrenceActionUrl } = $props<{
     data: PageData;
@@ -92,10 +99,33 @@
     if (group.label === "Dati del defunto") return "Salva dati del defunto";
     return "Salva il quadro";
   }
+
+  function hasMissingRequired(): boolean {
+    return group.fields.some((field: QuadroField) =>
+      data.declarationIssues.some((issue: DeclarationIssue) =>
+        isMissingRequiredField(
+          issue,
+          field.canonicalId,
+          fieldEntityId(field),
+          group.occurrenceId,
+        ),
+      ),
+    );
+  }
+
+  function startsOpen(): boolean {
+    return hasMissingRequired() || !isConditionallyApplicableGroup(group.fields);
+  }
+
+  function groupRequirementSummary(): string {
+    return isConditionallyApplicableGroup(group.fields)
+      ? "Blocco solo se pertinente"
+      : fieldRequirementSummary(group.fields);
+  }
 </script>
 
-<section class="official-fields-group">
-  <div class="official-fields-group-heading"><h3>{group.label}</h3><span>{group.fields.length} campi</span></div>
+<details class="official-fields-group" open={startsOpen()}>
+  <summary class="official-fields-group-heading"><h3>{group.label}</h3><span class="field-group-summary-meta"><span>{group.fields.length} campi · {groupRequirementSummary()}</span><ChevronDown class="field-group-chevron" size={16} aria-hidden="true" /></span></summary>
   <form method="POST" action={actionUrl}>
     <input type="hidden" name="declarationId" value={data.declaration.id} />
     <input type="hidden" name="expectedRevision" value={data.declaration.revision} />
@@ -143,4 +173,4 @@
       <button class="button text" type="submit" name="operation" value="remove">Rimuovi posizione</button>
     </form>
   {/if}
-</section>
+</details>

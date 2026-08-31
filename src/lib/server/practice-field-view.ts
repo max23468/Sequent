@@ -22,6 +22,11 @@ export function createPracticeFieldView(field: CatalogField, parity: Operational
     operationalParity: {
       quadro: parity.quadro,
       candidateContext: parity.candidateContext,
+      applicability: {
+        xsdPresence: parity.applicability.xsdPresence,
+        choiceGroup: parity.applicability.choiceGroup,
+      },
+      cardinality: { effectiveMin: parity.cardinality.effectiveMin },
       handling: parity.handling,
       handlingByDeclarationKind: parity.handlingByDeclarationKind,
       semanticReview: {

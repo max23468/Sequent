@@ -1,9 +1,14 @@
 <script lang="ts">
+  import { ChevronDown } from "@lucide/svelte";
   import type { PageData } from "../../routes/pratiche/[id]/$types";
   import {
     isOperationalParityEditable,
     operationalParityHandlingForDeclaration,
   } from "../../domain/operational-parity-shared";
+  import {
+    fieldRequirementSummary,
+    isConditionallyApplicableGroup,
+  } from "../field-necessity";
   import OfficialFieldControl from "./OfficialFieldControl.svelte";
 
   type OperationalField = PageData["operationalFields"][number];
@@ -79,6 +84,12 @@
     if (group.entityId) return "Salva questa scheda";
     return "Salva questi dati";
   }
+
+  function groupRequirementSummary(): string {
+    return isConditionallyApplicableGroup(group.fields)
+      ? "Blocco solo se pertinente"
+      : fieldRequirementSummary(group.fields);
+  }
 </script>
 
 <details
@@ -88,7 +99,7 @@
 >
   <summary class="operational-fields-summary">
     <span><strong>{group.label}</strong><small>{group.context}</small></span>
-    <span class="operational-fields-meta">{group.quadro === "Frontespizio" ? "Frontespizio" : `Quadro ${group.quadro}`} · {group.fields.length} campi</span>
+    <span class="field-group-summary-meta"><span class="operational-fields-meta">{group.quadro === "Frontespizio" ? "Frontespizio" : `Quadro ${group.quadro}`} · {group.fields.length} campi<br />{groupRequirementSummary()}</span><ChevronDown class="field-group-chevron" size={16} aria-hidden="true" /></span>
   </summary>
   {#if group.entityMissing}
     <p class="qualification-notice" role="status">Crea prima l’oggetto professionale richiesto per compilare questo blocco.</p>

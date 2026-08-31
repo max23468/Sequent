@@ -410,9 +410,80 @@
   color: var(--muted);
   font-size: 0.74rem;
 }
+.field-necessity-legend {
+  display: grid;
+  gap: 10px;
+  margin: 8px 18px 2px;
+  padding: 13px 15px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface-soft) 56%, var(--surface));
+}
+.field-necessity-legend > strong {
+  font-size: 0.8rem;
+}
+.field-necessity-legend ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.field-necessity-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.field-necessity-legend small,
+.field-necessity-legend p {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+.field-necessity-legend p {
+  margin: 0;
+}
+.field-necessity-badge {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.field-necessity-badge.required {
+  border-color: color-mix(in srgb, var(--teal) 46%, var(--line));
+  color: var(--teal);
+}
+.field-necessity-badge.alternative {
+  border-color: color-mix(in srgb, #6c63a8 48%, var(--line));
+  background: color-mix(in srgb, #6c63a8 7%, var(--surface));
+  color: color-mix(in srgb, #6c63a8 78%, var(--text));
+}
+.field-necessity-badge.conditional,
+.field-necessity-badge.read-only {
+  background: var(--surface-soft);
+}
+.field-necessity-badge.automatic {
+  border-color: color-mix(in srgb, var(--success) 45%, var(--line));
+  background: color-mix(in srgb, var(--success) 7%, var(--surface));
+  color: color-mix(in srgb, var(--success) 72%, var(--text));
+}
+.field-necessity-badge.missing {
+  border-color: color-mix(in srgb, #b7791f 60%, var(--line));
+  background: color-mix(in srgb, #b7791f 11%, var(--surface));
+  color: color-mix(in srgb, #b7791f 78%, var(--text));
+}
 .official-fields-group {
   margin-top: 14px;
-  padding: 0 16px 18px;
+  padding: 0 16px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 95%, var(--background));
@@ -451,6 +522,19 @@
   flex: 0 0 auto;
   text-align: right;
 }
+.field-group-summary-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.field-group-chevron {
+  flex: 0 0 auto;
+  color: var(--muted);
+  transition: transform 160ms ease;
+}
+details[open] > summary .field-group-chevron {
+  transform: rotate(180deg);
+}
 .operational-fields-group[open] .operational-fields-summary {
   border-bottom: 1px solid var(--line-soft);
 }
@@ -474,7 +558,19 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  padding: 17px 2px 3px;
+  padding: 17px 2px;
+  cursor: pointer;
+  list-style: none;
+}
+.official-fields-group-heading::-webkit-details-marker {
+  display: none;
+}
+.official-fields-group[open] > .official-fields-group-heading {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.official-fields-group > form {
+  padding-bottom: 18px;
 }
 .official-fields-group-heading h3 {
   margin: 0;
@@ -509,6 +605,32 @@
 .official-field > div {
   display: flex;
   gap: 8px;
+}
+.official-field.field-required-missing {
+  margin-inline: -10px;
+  padding-inline: 10px;
+  border-left: 3px solid #b7791f;
+  background: color-mix(in srgb, #b7791f 6%, transparent);
+}
+.official-field > .official-field-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.official-field-heading > label {
+  min-width: 0;
+}
+.official-field-heading > .field-necessity-badge {
+  flex: 0 0 auto;
+}
+.field-required-message {
+  display: block;
+  margin: -1px 0 8px;
+  color: color-mix(in srgb, #b7791f 78%, var(--text));
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.4;
 }
 .official-instructions {
   margin-top: 16px;
