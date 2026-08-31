@@ -11,14 +11,20 @@ import {
   importDiz,
   materializeImportedDizAttachments,
   overrideOfficialStage,
+  repairImportedDizAcquisition,
 } from "../../src/lib/server/official-flow.ts";
-import { createSharedSubject } from "../../src/lib/server/domain-subjects.ts";
+import { listSharedAssets } from "../../src/lib/server/domain-assets.ts";
+import {
+  createSharedSubject,
+  listDeclarationSubjectEntries,
+  listSharedSubjects,
+} from "../../src/lib/server/domain-subjects.ts";
 import {
   getDeclaration,
   createPractice,
   listPracticeDocuments,
 } from "../../src/lib/server/practices.ts";
-import { syntheticDiz } from "../fixtures/synthetic-diz.ts";
+import { syntheticDiz, syntheticDizFromFields } from "../fixtures/synthetic-diz.ts";
 
 const directories: string[] = [];
 
@@ -30,7 +36,7 @@ afterEach(() => {
 });
 
 describe("flusso ufficiale persistente", () => {
-  it("preserva il DIZ quando manca il target applicativo e crea lo snapshot preventivo", async () => {
+  it("crea il target applicativo mancante e lo popola dal DIZ", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-official-flow-"));
     directories.push(directory);
     const database = openDatabase(directory);
@@ -50,10 +56,12 @@ describe("flusso ufficiale persistente", () => {
       format: "xstream-zip-v1",
       fields: 1,
       acquisition: {
-        qualifiedFields: 1,
-        importedFields: 0,
-        missingTargets: 1,
-        preservedFields: 1,
+        version: 2,
+        mappedFields: 1,
+        importedFields: 1,
+        missingTargets: 0,
+        preservedFields: 0,
+        createdSubjects: 1,
       },
     });
     expect(
@@ -63,7 +71,7 @@ describe("flusso ufficiale persistente", () => {
       database
         .prepare("SELECT revision FROM declarations WHERE id = ?")
         .get(practice.declarationId),
-    ).toEqual({ revision: 1 });
+    ).toEqual({ revision: 2 });
     expect(getOfficialFlowSummary(database, practice.id, practice.declarationId)).toMatchObject({
       stage: "diz-imported",
       stageLabel: "DIZ di partenza acquisito",
@@ -92,7 +100,8 @@ describe("flusso ufficiale persistente", () => {
 
     expect(artifact.metadata).toMatchObject({
       acquisition: {
-        qualifiedFields: 1,
+        version: 2,
+        mappedFields: 1,
         importedFields: 1,
         unchangedFields: 0,
         conflictingFields: 0,
@@ -107,7 +116,9 @@ describe("flusso ufficiale persistente", () => {
     ).toMatchObject({
       fieldId: "quadro-ea.soggetto.dati-anagrafici.cognome",
       state: "to_review",
-      sourceRefs: [expect.stringMatching(/^DIZ acquisito · SHA-256 [a-f0-9]{64}$/)],
+      sourceRefs: expect.arrayContaining([
+        expect.stringMatching(/^DIZ acquisito · SHA-256 [a-f0-9]{64}$/),
+      ]),
     });
     expect(
       database.prepare("SELECT reason, declaration_revision FROM declaration_snapshots").get(),
@@ -162,6 +173,11 @@ describe("flusso ufficiale persistente", () => {
         }),
       ],
       attachments: [expect.objectContaining({ name: "allegato.pdf", kind: "pdf" })],
+      attachmentEvidence: {
+        status: "embedded",
+        embeddedCount: 1,
+        embeddedBytes: attachment.length,
+      },
     });
 
     database.prepare("DELETE FROM documents WHERE practice_id = ?").run(practice.id);
@@ -172,6 +188,94 @@ describe("flusso ufficiale persistente", () => {
         dataDirectory: directory,
       }),
     ).resolves.toEqual({ attachments: 1, documents: 1 });
+    expect(listPracticeDocuments(database, practice.id)).toHaveLength(1);
+  });
+
+  it("materializza soggetti e cespiti multipli presenti nello stesso modulo", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-official-flow-entities-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica DIZ con più entità");
+    const bytes = syntheticDizFromFields([
+      { quadro: "EA", module: "00000001", field: "001005", value: "PRIMO" },
+      { quadro: "EA", module: "00000001", field: "002005", value: "SECONDO" },
+      { quadro: "EA", module: "00000001", field: "003005", value: "TERZO" },
+      { quadro: "EA", module: "00000002", field: "001005", value: "QUARTO" },
+      { quadro: "EC", module: "00000001", field: "001003", value: "A001" },
+      { quadro: "EC", module: "00000001", field: "002003", value: "A002" },
+      { quadro: "ER", module: "00000001", field: "001001", value: "BI" },
+      { quadro: "B", module: "00000001", field: "2", value: "RSSMRA80A01H501U" },
+    ]);
+
+    const artifact = await importDiz(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      file: new File([new Uint8Array(bytes)], "entita.diz"),
+      dataDirectory: directory,
+    });
+
+    expect(artifact.metadata.acquisition).toMatchObject({
+      mappedFields: 8,
+      importedFields: 8,
+      preservedFields: 0,
+      createdSubjects: 4,
+      createdAssets: 3,
+      createdDecedent: true,
+    });
+    expect(
+      listDeclarationSubjectEntries(database, practice.id, practice.declarationId),
+    ).toHaveLength(4);
+    expect(
+      listSharedSubjects(database, practice.id).filter((subject) => subject.role === "decedent"),
+    ).toHaveLength(1);
+    expect(listSharedAssets(database, practice.id, practice.declarationId)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "building" }),
+        expect.objectContaining({ kind: "inventory" }),
+      ]),
+    );
+    expect(listSharedAssets(database, practice.id, practice.declarationId)).toHaveLength(3);
+  });
+
+  it("ripara in modo idempotente una precedente acquisizione parziale e gli allegati", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-official-flow-repair-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica DIZ da riparare");
+    const attachment = Buffer.from("%PDF-1.7\nRiparazione\n%%EOF", "ascii");
+    const artifact = await importDiz(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      file: new File(
+        [new Uint8Array(syntheticDiz("ROSSI", { name: "prova.pdf", content: attachment }))],
+        "riparazione.diz",
+      ),
+      dataDirectory: directory,
+    });
+    database.prepare("DELETE FROM documents WHERE practice_id = ?").run(practice.id);
+    database
+      .prepare("UPDATE official_artifacts SET metadata_json = ? WHERE id = ?")
+      .run(
+        JSON.stringify({ ...artifact.metadata, acquisition: { importedFields: 1 } }),
+        artifact.id,
+      );
+
+    const first = await repairImportedDizAcquisition(database, {
+      practiceId: practice.id,
+      artifactId: artifact.id,
+      dataDirectory: directory,
+    });
+    const second = await repairImportedDizAcquisition(database, {
+      practiceId: practice.id,
+      artifactId: artifact.id,
+      dataDirectory: directory,
+    });
+
+    expect(first).toMatchObject({ mappedFields: 1, unchangedFields: 1, missingTargets: 0 });
+    expect(second).toMatchObject({ mappedFields: 1, unchangedFields: 1, missingTargets: 0 });
+    expect(
+      listDeclarationSubjectEntries(database, practice.id, practice.declarationId),
+    ).toHaveLength(1);
     expect(listPracticeDocuments(database, practice.id)).toHaveLength(1);
   });
 

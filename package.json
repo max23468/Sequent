@@ -1,6 +1,6 @@
 {
   "name": "sequent",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,6 +16,7 @@
     "admin:backup": "node scripts/admin/backup.ts",
     "admin:connect-codex": "node scripts/admin/connect-codex.ts",
     "admin:restore": "node scripts/admin/restore.ts",
+    "admin:repair-diz": "node scripts/admin/repair-diz-acquisitions.ts",
     "admin:reset-owner": "node scripts/admin/reset-owner.ts",
     "admin:seed-synthetic": "node scripts/admin/seed-synthetic.ts",
     "qualify:codex-runtime": "node scripts/admin/qualify-codex-runtime.ts",
@@ -41,6 +42,7 @@
     "generate:facsimile-layout": "node scripts/official-sources/generate-facsimile-layout.mjs",
     "generate:municipality-conservatory-map": "node scripts/official-sources/generate-municipality-conservatory-map.ts",
     "generate:successionionline-field-evidence": "node scripts/official-sources/generate-successionionline-field-evidence.ts",
+    "generate:diz-import-mappings": "node scripts/official-sources/generate-diz-import-mappings.ts",
     "generate:operational-parity-map": "node scripts/official-sources/generate-operational-parity-map.ts",
     "render:facsimile-fixture": "node --experimental-strip-types scripts/official-sources/render-facsimile-fixture.ts",
     "diz:compare": "node scripts/diz/compare.ts",

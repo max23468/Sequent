@@ -3,7 +3,13 @@ import { chmod, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import Database from "better-sqlite3";
 import { getCanonicalField } from "../../src/domain/declaration.ts";
-import { opaqueDizEvidence, parseDiz, qualifiedMappingFor } from "../../src/domain/diz/index.ts";
+import {
+  dizMappingIdentity,
+  dizMappingOccurrenceId,
+  importMappingFor,
+  opaqueDizEvidence,
+  parseDiz,
+} from "../../src/domain/diz/index.ts";
 import { resolveBlobPath } from "../../src/lib/server/blob-store.ts";
 import { getDeclaration } from "../../src/lib/server/practices.ts";
 
@@ -20,12 +26,6 @@ async function listDizFiles(directory: string): Promise<string[]> {
     else if (entry.isFile() && entry.name.toLowerCase().endsWith(".diz")) files.push(path);
   }
   return files.sort();
-}
-
-function moduleSequence(module: string): number | null {
-  if (!/^\d{1,8}$/.test(module)) return null;
-  const sequence = Number.parseInt(module, 10);
-  return Number.isSafeInteger(sequence) && sequence > 0 ? sequence : null;
 }
 
 async function writePrivateReport(path: string, report: unknown): Promise<void> {
@@ -55,7 +55,8 @@ try {
   const samples: Array<{
     sample: number;
     fields: number;
-    qualifiedFields: number;
+    mappedFields: number;
+    preservedFields: number;
     attachments: number;
     materializedAttachments: number;
     archiveArtifacts: number;
@@ -67,8 +68,8 @@ try {
     if (corpusHashes.has(parsed.sha256))
       throw new Error(`DIZ_CORPUS_QUALIFICATION_DUPLICATE:${index + 1}`);
     corpusHashes.add(parsed.sha256);
-    const qualifiedFields = parsed.fields.filter(
-      (field) => field.value.length > 0 && qualifiedMappingFor(field),
+    const mappedFields = parsed.fields.filter(
+      (field) => field.value.length > 0 && importMappingFor(field),
     );
     const expectedOpaqueEvidence = opaqueDizEvidence(parsed);
     const rows = database
@@ -92,41 +93,55 @@ try {
             attachments?: unknown;
             opaqueEvidence?: unknown;
             acquisition?: {
-              qualifiedFields?: unknown;
+              version?: unknown;
+              sourceFields?: unknown;
+              nonEmptyFields?: unknown;
+              mappedFields?: unknown;
               importedFields?: unknown;
               unchangedFields?: unknown;
               conflictingFields?: unknown;
               missingTargets?: unknown;
+              converterOnlyFields?: unknown;
+              opaqueFields?: unknown;
               preservedFields?: unknown;
+              targetBindings?: unknown;
             };
           };
           const acquisition = metadata.acquisition;
           const counts = acquisition
             ? [
-                acquisition.qualifiedFields,
+                acquisition.sourceFields,
+                acquisition.nonEmptyFields,
+                acquisition.mappedFields,
                 acquisition.importedFields,
                 acquisition.unchangedFields,
                 acquisition.conflictingFields,
                 acquisition.missingTargets,
+                acquisition.converterOnlyFields,
+                acquisition.opaqueFields,
                 acquisition.preservedFields,
               ]
             : [];
           if (
             !acquisition ||
+            acquisition.version !== 2 ||
             counts.some((count) => !Number.isInteger(count) || Number(count) < 0) ||
             metadata.format !== parsed.format ||
             metadata.fields !== parsed.fields.length ||
             metadata.attachments !== parsed.attachments.length ||
             JSON.stringify(metadata.opaqueEvidence) !== JSON.stringify(expectedOpaqueEvidence) ||
-            acquisition.qualifiedFields !== qualifiedFields.length ||
+            acquisition.sourceFields !== parsed.fields.length ||
+            acquisition.nonEmptyFields !==
+              parsed.fields.filter((field) => field.value.length > 0).length ||
+            acquisition.mappedFields !== mappedFields.length ||
             Number(acquisition.importedFields) + Number(acquisition.unchangedFields) !==
-              qualifiedFields.length ||
+              mappedFields.length ||
             acquisition.conflictingFields !== 0 ||
             acquisition.missingTargets !== 0 ||
             acquisition.preservedFields !==
-              parsed.fields.length -
-                Number(acquisition.importedFields) -
-                Number(acquisition.unchangedFields)
+              Number(acquisition.converterOnlyFields) + Number(acquisition.opaqueFields) ||
+            !acquisition.targetBindings ||
+            typeof acquisition.targetBindings !== "object"
           )
             return null;
           return row;
@@ -161,20 +176,23 @@ try {
     }
     const declaration = getDeclaration(database, declarationId, practiceId)?.declaration;
     if (!declaration) throw new Error(`DIZ_CORPUS_QUALIFICATION_DECLARATION_MISSING:${index + 1}`);
-    const entries = database
-      .prepare(
-        `SELECT entry_id, sequence FROM declaration_subject_entries
-         WHERE declaration_id = ? ORDER BY sequence`,
-      )
-      .all(declarationId) as Array<{ entry_id: string; sequence: number }>;
-    for (const field of qualifiedFields) {
-      const mapping = qualifiedMappingFor(field)!;
-      const sequence = field.quadro === "EA" ? moduleSequence(field.module) : null;
-      const entityId = entries.find((entry) => entry.sequence === sequence)?.entry_id ?? null;
+    const acquisition = JSON.parse(String(row.metadata_json)).acquisition as {
+      preservedFields: number;
+      targetBindings: Record<string, string>;
+    };
+    for (const field of mappedFields) {
+      const mapping = importMappingFor(field)!;
+      const identity = dizMappingIdentity(field, mapping);
+      const entityId = ["subject", "asset", "decedent"].includes(mapping.entityScope)
+        ? (acquisition.targetBindings[identity] ?? null)
+        : null;
+      const occurrenceId = dizMappingOccurrenceId(field, mapping);
       if (
-        !entityId ||
-        String(getCanonicalField(declaration, mapping.catalogFieldId, entityId)?.value ?? "") !==
-          field.value
+        (["subject", "asset", "decedent"].includes(mapping.entityScope) && !entityId) ||
+        String(
+          getCanonicalField(declaration, mapping.catalogFieldId, entityId, occurrenceId)?.value ??
+            "",
+        ) !== field.value
       ) {
         throw new Error(`DIZ_CORPUS_QUALIFICATION_CANONICAL_READBACK:${index + 1}`);
       }
@@ -182,7 +200,8 @@ try {
     samples.push({
       sample: index + 1,
       fields: parsed.fields.length,
-      qualifiedFields: qualifiedFields.length,
+      mappedFields: mappedFields.length,
+      preservedFields: acquisition.preservedFields,
       attachments: parsed.attachments.length,
       materializedAttachments: parsed.attachments.length,
       archiveArtifacts: rows.length,
@@ -192,7 +211,7 @@ try {
 
   const report = {
     format: "sequent-diz-corpus-qualification",
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
     commit: releaseCommit,
     corpusFiles: files.length,

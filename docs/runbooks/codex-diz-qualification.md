@@ -54,7 +54,15 @@ npm run qualify:diz-corpus -- \
   --output /var/lib/sequent/qualification/diz-corpus.json
 ```
 
-Il comando richiede esattamente cinque DIZ univoci, associa ciascun hash ad almeno un’acquisizione attiva e completa, rilegge il blob, ripete il parsing e verifica metadati, contenuti opachi e ogni campo qualificato nel modello canonico. Eventuali tentativi incompleti precedenti restano nella cronologia senza impedire la prova dell’acquisizione corretta più recente. Il controllo fallisce se manca una posizione, resta una divergenza, i metadati non coincidono o un file è diverso. Il report contiene soltanto conteggi sanitizzati, è legato allo SHA completo della release e viene scritto con directory `0700` e file `0600`.
+Il comando richiede esattamente cinque DIZ univoci, associa ciascun hash ad almeno un’acquisizione attiva e completa, rilegge il blob, ripete il parsing e verifica metadati, contenuti opachi e ogni campo acquisibile nel modello canonico, inclusi soggetti e cespiti multipli nello stesso modulo. Eventuali tentativi incompleti precedenti restano nella cronologia senza impedire la prova dell’acquisizione corretta più recente. Il controllo fallisce se manca una posizione, resta una divergenza, i metadati non coincidono, un allegato incorporato non è materializzato o un file è diverso. Il report contiene soltanto conteggi sanitizzati, è legato allo SHA completo della release e viene scritto con directory `0700` e file `0600`.
+
+Per aggiornare acquisizioni create con una mappatura precedente, verificare prima il backup operativo e usare la riparazione dalla scheda **Flusso ufficiale**. In alternativa, la procedura amministrativa bulk richiede deliberatamente `--apply` e il numero esatto di pratiche attese:
+
+```bash
+npm run admin:repair-diz -- --data-dir /percorso/dati --expected-count 5 --apply
+```
+
+La riparazione non modifica i byte del DIZ: crea uno snapshot, integra soltanto campi mancanti, conserva le divergenze, riusa i target già legati e rimaterializza per hash gli allegati incorporati.
 
 ## Chiusura della qualificazione
 

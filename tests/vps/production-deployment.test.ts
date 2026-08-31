@@ -92,6 +92,14 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.doesNotMatch(workflow, /docker build|continue-on-error/);
 });
 
+test("l’immagine Production include e qualifica il backfill DIZ amministrativo", () => {
+  const dockerfile = read("Dockerfile");
+  const runtimeVerification = read("scripts/local/verify-docker-runtime.sh");
+
+  assert.match(dockerfile, /COPY --from=build --chown=root:root \/app\/scripts\/admin/);
+  assert.match(runtimeVerification, /repair-diz-acquisitions/);
+});
+
 test("il runbook qualifica la finalizzazione di un deploy annullato", () => {
   const runbook = read("docs/runbooks/vps.md");
 

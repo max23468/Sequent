@@ -3,10 +3,10 @@ import { readFile } from "node:fs/promises";
 import type Database from "better-sqlite3";
 import {
   compareDizFields,
+  DIZ_IMPORT_MAPPING_SOURCE,
   opaqueDizEvidence,
   parseDiz,
   QUALIFIED_DIZ_FIELD_MAPPINGS,
-  qualifiedMappingFor,
   rewriteDizFields,
   type ThreeWayFieldComparison,
 } from "../../domain/diz/index.ts";
@@ -15,8 +15,8 @@ import { getCanonicalField, setCanonicalField } from "../../domain/declaration.t
 import { persistUpload, resolveBlobPath, type PersistedUpload } from "./blob-store.ts";
 import { getDataDirectory } from "./config.ts";
 import { ingestPersistedUploadInTransaction } from "./document-ingestion.ts";
+import { acquireDizFields, type DizAcquisitionSummary } from "./diz-acquisition.ts";
 import { buildComplianceReport } from "./domain-compliance.ts";
-import { listDeclarationSubjectEntries } from "./domain-subjects.ts";
 import { listOfficialAttachments } from "./official-attachments.ts";
 import { getDeclaration, saveDeclaration } from "./practices.ts";
 
@@ -64,6 +64,11 @@ export interface ImportedDizContent {
     bytes: number;
     kind: "pdf" | "tiff" | "jpeg" | "png" | "unknown";
   }>;
+  attachmentEvidence: {
+    status: "embedded" | "none-in-source";
+    embeddedCount: number;
+    embeddedBytes: number;
+  };
 }
 
 export interface DizRoundTrip {
@@ -228,6 +233,11 @@ export async function getImportedDizContent(
       fields: sectionFields,
     })),
     attachments: parsed.attachments.map(({ name, bytes, kind }) => ({ name, bytes, kind })),
+    attachmentEvidence: {
+      status: parsed.attachments.length > 0 ? "embedded" : "none-in-source",
+      embeddedCount: parsed.attachments.length,
+      embeddedBytes: parsed.attachments.reduce((total, attachment) => total + attachment.bytes, 0),
+    },
   };
 }
 
@@ -387,7 +397,7 @@ function createSnapshot(
   database: Database.Database,
   practiceId: string,
   declarationId: string,
-  reason: "diz-import" | "diz-reimport" | "presentation" | "closure",
+  reason: "diz-import" | "diz-reimport" | "presentation" | "closure" | "manual",
 ): void {
   const declaration = assertDeclaration(database, practiceId, declarationId);
   database
@@ -513,88 +523,6 @@ function readArtifactBytes(
   return readFile(resolveBlobPath(dataDirectory, artifact.blobPath));
 }
 
-type DizAcquisitionSummary = {
-  qualifiedFields: number;
-  importedFields: number;
-  unchangedFields: number;
-  conflictingFields: number;
-  missingTargets: number;
-  preservedFields: number;
-};
-
-function dizModuleSequence(module: string): number | null {
-  if (!/^\d{1,8}$/.test(module)) return null;
-  const sequence = Number.parseInt(module, 10);
-  return Number.isSafeInteger(sequence) && sequence > 0 ? sequence : null;
-}
-
-function acquireRepresentableDizFields(
-  database: Database.Database,
-  input: { practiceId: string; declarationId: string },
-  fields: readonly DizField[],
-  sourceSha256: string,
-): DizAcquisitionSummary {
-  const record = assertDeclaration(database, input.practiceId, input.declarationId);
-  const subjectEntries = listDeclarationSubjectEntries(
-    database,
-    input.practiceId,
-    input.declarationId,
-  );
-  let declaration = record.declaration;
-  const summary: DizAcquisitionSummary = {
-    qualifiedFields: 0,
-    importedFields: 0,
-    unchangedFields: 0,
-    conflictingFields: 0,
-    missingTargets: 0,
-    preservedFields: 0,
-  };
-
-  for (const field of fields) {
-    const mapping = qualifiedMappingFor(field);
-    if (!mapping || field.value.length === 0) {
-      summary.preservedFields += 1;
-      continue;
-    }
-    summary.qualifiedFields += 1;
-
-    // I mapping qualificati correnti riguardano il Quadro EA: il modulo DIZ
-    // identifica la posizione del soggetto nella dichiarazione. Altri contesti
-    // restano preservati finché un round-trip ufficiale non ne qualifica il target.
-    const sequence = field.quadro === "EA" ? dizModuleSequence(field.module) : null;
-    const entityId = subjectEntries.find((entry) => entry.sequence === sequence)?.id ?? null;
-    if (!entityId) {
-      summary.missingTargets += 1;
-      summary.preservedFields += 1;
-      continue;
-    }
-
-    const current = getCanonicalField(declaration, mapping.catalogFieldId, entityId);
-    if (current) {
-      if (String(current.value ?? "") === field.value) summary.unchangedFields += 1;
-      else {
-        summary.conflictingFields += 1;
-        summary.preservedFields += 1;
-      }
-      continue;
-    }
-    declaration = setCanonicalField(
-      declaration,
-      mapping.catalogFieldId,
-      field.value,
-      "to_review",
-      [`DIZ acquisito · SHA-256 ${sourceSha256}`],
-      entityId,
-    );
-    summary.importedFields += 1;
-  }
-
-  if (summary.importedFields > 0) {
-    saveDeclaration(database, input.declarationId, record.revision, declaration);
-  }
-  return summary;
-}
-
 export async function importDiz(
   database: Database.Database,
   input: { practiceId: string; declarationId: string; file: File; dataDirectory?: string },
@@ -610,14 +538,18 @@ export async function importDiz(
   const dataDirectory = input.dataDirectory ?? getDataDirectory();
   const upload = await persistUpload(input.file, dataDirectory);
   const attachmentUploads = await persistDizAttachments(parsed, dataDirectory);
+  const priorImport = listArtifacts(database, input.practiceId, input.declarationId).find(
+    (artifact) => artifact.kind === "diz-imported",
+  );
   let artifact!: OfficialArtifact;
   database.transaction(() => {
     createSnapshot(database, input.practiceId, input.declarationId, "diz-import");
-    const acquisition = acquireRepresentableDizFields(
+    const acquisition = acquireDizFields(
       database,
       input,
       parsed.fields,
       parsed.sha256,
+      priorImport ? acquisitionBindings(priorImport.metadata) : {},
     );
     artifact = insertArtifact(database, {
       ...input,
@@ -629,6 +561,7 @@ export async function importDiz(
         fields: parsed.fields.length,
         attachments: parsed.attachments.length,
         opaqueEvidence: opaqueDizEvidence(parsed),
+        importMappingSource: DIZ_IMPORT_MAPPING_SOURCE,
         acquisition,
       },
     });
@@ -673,6 +606,72 @@ export async function materializeImportedDizAttachments(
     })
     .immediate();
   return { attachments: parsed.attachments.length, documents: new Set(documentIds).size };
+}
+
+function acquisitionBindings(metadata: Record<string, unknown>): Record<string, string> {
+  const acquisition = metadata.acquisition;
+  if (!acquisition || typeof acquisition !== "object") return {};
+  const bindings = (acquisition as { targetBindings?: unknown }).targetBindings;
+  if (!bindings || typeof bindings !== "object" || Array.isArray(bindings)) return {};
+  return Object.fromEntries(
+    Object.entries(bindings).filter(
+      (entry): entry is [string, string] =>
+        typeof entry[0] === "string" && typeof entry[1] === "string",
+    ),
+  );
+}
+
+export async function repairImportedDizAcquisition(
+  database: Database.Database,
+  input: { practiceId: string; artifactId: string; dataDirectory?: string },
+): Promise<DizAcquisitionSummary> {
+  const artifact = getOfficialArtifact(database, input.artifactId, input.practiceId);
+  if (!artifact || artifact.kind !== "diz-imported") throw new Error("DIZ_IMPORT_NOT_FOUND");
+  const parsed = parseDiz(
+    await readArtifactBytes(artifact, input.dataDirectory ?? getDataDirectory()),
+  );
+  const attachmentUploads = await persistDizAttachments(
+    parsed,
+    input.dataDirectory ?? getDataDirectory(),
+  );
+  let acquisition!: DizAcquisitionSummary;
+  database
+    .transaction(() => {
+      createSnapshot(database, artifact.practiceId, artifact.declarationId, "manual");
+      acquisition = acquireDizFields(
+        database,
+        { practiceId: artifact.practiceId, declarationId: artifact.declarationId },
+        parsed.fields,
+        parsed.sha256,
+        acquisitionBindings(artifact.metadata),
+      );
+      for (const attachment of attachmentUploads)
+        ingestPersistedUploadInTransaction(database, attachment, artifact.practiceId);
+      const metadata = {
+        ...artifact.metadata,
+        importMappingSource: DIZ_IMPORT_MAPPING_SOURCE,
+        acquisition,
+        acquisitionRepairedAt: new Date().toISOString(),
+      };
+      database
+        .prepare("UPDATE official_artifacts SET metadata_json = ? WHERE id = ?")
+        .run(JSON.stringify(metadata), artifact.id);
+      recordAudit(
+        database,
+        artifact.practiceId,
+        artifact.declarationId,
+        "diz.acquisition-repaired",
+        "Ricalcolata l’integrazione strutturata del DIZ archiviato senza modificare il file originale.",
+        {
+          artifactId: artifact.id,
+          sha256: artifact.sha256,
+          materializedAttachments: attachmentUploads.length,
+          acquisition,
+        },
+      );
+    })
+    .immediate();
+  return acquisition;
 }
 
 function latestDizSource(artifacts: OfficialArtifact[]): OfficialArtifact | null {

@@ -23,12 +23,17 @@
   }
 
   interface DizAcquisition {
-    qualifiedFields: number;
+    mappedFields: number;
     importedFields: number;
     unchangedFields: number;
     conflictingFields: number;
     missingTargets: number;
     preservedFields: number;
+    converterOnlyFields: number;
+    opaqueFields: number;
+    createdSubjects: number;
+    createdAssets: number;
+    createdDecedent: boolean;
   }
 
   let { data, form, actionUrl } = $props<{
@@ -72,15 +77,24 @@
     const acquisition = latestImport?.metadata.acquisition;
     if (!acquisition || typeof acquisition !== "object") return null;
     const candidate = acquisition as Partial<DizAcquisition>;
-    return isAcquisitionCount(candidate.qualifiedFields) &&
+    return isAcquisitionCount(candidate.mappedFields) &&
       isAcquisitionCount(candidate.importedFields) &&
       isAcquisitionCount(candidate.unchangedFields) &&
       isAcquisitionCount(candidate.conflictingFields) &&
       isAcquisitionCount(candidate.missingTargets) &&
-      isAcquisitionCount(candidate.preservedFields)
+      isAcquisitionCount(candidate.preservedFields) &&
+      isAcquisitionCount(candidate.converterOnlyFields) &&
+      isAcquisitionCount(candidate.opaqueFields) &&
+      isAcquisitionCount(candidate.createdSubjects) &&
+      isAcquisitionCount(candidate.createdAssets) &&
+      typeof candidate.createdDecedent === "boolean"
       ? (candidate as DizAcquisition)
       : null;
   });
+  let acquisitionNeedsRepair = $derived(
+    Boolean(latestImport) &&
+      (latestImport?.metadata.acquisition as { version?: unknown } | undefined)?.version !== 2,
+  );
   let presentationConfirmation = $derived(
     data.officialFlow.events.find(
       (event: OfficialFlowEvent) => event.eventType === "presentation-confirmed",
@@ -147,10 +161,23 @@
       <div class="diz-acquisition-summary" class:incomplete={acquisitionIncomplete} role={acquisitionIncomplete ? "alert" : "status"}>
         <strong>{acquisitionIncomplete ? "Acquisizione da completare" : "Dati acquisiti nella dichiarazione"}</strong>
         <p>{latestAcquisition.importedFields} nuovi dati in Da verificare · {latestAcquisition.unchangedFields} già coincidenti · {latestAcquisition.preservedFields} conservati soltanto nell’originale.</p>
+        {#if latestAcquisition.createdSubjects > 0 || latestAcquisition.createdAssets > 0 || latestAcquisition.createdDecedent}
+          <p>Struttura creata dal DIZ: {latestAcquisition.createdSubjects} soggetti · {latestAcquisition.createdAssets} beni o passività{latestAcquisition.createdDecedent ? " · defunto" : ""}.</p>
+        {/if}
         {#if acquisitionIncomplete}
           <p>{latestAcquisition.conflictingFields} valori differiscono dai dati esistenti e {latestAcquisition.missingTargets} posizioni non sono collegate. Nessun dato esistente è stato sostituito.</p>
           <a href={`?vista=quadri&sezione=quadri&quadro=EA&dichiarazione=${data.declaration.id}`}>Controlla il Quadro EA</a>
         {/if}
+      </div>
+    {:else if acquisitionNeedsRepair && latestImport}
+      <div class="diz-acquisition-summary incomplete" role="alert">
+        <strong>Integrazione DIZ da aggiornare</strong>
+        <p>Il file originale è integro, ma questa importazione usa ancora la mappatura parziale precedente.</p>
+        <form method="POST" action={actionUrl("repairImportedDiz")}>
+          <input type="hidden" name="declarationId" value={data.declaration.id} />
+          <input type="hidden" name="artifactId" value={latestImport.id} />
+          <button class="button secondary" type="submit" disabled={!data.dizEnabled}>Integra tutti i contenuti</button>
+        </form>
       </div>
     {/if}
   </section>
