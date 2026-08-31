@@ -42,6 +42,7 @@ import {
   createSharedSubject,
   listDeclarationSubjectEntries,
   listSharedSubjects,
+  listSharedSubjectsForDeclaration,
 } from "$lib/server/domain-subjects";
 import { listDomainAuditEvents } from "$lib/server/domain-read-models";
 import {
@@ -161,7 +162,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
     declarations.at(-1) ??
     null;
   if (!declaration) error(500, "Dichiarazione non disponibile");
-  const subjects = listSharedSubjects(database, params.id);
+  const subjects = listSharedSubjectsForDeclaration(database, params.id, declaration.id);
   const selectedDecedent = subjects.find((subject) => subject.role === "decedent") ?? null;
   const quadroSubjects = listDeclarationSubjectEntries(database, params.id, declaration.id);
   const selectedSubject =

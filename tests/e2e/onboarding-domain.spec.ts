@@ -24,6 +24,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   page.on("pageerror", (error) => pageErrors.push(error.message));
   const practiceTitle = unique("Pratica soggetti e beni");
   const beneficiaryName = unique("Beneficiario sintetico");
+  const canonicalBeneficiaryName = "ROSSI MARIO";
   const decedentName = unique("Defunto sintetico");
   const assetName = unique("Immobile sintetico");
   const taxCode = "RSSMRA80A01H501U";
@@ -76,12 +77,14 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   ).toBeVisible();
 
   await openPracticeSection(page, "Persone");
+  await expect(page.getByRole("alert").filter({ hasText: "Defunto da aggiungere" })).toBeVisible();
   const subjectForm = page.locator("form.domain-inline-form");
   await subjectForm.getByLabel("Ruolo").selectOption("decedent");
   await subjectForm.getByLabel("Nome o denominazione").fill(decedentName);
   await subjectForm.getByLabel("Codice fiscale").fill(decedentTaxCode);
   await submitOnlinePracticeForm(subjectForm.getByRole("button", { name: "Aggiungi" }));
   await expect(page.getByText(decedentName, { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Defunto da aggiungere" })).toHaveCount(0);
 
   await subjectForm.getByLabel("Ruolo").selectOption("beneficiary");
   await subjectForm.getByLabel("Nome o denominazione").fill(beneficiaryName);
@@ -111,10 +114,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await selectPracticeView(page, "quadri");
   await expect(page.getByRole("heading", { name: "Quadro EA", level: 2 })).toBeVisible();
   await expect(page.locator(".quadri-navigation")).not.toContainText(/\d+\/\d+/);
-  await expect(page.getByRole("link", { name: beneficiaryName })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+  await expect(page.getByRole("link", { name: "ROSSI" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("textbox", { name: "1 Codice fiscale", exact: true })).toHaveValue(
     taxCode,
   );
@@ -197,9 +197,11 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await submitOnlinePracticeForm(
     page.getByRole("button", { name: "Aggiungi un’altra posizione per questo soggetto" }),
   );
-  await expect(page.getByRole("link", { name: `${beneficiaryName} · posizione 1` })).toBeVisible();
   await expect(
-    page.getByRole("link", { name: `${beneficiaryName} · posizione 2` }),
+    page.getByRole("link", { name: `${canonicalBeneficiaryName} · posizione 1` }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: `${canonicalBeneficiaryName} · posizione 2` }),
   ).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("textbox", { name: "1 Codice fiscale", exact: true })).toHaveValue(
     taxCode,
@@ -351,7 +353,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await openPracticeSection(page, "Persone");
   const reloadedOperationalSubject = page
     .locator("details.operational-fields-group")
-    .filter({ hasText: `${beneficiaryName} · posizione 2` });
+    .filter({ hasText: `${canonicalBeneficiaryName} · posizione 2` });
   await openDetails(reloadedOperationalSubject);
   await expect(reloadedOperationalSubject.getByRole("textbox", { name: /^\d+ Nome$/ })).toHaveValue(
     "MARIO",
@@ -426,7 +428,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   );
   await expect(page.getByRole("link", { name: "Scarica PDF" })).toHaveAttribute("download", "");
   await expect(page.getByText("Bozza — controlli da completare", { exact: true })).toBeVisible();
-  await expect(page.getByText(beneficiaryName, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(canonicalBeneficiaryName, { exact: true }).first()).toBeVisible();
   await expect(page.getByText(assetName, { exact: true }).first()).toBeVisible();
   const checklistRows = await page
     .locator("section")

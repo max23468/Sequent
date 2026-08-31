@@ -34,6 +34,9 @@
     createdSubjects: number;
     createdAssets: number;
     createdDecedent: boolean;
+    synchronizedSubjectEntries?: number;
+    synchronizedSharedSubjects?: number;
+    subjectIdentityConflicts?: number;
   }
 
   let { data, form, actionUrl } = $props<{
@@ -93,7 +96,7 @@
   });
   let acquisitionNeedsRepair = $derived(
     Boolean(latestImport) &&
-      (latestImport?.metadata.acquisition as { version?: unknown } | undefined)?.version !== 2,
+      (latestImport?.metadata.acquisition as { version?: unknown } | undefined)?.version !== 3,
   );
   let presentationConfirmation = $derived(
     data.officialFlow.events.find(
@@ -157,15 +160,18 @@
       <button class="button secondary" type="submit" disabled={!data.dizEnabled || data.officialFlow.pendingRoundTrip}>Acquisisci</button>
     </form>
     {#if latestAcquisition}
-      {@const acquisitionIncomplete = latestAcquisition.conflictingFields > 0 || latestAcquisition.missingTargets > 0}
+      {@const acquisitionIncomplete = latestAcquisition.conflictingFields > 0 || latestAcquisition.missingTargets > 0 || (latestAcquisition.subjectIdentityConflicts ?? 0) > 0}
       <div class="diz-acquisition-summary" class:incomplete={acquisitionIncomplete} role={acquisitionIncomplete ? "alert" : "status"}>
         <strong>{acquisitionIncomplete ? "Acquisizione da completare" : "Dati acquisiti nella dichiarazione"}</strong>
         <p>{latestAcquisition.importedFields} nuovi dati in Da verificare · {latestAcquisition.unchangedFields} già coincidenti · {latestAcquisition.preservedFields} conservati soltanto nell’originale.</p>
         {#if latestAcquisition.createdSubjects > 0 || latestAcquisition.createdAssets > 0 || latestAcquisition.createdDecedent}
           <p>Struttura creata dal DIZ: {latestAcquisition.createdSubjects} soggetti · {latestAcquisition.createdAssets} beni o passività{latestAcquisition.createdDecedent ? " · defunto" : ""}.</p>
         {/if}
+        {#if (latestAcquisition.synchronizedSubjectEntries ?? 0) > 0 || (latestAcquisition.synchronizedSharedSubjects ?? 0) > 0}
+          <p>Identità riallineate ai dati canonici: {latestAcquisition.synchronizedSubjectEntries ?? 0} posizioni · {latestAcquisition.synchronizedSharedSubjects ?? 0} soggetti condivisi.</p>
+        {/if}
         {#if acquisitionIncomplete}
-          <p>{latestAcquisition.conflictingFields} valori differiscono dai dati esistenti e {latestAcquisition.missingTargets} posizioni non sono collegate. Nessun dato esistente è stato sostituito.</p>
+          <p>{latestAcquisition.conflictingFields} valori differiscono dai dati esistenti, {latestAcquisition.missingTargets} posizioni non sono collegate e {latestAcquisition.subjectIdentityConflicts ?? 0} soggetti hanno identità discordanti fra più posizioni. Nessun dato esistente è stato sostituito.</p>
           <a href={`?vista=quadri&sezione=quadri&quadro=EA&dichiarazione=${data.declaration.id}`}>Controlla il Quadro EA</a>
         {/if}
       </div>

@@ -52,6 +52,9 @@ try {
       createdSubjects: acquisition.createdSubjects,
       createdAssets: acquisition.createdAssets,
       createdDecedent: acquisition.createdDecedent,
+      synchronizedSubjectEntries: acquisition.synchronizedSubjectEntries,
+      synchronizedSharedSubjects: acquisition.synchronizedSharedSubjects,
+      subjectIdentityConflicts: acquisition.subjectIdentityConflicts,
     });
   }
   process.stdout.write(

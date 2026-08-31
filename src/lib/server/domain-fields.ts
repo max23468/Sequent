@@ -13,7 +13,11 @@ import { validateFieldValue, type ValidationIssue } from "../../domain/validatio
 import { getDeclaration, saveDeclaration } from "./practices.ts";
 import { listSharedAssets } from "./domain-assets.ts";
 import { synchronizeChecklist } from "./domain-checklist.ts";
-import { listDeclarationSubjectEntries, listSharedSubjects } from "./domain-subjects.ts";
+import {
+  listDeclarationSubjectEntries,
+  listSharedSubjects,
+  synchronizeCanonicalSubjectIdentities,
+} from "./domain-subjects.ts";
 import {
   SUCCESSION_OPENING_DATE_FIELD_ID,
   officialAssetValueField,
@@ -350,25 +354,6 @@ export function saveCanonicalFields(
     latestCalculationRunId: null,
   };
   const revision = database.transaction(() => {
-    const eaTaxCode = changedFields.find(
-      (field) => field.fieldId === "quadro-ea.soggetto.codice-fiscale",
-    );
-    if (eaTaxCode && entry) {
-      database
-        .prepare(
-          `UPDATE shared_subjects
-           SET tax_code = ?, revision = revision + 1, updated_at = ?
-           WHERE id = ? AND practice_id = ?`,
-        )
-        .run(eaTaxCode.value || null, new Date().toISOString(), entry.subjectId, input.practiceId);
-      database
-        .prepare(
-          `UPDATE declaration_subject_entries
-           SET tax_code_snapshot = ?
-           WHERE declaration_id = ? AND subject_id = ?`,
-        )
-        .run(eaTaxCode.value || null, input.declarationId, entry.subjectId);
-    }
     if (decedent) {
       const data = { ...decedent.data };
       for (const field of changedFields) {
@@ -422,6 +407,7 @@ export function saveCanonicalFields(
       input.expectedRevision,
       declaration,
     );
+    synchronizeCanonicalSubjectIdentities(database, input.practiceId, input.declarationId);
     recordAuditEvent(
       database,
       input.practiceId,

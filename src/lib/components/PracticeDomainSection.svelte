@@ -119,6 +119,9 @@
 {:else if selectedSection === "beneficiaries"}
   <div class="workspace-panel-heading"><h2>Persone della pratica</h2><span>{data.subjects.length}</span></div>
   <div class="domain-section">
+    {#if !data.selectedDecedent}
+      <div class="domain-subject-warning" role="alert"><CircleAlert size={19} /><span><strong>Defunto da aggiungere</strong><small>Inseriscilo da una fonte verificata: senza questa anagrafica la pratica non è completa.</small></span></div>
+    {/if}
     {#if data.subjects.length === 0}
       <div class="panel-empty domain-empty"><UsersRound size={27} /><p>Nessun soggetto registrato.</p><span>Defunto, beneficiari e rappresentanti sono condivisi fra le dichiarazioni della pratica.</span></div>
     {:else}

@@ -257,6 +257,28 @@
 .domain-empty {
   min-height: 220px;
 }
+.domain-subject-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 14px 18px;
+  border: 1px solid color-mix(in srgb, #b7791f 45%, var(--line));
+  border-radius: 6px;
+  background: color-mix(in srgb, #b7791f 7%, var(--surface));
+}
+.domain-subject-warning > span {
+  display: grid;
+  gap: 4px;
+}
+.domain-subject-warning small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+.domain-subject-warning svg {
+  flex: 0 0 auto;
+  color: #b7791f;
+}
 .qualification-notice,
 .export-panel {
   margin: 22px;

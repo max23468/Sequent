@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.15
+
+### Fixed
+
+- identità e codice fiscale dei soggetti riallineati ai campi canonici in Vista operativa, Vista Quadri, dossier e acquisizioni DIZ pregresse, conservando esplicite le identità discordanti fra posizioni;
+- ordine dei soggetti della Vista operativa reso coerente con il Quadro EA e assenza del defunto segnalata come dato bloccante da inserire soltanto da una fonte verificata.
+
 ## 0.2.14
 
 ### Fixed
