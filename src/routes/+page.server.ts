@@ -9,6 +9,7 @@ import { listFailedBlobVerifications } from "$lib/server/jobs";
 import { getLauncherCapabilities } from "$lib/server/launchers";
 import { listPracticeDeadlines, listPracticeDomainSummaries } from "$lib/server/domain-read-models";
 import { createPractice, listPractices } from "$lib/server/practices";
+import { createDashboardVerificationItems } from "$lib/dashboard";
 
 const titleSchema = z
   .string()
@@ -21,13 +22,20 @@ export const load: PageServerLoad = ({ locals }) => {
   if (!hasOwner(database)) redirect(303, "/setup");
   if (!locals.ownerId) redirect(303, "/login");
   const practices = listPractices(database);
+  const domainSummaries = listPracticeDomainSummaries(database);
+  const pendingReviews = listPendingReviewSummaries(database);
+  const failedVerifications = listFailedBlobVerifications(database);
   return {
     practices,
-    pendingReviews: listPendingReviewSummaries(database),
-    failedVerifications: listFailedBlobVerifications(database),
+    verificationItems: createDashboardVerificationItems({
+      practices,
+      domainSummaries,
+      pendingReviews,
+      failedVerifications,
+    }),
     launchers: getLauncherCapabilities(),
     lastPractice: practices.at(0) ?? null,
-    domainSummaries: listPracticeDomainSummaries(database),
+    domainSummaries,
     deadlines: listPracticeDeadlines(database),
   };
 };

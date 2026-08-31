@@ -4,6 +4,7 @@
   import { formatItalianDate } from "$lib/format";
   import { uploadFilesResumably } from "$lib/client/resumable-upload";
   import { closeDialog, dialogMotion } from "$lib/client/dialog-motion";
+  import DashboardVerificationItem from "$lib/components/DashboardVerificationItem.svelte";
 
   let { data, form } = $props();
   let createDialog: HTMLDialogElement | undefined = undefined;
@@ -163,39 +164,16 @@
         <span class="mobile-panel-mark attention-mark" aria-hidden="true"></span>
         <h2 id="attention-title">Da verificare</h2>
       </div>
-      {#if data.failedVerifications.length === 0 && data.pendingReviews.length === 0 && data.domainSummaries.length === 0}
+      {#if data.verificationItems.length === 0}
         <div class="panel-empty"><p>Nessuna verifica da mostrare.</p><span>Le verifiche documentali compariranno qui quando saranno disponibili.</span></div>
       {:else}
         <ul class="verification-list">
-          {#each data.domainSummaries.slice(0, 5) as summary (summary.practiceId)}
-            {@const practice = data.practices.find((candidate: (typeof data.practices)[number]) => candidate.id === summary.practiceId)}
-            {#if practice}
-              <li>
-                <a href={`/pratiche/${summary.practiceId}?sezione=overview`}>
-                  <span><strong>{summary.nextStep}</strong><small>{practice.title} · {summary.label}</small></span>
-                  <ChevronRight size={19} aria-hidden="true" />
-                </a>
-              </li>
-            {/if}
-          {/each}
-          {#each data.pendingReviews.slice(0, 8) as review (review.id)}
-            <li>
-              <a href={`/pratiche/${review.practiceId}?sezione=verifications&verifica=${review.id}`}>
-                <span><strong>{review.label}</strong><small>{review.documentName ?? "Senza documento"} · {review.practiceTitle} · {review.method === "codex" ? "Codex" : review.method === "ocr" ? "OCR" : review.method}</small></span>
-                <ChevronRight size={19} aria-hidden="true" />
-              </a>
-            </li>
-          {/each}
-          {#each data.failedVerifications as verification (verification.jobId)}
-            <li>
-              <a href={`/pratiche/${verification.practiceId}?sezione=documents&documento=${verification.documentId}`}>
-                <span><strong>Verifica tecnica non riuscita</strong><small>{verification.documentName} · {verification.practiceTitle}</small></span>
-                <ChevronRight size={19} aria-hidden="true" />
-              </a>
-            </li>
+          {#each data.verificationItems as item (item.id)}
+            <DashboardVerificationItem {item} />
           {/each}
         </ul>
       {/if}
+      <a class="panel-shortcut" href="/documenti" data-sveltekit-prefetch><span>Apri Documenti</span><ChevronRight size={18} aria-hidden="true" /></a>
     </section>
     <section class="dashboard-panel deadlines-panel" aria-labelledby="deadlines-title">
       <div class="panel-title dashboard-panel-title">
@@ -206,7 +184,7 @@
         <div class="panel-empty"><p>Nessuna scadenza registrata.</p><span>Sequent mostrerà soltanto le scadenze essenziali della pratica.</span></div>
       {:else}
         <ul class="verification-list deadline-list">
-          {#each data.deadlines.slice(0, 5) as deadline (deadline.practiceId)}
+          {#each data.deadlines.slice(0, 4) as deadline (deadline.practiceId)}
             <li class:deadline-overdue={deadline.timing === "overdue"}>
               <a href={`/pratiche/${deadline.practiceId}?sezione=checks`}>
                 <span>
@@ -224,6 +202,7 @@
           {/each}
         </ul>
       {/if}
+      <a class="panel-shortcut" href="/pratiche" data-sveltekit-prefetch><span>Apri Pratiche</span><ChevronRight size={18} aria-hidden="true" /></a>
     </section>
     <section class="dashboard-panel recent-panel" aria-labelledby="recent-title">
       <div class="panel-title dashboard-panel-title">
@@ -235,7 +214,7 @@
       {:else}
         <div class="responsive-table">
           <div class="table-row table-header" aria-hidden="true"><span>Pratica</span><span>Stato</span><span>Documenti</span><span>Aggiornato</span><span></span></div>
-          {#each data.practices.slice(0, 6) as practice (practice.id)}
+          {#each data.practices.slice(0, 5) as practice (practice.id)}
             <a class="table-row practice-row" href={`/pratiche/${practice.id}`}>
               <strong>{practice.title}</strong><span class="status-cell"><i></i>{domainSummary(practice.id)?.label ?? "Da impostare"}</span><span>{practice.documentCount}</span>
               <time datetime={practice.updatedAt}>{formatItalianDate(practice.updatedAt)}</time><ChevronRight size={19} aria-hidden="true" />
@@ -243,6 +222,7 @@
           {/each}
         </div>
       {/if}
+      <a class="panel-shortcut" href="/pratiche" data-sveltekit-prefetch><span>Vedi tutte le pratiche</span><ChevronRight size={18} aria-hidden="true" /></a>
     </section>
   </div>
 </div>
