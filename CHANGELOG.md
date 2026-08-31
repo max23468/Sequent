@@ -4,6 +4,12 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.14
+
+### Fixed
+
+- scorciatoie dei box Dashboard allineate su desktop e metadati delle pratiche recenti ricomposti su mobile, con conteggio documenti separato dallo stato e data allineata alla freccia.
+
 ## 0.2.13
 
 ### Added

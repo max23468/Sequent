@@ -107,6 +107,15 @@
   background: var(--surface);
   box-shadow: var(--shadow-soft);
 }
+.attention-panel,
+.deadlines-panel {
+  display: flex;
+  flex-direction: column;
+}
+.attention-panel .panel-shortcut,
+.deadlines-panel .panel-shortcut {
+  margin-top: auto;
+}
 .recent-panel {
   grid-column: 1 / -1;
   min-height: 0;
@@ -288,6 +297,9 @@
 .practice-row time,
 .practice-row > span {
   color: var(--muted);
+}
+.mobile-document-label {
+  display: none;
 }
 .status-cell {
   display: inline-flex;
