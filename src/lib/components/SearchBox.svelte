@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Building2, FileText, Folder, Search, UsersRound, X } from "@lucide/svelte";
-  import { onDestroy } from "svelte";
   import { searchSequent, type SearchResult } from "$lib/client/search";
 
   let query = $state("");
@@ -111,9 +110,11 @@
     }
   }
 
-  onDestroy(() => {
-    if (typeof window !== "undefined") window.clearTimeout(debounceTimer);
-    searchController?.abort();
+  $effect(() => {
+    return () => {
+      window.clearTimeout(debounceTimer);
+      searchController?.abort();
+    };
   });
 </script>
 
