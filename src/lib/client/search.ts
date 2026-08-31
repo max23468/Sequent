@@ -7,8 +7,8 @@ export interface SearchResult {
   href: string;
 }
 
-export async function searchSequent(query: string): Promise<SearchResult[]> {
-  const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+export async function searchSequent(query: string, signal?: AbortSignal): Promise<SearchResult[]> {
+  const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal });
   if (!response.ok) return [];
   const payload = (await response.json()) as { results: Omit<SearchResult, "href">[] };
   return payload.results.map((result) => ({

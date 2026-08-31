@@ -5,7 +5,6 @@
   import SearchBox from "$lib/components/SearchBox.svelte";
   import ThemeSelector from "$lib/components/ThemeSelector.svelte";
   import { resolvePageTitle } from "$lib/page-title";
-  import { clearAllOfflineData } from "$lib/offline/store";
   import "./app.css";
 
   let { children, data } = $props();
@@ -39,6 +38,7 @@
   async function clearOfflineCopiesBeforeLogout(event: SubmitEvent) {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
+    const { clearAllOfflineData } = await import("$lib/offline/store");
     await clearAllOfflineData();
     form.submit();
   }
