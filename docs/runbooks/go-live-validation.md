@@ -61,3 +61,5 @@ La pubblicazione della candidata stabile non chiude da sola il gate. Dopo il dep
 6. acquisire l’approvazione finale dell’owner dopo la rilettura tecnica;
 7. generare e rileggere il report `TG-GOLIVE` senza blocker;
 8. registrare nel capitolo canonico del Master Plan lo stato chiuso, la release e il commit esatti mediante una modifica esclusivamente documentale.
+
+La verifica del bundle e del catalogo può essere ripetuta sulla VPS dal checkout canonico. Il controllo SUC13 usa invece il runtime Java ufficiale incluso nel pacchetto desktop per macOS e va eseguito sul checkout macOS dello stesso commit; non deve essere forzato sulla VPS Linux né sostituito con un runtime diverso.
