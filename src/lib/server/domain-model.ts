@@ -270,4 +270,7 @@ export interface ChecklistItem {
   sourceRefs: string[];
   documentId: string | null;
   decisionNote: string | null;
+  officialAttachmentBucket:
+    | import("../../domain/successionionline-eg.ts").SuccessioniOnLineEgBucketId
+    | null;
 }

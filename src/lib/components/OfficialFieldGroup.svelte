@@ -58,6 +58,7 @@
   }
 
   function isEditable(field: QuadroField): boolean {
+    if (field.successioniOnLineAttachmentBucket) return false;
     return isOperationalParityEditable(
       field.operationalParity,
       data.declaration.declaration.declarationKind,

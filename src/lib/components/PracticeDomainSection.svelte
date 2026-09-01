@@ -173,7 +173,7 @@
         <section class="checklist-row">
           <input type="hidden" name="itemId" value={item.id} />
           <PackageCheck size={19} />
-          <div><strong>{item.label}</strong><small>{item.importance === "blocking" ? "Necessario" : item.importance === "conditional" ? "Da acquisire quando disponibile" : "Consigliato"}</small></div>
+          <div><strong>{item.label}</strong><small>{item.importance === "blocking" ? "Necessario" : item.importance === "conditional" ? "Da acquisire quando disponibile" : "Consigliato"}{item.officialAttachmentBucket ? ` · Quadro ${item.officialAttachmentBucket}` : ""}</small></div>
           <label><span>Stato</span><select name={`status:${item.id}`}><option value="missing" selected={item.status === "missing"}>Mancante</option><option value="available" selected={item.status === "available"}>Disponibile</option>{#if item.importance !== "blocking"}<option value="overridden" selected={item.status === "overridden"}>Deroga motivata</option>{/if}</select></label>
           <label><span>Documento</span><select name={`documentId:${item.id}`}><option value="">Non collegato</option>{#each data.documents as sourceDocument (sourceDocument.id)}<option value={sourceDocument.id} selected={item.documentId === sourceDocument.id}>{sourceDocument.originalName}</option>{/each}</select></label>
           <label class="checklist-note"><span>Nota</span><input name={`decisionNote:${item.id}`} value={item.decisionNote ?? ""} placeholder={item.importance === "blocking" ? "Il documento necessario non ammette deroga" : "Necessaria per una deroga"} /></label>

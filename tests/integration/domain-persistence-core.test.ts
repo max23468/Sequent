@@ -14,6 +14,7 @@ import {
   updateChecklistItem,
 } from "../../src/lib/server/domain-checklist.ts";
 import { buildComplianceReport } from "../../src/lib/server/domain-compliance.ts";
+import { buildOfficialEgAttachmentState } from "../../src/lib/server/successionionline-eg-attachments.ts";
 import {
   confirmDevolutionScenario,
   listDevolutionScenarios,
@@ -41,6 +42,64 @@ import {
 afterEach(cleanupDomainDirectories);
 
 describe("persistenza del procedimento", () => {
+  it("collega ogni documento preparato a un solo contenitore ufficiale EG", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-domain-eg-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica allegati EG sintetica");
+    const checklist = synchronizeChecklist(database, practice.id, practice.declarationId);
+    const familyTree = checklist.find((item) => item.officialAttachmentBucket === "EG6");
+    expect(familyTree).toBeDefined();
+    const documentId = "documento-eg-sintetico";
+    const now = new Date().toISOString();
+    database
+      .prepare(
+        `INSERT INTO documents(
+           id, practice_id, original_name, media_type, byte_size, sha256, blob_path, created_at
+         ) VALUES (?, ?, 'albero.pdf', 'application/pdf', 1, 'documento-eg', 'blobs/eg/albero', ?)`,
+      )
+      .run(documentId, practice.id, now);
+    expect(
+      updateChecklistItem(database, {
+        practiceId: practice.id,
+        declarationId: practice.declarationId,
+        itemId: familyTree!.id,
+        status: "available",
+        documentId,
+      }),
+    ).toBe(true);
+    database
+      .prepare(
+        `INSERT INTO official_attachments(
+           id, document_id, practice_id, original_name, prepared_name, format, byte_size,
+           sha256, blob_path, validation_json, source_refs_json, created_at
+         ) VALUES ('attachment-eg', ?, ?, 'albero.pdf', 'albero.pdf', 'PDF/A-1b', 1,
+                   'attachment-eg-hash', 'blobs/eg/preparato', '{}', '["SRC-08"]', ?)`,
+      )
+      .run(documentId, practice.id, now);
+    let state = buildOfficialEgAttachmentState(
+      database,
+      practice.id,
+      synchronizeChecklist(database, practice.id, practice.declarationId),
+    );
+    expect(state.ready).toBe(true);
+    expect(state.buckets.find((bucket) => bucket.id === "EG6")?.count).toBe(1);
+
+    const ambiguousChecklist = [
+      ...synchronizeChecklist(database, practice.id, practice.declarationId),
+      {
+        ...familyTree!,
+        id: `checklist:${practice.declarationId}:will-test`,
+        officialAttachmentBucket: "EG2" as const,
+        documentId,
+        status: "available" as const,
+      },
+    ];
+    state = buildOfficialEgAttachmentState(database, practice.id, ambiguousChecklist);
+    expect(state.ready).toBe(false);
+    expect(state.ambiguousDocumentIds).toEqual([documentId]);
+  });
+
   it("condivide soggetti e beni fra dichiarazioni con snapshot separati", () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-domain-"));
     directories.push(directory);

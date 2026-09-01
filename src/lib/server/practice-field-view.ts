@@ -1,9 +1,19 @@
 import { listQuadroFields } from "../../domain/official-catalog/catalog.ts";
 import type { OperationalParityRow } from "../../domain/operational-parity.ts";
+import { successioniOnLineLayout } from "../../domain/successionionline-layout.ts";
+import { successioniOnLineDisabledWhen } from "../../domain/successionionline-behavior.ts";
+import { successioniOnLineEgBucketForField } from "../../domain/successionionline-eg.ts";
 
 type CatalogField = ReturnType<typeof listQuadroFields>[number];
 
-export function createPracticeFieldView(field: CatalogField, parity: OperationalParityRow) {
+export function createPracticeFieldView(
+  field: CatalogField,
+  parity: OperationalParityRow,
+  includeSuccessioniOnLineLayout = false,
+) {
+  const applicationLayout = includeSuccessioniOnLineLayout
+    ? successioniOnLineLayout(field.canonicalId)
+    : null;
   return {
     canonicalId: field.canonicalId,
     label: field.label,
@@ -19,6 +29,17 @@ export function createPracticeFieldView(field: CatalogField, parity: Operational
     choiceProvinceFieldId: field.choiceProvinceFieldId,
     appliesToDeclarationKinds: field.appliesToDeclarationKinds,
     options: field.control === "combobox" ? [] : field.options,
+    ...(includeSuccessioniOnLineLayout
+      ? {
+          successioniOnLineOrder: applicationLayout?.order ?? null,
+          successioniOnLineSection: applicationLayout?.section ?? null,
+          successioniOnLinePage: applicationLayout?.page ?? null,
+          successioniOnLineControlTypes: applicationLayout?.uiControls ?? [],
+          successioniOnLineRadioGroup: applicationLayout?.radioGroup ?? null,
+          successioniOnLineDisabledWhen: successioniOnLineDisabledWhen(field.canonicalId),
+          successioniOnLineAttachmentBucket: successioniOnLineEgBucketForField(field.canonicalId),
+        }
+      : {}),
     type: field.type,
     instructions: field.instructions.map(({ id, instruction }) => ({ id, instruction })),
     operationalParity: {

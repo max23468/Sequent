@@ -9,8 +9,10 @@ import {
   requiresOfficialApplicationEvidence,
 } from "../../src/domain/operational-parity.ts";
 import { listQuadroFields } from "../../src/domain/official-catalog/catalog.ts";
+import { normalizeItalianTypography } from "../../src/domain/italian-typography.ts";
 
 const EXPECTED_SOURCES = {
+  "SUC13.jar": "f7d01561591634ecb450c08e00cef5f91fb63810a28bf4cb25d14bed378bd2d1",
   "SUC13_ResSUC13.jar": "2332c71fb3f6db61ed7fe68e7f2f56c18e85015c96aea3c7df905d58dfaf24b5",
   "XMLConverter_PropertiesREG2013.jar":
     "e396845477cbc0b7628d75d46782748ec5d1452380e21a59af810ed95709f712",
@@ -36,6 +38,11 @@ const PROPERTY_RESOURCE_BY_QUADRO = {
   ER: "quadroER",
 } as const;
 
+const SOURCE_QUALIFIED_OVERRIDES = new Set([
+  "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneI_ImpostaIpotecaria/ImpostaIpotecariaVersata",
+  "xsd:/Fornitura/Dichiarazione/QuadroEF/SezioneII_ImpostaCatastale/ImpostaCatastaleVersata",
+]);
+
 type ReviewedProducer = "professionista" | "automatico" | "riservato-ufficio";
 
 interface FieldEvidence {
@@ -51,16 +58,52 @@ interface FieldEvidence {
     | "sezione-riservata-all-ufficio";
 }
 
+interface LayoutEvidence {
+  fieldId: string;
+  quadro: string;
+  recordCode: string;
+  script: string;
+  section: string;
+  page: number;
+  order: number;
+  uiControls: string[];
+  radioGroup: string | null;
+}
+
+interface AttachmentBucketEvidence {
+  id: `EG${number}`;
+  recordCode: string;
+  fieldId?: string;
+  label: string;
+  order: number;
+}
+
+interface ConditionalRuleEvidence {
+  triggerRecordCode: string;
+  triggerValue: "1";
+  effect: "disable-while-selected";
+  targetRecordCodes: string[];
+  sourcePointer: string;
+}
+
 interface OfficialApplicationEvidence {
-  schemaVersion: 1;
+  schemaVersion: 4;
   application: {
     name: "SuccessioniOnLine";
     model: "SUC13";
     jnlpUrl: "https://jws.agenziaentrate.it/jws/registro/2013/SUC13/SUC13.jnlp";
     sources: Array<{ file: string; sha256: string }>;
   };
-  counts: Record<ReviewedProducer, number> & { reviewedFields: number };
+  counts: Record<ReviewedProducer, number> & {
+    reviewedFields: number;
+    layoutFields: number;
+    attachmentBuckets: number;
+    conditionalRules: number;
+  };
   fields: FieldEvidence[];
+  layout: LayoutEvidence[];
+  attachmentBuckets: AttachmentBucketEvidence[];
+  conditionalRules: ConditionalRuleEvidence[];
 }
 
 function sha256(value: Uint8Array): string {
@@ -93,6 +136,21 @@ function relativeFieldPath(technicalPath: string): string {
       "",
     ),
   );
+}
+
+function normalizeUiSection(value: string): string {
+  const numbered = value.match(/^SEZIONE ([IVX]+): (.*)$/u);
+  if (numbered)
+    return normalizeItalianTypography(`Sezione ${numbered[1]}: ${numbered[2]}`).replaceAll(
+      "'",
+      "’",
+    );
+  const [heading, suffix] = value.split(" - ", 2);
+  const normalizedHeading = heading?.toLocaleLowerCase("it") ?? value;
+  const sentenceHeading = `${normalizedHeading.charAt(0).toLocaleUpperCase("it")}${normalizedHeading.slice(1)}`;
+  return normalizeItalianTypography(
+    suffix ? `${sentenceHeading} — ${suffix}` : sentenceHeading,
+  ).replaceAll("'", "’");
 }
 
 function producerFor(row: ReturnType<typeof buildOperationalParityMap>[number]): {
@@ -140,26 +198,178 @@ function parsePropertyMappings(archive: Record<string, Uint8Array>): Map<string,
   return result;
 }
 
-function parseUiControls(archive: Record<string, Uint8Array>): Map<string, Set<string>> {
-  const result = new Map<string, Set<string>>();
+function parseUiControls(archive: Record<string, Uint8Array>): {
+  controlsByCode: Map<string, Set<string>>;
+  layoutByQuadroAndCode: Map<
+    string,
+    { script: string; section: string; page: number; order: number }
+  >;
+  radioGroupByQuadroAndCode: Map<string, string>;
+  attachmentBuckets: AttachmentBucketEvidence[];
+} {
+  const controlsByCode = new Map<string, Set<string>>();
+  const layoutByQuadroAndCode = new Map<
+    string,
+    { script: string; section: string; page: number; order: number }
+  >();
+  const radioGroupByQuadroAndCode = new Map<string, string>();
+  const attachmentBuckets: AttachmentBucketEvidence[] = [];
   const scriptPrefix = "finanze/IDAC/resources/SUC13/localAppRoot/script/";
-  for (const [resourcePath, resource] of Object.entries(archive)) {
+  const quadroByScript = new Map([
+    ["DatiAnagrafici", "Frontespizio"],
+    ...Object.keys(PROPERTY_RESOURCE_BY_QUADRO)
+      .filter((quadro) => quadro !== "Frontespizio")
+      .map((quadro) => [quadro, quadro] as const),
+  ]);
+  for (const [resourcePath, resource] of Object.entries(archive).sort(([left], [right]) =>
+    left.localeCompare(right, "it"),
+  )) {
     if (!resourcePath.startsWith(scriptPrefix) || !resourcePath.endsWith(".txt")) continue;
+    const script = basename(resourcePath, ".txt");
+    const quadro = quadroByScript.get(script);
+    let order = 0;
+    let page = 1;
+    let section = quadro === "Frontespizio" ? "Dati generali" : `Quadro ${quadro}`;
+    let currentRadioGroup: string | null = null;
+    let radioGroupIndex = 0;
+    let pendingAttachmentBucket: Omit<AttachmentBucketEvidence, "recordCode" | "order"> | null =
+      null;
     for (const sourceLine of strFromU8(resource).split(/\r?\n/u)) {
       const line = sourceLine.trim();
       if (!line || line.startsWith("//")) continue;
+      const sectionMatch = line.match(/^SeparaSezione\(([^;]*);[^;]*;negativo\)/u);
+      if (sectionMatch?.[1]?.trim()) {
+        const rawSection = sectionMatch[1].trim();
+        section = normalizeUiSection(rawSection);
+      }
       const match = line.match(/^([A-Za-z][A-Za-z0-9_]*)\s*\(([^)]*)\)/u);
       if (!match) continue;
       const [first = "", second = ""] = match[2]?.split(";").map((part) => part.trim()) ?? [];
+      const attachmentLabel =
+        quadro === "EG" && match[1] === "Etichetta" ? first.match(/^EG(\d+) - (.+)$/u) : null;
+      if (attachmentLabel)
+        pendingAttachmentBucket = {
+          id: `EG${Number(attachmentLabel[1])}`,
+          label: normalizeItalianTypography(attachmentLabel[2]!).replaceAll("'", "’"),
+        };
+      if (quadro === "EG" && match[1] === "ListaFileSemaforo") {
+        if (!pendingAttachmentBucket)
+          throw new Error(`Contenitore allegati senza etichetta per ${first}.`);
+        attachmentBuckets.push({
+          ...pendingAttachmentBucket,
+          recordCode: normalizeRecordCode(first),
+          order: attachmentBuckets.length,
+        });
+        pendingAttachmentBucket = null;
+      }
+      if (match[1] === "NextPage") {
+        page += 1;
+        continue;
+      }
+      if (match[1] === "NewRadioGroup") {
+        currentRadioGroup = `${script}:radio-${radioGroupIndex}`;
+        radioGroupIndex += 1;
+        continue;
+      }
+      if (match[1] === "NewRadioMultiGroup") {
+        currentRadioGroup = first ? `${script}:radio-${first}` : null;
+        continue;
+      }
       const rawCode = match[1] === "SingleRadioGroup" ? second : first;
       const code = normalizeRecordCode(rawCode);
       if (!/^(?:B|E[A-S])\d+/u.test(code)) continue;
-      const controls = result.get(code) ?? new Set<string>();
+      const controls = controlsByCode.get(code) ?? new Set<string>();
       controls.add(match[1]!);
-      result.set(code, controls);
+      controlsByCode.set(code, controls);
+      if (quadro) {
+        const key = `${quadro}|${code}`;
+        if (!layoutByQuadroAndCode.has(key))
+          layoutByQuadroAndCode.set(key, { script, section, page, order });
+        const radioGroup =
+          match[1] === "SingleRadioGroup"
+            ? first
+              ? `${script}:radio-${first}`
+              : null
+            : match[1] === "SingleRadio"
+              ? currentRadioGroup
+              : null;
+        if (radioGroup) {
+          const existingRadioGroup = radioGroupByQuadroAndCode.get(key);
+          if (existingRadioGroup && existingRadioGroup !== radioGroup)
+            throw new Error(`Gruppi radio discordanti per ${key}.`);
+          radioGroupByQuadroAndCode.set(key, radioGroup);
+        }
+        order += 1;
+      }
     }
   }
-  return result;
+  return {
+    controlsByCode,
+    layoutByQuadroAndCode,
+    radioGroupByQuadroAndCode,
+    attachmentBuckets,
+  };
+}
+
+function officialConditionalRules(): ConditionalRuleEvidence[] {
+  const sourcePointer =
+    "SUC13.jar#it.finanze.entrate.sco.quadri.EventiQuadroEH.eventiCampi/eventiTestamento";
+  return [
+    {
+      triggerRecordCode: "EH000014",
+      triggerValue: "1",
+      effect: "disable-while-selected",
+      targetRecordCodes: ["EH000015", "EH000019", "EH000020", "EH000077"],
+      sourcePointer,
+    },
+    {
+      triggerRecordCode: "EH000018",
+      triggerValue: "1",
+      effect: "disable-while-selected",
+      targetRecordCodes: ["EH000015", "EH000016", "EH000017"],
+      sourcePointer,
+    },
+    {
+      triggerRecordCode: "EH000021",
+      triggerValue: "1",
+      effect: "disable-while-selected",
+      targetRecordCodes: [
+        "EH004001",
+        "EH004002",
+        "EH004003",
+        "EH004004",
+        "EH004005",
+        "EH005001",
+        "EH005002",
+        "EH005003",
+        "EH005004",
+        "EH005005",
+      ],
+      sourcePointer,
+    },
+    {
+      triggerRecordCode: "EH000023",
+      triggerValue: "1",
+      effect: "disable-while-selected",
+      targetRecordCodes: ["EH007001", "EH007002", "EH007003"],
+      sourcePointer,
+    },
+    {
+      triggerRecordCode: "EH000025",
+      triggerValue: "1",
+      effect: "disable-while-selected",
+      targetRecordCodes: [
+        "EH008001",
+        "EH008002",
+        "EH008003",
+        "EH008004",
+        "EH008005",
+        "EH008006",
+        "EH008007",
+      ],
+      sourcePointer,
+    },
+  ];
 }
 
 export async function buildOfficialApplicationEvidence(
@@ -181,12 +391,29 @@ export async function buildOfficialApplicationEvidence(
     sourceEntries.find(({ file }) => file === "SUC13_ResSUC13.jar")!.content,
   );
   const recordCodeByPath = parsePropertyMappings(propertyArchive);
-  const controlsByCode = parseUiControls(resourceArchive);
-  const rows = buildOperationalParityMap().filter((row) => {
+  const { controlsByCode, layoutByQuadroAndCode, radioGroupByQuadroAndCode, attachmentBuckets } =
+    parseUiControls(resourceArchive);
+  const conditionalRules = officialConditionalRules();
+  if (attachmentBuckets.length !== 11)
+    throw new Error(`Attesi 11 contenitori allegati EG, trovati ${attachmentBuckets.length}.`);
+  const parityRows = buildOperationalParityMap();
+  const egCountFields = listQuadroFields("EG").filter((field) => field.visibleFieldId !== null);
+  if (egCountFields.length !== attachmentBuckets.length)
+    throw new Error(
+      `I ${attachmentBuckets.length} contenitori EG non coincidono con i ${egCountFields.length} contatori ufficiali.`,
+    );
+  const qualifiedAttachmentBuckets = attachmentBuckets.map((bucket, index) => ({
+    ...bucket,
+    fieldId: egCountFields[index]!.canonicalId,
+  }));
+  const rows = parityRows.filter((row) => {
     const field = listQuadroFields(row.quadro).find(
       (candidate) => candidate.canonicalId === row.fieldId,
     );
-    return field ? requiresOfficialApplicationEvidence(row.quadro, field) : false;
+    return field
+      ? requiresOfficialApplicationEvidence(row.quadro, field) ||
+          SOURCE_QUALIFIED_OVERRIDES.has(row.fieldId)
+      : false;
   });
   if (rows.length !== 257)
     throw new Error(`Attesi 257 campi da riesaminare, trovati ${rows.length}.`);
@@ -226,8 +453,38 @@ export async function buildOfficialApplicationEvidence(
 
   const count = (producer: ReviewedProducer) =>
     fields.filter((field) => field.reviewedProducer === producer).length;
+  const layout = parityRows
+    .flatMap((row): LayoutEvidence[] => {
+      const recordCode = recordCodeByPath.get(
+        `${row.quadro}|${relativeFieldPath(row.technicalPath)}`,
+      );
+      if (!recordCode) return [];
+      const layoutKey = `${row.quadro}|${recordCode}`;
+      const position = layoutByQuadroAndCode.get(layoutKey);
+      return position
+        ? [
+            {
+              fieldId: row.fieldId,
+              quadro: row.quadro,
+              recordCode,
+              ...position,
+              uiControls: [...(controlsByCode.get(recordCode) ?? [])].sort(),
+              radioGroup: radioGroupByQuadroAndCode.get(layoutKey) ?? null,
+            },
+          ]
+        : [];
+    })
+    .sort(
+      (left, right) =>
+        left.quadro.localeCompare(right.quadro, "it") ||
+        left.order - right.order ||
+        left.fieldId.localeCompare(right.fieldId, "it"),
+    );
   const counts = {
     reviewedFields: fields.length,
+    layoutFields: layout.length,
+    attachmentBuckets: qualifiedAttachmentBuckets.length,
+    conditionalRules: conditionalRules.length,
     professionista: count("professionista"),
     automatico: count("automatico"),
     "riservato-ufficio": count("riservato-ufficio"),
@@ -240,7 +497,7 @@ export async function buildOfficialApplicationEvidence(
     throw new Error(`Conteggi produttori inattesi: ${JSON.stringify(counts)}`);
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 4,
     application: {
       name: "SuccessioniOnLine",
       model: "SUC13",
@@ -252,6 +509,9 @@ export async function buildOfficialApplicationEvidence(
     },
     counts,
     fields,
+    layout,
+    attachmentBuckets: qualifiedAttachmentBuckets,
+    conditionalRules,
   };
 }
 

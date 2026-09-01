@@ -150,7 +150,8 @@
   padding-inline: 12px;
   font-size: 0.78rem;
 }
-.official-checkbox-control {
+.official-checkbox-control,
+.official-radio-control {
   display: inline-flex;
   align-items: center;
   gap: 9px;
@@ -158,14 +159,16 @@
   color: var(--text);
   font-size: 0.86rem;
 }
-.official-fields label.official-checkbox-control {
+.official-fields label.official-checkbox-control,
+.official-fields label.official-radio-control {
   min-height: 44px;
   margin: 0;
   cursor: pointer;
   font-size: 0.86rem;
   font-weight: 400;
 }
-.official-checkbox-control input {
+.official-checkbox-control input,
+.official-radio-control input {
   width: 18px;
   height: 18px;
   min-height: 18px;
@@ -174,7 +177,8 @@
   flex: 0 0 auto;
   accent-color: var(--teal);
 }
-.official-fields label.official-checkbox-control span {
+.official-fields label.official-checkbox-control span,
+.official-fields label.official-radio-control span {
   display: inline;
   min-width: 0;
   height: auto;

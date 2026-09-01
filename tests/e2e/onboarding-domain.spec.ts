@@ -16,6 +16,70 @@ import {
 test.describe.configure({ mode: "serial" });
 test.afterEach(resetFailedBlobVerification);
 
+test("mantiene mutuamente esclusive le scelte radio qualificate da SuccessioniOnLine", async ({
+  page,
+}) => {
+  test.slow();
+  const practiceTitle = unique("Pratica radio SuccessioniOnLine");
+  await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  await selectPracticeView(page, "quadri");
+  await openPracticeQuadro(page, "Quadro EH");
+
+  await expect(page.getByRole("heading", { name: /^Pagina 2 ·/ }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Pagina 3 ·/ }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Pagina 4 ·/ }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Pagina 1 ·/ })).toHaveCount(0);
+
+  const testamentChoice = page.locator("details.official-fields-group").filter({
+    has: page.getByRole("heading", { name: "Scelta esclusiva · Testamento" }),
+  });
+  await openDetails(testamentChoice);
+  const noTestament = page.getByRole("radio", { name: /Flag Assenza Testamento/ });
+  const hasTestament = page.getByRole("radio", { name: /Flag Testamento/ });
+  const testamentRegistryOffice = page.locator(
+    'input[id*="/PresenzaTestamento/RegistrazioneTestamento/UfficioDiRegistrazione"]',
+  );
+  await expect(testamentRegistryOffice).toBeEnabled();
+  await noTestament.check();
+  await expect(testamentRegistryOffice).toBeDisabled();
+  await hasTestament.check();
+  await expect(testamentRegistryOffice).toBeEnabled();
+
+  const section = page.locator("details.official-fields-group").filter({
+    has: page.getByRole("heading", { name: "Scelta esclusiva · Opzioni" }),
+  });
+  await openDetails(section);
+  let firstHome = page.getByRole("radio", { name: /Flag Comune Residenza/ });
+  let workTown = page.getByRole("radio", { name: /Flag Comune Attività/ });
+  await expect(firstHome).toHaveAttribute("name", "successioniOnLineRadio:EH:radio-EH001");
+  await expect(workTown).toHaveAttribute("name", "successioniOnLineRadio:EH:radio-EH001");
+
+  await firstHome.check();
+  await expect(firstHome).toBeChecked();
+  await workTown.check();
+  await expect(workTown).toBeChecked();
+  await expect(firstHome).not.toBeChecked();
+
+  const save = section.getByRole("button", { name: "Salva il quadro" });
+  await confirmOfficialInstructions(save);
+  await submitOnlinePracticeForm(save);
+  const reloadedSection = page.locator("details.official-fields-group").filter({
+    has: page.getByRole("heading", { name: "Scelta esclusiva · Opzioni" }),
+  });
+  await openDetails(reloadedSection);
+  firstHome = page.getByRole("radio", { name: /Flag Comune Residenza/ });
+  workTown = page.getByRole("radio", { name: /Flag Comune Attività/ });
+  await expect(workTown).toBeChecked();
+  await expect(firstHome).not.toBeChecked();
+
+  await openPracticeQuadro(page, "Quadro EG");
+  await expect(page.getByText(/Gli 11 conteggi EG derivano dai documenti collegati/)).toBeVisible();
+  await expect(page.locator(".official-field")).toHaveCount(11);
+  await expect(page.locator(".official-field output")).toHaveCount(11);
+  await expect(page.locator('.official-field input:not([type="hidden"])')).toHaveCount(0);
+});
+
 test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, calcoli e dossier", async ({
   page,
 }) => {

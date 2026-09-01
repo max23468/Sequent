@@ -4,6 +4,18 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 1.1.0
+
+### Added
+
+- layout della Vista Quadri derivato dall’ordine osservabile di SuccessioniOnLine, con 580 campi ufficiali, paginazione del Quadro EH e gruppi di scelta esclusiva qualificati;
+- collegamento degli 11 contenitori documentali del Quadro EG alle checklist e ai documenti preparati, con conteggi derivati non modificabili e classificazione fail-closed dei documenti ambigui o non assegnati;
+- cinque famiglie di abilitazione condizionale ricavate dal bytecode ufficiale di SUC13, applicate in tempo reale nell’interfaccia e riconvalidate dal server su 36 campi collegati.
+
+### Changed
+
+- evidenza applicativa di SuccessioniOnLine estesa all’esatto JAR SUC13, ai contenitori EG e alle condizioni eseguite, mantenendo bloccata la scrittura DIZ dei nuovi collegamenti finché non supera un round-trip ufficiale dedicato.
+
 ## 1.0.0
 
 ### Changed
