@@ -4,6 +4,12 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.21
+
+### Fixed
+
+- spegnimento del runner Codex durante i deploy con feature flag disattivata, includendo esplicitamente anche i servizi Compose profilati nella rimozione controllata e nel rollback.
+
 ## 0.2.20
 
 ### Fixed

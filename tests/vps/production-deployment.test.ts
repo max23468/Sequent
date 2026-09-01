@@ -255,7 +255,10 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   const migration = deploy.indexOf(
     'migration_copy="$(mktemp -d "$root/snapshots/.migration-$commit.XXXXXX")"',
   );
-  const shutdown = deploy.indexOf('"${candidate_compose[@]}" down --remove-orphans', maintenance);
+  const shutdown = deploy.indexOf(
+    '"${candidate_compose_all[@]}" down --remove-orphans',
+    maintenance,
+  );
   const snapshot = deploy.indexOf('snapshot="$(mktemp -d', shutdown);
   assert.ok(
     maintenance >= 0 &&
@@ -263,6 +266,11 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
       frozenJobCheck < migration &&
       migration < shutdown &&
       shutdown < snapshot,
+  );
+  assert.match(deploy, /candidate_compose_all=\("\$\{candidate_compose\[@\]\}" --profile codex\)/);
+  assert.match(
+    deploy,
+    /rollback\(\)[\s\S]*?"\$\{candidate_compose_all\[@\]\}" down --remove-orphans/,
   );
 });
 

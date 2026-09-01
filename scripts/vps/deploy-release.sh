@@ -205,6 +205,7 @@ cd "$checkout_repository"
 
 candidate_compose=(docker compose --project-name sequent --env-file "$trusted_runtime_env" \
   --file "$repository/deploy/compose.example.yml")
+candidate_compose_all=("${candidate_compose[@]}" --profile codex)
 if [[ "$SEQUENT_CODEX_ENABLED" == true ]]; then
   candidate_compose+=(--profile codex)
 fi
@@ -344,7 +345,7 @@ rollback() {
   trap - ERR HUP INT TERM
   if [[ "$rollback_armed" == true ]]; then
     echo "Deploy fallito: ripristino automatico dell'immagine precedente" >&2
-    "${candidate_compose[@]}" down --remove-orphans >/dev/null 2>&1 || true
+    "${candidate_compose_all[@]}" down --remove-orphans >/dev/null 2>&1 || true
     rsync --archive --delete "$snapshot/data/" "$root/data/"
     install -o "$runtime_uid" -g "$runtime_gid" -m 0600 /dev/null "$maintenance_marker"
     maintenance_active=true
@@ -444,7 +445,7 @@ done
 docker rm --force "$migration_container" >/dev/null
 [[ -f "$migration_copy/sequent.sqlite" ]] && check_database "$migration_copy/sequent.sqlite"
 
-"${candidate_compose[@]}" down --remove-orphans
+"${candidate_compose_all[@]}" down --remove-orphans
 [[ -f "$database" ]] && check_database "$database"
 
 snapshot="$(mktemp -d "$root/snapshots/$deployment_stamp-$previous_commit.XXXXXX")"
