@@ -8,6 +8,7 @@ import {
   PRE_REVIEW_CHECKS,
   prBody,
   publicationScope,
+  retryRead,
   productionRunCommit,
   remoteDeletionFailed,
   selectWorkflowRun,
@@ -15,6 +16,29 @@ import {
   waitForWorkflowCompletion,
   waitForPrHead,
 } from "./publish.mjs";
+
+test("ripete le letture GitHub transitorie senza duplicare mutazioni", () => {
+  const snapshots = [new Error("unexpected EOF"), new Error("TLS timeout"), "ok"];
+  const pauses = [];
+  const reports = [];
+  const result = retryRead(
+    () => {
+      const snapshot = snapshots.shift();
+      if (snapshot instanceof Error) throw snapshot;
+      return snapshot;
+    },
+    {
+      attempts: 3,
+      intervalMs: 10,
+      pause: (milliseconds) => pauses.push(milliseconds),
+      report: (message) => reports.push(message),
+    },
+  );
+
+  assert.equal(result, "ok");
+  assert.deepEqual(pauses, [10, 10]);
+  assert.equal(reports.length, 2);
+});
 
 test("il preflight rapido non esegue suite applicative complete", () => {
   assert.deepEqual(localGateCommands({ level: "rapid" }), [["npm", ["run", "verify:rapid"]]]);

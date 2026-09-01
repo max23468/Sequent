@@ -60,16 +60,16 @@ test("vincola ai cataloghi ufficiali tutti i campi a scelta del Quadro EC", asyn
   await expect(page.getByRole("link", { name: assetName })).toHaveAttribute("aria-current", "page");
   await expect(page.locator("datalist")).toHaveCount(0);
 
-  await openFieldGroup(page, "Luogo");
+  await openFieldGroup(page, "Quadro EC · Luogo");
   const province = page.getByRole("combobox", { name: "1 Provincia", exact: true });
   await province.fill("Provincia inesistente");
   expect(await province.evaluate((input: HTMLInputElement) => input.checkValidity())).toBe(false);
   await chooseOfficialOption(page, province, "Milano", "MI — Milano");
   await saveFieldGroup(province);
-  await openFieldGroup(page, "Luogo");
+  await openFieldGroup(page, "Quadro EC · Luogo");
   await expect(province).toHaveValue("MI");
 
-  await openFieldGroup(page, "Italia");
+  await openFieldGroup(page, "Quadro EC · Italia");
   const municipality = page.getByRole("combobox", {
     name: "2 Comune amministrativo",
     exact: true,
@@ -81,17 +81,17 @@ test("vincola ai cataloghi ufficiali tutti i campi a scelta del Quadro EC", asyn
   });
   await chooseOfficialOption(page, municipalityCode, "F205", "F205 — MILANO (MI)");
   await saveFieldGroup(municipality);
-  await openFieldGroup(page, "Italia");
+  await openFieldGroup(page, "Quadro EC · Italia");
   await expect(municipality).toHaveValue("MILANO");
   await expect(municipalityCode).toHaveValue("F205");
 
-  await openFieldGroup(page, "Dati fabbricati");
+  await openFieldGroup(page, "Quadro EC · Dati fabbricati");
   const category = page.getByRole("combobox", { name: "10 Categoria", exact: true });
   const propertyClass = page.getByRole("textbox", { name: "11 Classe", exact: true });
   await category.selectOption("A1");
   await propertyClass.fill("03");
   await saveFieldGroup(propertyClass);
-  await openFieldGroup(page, "Dati fabbricati");
+  await openFieldGroup(page, "Quadro EC · Dati fabbricati");
   await expect(category).toHaveValue("A1");
   await expect(propertyClass).toHaveValue("03");
   await expect(propertyClass).not.toHaveAttribute("role", "combobox");

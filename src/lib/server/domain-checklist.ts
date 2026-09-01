@@ -5,6 +5,7 @@ import { listSharedAssets } from "./domain-assets.ts";
 import { listDevolutionScenarios } from "./domain-devolution.ts";
 import type { ChecklistItem } from "./domain-model.ts";
 import { recordAuditEvent } from "./domain-write-support.ts";
+import { successioniOnLineEgBucketForChecklistItem } from "../../domain/successionionline-eg.ts";
 
 function listChecklist(
   database: Database.Database,
@@ -28,6 +29,7 @@ function listChecklist(
     sourceRefs: JSON.parse(String(row.source_refs_json)) as string[],
     documentId: row.document_id === null ? null : String(row.document_id),
     decisionNote: row.decision_note === null ? null : String(row.decision_note),
+    officialAttachmentBucket: successioniOnLineEgBucketForChecklistItem(String(row.id)),
   }));
 }
 
@@ -122,7 +124,7 @@ export function synchronizeChecklist(
     },
     {
       id: "liability-proof",
-      requirementKind: "source",
+      requirementKind: "attachment",
       importance: "blocking",
       label: "Documenti che provano le passività indicate",
       applicable: assets.some((asset) => asset.category === "liability"),
@@ -159,12 +161,20 @@ export function synchronizeChecklist(
       sourceRefs: ["SRC-05#quali-documenti-occorrono"],
     },
     {
-      id: "relief-proof",
+      id: "ipocatastal-relief-proof",
       requirementKind: "attachment",
       importance: "blocking",
-      label: "Richiesta e documenti per agevolazioni o riduzioni",
+      label: "Richiesta e documenti per agevolazioni ipocatastali diverse dalla prima casa",
+      applicable: ["C", "D", "E"].some((code) => reliefCodes.has(code)),
+      sourceRefs: ["SRC-05#quali-documenti-occorrono", "SRC-01#quadro-eg"],
+    },
+    {
+      id: "succession-reduction-proof",
+      requirementKind: "attachment",
+      importance: "blocking",
+      label: "Richiesta e documenti per riduzioni dell’imposta di successione",
       applicable:
-        reliefCodes.size > 0 ||
+        ["A", "L", "Q", "1", "2", "3", "4", "5"].some((code) => reliefCodes.has(code)) ||
         checklistScenario?.shares.some(
           (share) => share.reductionYears > 0 || share.previousSuccessionValueCents > 0n,
         ) === true,

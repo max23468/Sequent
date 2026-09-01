@@ -1,9 +1,14 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { FileText } from "@lucide/svelte";
+  import { setContext } from "svelte";
   import type { ActionData, PageData } from "../../routes/pratiche/[id]/$types";
   import FieldNecessityLegend from "./FieldNecessityLegend.svelte";
   import OfficialFieldGroup from "./OfficialFieldGroup.svelte";
+  import {
+    SUCCESSIONIONLINE_FIELD_STATE,
+    type SuccessioniOnLineFieldState,
+  } from "../successionionline-field-state";
 
   type QuadroField = PageData["quadroFields"][number];
   interface FieldGroup {
@@ -24,6 +29,16 @@
     occurrenceActionUrl: string;
     duplicateActionUrl: string;
   }>();
+
+  let liveFieldValues = $state<Record<string, string>>({});
+  setContext<SuccessioniOnLineFieldState>(SUCCESSIONIONLINE_FIELD_STATE, {
+    current(fieldId, persistedValue) {
+      return liveFieldValues[fieldId] ?? persistedValue;
+    },
+    update(fieldId, value) {
+      liveFieldValues[fieldId] = value;
+    },
+  });
 
   function subjectHref(subjectId: string): string {
     const search = new URLSearchParams(page.url.searchParams);
@@ -74,15 +89,58 @@
           occurrenceCount: 0,
         },
       ];
-    const groups = new Map<string, FieldGroup>();
+    const groups: FieldGroup[] = [];
+    const radioGroups = new Map<string, FieldGroup>();
+    const regularGroups = new Map<string, FieldGroup>();
     for (const field of fieldsForCurrentDeclaration()) {
-      const label = field.saveGroup ?? field.section ?? (data.selectedQuadro === "EA" ? "Dati del soggetto" : `Quadro ${data.selectedQuadro}`);
-      const key = `${label}:${field.entityScope ?? "declaration"}:${field.occurrenceGroup ?? "single"}`;
-      const group = groups.get(key) ?? { key, label, fields: [], occurrenceId: null, isNewOccurrence: false, occurrenceGroup: field.occurrenceGroup, occurrenceIndex: null, occurrenceCount: 0 };
-      group.fields.push(field);
-      groups.set(key, group);
+      const catalogLabel = field.saveGroup ?? field.section ?? (data.selectedQuadro === "EA" ? "Dati del soggetto" : `Quadro ${data.selectedQuadro}`);
+      if (field.successioniOnLineRadioGroup) {
+        const existingRadioGroup = radioGroups.get(field.successioniOnLineRadioGroup);
+        if (existingRadioGroup) existingRadioGroup.fields.push(field);
+        else {
+          const radioGroup: FieldGroup = {
+            key: `radio:${field.successioniOnLineRadioGroup}`,
+            label: `Scelta esclusiva · ${catalogLabel}`,
+            fields: [field],
+            occurrenceId: null,
+            isNewOccurrence: false,
+            occurrenceGroup: null,
+            occurrenceIndex: null,
+            occurrenceCount: 0,
+          };
+          radioGroups.set(field.successioniOnLineRadioGroup, radioGroup);
+          groups.push(radioGroup);
+        }
+        continue;
+      }
+      const officialSection = field.successioniOnLineSection;
+      const officialLabel = officialSection
+        ? field.successioniOnLinePage && field.successioniOnLinePage > 1
+          ? `Pagina ${field.successioniOnLinePage} · ${officialSection}`
+          : officialSection
+        : `Altri campi del modello · ${catalogLabel}`;
+      const label = officialSection && catalogLabel !== officialSection
+        ? `${officialLabel} · ${catalogLabel}`
+        : officialLabel;
+      const baseKey = `${label}:${field.entityScope ?? "declaration"}:${field.occurrenceGroup ?? "single"}`;
+      const existingGroup = regularGroups.get(baseKey);
+      if (existingGroup) existingGroup.fields.push(field);
+      else {
+        const group: FieldGroup = {
+          key: `fields:${baseKey}`,
+          label,
+          fields: [field],
+          occurrenceId: null,
+          isNewOccurrence: false,
+          occurrenceGroup: field.occurrenceGroup,
+          occurrenceIndex: null,
+          occurrenceCount: 0,
+        };
+        regularGroups.set(baseKey, group);
+        groups.push(group);
+      }
     }
-    return [...groups.values()].flatMap((group) => {
+    return groups.flatMap((group) => {
       const occurrenceGroup = group.fields[0]?.occurrenceGroup;
       if (!occurrenceGroup) return [group];
       const occurrenceIds = (data.occurrenceOrders[occurrenceGroup] ?? []) as string[];
@@ -114,6 +172,14 @@
 </script>
 
 <div class="workspace-panel-heading"><h2>{data.selectedQuadro === "Frontespizio" ? "Frontespizio" : `Quadro ${data.selectedQuadro}`}</h2><span>{fieldsForCurrentDeclaration().length} campi disponibili</span></div>
+
+{#if data.selectedQuadro === "EG"}
+  <aside class="field-necessity-legend" aria-label="Allineamento allegati Quadro EG">
+    <strong>Allegati SuccessioniOnLine</strong>
+    <p>Gli 11 conteggi EG derivano dai documenti collegati alla checklist e preparati nel formato ufficiale. Non sono inseribili manualmente.</p>
+    {#if !data.officialEgAttachments.ready}<p class="workspace-form-error" role="alert">Risolvi i documenti non classificati o collegati a più contenitori prima di generare il DIZ.</p>{/if}
+  </aside>
+{/if}
 
 {#if data.selectedQuadro === "EA"}
   <div class="quadro-subject-selector">

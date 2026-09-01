@@ -28,6 +28,7 @@ import { getDeclaration } from "./practices.ts";
 import { listOfficialAttachments } from "./official-attachments.ts";
 import { listSharedAssets } from "./domain-assets.ts";
 import { synchronizeChecklist } from "./domain-checklist.ts";
+import { buildOfficialEgAttachmentState } from "./successionionline-eg-attachments.ts";
 import { listDeclarationSubjectEntries, listSharedSubjects } from "./domain-subjects.ts";
 import { successionOpeningDateDivergenceIssue, type ChecklistItem } from "./domain-model.ts";
 
@@ -396,6 +397,7 @@ export function buildComplianceReport(
     });
   }
   const officialAttachments = listOfficialAttachments(database, practiceId);
+  const officialEgAttachments = buildOfficialEgAttachmentState(database, practiceId, checklist);
   const preparedDocumentIds = new Set(
     officialAttachments.map((attachment) => attachment.documentId),
   );
@@ -414,6 +416,16 @@ export function buildComplianceReport(
         "Almeno un documento da allegare non è ancora stato trasformato e controllato come PDF/A-1b o TIFF.",
       sourceId: "SRC-07/SRC-08/SRC-09",
       sourcePointer: "allegati PDF/A-1b o TIFF, 5 MB per file e 40 MB complessivi",
+    });
+  if (!officialEgAttachments.ready)
+    issues.push({
+      id: "OFFICIAL_ATTACHMENTS_EG_CLASSIFICATION_REQUIRED",
+      level: "blocking",
+      fieldId: null,
+      message:
+        "La destinazione nel Quadro EG di almeno un allegato è assente o ambigua. Ogni documento preparato deve appartenere a un solo contenitore ufficiale.",
+      sourceId: "SRC-08/SuccessioniOnLine-SUC13",
+      sourcePointer: "Quadro EG — contenitori EG1-EG11",
     });
   if (assets.length > 0 && !declaration.confirmedDevolutionScenarioId)
     issues.push({

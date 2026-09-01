@@ -66,13 +66,21 @@ import {
   saveCanonicalFieldsFromView,
 } from "$lib/server/canonical-field-views";
 import { createPracticeFieldView } from "$lib/server/practice-field-view";
+import {
+  sortForSuccessioniOnLine,
+  successioniOnLineLayout,
+} from "../../../domain/successionionline-layout.ts";
 import { validateFieldValue } from "../../../domain/validation.ts";
+import { getCanonicalField } from "../../../domain/declaration.ts";
+import { isSuccessioniOnLineFieldDisabled } from "../../../domain/successionionline-behavior.ts";
 import {
   listOfficialAttachments,
   prepareOfficialAttachment,
 } from "$lib/server/official-attachments";
 import { getImportedDizContent, getOfficialFlowSummary } from "$lib/server/official-flow";
 import { officialFlowActions } from "$lib/server/official-flow-actions";
+import { buildOfficialEgAttachmentState } from "$lib/server/successionionline-eg-attachments";
+import { successioniOnLineEgBucketForField } from "../../../domain/successionionline-eg.ts";
 
 const shortLabel = z.string().trim().min(1, "Inserisci una descrizione.").max(160);
 const practiceTitle = z
@@ -181,9 +189,9 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
   const parityByFieldId = new Map(
     buildOperationalParityMap().map((row) => [row.fieldId, row] as const),
   );
-  const quadroFields = listQuadroFields(selectedQuadro)
-    .filter((field) => field.visibleFieldId !== null)
-    .map((field) => createPracticeFieldView(field, parityByFieldId.get(field.canonicalId)!));
+  const quadroFields = sortForSuccessioniOnLine(
+    listQuadroFields(selectedQuadro).filter((field) => field.visibleFieldId !== null),
+  ).map((field) => createPracticeFieldView(field, parityByFieldId.get(field.canonicalId)!, true));
   const requestedSection = url.searchParams.get("sezione") ?? "overview";
   const operationalArea = isOperationalSectionId(requestedSection)
     ? OPERATIONAL_SECTION_AREAS[requestedSection]
@@ -215,6 +223,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
     params.id,
     declaration.id,
   );
+  const checklist = synchronizeChecklist(database, params.id, declaration.id);
   return {
     practice,
     documents,
@@ -237,7 +246,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
     assets,
     quadroAssets,
     selectedAsset,
-    checklist: synchronizeChecklist(database, params.id, declaration.id),
+    checklist,
+    officialEgAttachments: buildOfficialEgAttachmentState(database, params.id, checklist),
     devolutionScenarios: listDevolutionScenarios(database, params.id, declaration.id),
     calculationRuns,
     automaticFieldValues: automaticOfficialFields?.values ?? {},
@@ -509,7 +519,72 @@ export const actions = {
         return fail(400, {
           fieldError: "Non è stato possibile identificare la vista di provenienza dei dati.",
         });
-      const result = saveCanonicalFieldsFromView(openDatabase(), {
+      if (view.kind === "quadri") {
+        for (const fieldId of fieldIds) {
+          if (successioniOnLineEgBucketForField(fieldId))
+            return fail(400, {
+              fieldError:
+                "Il numero degli allegati EG è prodotto dai documenti preparati e non può essere inserito manualmente.",
+            });
+          const radioGroup = successioniOnLineLayout(fieldId)?.radioGroup;
+          if (!radioGroup) continue;
+          const selectedFieldId = String(
+            formData.get(`successioniOnLineRadio:${radioGroup}`) ?? "",
+          );
+          if (
+            selectedFieldId &&
+            (!fieldIds.includes(selectedFieldId) ||
+              successioniOnLineLayout(selectedFieldId)?.radioGroup !== radioGroup)
+          )
+            return fail(400, {
+              fieldError: "La scelta esclusiva non corrisponde ai dati del blocco.",
+            });
+        }
+      }
+      const submittedFields = fieldIds.map((fieldId) => {
+        const radioGroup =
+          view.kind === "quadri" ? successioniOnLineLayout(fieldId)?.radioGroup : null;
+        return {
+          fieldId,
+          value: radioGroup
+            ? String(formData.get(`successioniOnLineRadio:${radioGroup}`) ?? "") === fieldId
+              ? "1"
+              : "0"
+            : String(formData.getAll(`value:${fieldId}`).at(-1) ?? "").trim(),
+        };
+      });
+      const database = openDatabase();
+      const currentDeclaration = getDeclaration(database, declarationId, params.id);
+      if (!currentDeclaration) error(404, "Dichiarazione non trovata");
+      const submittedValues = new Map(submittedFields.map((field) => [field.fieldId, field.value]));
+      const activeFields = submittedFields.filter((field) => {
+        if (view.kind !== "quadri") return true;
+        const disabled = isSuccessioniOnLineFieldDisabled(field.fieldId, (relatedFieldId) => {
+          const submitted = submittedValues.get(relatedFieldId);
+          if (submitted !== undefined) return submitted;
+          const related = getCanonicalField(
+            currentDeclaration.declaration,
+            relatedFieldId,
+            entityId,
+            occurrenceId,
+          );
+          return related?.value === null || related?.value === undefined
+            ? ""
+            : String(related.value);
+        });
+        if (!disabled) return true;
+        if (
+          formData.getAll(`value:${field.fieldId}`).length > 0 ||
+          (successioniOnLineLayout(field.fieldId)?.radioGroup && field.value === "1")
+        )
+          throw new Error("SUCCESSIONIONLINE_FIELD_DISABLED");
+        return false;
+      });
+      if (activeFields.length === 0)
+        return fail(400, {
+          fieldError: "Questo blocco è disabilitato dalla scelta collegata.",
+        });
+      const result = saveCanonicalFieldsFromView(database, {
         practiceId: params.id,
         declarationId,
         expectedRevision,
@@ -517,10 +592,7 @@ export const actions = {
         entityId,
         occurrenceId,
         confirmOfficialRules: formData.get("confirmOfficialRules") === "yes",
-        fields: fieldIds.map((fieldId) => ({
-          fieldId,
-          value: String(formData.getAll(`value:${fieldId}`).at(-1) ?? "").trim(),
-        })),
+        fields: activeFields,
       });
       if (result.issues.length > 0)
         return fail(400, {
@@ -530,6 +602,10 @@ export const actions = {
       if (saveError instanceof Error && saveError.message === "REVISION_CONFLICT")
         return fail(409, {
           fieldError: "La dichiarazione è stata aggiornata altrove. Ricarica la pagina e riprova.",
+        });
+      if (saveError instanceof Error && saveError.message === "SUCCESSIONIONLINE_FIELD_DISABLED")
+        return fail(400, {
+          fieldError: "Un campo disabilitato da SuccessioniOnLine non può essere modificato.",
         });
       throw saveError;
     }
