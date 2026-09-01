@@ -76,13 +76,16 @@ describe("analisi pratica con Codex", () => {
         };
       },
     };
+    const progress: number[] = [];
 
     const result = await analyzePracticeWithCodex(database, document.practiceId, {
       dataDirectory: directory,
       adapter,
+      onProgress: (value) => progress.push(value),
     });
 
     expect(result).toMatchObject({ proposals: 1, conflicts: 0 });
+    expect(progress).toEqual([5, 12, 15, 90, 95]);
     expect(listReviewItems(database, document.practiceId)).toEqual([
       expect.objectContaining({
         label: "Riferimento pratica",

@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.23
+
+### Fixed
+
+- avanzamento delle analisi Codex inizializzato e aggiornato anche quando il runner dedicato non emette eventi intermedi, evitando che l’interfaccia resti ferma allo 0%;
+- anteprima PDF caricata in Chrome tramite un URL locale temporaneo, mantenendo la protezione `frame-ancestors` della risposta originale e il collegamento separato per aprire il documento.
+
 ## 0.2.22
 
 ### Added

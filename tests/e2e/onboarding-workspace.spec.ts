@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
+import { PDFDocument } from "pdf-lib";
 import {
   authenticate,
   createPracticeFromDashboard,
@@ -393,4 +394,35 @@ test("mostra la fonte e registra una correzione manuale", async ({ page }) => {
   await page.getByLabel("Correggi prima di confermare").fill("30/12/2026");
   await page.getByRole("button", { name: "Conferma correzione" }).click();
   await expect(page.getByText("Nessuna verifica in sospeso.")).toBeVisible();
+});
+
+test("mostra il PDF come anteprima locale senza incorporare la risposta HTTP", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "Il difetto osservato riguarda il visualizzatore Chrome.");
+  const practiceTitle = unique("Pratica anteprima PDF");
+  const documentName = `anteprima-${suffix}.pdf`;
+  const pdf = await PDFDocument.create();
+  pdf.addPage([320, 200]);
+
+  await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  await page.getByRole("button", { name: "Documenti" }).click();
+  await page.getByLabel("Aggiungi un documento").setInputFiles({
+    name: documentName,
+    mimeType: "application/pdf",
+    buffer: Buffer.from(await pdf.save()),
+  });
+  await page.getByRole("button", { name: "Carica", exact: true }).click();
+
+  await expect(page.getByRole("heading", { name: documentName })).toBeVisible();
+  const preview = page.locator(".source-viewer iframe");
+  await expect(preview).toBeVisible();
+  await expect.poll(() => preview.getAttribute("src")).toMatch(/^blob:/);
+  await expect(preview).toHaveAttribute("title", `Originale ${documentName}`);
+  await expect(page.getByRole("link", { name: "Apri originale" })).toHaveAttribute(
+    "href",
+    /^\/api\/documents\/.+\/content$/,
+  );
 });

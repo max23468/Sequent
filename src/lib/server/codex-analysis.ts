@@ -296,8 +296,11 @@ export async function analyzePracticeWithCodex(
     );
   let workspace: Awaited<ReturnType<typeof prepareWorkspace>> | null = null;
   try {
+    options.onProgress?.(5);
     workspace = await prepareWorkspace(documents, dataDirectory);
+    options.onProgress?.(12);
     let completedItems = 0;
+    options.onProgress?.(15);
     const response = await adapter.run({
       workingDirectory: workspace.directory,
       input: workspace.input,
@@ -314,6 +317,7 @@ export async function analyzePracticeWithCodex(
     });
     const parsed = analysisSchema.parse(JSON.parse(response.finalResponse));
     validateAnalysisEvidence(parsed, documents);
+    options.onProgress?.(90);
     database.transaction(() => {
       storeThread(database, practiceId, response.threadId);
       for (const proposal of parsed.proposals) {
