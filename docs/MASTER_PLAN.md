@@ -3581,6 +3581,8 @@ M2 comprende inoltre Brand Foundation, design token, shell responsive, Dashboard
 
 ## M8 — Validazione e go-live
 
+**Stato:** chiusa con approvazione dell’owner il 1 settembre 2026 sulla release `1.0.0`, commit `70d8f7513ff3e004cafde9a9c2f0e026b04dd86a`. Il report privato `TG-GOLIVE` ha qualificato cinque DIZ unici e completi, 897 campi mappati, copertura del primo anno dell’autoliquidazione, zero divergenze critiche irrisolte, conformità ufficiale, backup/restore isolato, health HTTPS e approvazione finale successiva alle prove tecniche, senza dati reali nel repository o negli artefatti pubblici.
+
 **Prerequisito:** M7.
 
 **Risultato:** corpus dei cinque DIZ completi riletto senza divergenze critiche sul candidato esatto, prove di conformità e continuità operativa riconfermate e release stabile.
