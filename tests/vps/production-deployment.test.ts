@@ -207,7 +207,12 @@ test("il deploy VPS preserva lock, dati, rollback e confini condivisi", () => {
   assert.match(deploy, /runner Codex candidato non healthy/);
   assert.match(deploy, /dati operativi esposti al runner Codex/);
   assert.match(deploy, /reti del runner Codex divergenti/);
-  assert.match(deploy, /capability NET_RAW non ammessa nel runner Codex/);
+  assert.match(
+    deploy,
+    /CAP_NET_ADMIN.*CAP_SETGID.*CAP_SETUID.*CAP_SYS_ADMIN.*CAP_SYS_CHROOT.*CAP_SYS_PTRACE/,
+  );
+  assert.match(deploy, /capability del runner Codex divergenti/);
+  assert.doesNotMatch(deploy, /CAP_NET_RAW/);
   assert.match(deploy, /home Codex esposta al container web/);
   assert.match(deploy, /\$root\/private\/codex/);
   assert.match(deploy, /\$root\/tmp\/codex-runtime/);
