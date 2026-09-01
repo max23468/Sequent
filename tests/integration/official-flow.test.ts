@@ -237,6 +237,44 @@ describe("flusso ufficiale persistente", () => {
     expect(listSharedAssets(database, practice.id, practice.declarationId)).toHaveLength(3);
   });
 
+  it("recupera dal record B la data di apertura e la proietta sulla dichiarazione", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-official-flow-frontespizio-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica DIZ con Frontespizio");
+    const bytes = syntheticDizFromFields(
+      [{ quadro: "EA", module: "00000001", field: "001005", value: "ROSSI" }],
+      undefined,
+      { 2: "RSSMRA80A01H501U", 24: "ROSSI", 25: "MARIO", 32: "15082025" },
+    );
+
+    const artifact = await importDiz(database, {
+      practiceId: practice.id,
+      declarationId: practice.declarationId,
+      file: new File([new Uint8Array(bytes)], "frontespizio.diz"),
+      dataDirectory: directory,
+    });
+
+    expect(artifact.metadata.acquisition).toMatchObject({
+      sourceFields: 112,
+      mappedFields: 5,
+      importedFields: 5,
+      createdDecedent: true,
+    });
+    expect(
+      getDeclaration(database, practice.declarationId, practice.id)?.declaration,
+    ).toMatchObject({ successionOpenedAt: "2025-08-15" });
+
+    await repairImportedDizAcquisition(database, {
+      practiceId: practice.id,
+      artifactId: artifact.id,
+      dataDirectory: directory,
+    });
+    expect(
+      getDeclaration(database, practice.declarationId, practice.id)?.declaration,
+    ).toMatchObject({ successionOpenedAt: "2025-08-15" });
+  });
+
   it("ripara in modo idempotente una precedente acquisizione parziale e gli allegati", async () => {
     const directory = mkdtempSync(join(tmpdir(), "sequent-official-flow-repair-"));
     directories.push(directory);

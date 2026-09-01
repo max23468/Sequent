@@ -59,6 +59,7 @@ export function syntheticDiz(
 export function syntheticDizFromFields(
   fields: readonly { quadro: string; module: string; field: string; value: string }[],
   attachment?: { name: string; content: Buffer },
+  frontespizio?: Readonly<Record<number, string>>,
 ): Buffer {
   const attachments = attachment
     ? `<hashtable><entry><string>00000001</string><hashtable><entry><string>0001</string>` +
@@ -91,9 +92,19 @@ export function syntheticDizFromFields(
       );
     })
     .join("");
+  const recordParser = frontespizio
+    ? `<it.finanze.entrate.sco.resources.RecordParser><isKeyRequired>false</isKeyRequired>` +
+      `<numControlliRes>0</numControlliRes><resourceData class="vector">` +
+      Array.from(
+        { length: 111 },
+        (_, index) => `<string>${frontespizio[index + 1] ?? ""}</string>`,
+      ).join("") +
+      `</resourceData><pos>0</pos></it.finanze.entrate.sco.resources.RecordParser>`
+    : "";
   const xml = Buffer.from(
     `<finanze.IDAC.structSUC.SavedDataSUC13 serialization="custom">` +
       `<finanze.IDAC.struct.SavedData><hashtable>${quadroEntries}</hashtable>` +
+      `${recordParser}` +
       `${attachments}</finanze.IDAC.struct.SavedData>` +
       `</finanze.IDAC.structSUC.SavedDataSUC13>`,
     "utf8",

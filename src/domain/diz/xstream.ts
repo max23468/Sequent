@@ -4,6 +4,10 @@ const DIZ_ROOT = "finanze.IDAC.structSUC.SavedDataSUC13";
 const SAVED_DATA = "finanze.IDAC.struct.SavedData";
 const DIC_QUADRO_SUFFIX = ".DicQuadro";
 const DIC_MODULO_SUFFIX = ".DicModulo";
+const RECORD_PARSER_SUFFIX = ".RecordParser";
+const FRONTESPIZIO_QUADRO = "B";
+const FRONTESPIZIO_MODULE = "00000001";
+const FRONTESPIZIO_RECORD_FIELDS = 111;
 
 type XmlElement = {
   readonly name: string;
@@ -278,6 +282,37 @@ function extractFields(
         fieldElements.set(key, valueElement);
         fields.push({ ...locator, value });
       }
+    }
+  }
+
+  const recordParsers = savedData.children.filter((child) =>
+    child.name.endsWith(RECORD_PARSER_SUFFIX),
+  );
+  if (recordParsers.length > 1) {
+    throw new Error("DIZ XML non valido: più record Frontespizio");
+  }
+  const recordParser = recordParsers[0];
+  if (recordParser) {
+    const resourceData = directChild(recordParser, "resourceData");
+    if (!resourceData) throw new Error("DIZ XML non valido: dati Frontespizio assenti");
+    if (
+      resourceData.children.length !== FRONTESPIZIO_RECORD_FIELDS ||
+      resourceData.children.some((child) => child.name !== "string")
+    ) {
+      throw new Error("DIZ XML non supportato: tracciato Frontespizio inatteso");
+    }
+    for (const [index, valueElement] of resourceData.children.entries()) {
+      const locator = {
+        quadro: FRONTESPIZIO_QUADRO,
+        module: FRONTESPIZIO_MODULE,
+        field: String(index + 1),
+      };
+      const key = locatorKey(locator);
+      if (fieldElements.has(key)) {
+        throw new Error("DIZ XML non valido: localizzatore campo duplicato");
+      }
+      fieldElements.set(key, valueElement);
+      fields.push({ ...locator, value: scalar(source, valueElement) });
     }
   }
   return { fields, fieldKeyElements, fieldElements };

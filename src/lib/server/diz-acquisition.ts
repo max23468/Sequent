@@ -10,13 +10,14 @@ import {
 import type { DizField } from "../../domain/diz/xstream.ts";
 import { getCanonicalField, setCanonicalField } from "../../domain/declaration.ts";
 import { createSharedAsset, listSharedAssets } from "./domain-assets.ts";
-import type { AssetKind } from "./domain-model.ts";
+import { SUCCESSION_OPENING_DATE_FIELD_ID, type AssetKind } from "./domain-model.ts";
 import {
   createSharedSubject,
   listDeclarationSubjectEntries,
   listSharedSubjects,
   synchronizeCanonicalSubjectIdentities,
 } from "./domain-subjects.ts";
+import { officialDateToIso } from "./domain-values.ts";
 import { getDeclaration, saveDeclaration } from "./practices.ts";
 
 export interface DizAcquisitionSummary {
@@ -298,7 +299,26 @@ export function acquireDizFields(
     );
     importedFields += 1;
   }
-  if (importedFields > 0)
+  const openingDateRow = mapped.find(
+    (row) => row.mapping.catalogFieldId === SUCCESSION_OPENING_DATE_FIELD_ID,
+  );
+  if (openingDateRow) {
+    const entityId = targets.bindings[openingDateRow.identity] ?? null;
+    const canonicalOpeningDate = getCanonicalField(
+      declaration,
+      SUCCESSION_OPENING_DATE_FIELD_ID,
+      entityId,
+      openingDateRow.occurrenceId,
+    );
+    const successionOpenedAt = officialDateToIso(String(canonicalOpeningDate?.value ?? ""));
+    if (successionOpenedAt && declaration.successionOpenedAt !== successionOpenedAt) {
+      declaration = { ...declaration, successionOpenedAt };
+    }
+  }
+  if (
+    importedFields > 0 ||
+    declaration.successionOpenedAt !== record.declaration.successionOpenedAt
+  )
     saveDeclaration(database, input.declarationId, record.revision, declaration);
   const identitySynchronization = synchronizeCanonicalSubjectIdentities(
     database,

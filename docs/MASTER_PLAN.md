@@ -3598,7 +3598,7 @@ M2 comprende inoltre Brand Foundation, design token, shell responsive, Dashboard
 | M5        | nessun impatto diretto                     | l’offline selettivo conserva le versioni delle regole già previste e non richiede una nuova architettura                                                                                                       |
 | M6        | diretto                                    | installer e modulo SUC13 sono già disponibili nel bundle; controllo, uffici, Comuni/Stati esteri, allegati e ricevute devono comunque essere riletti dai servizi ufficiali correnti prima del flusso ufficiale |
 | M7        | indiretto                                  | i cinque DIZ vengono acquisiti senza reinterpretare le regole applicate; Codex resta assistivo e ogni proposta mantiene la provenienza, mentre mapping e flusso ufficiale restano requisiti già chiusi in M6   |
-| M8        | diretto                                    | il corpus storico deve comprendere periodi 2025 e 2026 e almeno il caso anteriore alla riforma interessato dalla sentenza 89/2026                                                                              |
+| M8        | diretto                                    | il corpus storico deve comprendere almeno una pratica aperta nel 2025; le altre annualità e fattispecie normative vengono validate quando presenti, senza imporre una pratica 2026 o un caso costruito apposta sulla sentenza 89/2026 |
 
 Questa valutazione non anticipa l’esito della riconciliazione fiscale: identifica dove le nuove fonti cambiano i criteri di uscita e dove, invece, non giustificano lavoro aggiuntivo.
 
@@ -3796,6 +3796,7 @@ La chiusura richiede una prova e, se la scelta è difficile da invertire, un ADR
 | `.suc` come formato modificabile                         | `.diz` come file di lavoro; telematico separato                                                                                                                                           |
 | DIZ solo export                                          | round-trip completo                                                                                                                                                                       |
 | collaudo DIZ obbligatorio su macOS e Windows             | qualificazione DIZ su macOS con test deterministici di portabilità; disponibilità ed esecuzione del collaudo Windows finale facoltative, senza rendere advisory un difetto DIZ confermato |
+| corpus finale obbligatorio con una pratica 2026 e un caso scelto per la sentenza 89/2026 | corpus di 5–10 pratiche complete con almeno una pratica aperta nel 2025; ogni caso usa le fonti applicabili alla propria data e fattispecie, senza quote obbligatorie per il 2026 o per una decisione normativa specifica |
 | app si ferma al DIZ                                      | fascicolo completo fino agli esiti                                                                                                                                                        |
 | tutto AI                                                 | deterministic-first, AI-assisted                                                                                                                                                          |
 
