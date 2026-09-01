@@ -351,6 +351,36 @@ test("mostra una verifica tecnica fallita nella Dashboard e nella pratica", asyn
   await expect(page.getByRole("alert").getByRole("link", { name: documentName })).toBeVisible();
 });
 
+test("propone una nuova analisi quando i tentativi Codex sono esauriti", async ({ page }) => {
+  const practiceTitle = unique("Pratica analisi esaurita");
+  const documentName = `analisi-esaurita-${suffix}.txt`;
+  await authenticate(page);
+  await createPracticeFromDashboard(page, practiceTitle);
+  await uploadFromWorkspace(page, documentName);
+  const dataDirectory = process.env.SEQUENT_E2E_DATA_DIR ?? ".test-data/e2e";
+  const database = new Database(join(dataDirectory, "sequent.sqlite"));
+  const practice = database
+    .prepare("SELECT id FROM practices WHERE title = ?")
+    .get(practiceTitle) as { id: string };
+  const now = new Date().toISOString();
+  database
+    .prepare(
+      `INSERT INTO jobs(
+         id, type, practice_id, input_hash, parameters_json,
+         status, progress, attempts, error_code, created_at, updated_at
+       ) VALUES (?, 'codex.analyze_practice', ?, ?, '{}', 'failed', 0, 3,
+                 'CODEX_DUPLICATE_SUBJECT_ID', ?, ?)`,
+    )
+    .run(randomUUID(), practice.id, randomUUID(), now, now);
+  database.close();
+
+  await page.reload();
+  const failure = page.getByLabel("Elaborazioni non riuscite");
+  await expect(failure).toContainText("I tentativi sono terminati");
+  await expect(failure.getByRole("button", { name: "Nuova analisi" })).toBeVisible();
+  await expect(failure.getByRole("button", { name: "Riprova" })).toHaveCount(0);
+});
+
 test("mostra la fonte e registra una correzione manuale", async ({ page }) => {
   const practiceTitle = unique("Pratica revisione documentale");
   const documentName = `revisione-${suffix}.txt`;

@@ -15,6 +15,7 @@ export interface JobRecord {
   status: JobStatus;
   progress: number;
   attempts: number;
+  canRetry: boolean;
   errorCode: string | null;
   createdAt: string;
   updatedAt: string;
@@ -32,6 +33,8 @@ export interface FailedBlobVerification {
 }
 
 function mapJob(row: Record<string, unknown>): JobRecord {
+  const status = String(row.status) as JobStatus;
+  const attempts = Number(row.attempts);
   return {
     id: String(row.id),
     type: String(row.type),
@@ -39,9 +42,10 @@ function mapJob(row: Record<string, unknown>): JobRecord {
     documentId: row.document_id === null ? null : String(row.document_id),
     inputHash: String(row.input_hash),
     parameters: JSON.parse(String(row.parameters_json)),
-    status: String(row.status) as JobStatus,
+    status,
     progress: Number(row.progress),
-    attempts: Number(row.attempts),
+    attempts,
+    canRetry: ["failed", "cancelled"].includes(status) && attempts < MAX_JOB_ATTEMPTS,
     errorCode: row.error_code === null ? null : String(row.error_code),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
@@ -57,6 +61,17 @@ export function listPracticeJobs(database: Database.Database, practiceId: string
     )
     .all(practiceId) as Array<Record<string, unknown>>;
   return rows.map(mapJob);
+}
+
+export function selectCurrentPracticeJobs(jobs: JobRecord[]): JobRecord[] {
+  const lanes = new Set<string>();
+  return jobs.filter((job) => {
+    const lane =
+      job.type === "codex.analyze_practice" ? job.type : `${job.type}:${job.documentId ?? job.id}`;
+    if (lanes.has(lane)) return false;
+    lanes.add(lane);
+    return true;
+  });
 }
 
 export function enqueuePracticeAnalysis(

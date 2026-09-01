@@ -177,6 +177,82 @@ describe("analisi pratica con Codex", () => {
     expect(listReviewItems(database, document.practiceId)).toHaveLength(2);
   });
 
+  it.each([
+    ["subjectId duplicato", "CODEX_DUPLICATE_SUBJECT_ID"],
+    ["valore non letterale", "CODEX_UNSUPPORTED_VALUE"],
+  ] as const)(
+    "ripara una sola volta un output con %s mantenendo i controlli",
+    async (_case, expectedError) => {
+      const directory = mkdtempSync(join(tmpdir(), "sequent-codex-repair-"));
+      directories.push(directory);
+      const database = openDatabase(directory);
+      const document = await ingestDocument(
+        database,
+        new File(["Documento sintetico: riferimento pratica AB-12."], "nota.txt", {
+          type: "text/plain",
+        }),
+        { newPracticeTitle: "Pratica riparazione Codex" },
+        directory,
+      );
+      await processDocument(database, document.id, { dataDirectory: directory });
+      let invocation = 0;
+      const adapter: CodexAnalysisAdapter = {
+        async run(request) {
+          invocation += 1;
+          if (invocation === 2) {
+            expect(request.threadId).toBe("thread-da-riparare");
+            expect(request.input[0]).toMatchObject({
+              type: "text",
+              text: expect.stringContaining(expectedError),
+            });
+          }
+          const proposal = {
+            subjectId: "practice.reference",
+            label: "Riferimento pratica",
+            value: "AB-12",
+            documentId: document.id,
+            pageNumber: 1,
+            excerpt: "riferimento pratica AB-12",
+            confidence: 0.97,
+            alternatives: [],
+          };
+          return {
+            threadId: "thread-da-riparare",
+            usage: null,
+            finalResponse: JSON.stringify({
+              summary: invocation === 1 ? "Output duplicato" : "Output corretto",
+              proposals:
+                invocation === 1
+                  ? expectedError === "CODEX_DUPLICATE_SUBJECT_ID"
+                    ? [proposal, proposal]
+                    : [{ ...proposal, value: "AB 12" }]
+                  : [proposal],
+              conflicts: [],
+            }),
+          };
+        },
+      };
+      const progress: number[] = [];
+
+      await expect(
+        analyzePracticeWithCodex(database, document.practiceId, {
+          dataDirectory: directory,
+          adapter,
+          onProgress: (value) => progress.push(value),
+        }),
+      ).resolves.toMatchObject({ proposals: 1, conflicts: 0 });
+
+      expect(invocation).toBe(2);
+      expect(progress).toEqual([5, 12, 15, 75, 90, 95]);
+      expect(listReviewItems(database, document.practiceId)).toEqual([
+        expect.objectContaining({ proposedValue: "AB-12", status: "pending" }),
+      ]);
+      expect(listCodexRuns(database, document.practiceId)).toEqual([
+        expect.objectContaining({ status: "completed", summary: "Output corretto" }),
+      ]);
+    },
+  );
+
   it.each(["proposal", "conflict"] as const)(
     "mantiene autorevole la decisione nella transizione da %s",
     async (initialKind) => {

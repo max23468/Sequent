@@ -9,10 +9,13 @@ import {
   cancelQueuedJob,
   claimNextJob,
   enqueueJob,
+  enqueuePracticeAnalysis,
   finishJob,
   listFailedBlobVerifications,
+  listPracticeJobs,
   recoverInterruptedJobs,
   retryJob,
+  selectCurrentPracticeJobs,
 } from "../../src/lib/server/jobs.ts";
 import { createPractice } from "../../src/lib/server/practices.ts";
 import { ingestDocument } from "../../src/lib/server/document-ingestion.ts";
@@ -144,6 +147,39 @@ describe("coda persistente", () => {
       expect(duplicate.status).toBe(attempt < 3 ? "queued" : "failed");
       expect(duplicate.errorCode).toBe(attempt < 3 ? null : "READ_TRANSIENT");
     }
+  });
+
+  it("espone il retry manuale soltanto finché restano tentativi", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-job-manual-retry-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica retry manuale");
+    const job = enqueuePracticeAnalysis(database, practice.id);
+
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      expect(claimNextJob(database)).toMatchObject({ id: job.id, attempts: attempt });
+      finishJob(database, job.id, "CODEX_ANALYSIS_FAILED");
+      expect(listPracticeJobs(database, practice.id)[0]?.canRetry).toBe(attempt < 3);
+      expect(retryJob(database, job.id, practice.id)).toBe(attempt < 3);
+    }
+  });
+
+  it("nasconde un fallimento Codex storico quando esiste una nuova analisi", () => {
+    const directory = mkdtempSync(join(tmpdir(), "sequent-job-current-analysis-"));
+    directories.push(directory);
+    const database = openDatabase(directory);
+    const practice = createPractice(database, "Pratica analisi corrente");
+    const failed = enqueuePracticeAnalysis(database, practice.id);
+    expect(claimNextJob(database)?.id).toBe(failed.id);
+    finishJob(database, failed.id, "CODEX_DUPLICATE_SUBJECT_ID");
+
+    const currentFailure = selectCurrentPracticeJobs(listPracticeJobs(database, practice.id));
+    expect(currentFailure).toEqual([expect.objectContaining({ id: failed.id, status: "failed" })]);
+
+    const queued = enqueuePracticeAnalysis(database, practice.id);
+    const currentQueued = selectCurrentPracticeJobs(listPracticeJobs(database, practice.id));
+    expect(queued.id).not.toBe(failed.id);
+    expect(currentQueued).toEqual([expect.objectContaining({ id: queued.id, status: "queued" })]);
   });
 
   it("deduplica i job equivalenti e recupera quello interrotto al riavvio", () => {

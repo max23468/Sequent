@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.24
+
+### Fixed
+
+- singolo passaggio di riparazione controllata per gli output Codex che duplicano un soggetto o citano valori e fonti non supportati, mantenendo invariati i controlli deterministici prima della persistenza;
+- sostituzione del falso comando `Riprova`, dopo l’esaurimento dei tentativi, con l’avvio esplicito di una nuova analisi.
+
 ## 0.2.23
 
 ### Fixed
