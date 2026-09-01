@@ -49,7 +49,7 @@ describe("client del runner Codex", () => {
     const adapter = new RunnerCodexAnalysisAdapter(socket);
     await expect(
       adapter.run({
-        workingDirectory: "/var/run/sequent-codex/workspaces/practice-1",
+        workingDirectory: "/run/sequent-codex/workspaces/practice-1",
         input: [{ type: "text", text: "contenuto sintetico" }],
         threadId: null,
         model: "gpt-5.6-terra",
@@ -61,7 +61,7 @@ describe("client del runner Codex", () => {
     });
     expect(received).toEqual([
       {
-        workingDirectory: "/var/run/sequent-codex/workspaces/practice-1",
+        workingDirectory: "/run/sequent-codex/workspaces/practice-1",
         input: [{ type: "text", text: "contenuto sintetico" }],
         threadId: null,
         model: "gpt-5.6-terra",
