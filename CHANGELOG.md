@@ -4,6 +4,12 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.19
+
+### Fixed
+
+- socket e workspace del runner Codex montati sul percorso canonico `/run`, evitando che la risoluzione di `/var/run` renda il workspace invisibile al sandbox Bubblewrap.
+
 ## 0.2.18
 
 ### Fixed

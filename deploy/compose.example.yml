@@ -13,8 +13,8 @@ services:
       SEQUENT_DATA_DIR: /var/lib/sequent
       SEQUENT_CODEX_MODEL: gpt-5.6-terra
       SEQUENT_CODEX_ENABLED: ${SEQUENT_CODEX_ENABLED:?Flag Codex obbligatoria}
-      SEQUENT_CODEX_RUNNER_SOCKET: /var/run/sequent-codex/runner.sock
-      SEQUENT_CODEX_WORKSPACE_ROOT: /var/run/sequent-codex/workspaces
+      SEQUENT_CODEX_RUNNER_SOCKET: /run/sequent-codex/runner.sock
+      SEQUENT_CODEX_WORKSPACE_ROOT: /run/sequent-codex/workspaces
       SEQUENT_DIZ_ENABLED: ${SEQUENT_DIZ_ENABLED:?Flag DIZ obbligatoria}
       SEQUENT_SECURE_COOKIES: "true"
       ORIGIN: ${SEQUENT_ORIGIN:?Origine HTTPS pubblica obbligatoria}
@@ -22,7 +22,7 @@ services:
       XFF_DEPTH: "1"
     volumes:
       - /opt/sequent/data:/var/lib/sequent
-      - /opt/sequent/tmp/codex-runtime:/var/run/sequent-codex
+      - /opt/sequent/tmp/codex-runtime:/run/sequent-codex
     networks:
       - sequent
       - sequent-proxy
@@ -57,11 +57,11 @@ services:
       SEQUENT_CODEX_MODEL: gpt-5.6-terra
       SEQUENT_CODEX_ENABLED: "true"
       SEQUENT_CODEX_RUNNER_LOCAL: "true"
-      SEQUENT_CODEX_RUNNER_SOCKET: /var/run/sequent-codex/runner.sock
-      SEQUENT_CODEX_WORKSPACE_ROOT: /var/run/sequent-codex/workspaces
+      SEQUENT_CODEX_RUNNER_SOCKET: /run/sequent-codex/runner.sock
+      SEQUENT_CODEX_WORKSPACE_ROOT: /run/sequent-codex/workspaces
     volumes:
       - /opt/sequent/private/codex:/var/lib/sequent
-      - /opt/sequent/tmp/codex-runtime:/var/run/sequent-codex
+      - /opt/sequent/tmp/codex-runtime:/run/sequent-codex
     networks:
       - sequent
     mem_limit: 2g
@@ -85,7 +85,7 @@ services:
         - node
         - -e
         - >-
-          const http=require('node:http');const r=http.get({socketPath:'/var/run/sequent-codex/runner.sock',path:'/health'},x=>process.exit(x.statusCode===200?0:1));r.on('error',()=>process.exit(1));r.setTimeout(3000,()=>process.exit(1));
+          const http=require('node:http');const r=http.get({socketPath:'/run/sequent-codex/runner.sock',path:'/health'},x=>process.exit(x.statusCode===200?0:1));r.on('error',()=>process.exit(1));r.setTimeout(3000,()=>process.exit(1));
       interval: 30s
       timeout: 5s
       start_period: 10s
