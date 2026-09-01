@@ -37,7 +37,6 @@ const browserEvidenceSchema = z.object({
 
 const historicalPracticeSchema = z.object({
   openingDate: openingDateSchema,
-  constitutionalCourtDecisionApplicable: z.boolean(),
   expectedOutcomeSource: z.enum([
     "submitted_declaration_and_professional_corrections",
     "owner_confirmed_complete_diz",
@@ -106,9 +105,8 @@ export interface GoLiveQualificationReport {
     practices: number;
     benchmarkRuns: number;
     categories: string[];
+    openingYears: number[];
     coversFirstReformYear: boolean;
-    coversFollowingYear: boolean;
-    coversHistoricalCourtCase: boolean;
     reconstructed: number;
     reconciled: number;
     unresolvedCriticalDivergences: number;
@@ -174,13 +172,8 @@ export function evaluateGoLiveQualification(
   const years = input.historicalPractices.map((practice) =>
     Number(practice.openingDate.slice(0, 4)),
   );
+  const openingYears = [...new Set(years)].sort((left, right) => left - right);
   const coversFirstReformYear = years.includes(2025);
-  const coversFollowingYear = years.includes(2026);
-  const coversHistoricalCourtCase = input.historicalPractices.some(
-    (practice) =>
-      Number(practice.openingDate.slice(0, 4)) < 2025 &&
-      practice.constitutionalCourtDecisionApplicable,
-  );
   const reconstructed = input.historicalPractices.filter(
     (practice) => practice.reconstructedEndToEnd,
   ).length;
@@ -231,8 +224,6 @@ export function evaluateGoLiveQualification(
   const ownerApproved = input.ownerApproval.approved && input.ownerApproval.approvedAt !== null;
 
   if (!coversFirstReformYear) blockers.push("HISTORICAL_CORPUS_FIRST_REFORM_YEAR_MISSING");
-  if (!coversFollowingYear) blockers.push("HISTORICAL_CORPUS_FOLLOWING_YEAR_MISSING");
-  if (!coversHistoricalCourtCase) blockers.push("HISTORICAL_CORPUS_COURT_CASE_MISSING");
   if (reconstructed !== input.historicalPractices.length)
     blockers.push("HISTORICAL_PRACTICES_NOT_RECONSTRUCTED");
   if (reconciled !== input.historicalPractices.length)
@@ -260,9 +251,8 @@ export function evaluateGoLiveQualification(
       practices: input.historicalPractices.length,
       benchmarkRuns: reports.length,
       categories,
+      openingYears,
       coversFirstReformYear,
-      coversFollowingYear,
-      coversHistoricalCourtCase,
       reconstructed,
       reconciled,
       unresolvedCriticalDivergences,

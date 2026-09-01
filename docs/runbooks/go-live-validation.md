@@ -14,7 +14,7 @@ Questa procedura ricostruisce il corpus storico, aggrega il benchmark di sicurez
 
 ## Corpus storico
 
-Selezionare da cinque a dieci pratiche concluse. Il corpus deve coprire i periodi temporali e il caso storico indicati nel Master Plan. Per ogni pratica:
+Selezionare da cinque a dieci pratiche concluse. Il corpus deve comprendere almeno una successione aperta nel primo anno dell’autoliquidazione indicato dal Master Plan. Non sono obbligatorie annualità successive né una pratica scelta apposta per una decisione costituzionale specifica: ogni fonte o decisione normativa viene applicata e verificata soltanto quando pertinente ai fatti e alla data della pratica. Per ogni pratica:
 
 1. ricostruire il fascicolo completo in Sequent;
 2. classificare separatamente i documenti secondo le categorie del benchmark;
@@ -23,7 +23,7 @@ Selezionare da cinque a dieci pratiche concluse. Il corpus deve coprire i period
 5. eseguire più run quando la variabilità di Codex rende insufficiente una singola esecuzione;
 6. mantenere dati attesi e osservati soltanto nel file privato di qualifica.
 
-Per i cinque DIZ acquisiti nella fase precedente, la conferma dell’owner che si tratta di pratiche complete consente di usare l’originale archiviato come esito atteso (`owner_confirmed_complete_diz`). Questa conferma non sostituisce ricostruzione, benchmark e riconciliazione né colma da sola la copertura temporale richiesta.
+Per i cinque DIZ acquisiti nella fase precedente, la conferma dell’owner che si tratta di pratiche complete consente di usare l’originale archiviato come esito atteso (`owner_confirmed_complete_diz`). Questa conferma non sostituisce ricostruzione, benchmark e riconciliazione.
 
 Ogni `benchmarkRuns` usa lo stesso formato accettato da `npm run benchmark:extraction-safety`. Le pratiche reali possono includere più dataset o più run; il report pubblico non contiene identificativi né risultati per campo.
 

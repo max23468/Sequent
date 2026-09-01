@@ -47,7 +47,7 @@ function benchmarkRun(category: string, suffix: number): unknown {
 }
 
 function validInput(): Record<string, unknown> {
-  const dates = ["2024-06-01", "2025-01-15", "2025-09-10", "2026-02-20", "2026-08-12"];
+  const dates = ["2006-10-03", "2021-04-18", "2024-06-01", "2025-01-15", "2025-09-10"];
   const categories = ["pdf_native", "pdf_scanned", "identity_document", "bank_certificate", "diz"];
   return {
     format: "sequent-go-live-qualification-input",
@@ -55,7 +55,6 @@ function validInput(): Record<string, unknown> {
     candidate: { commit, version: "0.7.0", httpsHealthReadback: true },
     historicalPractices: dates.map((openingDate, index) => ({
       openingDate,
-      constitutionalCourtDecisionApplicable: index === 0,
       expectedOutcomeSource:
         index === 0
           ? "owner_confirmed_complete_diz"
@@ -109,15 +108,17 @@ describe("qualifica finale", () => {
     expect(report.technicalGatePassed).toBe(true);
     expect(report.historicalCorpus.practices).toBe(5);
     expect(report.historicalCorpus.benchmarkRuns).toBe(5);
+    expect(report.historicalCorpus.openingYears).toEqual([2006, 2021, 2024, 2025]);
     expect(report.historicalCorpus.inventedSources).toBe(0);
     expect(report.blockers).toEqual([]);
   });
 
-  it("blocca corpus temporale incompleto, riconciliazione reale e approvazione mancanti", () => {
+  it("blocca il corpus senza il 2025, la riconciliazione reale e l’approvazione mancanti", () => {
     const input = validInput();
     const practices = input.historicalPractices as Array<Record<string, unknown>>;
-    practices[0]!.openingDate = "2025-06-01";
-    practices[0]!.constitutionalCourtDecisionApplicable = false;
+    for (const [index, practice] of practices.entries()) {
+      practice.openingDate = `${2020 + index}-06-01`;
+    }
     input.realPractice = {
       completedStages: realPracticeStages.slice(0, -1),
       parallelMethodReconciled: false,
@@ -130,7 +131,7 @@ describe("qualifica finale", () => {
     expect(report.passed).toBe(false);
     expect(report.blockers).toEqual(
       expect.arrayContaining([
-        "HISTORICAL_CORPUS_COURT_CASE_MISSING",
+        "HISTORICAL_CORPUS_FIRST_REFORM_YEAR_MISSING",
         "REAL_PRACTICE_NOT_RECONCILED",
         "OWNER_APPROVAL_MISSING",
       ]),

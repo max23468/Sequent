@@ -11,6 +11,10 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 - ingresso nella validazione finale con un gate privato e fail-closed su 5–10 pratiche storiche, benchmark di sicurezza, copertura temporale, conformità ufficiale, matrice browser, backup/restore e prima pratica reale parallela;
 - report sanitizzato legato all’esatto commit candidato, scritto con permessi privati e incapace di chiudere il go-live senza riconciliazione completa e approvazione esplicita dell’owner.
 
+### Changed
+
+- corpus storico finale vincolato ad almeno una pratica aperta nel 2025, senza richiedere artificialmente una pratica 2026 o un caso selezionato per la sentenza 89/2026; le fonti restano applicate quando pertinenti alla singola pratica.
+
 ### Fixed
 
 - conflitti critici esplicitamente ignorati o rifiutati non vengono più conteggiati come correttamente rilevati dal benchmark.
