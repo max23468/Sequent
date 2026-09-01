@@ -632,6 +632,52 @@ details[open] > summary .field-group-chevron {
   font-weight: 650;
   line-height: 1.4;
 }
+.official-search-select {
+  position: relative;
+  width: min(100%, 720px);
+}
+.official-search-select > input[type="search"] {
+  width: 100%;
+}
+.official-search-results {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  display: grid;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.official-search-results button {
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  text-align: left;
+}
+.official-search-results button:last-child {
+  border-bottom: 0;
+}
+.official-search-results button:hover,
+.official-search-results button.active {
+  background: color-mix(in srgb, var(--teal) 9%, var(--surface));
+}
+.official-search-results p {
+  margin: 0;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
 .official-instructions {
   margin-top: 16px;
   padding: 12px 14px;

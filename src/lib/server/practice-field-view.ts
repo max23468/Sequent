@@ -15,8 +15,10 @@ export function createPracticeFieldView(field: CatalogField, parity: Operational
     entryMode: field.entryMode,
     derivedFrom: field.derivedFrom,
     control: field.control,
+    choiceSource: field.choiceSource,
+    choiceProvinceFieldId: field.choiceProvinceFieldId,
     appliesToDeclarationKinds: field.appliesToDeclarationKinds,
-    options: field.options,
+    options: field.control === "combobox" ? [] : field.options,
     type: field.type,
     instructions: field.instructions.map(({ id, instruction }) => ({ id, instruction })),
     operationalParity: {

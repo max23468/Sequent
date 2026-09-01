@@ -4,6 +4,17 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.22
+
+### Added
+
+- selettori ricercabili e vincolati alle fonti ufficiali per Comuni, codici comunali e catastali, province, Stati esteri, uffici, categorie catastali e territori tavolari.
+
+### Fixed
+
+- enumerazioni XSD ereditate o definite tramite union rese disponibili come scelte chiuse in tutti i Quadri, senza degradare in testo libero;
+- validazione server dei riferimenti ufficiali e filtro territoriale dei Comuni coordinato con la provincia selezionata.
+
 ## 0.2.21
 
 ### Fixed
