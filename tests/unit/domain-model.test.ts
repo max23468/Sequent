@@ -26,9 +26,11 @@ import { validateDevolutionScenario } from "../../src/domain/devolution.ts";
 import {
   QUADRI,
   getCatalogStatus,
+  listOfficialChoiceOptions,
   listOfficialInstructions,
   listQuadroFields,
   listQuadroSummaries,
+  listTechnicalEnumerationValues,
 } from "../../src/domain/official-catalog/catalog.ts";
 import { validateDeclaration, validateFieldValue } from "../../src/domain/validation.ts";
 
@@ -199,6 +201,77 @@ describe("modello canonico della dichiarazione", () => {
     ].join("\n");
     expect(visibleText).not.toMatch(
       /\b(?:attivita|disabilita|dovra|gia|identita|localita|nazionalita|passivita|pubblicita|puo|quantita|societa|unita|volonta)'?\b/iu,
+    );
+  });
+
+  it("non degrada in testo libero nessuna enumerazione XSD, anche se annidata", () => {
+    for (const quadro of QUADRI) {
+      for (const field of listQuadroFields(quadro).filter(
+        (candidate) => candidate.visibleFieldId !== null,
+      )) {
+        const values = listTechnicalEnumerationValues(field.canonicalId);
+        if (values.length === 0) continue;
+        expect(
+          field.options.map((option) => option.value),
+          field.canonicalId,
+        ).toEqual(values);
+        expect(["checkbox", "select", "combobox"], field.canonicalId).toContain(field.control);
+      }
+    }
+    expect(
+      listQuadroFields("EC").find((field) => field.name === "CategoriaCatastale"),
+    ).toMatchObject({
+      control: "select",
+      options: expect.arrayContaining([
+        expect.objectContaining({ value: "A1", label: expect.stringContaining("Abitazioni") }),
+      ]),
+    });
+    expect(listQuadroFields("EC").find((field) => field.name === "Provincia")).toMatchObject({
+      control: "combobox",
+      options: expect.arrayContaining([
+        expect.objectContaining({ value: "MI", label: expect.stringContaining("Milano") }),
+      ]),
+    });
+  });
+
+  it("collega tutti i riferimenti territoriali ai cataloghi ufficiali vincolati", () => {
+    const municipalityCode = listQuadroFields("EC").find((field) => field.name === "CodiceComune");
+    expect(municipalityCode).toMatchObject({
+      control: "combobox",
+      choiceSource: "municipality-code",
+    });
+    expect(
+      listOfficialChoiceOptions(municipalityCode!.canonicalId, {
+        provinceCode: "MI",
+        query: "Milano",
+      }),
+    ).toContainEqual(expect.objectContaining({ value: "F205", provinceCode: "MI" }));
+    expect(validateFieldValue(municipalityCode!.canonicalId, "F205")).toEqual([]);
+    expect(validateFieldValue(municipalityCode!.canonicalId, "ZZZZ").map(({ id }) => id)).toContain(
+      "OFFICIAL_CHOICE_MISMATCH",
+    );
+    const foreignState = listQuadroFields("EC").find((field) => field.name === "StatoEstero");
+    expect(foreignState).toMatchObject({ control: "combobox", choiceSource: "foreign-state-name" });
+    expect(
+      listOfficialChoiceOptions(foreignState!.canonicalId, { query: "Francia" }),
+    ).toContainEqual(expect.objectContaining({ value: "FRANCIA" }));
+    const tavolareCode = listQuadroFields("EM").find(
+      (field) => field.name === "CodiceComuneAmministrativo",
+    );
+    expect(tavolareCode).toMatchObject({
+      control: "combobox",
+      choiceSource: "tavolare-municipality-code",
+    });
+    expect(
+      listOfficialChoiceOptions(tavolareCode!.canonicalId, { query: "Cortina" }),
+    ).toContainEqual(
+      expect.objectContaining({
+        value: "A266",
+        label: expect.stringContaining("CORTINA D'AMPEZZO"),
+      }),
+    );
+    expect(validateFieldValue(tavolareCode!.canonicalId, "F205").map(({ id }) => id)).toContain(
+      "OFFICIAL_CHOICE_MISMATCH",
     );
   });
 

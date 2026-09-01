@@ -3,6 +3,7 @@ import {
   getResolvedTechnicalFacetAlternatives,
   getResolvedTechnicalPrimitiveTypes,
   getTechnicalField,
+  isOfficialChoiceValue,
   listOfficialInstructions,
 } from "./official-catalog/catalog.ts";
 import { canonicalFieldKey, getCanonicalField, type DeclarationSnapshot } from "./declaration.ts";
@@ -121,6 +122,7 @@ export function validateFieldValue(fieldId: string, value: unknown): ValidationI
   }
   const text = typeof value === "string" ? value : String(value ?? "");
   const issues: ValidationIssue[] = [];
+  const catalogField = getCatalogField(fieldId);
   const primitiveTypes = getResolvedTechnicalPrimitiveTypes(fieldId);
   if (primitiveTypes.length > 0 && !primitiveTypes.some((type) => matchesPrimitiveType(text, type)))
     issues.push({
@@ -131,10 +133,20 @@ export function validateFieldValue(fieldId: string, value: unknown): ValidationI
       sourceId: field.sourceId,
       sourcePointer: field.sourcePointer,
     });
+  if (text !== "" && catalogField?.choiceSource && !isOfficialChoiceValue(fieldId, text))
+    issues.push({
+      id: "OFFICIAL_CHOICE_MISMATCH",
+      level: "blocking",
+      fieldId,
+      message: "Seleziona uno dei valori ammessi dalle fonti ufficiali.",
+      sourceId: "SRC-39",
+      sourcePointer: "Cataloghi territoriali e operativi del controllo SUC13",
+    });
   const alternatives = getResolvedTechnicalFacetAlternatives(fieldId);
   if (alternatives.length > 1) {
-    if (alternatives.some((facets) => matchesFacets(text, facets))) return [];
+    if (alternatives.some((facets) => matchesFacets(text, facets))) return issues;
     return [
+      ...issues,
       {
         id: "XSD_UNION_MISMATCH",
         level: "blocking",

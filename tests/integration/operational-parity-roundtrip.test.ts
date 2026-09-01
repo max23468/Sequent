@@ -11,6 +11,7 @@ import { deriveOfficialFieldValue } from "../../src/domain/derived-fields.ts";
 import {
   QUADRI,
   getResolvedTechnicalFacetAlternatives,
+  listOfficialChoiceOptions,
   listQuadroFields,
   listQuadroTechnicalElements,
   listTechnicalEnumerationValues,
@@ -210,6 +211,7 @@ function syntheticValues(testCase: RuntimeCase): [string, string] {
   const { field, row } = testCase;
   const candidates = [
     ...field.options.map((option) => option.value),
+    ...listOfficialChoiceOptions(row.fieldId).map((option) => option.value),
     ...listTechnicalEnumerationValues(row.fieldId),
     ...getResolvedTechnicalFacetAlternatives(row.fieldId).flatMap(
       (facets) => facets.enumeration ?? [],

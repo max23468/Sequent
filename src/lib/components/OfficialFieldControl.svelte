@@ -7,6 +7,7 @@
     isMissingRequiredField,
   } from "../field-necessity";
   import type { PageData } from "../../routes/pratiche/[id]/$types";
+  import OfficialSearchSelect from "./OfficialSearchSelect.svelte";
 
   type QuadroField = PageData["quadroFields"][number];
   type DeclarationIssue = PageData["declarationIssues"][number];
@@ -75,6 +76,18 @@
     return value === null || value === undefined ? "" : String(value);
   }
 
+  function relatedFieldValue(fieldId: string | null): string {
+    if (!fieldId) return "";
+    const entityId = fieldEntityId();
+    const key = entityId
+      ? `${fieldId}::${entityId}`
+      : occurrenceId
+        ? `${fieldId}::occurrence:${occurrenceId}`
+        : fieldId;
+    const value = data.declaration.declaration.fields[key]?.value;
+    return value === null || value === undefined ? "" : String(value);
+  }
+
   function displayedFieldValue(): string {
     const value = fieldValue();
     if (value === "") return "Non applicabile";
@@ -104,7 +117,6 @@
     });
   }
 
-  const largeOptionList = $derived(field.options.length > 80);
   const controlId = $derived(
     `field-${field.canonicalId}${fieldEntityId() ? `-${fieldEntityId()}` : ""}${occurrenceId ? `-${occurrenceId}` : ""}`,
   );
@@ -131,10 +143,19 @@
       <output class="official-derived-value" id={controlId} aria-describedby={necessityId()}>{displayedFieldValue()}</output>
     {:else if field.control === "checkbox"}
       <label class="official-checkbox-control" for={controlId}><input type="hidden" name={`value:${field.canonicalId}`} value={uncheckedValue()} disabled={entityMissing} /><input id={controlId} type="checkbox" name={`value:${field.canonicalId}`} value="1" checked={fieldValue() === "1"} disabled={entityMissing} aria-describedby={isMissingRequired() ? `${necessityId()} ${missingId()}` : necessityId()} /><span>Sì</span></label>
-    {:else if largeOptionList}
-      <input id={controlId} name={`value:${field.canonicalId}`} list={`options-${controlId}`} value={fieldValue()} autocomplete="off" disabled={entityMissing} aria-describedby={isMissingRequired() ? `${necessityId()} ${missingId()}` : necessityId()} />
-      <datalist id={`options-${controlId}`}>{#each field.options as option (option.value)}<option value={option.value}>{option.label}</option>{/each}</datalist>
-    {:else if field.options.length > 0}
+    {:else if field.control === "combobox"}
+      <OfficialSearchSelect
+        id={controlId}
+        fieldId={field.canonicalId}
+        name={`value:${field.canonicalId}`}
+        value={fieldValue()}
+        provinceFieldId={field.choiceProvinceFieldId}
+        provinceValue={relatedFieldValue(field.choiceProvinceFieldId)}
+        disabled={entityMissing}
+        ariaLabel={`${field.visibleNumber ? `${field.visibleNumber} ` : ""}${field.label}`}
+        ariaDescribedby={isMissingRequired() ? `${necessityId()} ${missingId()}` : necessityId()}
+      />
+    {:else if field.control === "select" || field.options.length > 0}
       <select id={controlId} name={`value:${field.canonicalId}`} disabled={entityMissing} aria-describedby={isMissingRequired() ? `${necessityId()} ${missingId()}` : necessityId()}>
         <option value="" selected={fieldValue() === ""}>Non indicato</option>
         {#each field.options as option (option.value)}<option value={option.value} selected={fieldValue() === option.value}>{option.label}</option>{/each}

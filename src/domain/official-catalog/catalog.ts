@@ -4,7 +4,25 @@ import semanticRules from "./semantic-rules.json" with { type: "json" };
 import calculationRules from "./calculation-rules.json" with { type: "json" };
 import deltaOverlays from "./delta-overlays.json" with { type: "json" };
 import officialCatalog from "./official-catalog.json" with { type: "json" };
+import officialReferences from "./municipality-conservatory-map.json" with { type: "json" };
 import { normalizeItalianTypography } from "../italian-typography.ts";
+
+export type OfficialChoiceSource =
+  | "place-name"
+  | "municipality-code"
+  | "tavolare-place-name"
+  | "tavolare-municipality-code"
+  | "foreign-state-code"
+  | "foreign-state-name"
+  | "tavolare-municipality";
+
+export interface OfficialChoiceOption {
+  value: string;
+  label: string;
+  provinceCode?: string;
+  validFrom?: string;
+  validTo?: string;
+}
 
 export interface TechnicalElement {
   id: string;
@@ -40,7 +58,9 @@ export interface CatalogField {
   occurrenceGroup?: string;
   entryMode?: "editable" | "derived";
   derivedFrom?: string;
-  control?: "checkbox";
+  control?: "checkbox" | "select" | "combobox";
+  choiceSource?: OfficialChoiceSource;
+  choiceProvinceFieldId?: string;
   appliesToDeclarationKinds?: Array<"first" | "substitute-1" | "substitute-2" | "substitute-3">;
   options?: Array<{ value: string; label: string }>;
   officialControlCode?: string;
@@ -68,6 +88,11 @@ const technicalElements = (technicalSchema.elements ?? []) as TechnicalElement[]
 const technicalElementsByPath = new Map(
   technicalElements.map((element) => [element.path, element]),
 );
+const technicalElementsById = new Map(
+  technicalElements
+    .filter((element) => element.kind === "field")
+    .map((element) => [element.id, element]),
+);
 const technicalTypes = (technicalSchema.types ?? []) as Array<{
   name: string;
   constraints?: {
@@ -76,6 +101,9 @@ const technicalTypes = (technicalSchema.types ?? []) as Array<{
     unionMemberTypes?: string[];
   };
 }>;
+const technicalTypesByName = new Map(technicalTypes.map((type) => [type.name, type]));
+const technicalEnumerationCache = new Map<string, string[]>();
+const catalogFieldCache = new Map<string, CatalogField>();
 const fieldsByPath = new Map(
   ((formFields.fields ?? []) as CatalogField[]).map((field) => [field.technicalPath, field]),
 );
@@ -84,6 +112,25 @@ const fieldsById = new Map(
 );
 const visibleFieldOrder = new Map(
   ((formFields.fields ?? []) as CatalogField[]).map((field, index) => [field.id, index]),
+);
+
+const provinceLabels = new Map(
+  officialReferences.provinces.map((option) => [option.value, option.label]),
+);
+const foreignStateLabels = new Map(
+  officialReferences.foreignStates.map((option) => [option.value, option.label]),
+);
+const registrationOfficeLabels = new Map(
+  officialReferences.registrationOffices.map((option) => [option.value, option.label]),
+);
+const transcriptionOfficeLabels = new Map(
+  officialReferences.transcriptionOffices.map((option) => [option.value, option.label]),
+);
+const tavolareMunicipalityLabels = new Map(
+  officialReferences.tavolareMunicipalities.map((option) => [option.value, option.label]),
+);
+const cadastralCategoryLabels = new Map(
+  officialReferences.cadastralCategories.map((option) => [option.value, option.label]),
 );
 
 const QUADRO_PAGES: Record<QuadroId, number> = {
@@ -187,21 +234,109 @@ function fieldSection(element: TechnicalElement, quadro: QuadroId): string {
   );
 }
 
+function technicalEnumerationValues(element: TechnicalElement): string[] {
+  const cached = technicalEnumerationCache.get(element.id);
+  if (cached) return cached;
+  const values = new Set<string>();
+  const visited = new Set<string>();
+  const visit = (name: string | undefined) => {
+    if (!name || visited.has(name)) return;
+    visited.add(name);
+    const type = technicalTypesByName.get(name);
+    if (!type) return;
+    for (const value of type.constraints?.facets?.enumeration ?? []) values.add(value);
+    visit(type.constraints?.base);
+    for (const member of type.constraints?.unionMemberTypes ?? []) visit(member);
+  };
+  for (const value of element.constraints.facets?.enumeration ?? []) values.add(value);
+  visit(element.type);
+  visit(element.constraints.base);
+  for (const member of element.constraints.unionMemberTypes ?? []) visit(member);
+  const resolved = [...values];
+  technicalEnumerationCache.set(element.id, resolved);
+  return resolved;
+}
+
+function technicalOptionLabel(element: TechnicalElement, value: string): string {
+  const source =
+    element.name === "CategoriaCatastale"
+      ? cadastralCategoryLabels
+      : element.name === "UfficioDiRegistrazione" || element.name === "UfficioTerritoriale"
+        ? registrationOfficeLabels
+        : element.name === "UfficioTrascrizione"
+          ? transcriptionOfficeLabels
+          : element.name === "CodiceComuneCatastale"
+            ? tavolareMunicipalityLabels
+            : element.name === "Provincia" || element.name === "ProvinciaNascita"
+              ? provinceLabels
+              : element.name === "CodiceStatoEstero"
+                ? foreignStateLabels
+                : null;
+  const label = source?.get(value);
+  return label ? `${value} — ${label}` : value;
+}
+
 function technicalOptions(element: TechnicalElement): Array<{ value: string; label: string }> {
-  const values = element.constraints.facets?.enumeration ?? [];
+  const values = technicalEnumerationValues(element);
   if (values.length === 0 && element.type.includes("DatoCB_Type"))
     return [
       { value: "0", label: "No" },
       { value: "1", label: "Sì" },
     ];
-  return values.map((value) => ({ value, label: value }));
+  return values.map((value) => ({ value, label: technicalOptionLabel(element, value) }));
+}
+
+function officialChoiceSource(element: TechnicalElement): OfficialChoiceSource | undefined {
+  const isTavolarePlace = element.path.includes("/LuogoTavolare/");
+  if (
+    isTavolarePlace &&
+    (element.name === "CodiceComune" || element.name === "CodiceComuneAmministrativo")
+  )
+    return "tavolare-municipality-code";
+  if (isTavolarePlace && element.name === "ComuneAmministrativo") return "tavolare-place-name";
+  if (element.name === "CodiceComune" || element.name === "CodiceComuneAmministrativo")
+    return "municipality-code";
+  if (
+    element.name === "Comune" ||
+    element.name === "ComuneNascita" ||
+    element.name === "ComuneAmministrativo"
+  )
+    return "place-name";
+  if (element.name === "CodiceStatoEstero") return "foreign-state-code";
+  if (element.name === "StatoEstero") return "foreign-state-name";
+  if (element.name === "ComuneCatastale") return "tavolare-municipality";
+  return undefined;
+}
+
+function relatedProvincePath(path: string): string | null {
+  if (path.endsWith("/ComuneNascita"))
+    return path.replace(/\/ComuneNascita$/u, "/ProvinciaNascita");
+  if (path.includes("/Luogo/Italia/")) return path.replace(/\/Italia\/[^/]+$/u, "/Provincia");
+  if (path.endsWith("/Comune")) return path.replace(/\/Comune$/u, "/Provincia");
+  return null;
+}
+
+function relatedProvinceFieldId(element: TechnicalElement): string | undefined {
+  const path = relatedProvincePath(element.path);
+  if (!path) return undefined;
+  const technical = technicalElementsByPath.get(path);
+  if (!technical) return undefined;
+  return fieldsByPath.get(path)?.id ?? technical.id;
 }
 
 function catalogFieldFor(element: TechnicalElement, quadro: QuadroId): CatalogField {
+  const cacheKey = `${quadro}\u0000${element.id}`;
+  const cached = catalogFieldCache.get(cacheKey);
+  if (cached) return cached;
   const curated = fieldsByPath.get(element.path);
   const section = normalizeItalianTypography(curated?.section ?? fieldSection(element, quadro));
   const entityScope = curated?.entityScope ?? fieldScope(element, quadro);
-  return {
+  const options = (curated?.options ?? technicalOptions(element)).map((option) => ({
+    ...option,
+    label: normalizeItalianTypography(option.label),
+  }));
+  const choiceSource = curated?.choiceSource ?? officialChoiceSource(element);
+  const resolved: CatalogField = {
     id: curated?.id ?? element.id,
     quadro,
     label: normalizeItalianTypography(curated?.label ?? humanize(element.name)),
@@ -216,18 +351,27 @@ function catalogFieldFor(element: TechnicalElement, quadro: QuadroId): CatalogFi
         : undefined,
     entryMode: curated?.entryMode ?? "editable",
     derivedFrom: curated?.derivedFrom,
-    control: curated?.control ?? (element.type.includes("DatoCB_Type") ? "checkbox" : undefined),
+    control:
+      curated?.control ??
+      (element.type.includes("DatoCB_Type")
+        ? "checkbox"
+        : options.length > 80 || choiceSource
+          ? "combobox"
+          : options.length > 0
+            ? "select"
+            : undefined),
+    choiceSource,
+    choiceProvinceFieldId: curated?.choiceProvinceFieldId ?? relatedProvinceFieldId(element),
     appliesToDeclarationKinds: curated?.appliesToDeclarationKinds ?? [],
-    options: (curated?.options ?? technicalOptions(element)).map((option) => ({
-      ...option,
-      label: normalizeItalianTypography(option.label),
-    })),
+    options,
     technicalPath: element.path,
     technicalType: element.type,
     presentation: curated?.presentation,
     status: curated?.status ?? "qualified-from-current-technical-source",
     sourceIds: curated?.sourceIds ?? ["SRC-07", "SRC-08"],
   };
+  catalogFieldCache.set(cacheKey, resolved);
+  return resolved;
 }
 
 export const QUADRI = [
@@ -293,6 +437,8 @@ export function listQuadroFields(quadro: QuadroId): Array<
     entryMode: NonNullable<CatalogField["entryMode"]>;
     derivedFrom: string | null;
     control: CatalogField["control"] | null;
+    choiceSource: OfficialChoiceSource | null;
+    choiceProvinceFieldId: string | null;
     appliesToDeclarationKinds: NonNullable<CatalogField["appliesToDeclarationKinds"]>;
     options: Array<{ value: string; label: string }>;
     visibleFieldId: string | null;
@@ -321,6 +467,8 @@ export function listQuadroFields(quadro: QuadroId): Array<
         entryMode: field.entryMode ?? "editable",
         derivedFrom: field.derivedFrom ?? null,
         control: field.control ?? null,
+        choiceSource: field.choiceSource ?? null,
+        choiceProvinceFieldId: field.choiceProvinceFieldId ?? null,
         appliesToDeclarationKinds: field.appliesToDeclarationKinds ?? [],
         options: field.options ?? [],
         visibleFieldId: technicalOnly ? null : field.id,
@@ -350,9 +498,112 @@ export function getCatalogField(fieldId: string): CatalogField | null {
   const mapped = fieldsById.get(fieldId);
   const element = mapped
     ? technicalElementsByPath.get(mapped.technicalPath)
-    : technicalElements.find((candidate) => candidate.kind === "field" && candidate.id === fieldId);
+    : technicalElementsById.get(fieldId);
   const quadro = element ? quadroFromPath(element.path) : null;
   return element && quadro ? catalogFieldFor(element, quadro) : null;
+}
+
+function normalizeChoiceSearch(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleUpperCase("it")
+    .trim();
+}
+
+const referenceChoiceCache = new Map<OfficialChoiceSource, OfficialChoiceOption[]>();
+const referenceChoiceValueCache = new Map<OfficialChoiceSource, Set<string>>();
+
+function referenceChoiceOptions(source: OfficialChoiceSource): OfficialChoiceOption[] {
+  const cached = referenceChoiceCache.get(source);
+  if (cached) return cached;
+  const places = source.startsWith("tavolare-")
+    ? officialReferences.tavolarePlaces
+    : officialReferences.places;
+  const options =
+    source === "municipality-code" || source === "tavolare-municipality-code"
+      ? places.map((place) => ({
+          value: place.municipalityCode,
+          label: `${place.municipalityCode} — ${place.label}${place.provinceCode ? ` (${place.provinceCode})` : ""}`,
+          provinceCode: place.provinceCode || undefined,
+          validFrom: place.validFrom,
+          validTo: place.validTo,
+        }))
+      : source === "place-name" || source === "tavolare-place-name"
+        ? places.map((place) => ({
+            value: place.value,
+            label: `${place.label}${place.provinceCode ? ` (${place.provinceCode})` : ""}`,
+            provinceCode: place.provinceCode || undefined,
+            validFrom: place.validFrom,
+            validTo: place.validTo,
+          }))
+        : source === "foreign-state-code"
+          ? officialReferences.foreignStates.map((option) => ({
+              value: option.value,
+              label: `${option.value} — ${option.label}`,
+            }))
+          : source === "foreign-state-name"
+            ? officialReferences.foreignStates.map((option) => ({
+                value: option.label,
+                label: option.label,
+              }))
+            : officialReferences.tavolareMunicipalities.map((option) => ({
+                value: option.label,
+                label: `${option.label} — ${option.value}`,
+              }));
+  referenceChoiceCache.set(source, options);
+  return options;
+}
+
+export function listOfficialChoiceOptions(
+  fieldId: string,
+  input: {
+    query?: string;
+    provinceCode?: string;
+    effectiveDate?: string;
+    limit?: number;
+  } = {},
+): OfficialChoiceOption[] {
+  const field = getCatalogField(fieldId);
+  if (!field) return [];
+  const sourceOptions: OfficialChoiceOption[] = field.choiceSource
+    ? referenceChoiceOptions(field.choiceSource)
+    : (field.options ?? []);
+  const query = normalizeChoiceSearch(input.query ?? "");
+  const provinceCode = input.provinceCode?.trim().toUpperCase() ?? "";
+  const effectiveDate = input.effectiveDate?.trim() ?? "";
+  const limit = Math.max(1, Math.min(input.limit ?? 60, 100));
+  const unique = new Map<string, OfficialChoiceOption>();
+  for (const option of sourceOptions) {
+    if (provinceCode && option.provinceCode && option.provinceCode !== provinceCode) continue;
+    if (
+      effectiveDate &&
+      ((option.validFrom && option.validFrom > effectiveDate) ||
+        (option.validTo && option.validTo < effectiveDate))
+    )
+      continue;
+    const matchesQuery =
+      !query ||
+      normalizeChoiceSearch(option.value).includes(query) ||
+      normalizeChoiceSearch(option.label).includes(query);
+    if (!matchesQuery) continue;
+    const key = `${option.value}\u0000${option.label}`;
+    if (!unique.has(key)) unique.set(key, option);
+    if (unique.size >= limit) break;
+  }
+  return [...unique.values()];
+}
+
+export function isOfficialChoiceValue(fieldId: string, value: string): boolean {
+  const field = getCatalogField(fieldId);
+  if (!field || (!field.choiceSource && (field.options?.length ?? 0) === 0)) return true;
+  if (!field.choiceSource) return field.options?.some((option) => option.value === value) ?? false;
+  let values = referenceChoiceValueCache.get(field.choiceSource);
+  if (!values) {
+    values = new Set(referenceChoiceOptions(field.choiceSource).map((option) => option.value));
+    referenceChoiceValueCache.set(field.choiceSource, values);
+  }
+  return values.has(value);
 }
 
 export function getTechnicalField(fieldId: string): TechnicalElement | null {
@@ -385,24 +636,7 @@ export function listOfficialInstructions(fieldId: string): OfficialInstruction[]
 
 export function listTechnicalEnumerationValues(fieldId: string): string[] {
   const field = getTechnicalField(fieldId);
-  if (!field) return [];
-  const typesByName = new Map(technicalTypes.map((type) => [type.name, type]));
-  const values = new Set<string>();
-  const visited = new Set<string>();
-  const visit = (name: string | undefined) => {
-    if (!name || visited.has(name)) return;
-    visited.add(name);
-    const type = typesByName.get(name);
-    if (!type) return;
-    for (const value of type.constraints?.facets?.enumeration ?? []) values.add(value);
-    visit(type.constraints?.base);
-    for (const member of type.constraints?.unionMemberTypes ?? []) visit(member);
-  };
-  for (const value of field.constraints.facets?.enumeration ?? []) values.add(value);
-  visit(field.type);
-  visit(field.constraints.base);
-  for (const member of field.constraints.unionMemberTypes ?? []) visit(member);
-  return [...values];
+  return field ? technicalEnumerationValues(field) : [];
 }
 
 function mergeFacets(
