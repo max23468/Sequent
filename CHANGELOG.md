@@ -14,6 +14,7 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 ### Fixed
 
 - conflitti critici esplicitamente ignorati o rifiutati non vengono più conteggiati come correttamente rilevati dal benchmark.
+- Frontespizio dei DIZ reali letto dal record B ufficiale di SuccessioniOnLine, inclusa la proiezione della data di apertura sulla dichiarazione canonica durante import e riparazione.
 
 ## 0.2.24
 

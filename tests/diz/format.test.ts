@@ -21,6 +21,7 @@ import {
   QUALIFIED_DIZ_FIELD_MAPPINGS,
   rewriteDizFields,
 } from "../../src/domain/diz/index.ts";
+import { syntheticDizFromFields } from "../fixtures/synthetic-diz.ts";
 
 type SyntheticEntry = {
   name: string;
@@ -151,6 +152,26 @@ test("legge il contenitore XStream e collega gli allegati", () => {
   assert.deepEqual(
     parsed.attachments.map(({ name, kind, referenced }) => ({ name, kind, referenced })),
     [{ name: "allegato", kind: "pdf", referenced: true }],
+  );
+});
+
+test("legge il Frontespizio dal record B serializzato da SuccessioniOnLine", () => {
+  const parsed = parseDiz(
+    syntheticDizFromFields(
+      [{ quadro: "EA", module: "00000001", field: "001005", value: "ROSSI" }],
+      undefined,
+      { 2: "RSSMRA80A01H501U", 32: "15082025" },
+    ),
+  );
+
+  assert.equal(parsed.fields.length, 112);
+  assert.deepEqual(
+    parsed.fields.find((field) => field.quadro === "B" && field.field === "32"),
+    { quadro: "B", module: "00000001", field: "32", value: "15082025" },
+  );
+  assert.equal(
+    parsed.fields.find((field) => field.quadro === "B" && field.field === "2")?.value,
+    "RSSMRA80A01H501U",
   );
 });
 

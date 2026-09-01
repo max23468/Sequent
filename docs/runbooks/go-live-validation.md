@@ -6,7 +6,7 @@ Questa procedura ricostruisce il corpus storico, aggrega il benchmark di sicurez
 
 - lavorare dalla release candidata identificata da commit completo;
 - usare una copia ripristinata e isolata dei dati per preparazione, regressioni e prove rischiose;
-- derivare il risultato atteso dalla dichiarazione effettivamente presentata e dalle correzioni professionali, non da una nuova interpretazione automatica;
+- derivare il risultato atteso dalla dichiarazione effettivamente presentata e dalle correzioni professionali oppure, quando l’owner ne conferma la completezza, dal DIZ conclusivo archiviato; mai da una nuova interpretazione automatica;
 - usare identificativi neutri nel file privato e non stampare nomi, codici fiscali, valori, estratti o percorsi del corpus;
 - conservare input e report con directory `0700` e file `0600`;
 - lasciare ogni divergenza critica aperta come blocker esplicito;
@@ -22,6 +22,8 @@ Selezionare da cinque a dieci pratiche concluse. Il corpus deve coprire i period
 4. registrare zero divergenze critiche irrisolte e zero regressioni critiche;
 5. eseguire più run quando la variabilità di Codex rende insufficiente una singola esecuzione;
 6. mantenere dati attesi e osservati soltanto nel file privato di qualifica.
+
+Per i cinque DIZ acquisiti nella fase precedente, la conferma dell’owner che si tratta di pratiche complete consente di usare l’originale archiviato come esito atteso (`owner_confirmed_complete_diz`). Questa conferma non sostituisce ricostruzione, benchmark e riconciliazione né colma da sola la copertura temporale richiesta.
 
 Ogni `benchmarkRuns` usa lo stesso formato accettato da `npm run benchmark:extraction-safety`. Le pratiche reali possono includere più dataset o più run; il report pubblico non contiene identificativi né risultati per campo.
 

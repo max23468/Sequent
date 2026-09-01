@@ -38,7 +38,10 @@ const browserEvidenceSchema = z.object({
 const historicalPracticeSchema = z.object({
   openingDate: openingDateSchema,
   constitutionalCourtDecisionApplicable: z.boolean(),
-  expectedOutcomeSource: z.literal("submitted_declaration_and_professional_corrections"),
+  expectedOutcomeSource: z.enum([
+    "submitted_declaration_and_professional_corrections",
+    "owner_confirmed_complete_diz",
+  ]),
   reconstructedEndToEnd: z.boolean(),
   reconciledWithExpectedOutcome: z.boolean(),
   unresolvedCriticalDivergences: z.number().int().nonnegative(),

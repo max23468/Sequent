@@ -56,7 +56,10 @@ function validInput(): Record<string, unknown> {
     historicalPractices: dates.map((openingDate, index) => ({
       openingDate,
       constitutionalCourtDecisionApplicable: index === 0,
-      expectedOutcomeSource: "submitted_declaration_and_professional_corrections",
+      expectedOutcomeSource:
+        index === 0
+          ? "owner_confirmed_complete_diz"
+          : "submitted_declaration_and_professional_corrections",
       reconstructedEndToEnd: true,
       reconciledWithExpectedOutcome: true,
       unresolvedCriticalDivergences: 0,
