@@ -3570,6 +3570,8 @@ M2 comprende inoltre Brand Foundation, design token, shell responsive, Dashboard
 
 ## M7 — Qualificazione Codex e acquisizione del corpus DIZ
 
+**Stato:** chiusa con approvazione dell'owner il 1 settembre 2026 sulla release `0.2.22`, commit `7eafea49be137be2dac0ce4709fa151b0c90bc82`. Il readback finale ha qualificato autenticazione ChatGPT dedicata e riautenticazione, persistenza del thread, input immagine, benchmark senza fonti inventate, cinque DIZ unici con provenienza e readback verificati, 10 allegati materializzati, health di web e runner e report privati con modalità `0600`.
+
 **Prerequisito:** M6 chiusa senza trasferirne o ridurne i criteri di uscita.
 
 **Risultato:** Codex viene qualificato realmente attraverso Sequent sulla VPS con autenticazione ChatGPT, SDK, thread e run strutturate, provenienza verificabile, persistenza dopo riavvio, riautenticazione e indisponibilità controllata. I cinque DIZ già presenti nel corpus privato vengono acquisiti nell'archivio applicativo tramite il percorso productizzato in M6, creando o collegando le pratiche pertinenti, importando tutti i dati rappresentabili e preservando integralmente originali e contenuti non interpretati.
