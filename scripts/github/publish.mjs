@@ -18,14 +18,35 @@ export const PRE_REVIEW_CHECKS = [
 ];
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const synchronousSleep = (milliseconds) =>
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, { encoding: "utf8", stdio: "inherit", ...options });
   if (result.status !== 0) throw new Error(`${command} ${args.join(" ")} non riuscito`);
 }
 
+export function retryRead(
+  read,
+  { attempts = 4, intervalMs = 2_000, pause = synchronousSleep, report = console.warn } = {},
+) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return read();
+    } catch (error) {
+      if (attempt === attempts) throw error;
+      report(
+        `Lettura GitHub temporaneamente non disponibile; nuovo tentativo ${attempt}/${attempts}`,
+      );
+      pause(intervalMs);
+    }
+  }
+  throw new Error("Lettura GitHub non disponibile");
+}
+
 function output(command, args) {
-  return execFileSync(command, args, { encoding: "utf8" }).trim();
+  const read = () => execFileSync(command, args, { encoding: "utf8" }).trim();
+  return command === "gh" ? retryRead(read) : read();
 }
 
 function json(command, args) {
