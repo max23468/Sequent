@@ -51,16 +51,13 @@ Per ogni file del corpus privato:
 4. verificare i valori importati in `Da verificare`; ogni divergenza con un valore già presente resta esplicita e non viene sovrascritta;
 5. lasciare invariati originali, allegati e campi privi di mapping qualificato.
 
-Al termine, dalla release attiva eseguire il readback privato:
+Al termine, sulla VPS eseguire il readback privato attraverso lo staging effimero qualificato. Il runner monta soltanto la home Codex e il container web soltanto i dati operativi: il corpus host non deve essere montato stabilmente in nessuno dei due.
 
 ```bash
-npm run qualify:diz-corpus -- \
-  --corpus /opt/sequent/private \
-  --data-dir /var/lib/sequent \
-  --output /var/lib/sequent/qualification/diz-corpus.json
+scripts/vps/qualify-diz-corpus.sh
 ```
 
-Il comando richiede esattamente cinque DIZ univoci, associa ciascun hash ad almeno un’acquisizione attiva e completa, rilegge il blob, ripete il parsing e verifica metadati, contenuti opachi e ogni campo acquisibile nel modello canonico, inclusi soggetti e cespiti multipli nello stesso modulo. Eventuali tentativi incompleti precedenti restano nella cronologia senza impedire la prova dell’acquisizione corretta più recente. Il controllo fallisce se manca una posizione, resta una divergenza, i metadati non coincidono, un allegato incorporato non è materializzato o un file è diverso. Il report contiene soltanto conteggi sanitizzati, è legato allo SHA completo della release e viene scritto con directory `0700` e file `0600`.
+Lo script individua esattamente il container web attivo, esclude la home Codex dalla scansione, copia con nomi neutri soltanto i cinque `.diz` in uno staging temporaneo e lo rimuove anche in caso di errore. La qualifica associa ciascun hash ad almeno un’acquisizione attiva e completa, rilegge il blob, ripete il parsing e verifica metadati, contenuti opachi e ogni campo acquisibile nel modello canonico, inclusi soggetti e cespiti multipli nello stesso modulo. Eventuali tentativi incompleti precedenti restano nella cronologia senza impedire la prova dell’acquisizione corretta più recente. Il controllo fallisce se manca una posizione, resta una divergenza, i metadati non coincidono, un allegato incorporato non è materializzato o un file è diverso. Il report contiene soltanto conteggi sanitizzati, è legato allo SHA completo della release e viene scritto con directory `0700` e file `0600`.
 
 Per aggiornare acquisizioni create con una mappatura precedente, verificare prima il backup operativo e usare la riparazione dalla scheda **Flusso ufficiale**. In alternativa, la procedura amministrativa bulk richiede deliberatamente `--apply` e il numero esatto di pratiche attese:
 
