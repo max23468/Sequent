@@ -4,6 +4,17 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.7.0
+
+### Added
+
+- ingresso nella validazione finale con un gate privato e fail-closed su 5–10 pratiche storiche, benchmark di sicurezza, copertura temporale, conformità ufficiale, matrice browser, backup/restore e prima pratica reale parallela;
+- report sanitizzato legato all’esatto commit candidato, scritto con permessi privati e incapace di chiudere il go-live senza riconciliazione completa e approvazione esplicita dell’owner.
+
+### Fixed
+
+- conflitti critici esplicitamente ignorati o rifiutati non vengono più conteggiati come correttamente rilevati dal benchmark.
+
 ## 0.2.24
 
 ### Fixed

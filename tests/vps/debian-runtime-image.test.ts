@@ -79,6 +79,7 @@ test("l'immagine include tutti gli strumenti amministrativi dichiarati", () => {
     "connect-codex",
     "qualify-codex-runtime",
     "qualify-diz-corpus",
+    "qualify-go-live",
     "reset-owner",
     "restore",
     "seed-synthetic",

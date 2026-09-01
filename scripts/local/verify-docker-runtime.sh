@@ -19,7 +19,7 @@ test -z "$(find /lib /usr/lib -iname "*musl*" -print -quit 2>/dev/null)"
 ! dpkg-query -W gcompat >/dev/null 2>&1
 test "$(node --version)" = v26.7.0
 test "$(npm --version)" = 12.0.2
-for script in backup connect-codex qualify-codex-runtime qualify-diz-corpus repair-diz-acquisitions reset-owner restore seed-synthetic; do
+for script in backup connect-codex qualify-codex-runtime qualify-diz-corpus qualify-go-live repair-diz-acquisitions reset-owner restore seed-synthetic; do
   test -r "/app/scripts/admin/$script.ts"
 done
 test -r /app/src/lib/server/codex-runner-server.ts

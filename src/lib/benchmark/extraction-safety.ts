@@ -252,6 +252,9 @@ export function evaluateExtractionSafetyBenchmark(input: unknown): BenchmarkRepo
       } else if (!observed) {
         outcome = "conflict_ignored";
         if (expected.critical) criticalSilentErrors += 1;
+      } else if (observed.reviewStatus === "ignored" || observed.reviewStatus === "rejected") {
+        outcome = "conflict_ignored";
+        if (expected.critical) criticalSilentErrors += 1;
       } else if (!sameSources) {
         outcome = "invented_source";
         if (expected.critical) criticalSilentErrors += 1;

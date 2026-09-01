@@ -326,6 +326,34 @@ describe("benchmark di sicurezza estrattiva", () => {
     expect(report.criticalSilentErrors).toBe(1);
   });
 
+  it("non considera rilevato un conflitto esplicitamente ignorato", () => {
+    const report = evaluateExtractionSafetyBenchmark({
+      corpusId: "sintetico",
+      corpusHash,
+      cases: [
+        {
+          id: "caso-conflitto-ignorato",
+          category: "bank_certificate",
+          knownDocumentIds: ["doc-1", "doc-2"],
+          expected: [],
+          observed: [],
+          expectedConflicts: [{ key: "saldo", sources: expectedConflictSources, critical: true }],
+          observedConflicts: [
+            {
+              key: "saldo",
+              sources: observedConflictSources,
+              reviewStatus: "ignored",
+            },
+          ],
+        },
+      ],
+    });
+    expect(report.passedSafetyGate).toBe(false);
+    expect(report.totals.conflict_ignored).toBe(1);
+    expect(report.totals.conflict_detected).toBe(0);
+    expect(report.criticalSilentErrors).toBe(1);
+  });
+
   it("blocca un campo critico non trovato", () => {
     const report = evaluateExtractionSafetyBenchmark({
       corpusId: "sintetico",
