@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 1.0.0
+
+### Changed
+
+- chiusura di `TG-GOLIVE` basata sui cinque DIZ completi confermati dall’owner, con readback sul candidato esatto, conformità ufficiale, backup/restore, HTTPS e approvazione finale;
+- ricostruzione storica estesa, benchmark storico finale, matrice browser manuale completa e pratica reale parallela riclassificati come verifiche successive non bloccanti, senza rappresentarli come evidenze eseguite.
+
 ## 0.7.1
 
 ### Fixed
