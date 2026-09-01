@@ -10,6 +10,7 @@ const userFacingFiles = [
   "src/routes/__design/+page.svelte",
   "src/lib/components/CodexRunHistory.svelte",
   "src/lib/components/DocumentSourcePanel.svelte",
+  "src/lib/components/PdfSourcePreview.svelte",
   "src/lib/components/PracticeContextPanel.svelte",
   "src/lib/components/PracticeDomainSection.svelte",
   "src/lib/components/QuadroFields.svelte",

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Eye, FileText } from "@lucide/svelte";
   import { formatItalianDate, formatMegabytes } from "$lib/format";
+  import PdfSourcePreview from "$lib/components/PdfSourcePreview.svelte";
   import SourceTabs from "$lib/components/SourceTabs.svelte";
   import type { ActionData, PageData } from "../../routes/pratiche/[id]/$types";
 
@@ -43,7 +44,7 @@
 {#if data.selectedDocument}
   <div class="source-viewer">
     {#if data.selectedDocument.mediaType.startsWith("image/")}<img src={`/api/documents/${data.selectedDocument.id}/content`} alt={`Originale ${data.selectedDocument.originalName}`} />
-    {:else if data.selectedDocument.mediaType === "application/pdf"}<iframe src={`/api/documents/${data.selectedDocument.id}/content`} title={`Originale ${data.selectedDocument.originalName}`}></iframe>
+    {:else if data.selectedDocument.mediaType === "application/pdf"}<PdfSourcePreview resourceUrl={`/api/documents/${data.selectedDocument.id}/content`} title={`Originale ${data.selectedDocument.originalName}`} byteSize={data.selectedDocument.byteSize} />
     {:else if selectedSourcePage}<pre>{selectedSourcePage.text || "Nessun testo estraibile."}</pre>
     {:else}<div class="panel-empty source-preview-empty"><FileText size={27} /><p>Anteprima non disponibile.</p><span>L’originale è conservato e può essere aperto separatamente.</span></div>{/if}
   </div>
