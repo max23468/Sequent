@@ -40,6 +40,11 @@ describe("analisi pratica con Codex", () => {
     const adapter: CodexAnalysisAdapter = {
       async run(request) {
         expect(request.input[0]).toMatchObject({ type: "text" });
+        expect(request.input[0]).toMatchObject({
+          text: expect.stringContaining(
+            "Apri manifest.json e leggi per intero ogni file indicato da extractedTextPath",
+          ),
+        });
         expect(statSync(request.workingDirectory).mode & 0o777).toBe(0o755);
         expect(statSync(join(request.workingDirectory, "manifest.json")).mode & 0o777).toBe(0o644);
         const documentDirectory = join(request.workingDirectory, "documents");
