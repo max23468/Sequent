@@ -23,7 +23,17 @@ import {
 } from "./codex-sdk-adapter.ts";
 import { createReviewItem, getDocumentText } from "./documents.ts";
 
-const CODEX_PROMPT_VERSION = "practice-analysis-v3";
+const CODEX_PROMPT_VERSION = "practice-analysis-v4";
+
+const REPAIRABLE_ANALYSIS_ERRORS = new Set([
+  "CODEX_DUPLICATE_SUBJECT_ID",
+  "CODEX_UNKNOWN_DOCUMENT",
+  "CODEX_UNKNOWN_PAGE",
+  "CODEX_UNSUPPORTED_EXCERPT",
+  "CODEX_UNSUPPORTED_VALUE",
+  "CODEX_UNSUPPORTED_ALTERNATIVE",
+  "CODEX_UNSUPPORTED_CONFLICT_VALUE",
+]);
 
 const proposalSchema = z.object({
   subjectId: z.string().trim().min(1).max(200),
@@ -170,6 +180,32 @@ function validateAnalysisEvidence(
   }
 }
 
+function parseAndValidateAnalysis(
+  finalResponse: string,
+  documents: PracticeSnapshotDocument[],
+): AnalysisOutput {
+  const parsed = analysisSchema.parse(JSON.parse(finalResponse));
+  validateAnalysisEvidence(parsed, documents);
+  return parsed;
+}
+
+function repairAnalysisInput(errorCode: string): Input {
+  return [
+    {
+      type: "text",
+      text: [
+        `La risposta precedente è stata rifiutata dal controllo deterministico: ${errorCode}.`,
+        "Rileggi manifest.json e tutti i testi estratti, poi restituisci l’analisi completa corretta.",
+        "Ogni subjectId deve comparire una sola volta nell’insieme di proposals e conflicts.",
+        "Se più fonti discordano sullo stesso subjectId, produci un solo conflict con tutte le fonti pertinenti.",
+        "value, alternatives e valori dei conflitti devono comparire letteralmente nei rispettivi excerpt.",
+        "Usa esclusivamente ID documento e numeri di pagina presenti nel manifest.",
+        "Non attenuare, aggirare o commentare il controllo: correggi soltanto l’output strutturato.",
+      ].join("\n"),
+    },
+  ];
+}
+
 async function prepareWorkspace(
   documents: PracticeSnapshotDocument[],
   dataDirectory: string,
@@ -301,7 +337,7 @@ export async function analyzePracticeWithCodex(
     options.onProgress?.(12);
     let completedItems = 0;
     options.onProgress?.(15);
-    const response = await adapter.run({
+    let response = await adapter.run({
       workingDirectory: workspace.directory,
       input: workspace.input,
       threadId: existingThread?.thread_id ?? null,
@@ -311,12 +347,34 @@ export async function analyzePracticeWithCodex(
       onEvent(event) {
         if (event.type === "item.completed") {
           completedItems += 1;
-          options.onProgress?.(Math.min(90, 15 + completedItems * 5));
+          options.onProgress?.(Math.min(70, 15 + completedItems * 5));
         }
       },
     });
-    const parsed = analysisSchema.parse(JSON.parse(response.finalResponse));
-    validateAnalysisEvidence(parsed, documents);
+    let parsed: AnalysisOutput;
+    try {
+      parsed = parseAndValidateAnalysis(response.finalResponse, documents);
+    } catch (error) {
+      const errorCode = error instanceof Error ? error.message : "";
+      if (!REPAIRABLE_ANALYSIS_ERRORS.has(errorCode)) throw error;
+      options.onProgress?.(75);
+      let repairedItems = 0;
+      response = await adapter.run({
+        workingDirectory: workspace.directory,
+        input: repairAnalysisInput(errorCode),
+        threadId: response.threadId,
+        model,
+        effort: "high",
+        signal: options.signal,
+        onEvent(event) {
+          if (event.type === "item.completed") {
+            repairedItems += 1;
+            options.onProgress?.(Math.min(89, 75 + repairedItems * 2));
+          }
+        },
+      });
+      parsed = parseAndValidateAnalysis(response.finalResponse, documents);
+    }
     options.onProgress?.(90);
     database.transaction(() => {
       storeThread(database, practiceId, response.threadId);

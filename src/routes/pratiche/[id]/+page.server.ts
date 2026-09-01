@@ -11,6 +11,7 @@ import {
   listFailedBlobVerifications,
   listPracticeJobs,
   retryJob,
+  selectCurrentPracticeJobs,
 } from "$lib/server/jobs";
 import { hasCodexThread, listCodexRuns, resetCodexThread } from "$lib/server/codex-analysis";
 import { cancelPracticeJob } from "$lib/server/job-runner";
@@ -151,6 +152,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
     documents.at(0) ??
     null;
   const jobs = listPracticeJobs(database, params.id);
+  const currentJobs = selectCurrentPracticeJobs(jobs);
   const selectedQuadro = QUADRI.includes(url.searchParams.get("quadro") as QuadroId)
     ? (url.searchParams.get("quadro") as QuadroId)
     : "EA";
@@ -222,8 +224,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
     selectedDocumentPages: selectedDocument ? getDocumentText(database, selectedDocument.id) : [],
     reviewItems,
     selectedReview,
-    activeJobs: jobs.filter((job) => job.status === "queued" || job.status === "running"),
-    failedJobs: jobs.filter((job) => job.status === "failed" || job.status === "cancelled"),
+    activeJobs: currentJobs.filter((job) => job.status === "queued" || job.status === "running"),
+    failedJobs: currentJobs.filter((job) => job.status === "failed" || job.status === "cancelled"),
     codexRuns: listCodexRuns(database, params.id),
     hasCodexThread: hasCodexThread(database, params.id),
     declaration,
