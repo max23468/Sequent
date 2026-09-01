@@ -538,7 +538,7 @@ Non rientrano nel perimetro iniziale:
 
 ## 6.1 Successo operativo
 
-Sequent è pronto quando una pratica reale nuova attraversa:
+Nell’uso ordinario una pratica reale nuova può attraversare:
 
 ```text
 caricamento fascicolo
@@ -555,7 +555,7 @@ caricamento fascicolo
 → chiusura
 ```
 
-senza interventi tecnici e con un risparmio sostanziale rispetto all'inserimento manuale.
+senza interventi tecnici e con un risparmio sostanziale rispetto all'inserimento manuale. Il completamento osservato di questo percorso resta un obiettivo operativo successivo alla release stabile e non è una condizione di chiusura di `TG-GOLIVE`.
 
 ## 6.2 Successo DIZ
 
@@ -575,11 +575,12 @@ Prima del percorso ordinario:
 
 1. round-trip DIZ qualificato;
 2. qualificazione reale di Codex attraverso Sequent e acquisizione applicativa dei cinque DIZ privati già disponibili;
-3. ricostruzione end-to-end di 5–10 pratiche storiche;
-4. benchmark OCR/Codex finale;
-5. prima pratica reale lavorata in parallelo al metodo abituale;
-6. riconciliazione di tutte le divergenze critiche;
-7. approvazione dell'owner al go-live.
+3. readback integrale dei cinque DIZ confermati completi dall’owner, con almeno una successione aperta nel 2025;
+4. conformità ufficiale, backup/restore e health HTTPS qualificati sullo stesso candidato;
+5. riconciliazione di tutte le divergenze critiche dell’acquisizione;
+6. approvazione dell'owner al go-live.
+
+La ricostruzione storica estesa, la matrice manuale completa dei sistemi target e una pratica reale lavorata in parallelo restano verifiche consigliate durante l’uso ordinario, non blocker della release stabile iniziale.
 
 ## 6.5 Successo della conformità ufficiale
 
@@ -1699,9 +1700,9 @@ Se l'obiettivo richiede attività oltre il perimetro strettamente necessario all
 
 ## 23.4 Corpus
 
-Corpus misto:
+Corpus di interoperabilità:
 
-- 5–10 pratiche storiche complete;
+- cinque DIZ storici completi confermati dall’owner, unici e inventariati;
 - dichiarazioni iniziali e, se disponibili, sostitutive di tipo 1, 2 e 3 e ulteriori dichiarazioni che si affiancano alla precedente;
 - legittime e testamentarie;
 - immobili, rapporti, passività e allegati vari;
@@ -3508,9 +3509,9 @@ Il collaudo con SuccessioniOnLine su Windows è una verifica finale facoltativa 
 
 **Criteri:** pratica selezionata offline, IndexedDB/Blob, storage insufficiente, modifica/allegato in coda, migrazione schema, cache rimossa ed export delle modifiche locali dopo restore server sui browser supportati.
 
-## TG-GOLIVE — Validazione storica e pratica reale
+## TG-GOLIVE — Integrità del corpus e go-live
 
-**Criteri:** 5–10 pratiche storiche, benchmark senza errori critici silenziosi, catalogo ministeriale e regole coerenti con il perimetro, browser matrix, backup/restore provati e una pratica reale nuova lavorata in parallelo e riconciliata.
+**Criteri:** cinque DIZ completi confermati dall’owner, unici, acquisiti e riletti sul candidato esatto; almeno una successione aperta nel 2025; zero divergenze critiche irrisolte nell’acquisizione; catalogo ministeriale e regole coerenti con il perimetro; backup/restore e HTTPS provati; approvazione owner. Per decisione dell’owner del 1 settembre 2026, ricostruzione storica estesa, benchmark storico finale, matrice browser manuale completa e pratica reale parallela non sono blocker di questo gate e non vengono dichiarati eseguiti.
 
 ---
 
@@ -3576,13 +3577,13 @@ M2 comprende inoltre Brand Foundation, design token, shell responsive, Dashboard
 
 **Risultato:** Codex viene qualificato realmente attraverso Sequent sulla VPS con autenticazione ChatGPT, SDK, thread e run strutturate, provenienza verificabile, persistenza dopo riavvio, riautenticazione e indisponibilità controllata. I cinque DIZ già presenti nel corpus privato vengono acquisiti nell'archivio applicativo tramite il percorso productizzato in M6, creando o collegando le pratiche pertinenti, importando tutti i dati rappresentabili e preservando integralmente originali e contenuti non interpretati.
 
-**Uscita:** `TG-CODEX` chiuso con almeno una run reale riproducibile e un benchmark privato controllato senza fonti inventate o valori critici errati accettati silenziosamente; cinque DIZ presenti e consultabili in Sequent con hash, provenienza, pratica/dichiarazione e readback verificati; nessun dato reale in Git, CI o artefatti pubblici. Il caricamento usa mapping, round-trip, backup/restore, health e procedure operative già qualificati in M6 e non ne ridefinisce né sposta i requisiti. Il benchmark storico completo su 5–10 pratiche e la prima pratica reale restano in M8.
+**Uscita:** `TG-CODEX` chiuso con almeno una run reale riproducibile e un benchmark privato controllato senza fonti inventate o valori critici errati accettati silenziosamente; cinque DIZ presenti e consultabili in Sequent con hash, provenienza, pratica/dichiarazione e readback verificati; nessun dato reale in Git, CI o artefatti pubblici. Il caricamento usa mapping, round-trip, backup/restore, health e procedure operative già qualificati in M6 e non ne ridefinisce né sposta i requisiti.
 
 ## M8 — Validazione e go-live
 
 **Prerequisito:** M7.
 
-**Risultato:** ricostruzione delle pratiche storiche, benchmark, regressioni, prima pratica reale parallela sull'endpoint HTTPS qualificato in M6 e release stabile.
+**Risultato:** corpus dei cinque DIZ completi riletto senza divergenze critiche sul candidato esatto, prove di conformità e continuità operativa riconfermate e release stabile.
 
 **Uscita:** `TG-GOLIVE` chiuso e approvazione owner.
 
@@ -3796,7 +3797,7 @@ La chiusura richiede una prova e, se la scelta è difficile da invertire, un ADR
 | `.suc` come formato modificabile                         | `.diz` come file di lavoro; telematico separato                                                                                                                                           |
 | DIZ solo export                                          | round-trip completo                                                                                                                                                                       |
 | collaudo DIZ obbligatorio su macOS e Windows             | qualificazione DIZ su macOS con test deterministici di portabilità; disponibilità ed esecuzione del collaudo Windows finale facoltative, senza rendere advisory un difetto DIZ confermato |
-| corpus finale obbligatorio con una pratica 2026 e un caso scelto per la sentenza 89/2026 | corpus di 5–10 pratiche complete con almeno una pratica aperta nel 2025; ogni caso usa le fonti applicabili alla propria data e fattispecie, senza quote obbligatorie per il 2026 o per una decisione normativa specifica |
+| corpus finale obbligatorio con una pratica 2026 e un caso scelto per la sentenza 89/2026 | cinque DIZ completi confermati dall’owner, con almeno una pratica aperta nel 2025; ogni caso usa le fonti applicabili alla propria data e fattispecie, senza quote obbligatorie per il 2026 o per una decisione normativa specifica |
 | app si ferma al DIZ                                      | fascicolo completo fino agli esiti                                                                                                                                                        |
 | tutto AI                                                 | deterministic-first, AI-assisted                                                                                                                                                          |
 
@@ -3816,9 +3817,9 @@ La release stabile iniziale di Sequent è pronta quando:
 8. backup manuale e restore CLI sono provati;
 9. Codex può mancare senza bloccare il prodotto;
 10. Sequent e Hub Fatture restano isolate;
-11. browser e piattaforme target superano la matrice; il supporto Chrome/Edge su Windows resta obbligatorio, mentre SuccessioniOnLine su Windows è escluso dalla matrice bloccante;
+11. i browser automatizzati della release superano i gate pertinenti; la matrice manuale completa dei sistemi target resta una verifica successiva non bloccante;
 12. catalogo ministeriale e output coprono integralmente il perimetro del pacchetto ufficiale corrente;
-13. la prima pratica reale parallela è riconciliata;
+13. il corpus dei cinque DIZ completi è acquisito e riletto senza divergenze critiche irrisolte;
 14. non esistono blocker su dati, autenticazione o DIZ;
 15. Master Plan, source manifest, catalogo, contratti essenziali e runbook consentono a Codex di mantenere il sistema senza questa chat;
 16. allegati e fornitura rispettano i limiti ufficiali e il controllo Agenzia/Sogei è superato;
