@@ -57,7 +57,7 @@ export function listPracticeJobs(database: Database.Database, practiceId: string
     .prepare(
       `SELECT * FROM jobs
        WHERE practice_id = ? AND type IN ('document.process', 'codex.analyze_practice')
-       ORDER BY created_at DESC LIMIT 40`,
+       ORDER BY created_at DESC, rowid DESC LIMIT 40`,
     )
     .all(practiceId) as Array<Record<string, unknown>>;
   return rows.map(mapJob);
@@ -83,7 +83,7 @@ export function enqueuePracticeAnalysis(
       `SELECT * FROM jobs
        WHERE type = 'codex.analyze_practice' AND practice_id = ?
          AND status IN ('queued', 'running')
-       ORDER BY created_at DESC LIMIT 1`,
+       ORDER BY created_at DESC, rowid DESC LIMIT 1`,
     )
     .get(practiceId) as Record<string, unknown> | undefined;
   if (active) return mapJob(active);

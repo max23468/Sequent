@@ -177,6 +177,9 @@ describe("coda persistente", () => {
     expect(currentFailure).toEqual([expect.objectContaining({ id: failed.id, status: "failed" })]);
 
     const queued = enqueuePracticeAnalysis(database, practice.id);
+    database
+      .prepare("UPDATE jobs SET created_at = ? WHERE id IN (?, ?)")
+      .run("2026-09-01T10:41:26.346Z", failed.id, queued.id);
     const currentQueued = selectCurrentPracticeJobs(listPracticeJobs(database, practice.id));
     expect(queued.id).not.toBe(failed.id);
     expect(currentQueued).toEqual([expect.objectContaining({ id: queued.id, status: "queued" })]);
