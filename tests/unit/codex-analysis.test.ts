@@ -39,19 +39,22 @@ describe("confine runtime Codex", () => {
       features: {
         apps: false,
         browser_use: false,
+        code_mode_host: true,
         computer_use: false,
         hooks: false,
         memories: false,
         multi_agent: false,
         plugins: false,
         remote_plugin: false,
+        shell_tool: true,
         skill_search: false,
         view_image: false,
       },
     });
     expect(options.configOverrides).toContain(
-      'permissions.sequent_practice.filesystem={":minimal"="read",":root"="deny","/tmp/practice-123"="read"}',
+      'permissions.sequent_practice.filesystem={":minimal"="read",":root"="deny","/app/node_modules/@openai"="read","/tmp/practice-123"="read"}',
     );
+    expect(options.configOverrides?.[0]).not.toContain('":root"="read"');
     expect(options.configOverrides).toContain(
       "permissions.sequent_practice.network={enabled=false}",
     );

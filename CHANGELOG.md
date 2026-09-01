@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.2.20
+
+### Fixed
+
+- strumenti locali del runner Codex abilitati nel sandbox senza rete, concedendo sola lettura al workspace e al solo pacchetto OpenAI necessario ad avviare i comandi;
+- prompt di analisi reso esplicito sulla lettura completa del manifest e dei testi estratti prima di produrre proposte.
+
 ## 0.2.19
 
 ### Fixed
