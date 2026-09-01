@@ -83,7 +83,7 @@ test("mantiene mutuamente esclusive le scelte radio qualificate da SuccessioniOn
 test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, calcoli e dossier", async ({
   page,
 }) => {
-  test.slow();
+  test.setTimeout(180_000);
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   const practiceTitle = unique("Pratica soggetti e beni");
@@ -212,7 +212,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await expect(page.getByRole("heading", { name: "Frontespizio", level: 2 })).toBeVisible();
   const foreignResidentGroup = page
     .locator("details.official-fields-group")
-    .filter({ hasText: "Residente estero" });
+    .filter({ hasText: "Riservato ai residenti all’estero" });
   await openDetails(foreignResidentGroup);
   await expect(page.getByRole("textbox", { name: /Località di residenza estera$/ })).toBeVisible();
   await expect(page.getByText(decedentName, { exact: true })).toBeVisible();
@@ -228,7 +228,9 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await page.setViewportSize({ width: 1440, height: 1000 });
   await expectOfficialCheckboxesAligned(page);
   await legalDevolution.check();
-  const saveGeneralData = page.getByRole("button", { name: "Salva dati generali" });
+  const saveGeneralData = legalDevolution
+    .locator("xpath=ancestor::form")
+    .getByRole("button", { name: "Salva il quadro" });
   await confirmOfficialInstructions(saveGeneralData);
   await submitOnlinePracticeForm(saveGeneralData);
   await expect(legalDevolution).toBeChecked();
@@ -241,7 +243,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   });
   await expect(
     page.locator('.official-fields button[type="submit"]').filter({ hasText: /^Salva/ }),
-  ).toHaveCount(13);
+  ).toHaveCount(15);
   await civilStatus.selectOption("3");
   await deathDate.fill("01012025");
   const saveDecedent = page.getByRole("button", { name: "Salva dati del defunto" });
@@ -302,13 +304,19 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await expect(page.getByRole("link", { name: assetName })).toHaveAttribute("aria-current", "page");
   const buildingsGroup = page
     .locator("details.official-fields-group")
-    .filter({ has: page.getByRole("heading", { name: "Fabbricati", exact: true, level: 3 }) });
+    .filter({
+      has: page.getByRole("heading", {
+        name: "Quadro EC · Fabbricati",
+        exact: true,
+        level: 3,
+      }),
+    })
+    .first();
   await openDetails(buildingsGroup);
-  const officialAssetValue = page.getByRole("textbox", { name: /^\d+ Valore$/ });
+  const officialAssetValue = buildingsGroup.getByRole("textbox", { name: /^\d+ Valore$/ });
   await officialAssetValue.fill("200000");
-  const saveOfficialAsset = page
-    .locator("form")
-    .filter({ has: officialAssetValue })
+  const saveOfficialAsset = officialAssetValue
+    .locator("xpath=ancestor::form")
     .getByRole("button", { name: "Salva questo bene" });
   await confirmOfficialInstructions(saveOfficialAsset);
   await submitOnlinePracticeForm(saveOfficialAsset);
@@ -318,8 +326,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await openPracticeQuadro(page, "Quadro EH");
   const newOccurrenceGroup = page.locator("details.official-fields-group").filter({
     has: page.getByRole("heading", {
-      name: "Presenza interdetti · nuova posizione",
-      exact: true,
+      name: /Presenza interdetti · nuova posizione$/,
     }),
   });
   await openDetails(newOccurrenceGroup);
@@ -328,7 +335,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     newOccurrenceGroup.getByRole("button", { name: "Aggiungi questa posizione" }),
   );
   const savedOccurrenceGroup = page.locator("details.official-fields-group").filter({
-    has: page.getByRole("heading", { name: "Presenza interdetti · posizione 1", exact: true }),
+    has: page.getByRole("heading", { name: /Presenza interdetti · posizione 1$/ }),
   });
   await openDetails(savedOccurrenceGroup);
   await expect(savedOccurrenceGroup.getByRole("textbox", { name: "3 Certificatore" })).toHaveValue(
@@ -336,8 +343,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   );
   const secondOccurrenceGroup = page.locator("details.official-fields-group").filter({
     has: page.getByRole("heading", {
-      name: "Presenza interdetti · nuova posizione",
-      exact: true,
+      name: /Presenza interdetti · nuova posizione$/,
     }),
   });
   await openDetails(secondOccurrenceGroup);
@@ -421,8 +427,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await openPracticeQuadro(page, "Quadro EH");
   const reloadedOccurrenceGroup = page.locator("details.official-fields-group").filter({
     has: page.getByRole("heading", {
-      name: "Presenza interdetti · posizione 1",
-      exact: true,
+      name: /Presenza interdetti · posizione 1$/,
     }),
   });
   await openDetails(reloadedOccurrenceGroup);

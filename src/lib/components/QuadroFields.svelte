@@ -91,6 +91,7 @@
       ];
     const groups: FieldGroup[] = [];
     const radioGroups = new Map<string, FieldGroup>();
+    const regularGroups = new Map<string, FieldGroup>();
     for (const field of fieldsForCurrentDeclaration()) {
       const catalogLabel = field.saveGroup ?? field.section ?? (data.selectedQuadro === "EA" ? "Dati del soggetto" : `Quadro ${data.selectedQuadro}`);
       if (field.successioniOnLineRadioGroup) {
@@ -113,16 +114,31 @@
         continue;
       }
       const officialSection = field.successioniOnLineSection;
-      const label = officialSection
+      const officialLabel = officialSection
         ? field.successioniOnLinePage && field.successioniOnLinePage > 1
           ? `Pagina ${field.successioniOnLinePage} · ${officialSection}`
           : officialSection
         : `Altri campi del modello · ${catalogLabel}`;
+      const label = officialSection && catalogLabel !== officialSection
+        ? `${officialLabel} · ${catalogLabel}`
+        : officialLabel;
       const baseKey = `${label}:${field.entityScope ?? "declaration"}:${field.occurrenceGroup ?? "single"}`;
-      const previous = groups.at(-1);
-      if (previous?.key.startsWith(`${baseKey}:segment-`)) previous.fields.push(field);
-      else
-        groups.push({ key: `${baseKey}:segment-${groups.length}`, label, fields: [field], occurrenceId: null, isNewOccurrence: false, occurrenceGroup: field.occurrenceGroup, occurrenceIndex: null, occurrenceCount: 0 });
+      const existingGroup = regularGroups.get(baseKey);
+      if (existingGroup) existingGroup.fields.push(field);
+      else {
+        const group: FieldGroup = {
+          key: `fields:${baseKey}`,
+          label,
+          fields: [field],
+          occurrenceId: null,
+          isNewOccurrence: false,
+          occurrenceGroup: field.occurrenceGroup,
+          occurrenceIndex: null,
+          occurrenceCount: 0,
+        };
+        regularGroups.set(baseKey, group);
+        groups.push(group);
+      }
     }
     return groups.flatMap((group) => {
       const occurrenceGroup = group.fields[0]?.occurrenceGroup;
