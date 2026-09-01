@@ -3,7 +3,7 @@ import { SUCCESSIONIONLINE_EG_BUCKETS } from "../../domain/successionionline-eg.
 import type { ChecklistItem } from "./domain-model.ts";
 import { listOfficialAttachments } from "./official-attachments.ts";
 
-export interface OfficialEgAttachmentBucket {
+interface OfficialEgAttachmentBucket {
   id: string;
   fieldId: string | null;
   label: string;
