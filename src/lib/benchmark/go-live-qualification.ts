@@ -90,7 +90,7 @@ const qualificationInputSchema = z.object({
   }),
 });
 
-export type GoLiveQualificationInput = z.infer<typeof qualificationInputSchema>;
+type GoLiveQualificationInput = z.infer<typeof qualificationInputSchema>;
 
 export interface GoLiveQualificationReport {
   format: "sequent-go-live-qualification";
