@@ -4,6 +4,12 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 0.7.1
+
+### Fixed
+
+- riallineamento dei metadati DIZ derivati durante la riparazione amministrativa, così il corpus storico resta qualificabile dopo un aggiornamento del parser.
+
 ## 0.7.0
 
 ### Added

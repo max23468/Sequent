@@ -291,12 +291,18 @@ describe("flusso ufficiale persistente", () => {
       dataDirectory: directory,
     });
     database.prepare("DELETE FROM documents WHERE practice_id = ?").run(practice.id);
-    database
-      .prepare("UPDATE official_artifacts SET metadata_json = ? WHERE id = ?")
-      .run(
-        JSON.stringify({ ...artifact.metadata, acquisition: { importedFields: 1 } }),
-        artifact.id,
-      );
+    database.prepare("UPDATE official_artifacts SET metadata_json = ? WHERE id = ?").run(
+      JSON.stringify({
+        ...artifact.metadata,
+        format: "legacy-parser",
+        entries: 0,
+        fields: 0,
+        attachments: 0,
+        opaqueEvidence: [],
+        acquisition: { importedFields: 1 },
+      }),
+      artifact.id,
+    );
 
     const first = await repairImportedDizAcquisition(database, {
       practiceId: practice.id,
@@ -315,6 +321,22 @@ describe("flusso ufficiale persistente", () => {
       listDeclarationSubjectEntries(database, practice.id, practice.declarationId),
     ).toHaveLength(1);
     expect(listPracticeDocuments(database, practice.id)).toHaveLength(1);
+    const repairedMetadata = JSON.parse(
+      String(
+        (
+          database
+            .prepare("SELECT metadata_json FROM official_artifacts WHERE id = ?")
+            .get(artifact.id) as { metadata_json: string }
+        ).metadata_json,
+      ),
+    ) as Record<string, unknown>;
+    expect(repairedMetadata).toMatchObject({
+      format: artifact.metadata.format,
+      entries: artifact.metadata.entries,
+      fields: artifact.metadata.fields,
+      attachments: artifact.metadata.attachments,
+      opaqueEvidence: artifact.metadata.opaqueEvidence,
+    });
   });
 
   it("riallinea l’identità duplicata di un soggetto riusato da una vecchia acquisizione", async () => {

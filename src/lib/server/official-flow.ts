@@ -649,6 +649,11 @@ export async function repairImportedDizAcquisition(
         ingestPersistedUploadInTransaction(database, attachment, artifact.practiceId);
       const metadata = {
         ...artifact.metadata,
+        format: parsed.format,
+        entries: parsed.entryCount,
+        fields: parsed.fields.length,
+        attachments: parsed.attachments.length,
+        opaqueEvidence: opaqueDizEvidence(parsed),
         importMappingSource: DIZ_IMPORT_MAPPING_SOURCE,
         acquisition,
         acquisitionRepairedAt: new Date().toISOString(),
