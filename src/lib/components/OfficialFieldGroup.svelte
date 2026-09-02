@@ -58,7 +58,8 @@
   }
 
   function isEditable(field: QuadroField): boolean {
-    if (field.successioniOnLineAttachmentBucket) return false;
+    if (field.successioniOnLineAttachmentBucket || field.successioniOnLineQuadroReadOnly)
+      return false;
     return isOperationalParityEditable(
       field.operationalParity,
       data.declaration.declaration.declarationKind,
@@ -77,6 +78,22 @@
       field.operationalParity,
       data.declaration.declaration.declarationKind,
     );
+  }
+
+  function readOnlyReason(field: QuadroField): string {
+    if (
+      field.successioniOnLineQuadroReadOnly &&
+      isOperationalParityEditable(
+        field.operationalParity,
+        data.declaration.declaration.declarationKind,
+      )
+    )
+      return "Valore acquisito nella Vista operativa e mostrato qui in sola lettura, come in SuccessioniOnLine.";
+    if (isAutomatic(field))
+      return "Valore prodotto automaticamente dall’elaborazione ufficiale confermata.";
+    if (isOfficeReserved(field))
+      return "Campo riservato all’ufficio: Sequent lo conserva in sola lettura e non lo produce.";
+    return "Valore derivato dagli altri dati della dichiarazione.";
   }
 
   function groupInstructions(): OfficialInstruction[] {
@@ -140,11 +157,7 @@
         occurrenceId={group.occurrenceId}
         entityMissing={entityMissing(field)}
         readOnly={!isEditable(field)}
-        readOnlyReason={isAutomatic(field)
-          ? "Valore prodotto automaticamente dall’elaborazione ufficiale confermata."
-          : isOfficeReserved(field)
-            ? "Campo riservato all’ufficio: Sequent lo conserva in sola lettura e non lo produce."
-            : "Valore derivato dagli altri dati della dichiarazione."}
+        readOnlyReason={readOnlyReason(field)}
       />
     {/each}
     {#if hasEditableFields()}

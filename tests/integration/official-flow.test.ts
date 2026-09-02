@@ -163,13 +163,17 @@ describe("flusso ufficiale persistente", () => {
     await expect(
       getImportedDizContent(database, practice.id, practice.declarationId, directory),
     ).resolves.toMatchObject({
-      integratedFields: 1,
+      integratedFields: 2,
       preservedFields: 0,
-      fieldCount: 1,
+      fieldCount: 2,
       sections: [
         expect.objectContaining({
           quadro: "EA",
           fields: [expect.objectContaining({ field: "001005", value: "VERDI" })],
+        }),
+        expect.objectContaining({
+          quadro: "EG",
+          fields: [expect.objectContaining({ field: "008001", value: "1" })],
         }),
       ],
       attachments: [expect.objectContaining({ name: "allegato.pdf", kind: "pdf" })],
@@ -315,8 +319,8 @@ describe("flusso ufficiale persistente", () => {
       dataDirectory: directory,
     });
 
-    expect(first).toMatchObject({ mappedFields: 1, unchangedFields: 1, missingTargets: 0 });
-    expect(second).toMatchObject({ mappedFields: 1, unchangedFields: 1, missingTargets: 0 });
+    expect(first).toMatchObject({ mappedFields: 2, unchangedFields: 2, missingTargets: 0 });
+    expect(second).toMatchObject({ mappedFields: 2, unchangedFields: 2, missingTargets: 0 });
     expect(
       listDeclarationSubjectEntries(database, practice.id, practice.declarationId),
     ).toHaveLength(1);

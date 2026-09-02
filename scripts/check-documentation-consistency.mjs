@@ -40,6 +40,7 @@ const implementationFiles = execFileSync(
 const satelliteExceptions = new Set(["CHANGELOG.md", "docs/MASTER_PLAN.md", "docs/VERSIONING.md"]);
 const generatedImplementationExceptions = new Set([
   "src/domain/official-catalog/municipality-conservatory-map.json",
+  "src/domain/official-catalog/successionionline-screen-commands.json",
   "src/domain/official-catalog/technical-schema.json",
 ]);
 const roadmapGuardFile = "scripts/check-documentation-consistency.mjs";

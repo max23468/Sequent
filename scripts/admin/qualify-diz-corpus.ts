@@ -3,6 +3,7 @@ import { chmod, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import Database from "better-sqlite3";
 import { getCanonicalField } from "../../src/domain/declaration.ts";
+import { qualifiedOfficialEgDizEvidence } from "../../src/domain/successionionline-eg.ts";
 import {
   dizMappingIdentity,
   dizMappingOccurrenceId,
@@ -59,6 +60,8 @@ try {
     mappedFields: number;
     preservedFields: number;
     attachments: number;
+    qualifiedEgAttachmentLinks: number;
+    egCountsMatch: true;
     materializedAttachments: number;
     archiveArtifacts: number;
     readbackVerified: boolean;
@@ -66,6 +69,7 @@ try {
   const corpusHashes = new Set<string>();
   for (const [index, path] of files.entries()) {
     const parsed = parseDiz(await readFile(path));
+    const egEvidence = qualifiedOfficialEgDizEvidence(parsed);
     if (corpusHashes.has(parsed.sha256))
       throw new Error(`DIZ_CORPUS_QUALIFICATION_DUPLICATE:${index + 1}`);
     corpusHashes.add(parsed.sha256);
@@ -250,6 +254,8 @@ try {
       mappedFields: mappedFields.length,
       preservedFields: acquisition.preservedFields,
       attachments: parsed.attachments.length,
+      qualifiedEgAttachmentLinks: egEvidence.qualifiedBucketLinks,
+      egCountsMatch: egEvidence.countsMatch,
       materializedAttachments: parsed.attachments.length,
       archiveArtifacts: rows.length,
       readbackVerified: true,

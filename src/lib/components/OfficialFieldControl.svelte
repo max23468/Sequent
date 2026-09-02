@@ -125,6 +125,11 @@
     );
   }
 
+  function updateRadioPanelValue(event: Event): void {
+    const control = event.currentTarget as HTMLInputElement;
+    if (control.checked) liveFieldState.update(field.canonicalId, control.value);
+  }
+
   function displayedFieldValue(): string {
     const value = fieldValue();
     if (value === "") return "Non applicabile";
@@ -179,7 +184,7 @@
 <div class="official-field" class:field-required-missing={isMissingRequired()}>
   {#if field.entryMode !== "derived" && !readOnly && !field.successioniOnLineAttachmentBucket}<input type="hidden" name="fieldId" value={field.canonicalId} />{/if}
   <div class="official-field-heading">
-    <label for={controlId}>{#if field.visibleNumber}<span>{field.visibleNumber}</span>{/if}{field.label}</label>
+    <label id={`${controlId}-label`} for={field.successioniOnLineRadioPanel ? undefined : controlId}>{#if field.visibleNumber}<span>{field.visibleNumber}</span>{/if}{field.label}</label>
     <span id={necessityId()} class={`field-necessity-badge ${necessityKind()}`}>{fieldNecessityLabel(necessityKind())}</span>
   </div>
   {#if isMissingRequired()}<small id={missingId()} class="field-required-message">Dato obbligatorio mancante: compilalo per completare i controlli.</small>{/if}
@@ -196,6 +201,12 @@
       <output class="official-derived-value" id={controlId} aria-describedby={necessityId()}>{displayedFieldValue()}</output>
     {:else if field.successioniOnLineRadioGroup}
       <label class="official-radio-control" for={controlId}><input id={controlId} type="radio" name={`successioniOnLineRadio:${field.successioniOnLineRadioGroup}`} value={field.canonicalId} checked={fieldValue() === "1"} disabled={controlDisabled()} onchange={updateLiveValue} aria-describedby={isMissingRequired() ? `${necessityId()} ${missingId()}` : necessityId()} /><span>Seleziona</span></label>
+    {:else if field.successioniOnLineRadioPanel}
+      <div class="official-radio-panel" role="radiogroup" aria-labelledby={`${controlId}-label`} aria-describedby={isMissingRequired() ? `${necessityId()} ${missingId()}` : necessityId()}>
+        {#each field.options as option (option.value)}
+          <label class="official-radio-control" for={`${controlId}-${option.value}`}><input id={`${controlId}-${option.value}`} type="radio" name={`value:${field.canonicalId}`} value={option.value} checked={fieldValue() === option.value} disabled={controlDisabled()} onchange={updateRadioPanelValue} /><span>{option.label}</span></label>
+        {/each}
+      </div>
     {:else if field.control === "checkbox"}
       <label class="official-checkbox-control" for={controlId}><input type="hidden" name={`value:${field.canonicalId}`} value={uncheckedValue()} disabled={controlDisabled()} /><input id={controlId} type="checkbox" name={`value:${field.canonicalId}`} value="1" checked={fieldValue() === "1"} disabled={controlDisabled()} onchange={updateLiveValue} aria-describedby={isMissingRequired() ? `${necessityId()} ${missingId()}` : necessityId()} /><span>Sì</span></label>
     {:else if field.control === "combobox"}

@@ -74,6 +74,8 @@ interface AttachmentBucketEvidence {
   id: `EG${number}`;
   recordCode: string;
   fieldId?: string;
+  converterPath?: string;
+  sourcePointer?: string;
   label: string;
   order: number;
 }
@@ -86,8 +88,20 @@ interface ConditionalRuleEvidence {
   sourcePointer: string;
 }
 
+interface ScreenCommandEvidence {
+  quadro: string;
+  script: string;
+  page: number;
+  section: string;
+  order: number;
+  command: string;
+  recordCodes: string[];
+  arguments: string[];
+  sourcePointer: string;
+}
+
 interface OfficialApplicationEvidence {
-  schemaVersion: 4;
+  schemaVersion: 5;
   application: {
     name: "SuccessioniOnLine";
     model: "SUC13";
@@ -99,11 +113,21 @@ interface OfficialApplicationEvidence {
     layoutFields: number;
     attachmentBuckets: number;
     conditionalRules: number;
+    screenCommands: number;
   };
   fields: FieldEvidence[];
   layout: LayoutEvidence[];
   attachmentBuckets: AttachmentBucketEvidence[];
   conditionalRules: ConditionalRuleEvidence[];
+  screenModel: {
+    schemaVersion: 1;
+    file: "successionionline-screen-commands.json";
+  };
+}
+
+interface OfficialApplicationEvidenceBundle {
+  evidence: OfficialApplicationEvidence;
+  screenCommands: ScreenCommandEvidence[];
 }
 
 function sha256(value: Uint8Array): string {
@@ -198,6 +222,33 @@ function parsePropertyMappings(archive: Record<string, Uint8Array>): Map<string,
   return result;
 }
 
+function parseAggregateEgCountMappings(
+  archive: Record<string, Uint8Array>,
+): Map<string, { converterPath: string; sourcePointer: string }> {
+  const resourcePath = "SUC/conf/quadroEG.properties";
+  const resource = archive[resourcePath];
+  if (!resource) throw new Error("Risorsa aggregata di conversione EG assente.");
+  const result = new Map<string, { converterPath: string; sourcePointer: string }>();
+  for (const sourceLine of strFromU8(resource).split(/\r?\n/u)) {
+    const line = sourceLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const separator = line.indexOf("=");
+    if (separator < 1) continue;
+    const converterPath = normalizeTechnicalPath(line.slice(0, separator));
+    if (!converterPath.endsWith("Num")) continue;
+    const recordCode = normalizeRecordCode(line.slice(separator + 1));
+    if (result.has(recordCode))
+      throw new Error(`Codice aggregato EG duplicato nella conversione: ${recordCode}.`);
+    result.set(recordCode, {
+      converterPath,
+      sourcePointer: `XMLConverter_PropertiesREG2013.jar#${resourcePath}:${converterPath}`,
+    });
+  }
+  if (result.size !== 11)
+    throw new Error(`Attesi 11 contatori aggregati EG, trovati ${result.size}.`);
+  return result;
+}
+
 function parseUiControls(archive: Record<string, Uint8Array>): {
   controlsByCode: Map<string, Set<string>>;
   layoutByQuadroAndCode: Map<
@@ -206,6 +257,7 @@ function parseUiControls(archive: Record<string, Uint8Array>): {
   >;
   radioGroupByQuadroAndCode: Map<string, string>;
   attachmentBuckets: AttachmentBucketEvidence[];
+  screenCommands: ScreenCommandEvidence[];
 } {
   const controlsByCode = new Map<string, Set<string>>();
   const layoutByQuadroAndCode = new Map<
@@ -214,6 +266,7 @@ function parseUiControls(archive: Record<string, Uint8Array>): {
   >();
   const radioGroupByQuadroAndCode = new Map<string, string>();
   const attachmentBuckets: AttachmentBucketEvidence[] = [];
+  const screenCommands: ScreenCommandEvidence[] = [];
   const scriptPrefix = "finanze/IDAC/resources/SUC13/localAppRoot/script/";
   const quadroByScript = new Map([
     ["DatiAnagrafici", "Frontespizio"],
@@ -228,13 +281,14 @@ function parseUiControls(archive: Record<string, Uint8Array>): {
     const script = basename(resourcePath, ".txt");
     const quadro = quadroByScript.get(script);
     let order = 0;
+    let screenOrder = 0;
     let page = 1;
     let section = quadro === "Frontespizio" ? "Dati generali" : `Quadro ${quadro}`;
     let currentRadioGroup: string | null = null;
     let radioGroupIndex = 0;
     let pendingAttachmentBucket: Omit<AttachmentBucketEvidence, "recordCode" | "order"> | null =
       null;
-    for (const sourceLine of strFromU8(resource).split(/\r?\n/u)) {
+    for (const [lineIndex, sourceLine] of strFromU8(resource).split(/\r?\n/u).entries()) {
       const line = sourceLine.trim();
       if (!line || line.startsWith("//")) continue;
       const sectionMatch = line.match(/^SeparaSezione\(([^;]*);[^;]*;negativo\)/u);
@@ -244,7 +298,37 @@ function parseUiControls(archive: Record<string, Uint8Array>): {
       }
       const match = line.match(/^([A-Za-z][A-Za-z0-9_]*)\s*\(([^)]*)\)/u);
       if (!match) continue;
-      const [first = "", second = ""] = match[2]?.split(";").map((part) => part.trim()) ?? [];
+      const closingParenthesis = line.lastIndexOf(")");
+      const openingParenthesis = line.indexOf("(");
+      if (closingParenthesis < openingParenthesis)
+        throw new Error(`Comando schermata non terminato in ${resourcePath}:${lineIndex + 1}.`);
+      const argumentsList = line
+        .slice(openingParenthesis + 1, closingParenthesis)
+        .split(";")
+        .map((part) => part.trim());
+      const [first = "", second = ""] = argumentsList;
+      if (quadro && !["Accapo", "Vuoto"].includes(match[1]!)) {
+        screenCommands.push({
+          quadro,
+          script,
+          page,
+          section,
+          order: screenOrder,
+          command: match[1]!,
+          recordCodes: [
+            ...new Set(
+              argumentsList.flatMap((argument) =>
+                [...argument.matchAll(/#?(?:B|E[A-S])[0-9A-Z]{6,14}/gu)].map((codeMatch) =>
+                  normalizeRecordCode(codeMatch[0]),
+                ),
+              ),
+            ),
+          ],
+          arguments: argumentsList,
+          sourcePointer: `SUC13_ResSUC13.jar#${resourcePath}:${lineIndex + 1}`,
+        });
+        screenOrder += 1;
+      }
       const attachmentLabel =
         quadro === "EG" && match[1] === "Etichetta" ? first.match(/^EG(\d+) - (.+)$/u) : null;
       if (attachmentLabel)
@@ -308,6 +392,7 @@ function parseUiControls(archive: Record<string, Uint8Array>): {
     layoutByQuadroAndCode,
     radioGroupByQuadroAndCode,
     attachmentBuckets,
+    screenCommands,
   };
 }
 
@@ -374,7 +459,7 @@ function officialConditionalRules(): ConditionalRuleEvidence[] {
 
 export async function buildOfficialApplicationEvidence(
   sourceDirectory: string,
-): Promise<OfficialApplicationEvidence> {
+): Promise<OfficialApplicationEvidenceBundle> {
   const sourceEntries = await Promise.all(
     Object.entries(EXPECTED_SOURCES).map(async ([file, expectedSha256]) => {
       const content = new Uint8Array(await readFile(resolve(sourceDirectory, file)));
@@ -391,8 +476,14 @@ export async function buildOfficialApplicationEvidence(
     sourceEntries.find(({ file }) => file === "SUC13_ResSUC13.jar")!.content,
   );
   const recordCodeByPath = parsePropertyMappings(propertyArchive);
-  const { controlsByCode, layoutByQuadroAndCode, radioGroupByQuadroAndCode, attachmentBuckets } =
-    parseUiControls(resourceArchive);
+  const aggregateEgCountMappings = parseAggregateEgCountMappings(propertyArchive);
+  const {
+    controlsByCode,
+    layoutByQuadroAndCode,
+    radioGroupByQuadroAndCode,
+    attachmentBuckets,
+    screenCommands,
+  } = parseUiControls(resourceArchive);
   const conditionalRules = officialConditionalRules();
   if (attachmentBuckets.length !== 11)
     throw new Error(`Attesi 11 contenitori allegati EG, trovati ${attachmentBuckets.length}.`);
@@ -402,10 +493,23 @@ export async function buildOfficialApplicationEvidence(
     throw new Error(
       `I ${attachmentBuckets.length} contenitori EG non coincidono con i ${egCountFields.length} contatori ufficiali.`,
     );
-  const qualifiedAttachmentBuckets = attachmentBuckets.map((bucket, index) => ({
-    ...bucket,
-    fieldId: egCountFields[index]!.canonicalId,
-  }));
+  const qualifiedAttachmentBuckets = attachmentBuckets.map((bucket) => {
+    const aggregateMapping = aggregateEgCountMappings.get(bucket.recordCode);
+    if (!aggregateMapping)
+      throw new Error(`Contenitore ${bucket.id} senza mapping aggregato ${bucket.recordCode}.`);
+    const matchingFields = egCountFields.filter(
+      (field) => relativeFieldPath(field.path) === aggregateMapping.converterPath,
+    );
+    if (matchingFields.length !== 1)
+      throw new Error(
+        `Il mapping aggregato ${bucket.recordCode} identifica ${matchingFields.length} campi canonici.`,
+      );
+    return {
+      ...bucket,
+      fieldId: matchingFields[0]!.canonicalId,
+      ...aggregateMapping,
+    };
+  });
   const rows = parityRows.filter((row) => {
     const field = listQuadroFields(row.quadro).find(
       (candidate) => candidate.canonicalId === row.fieldId,
@@ -485,6 +589,7 @@ export async function buildOfficialApplicationEvidence(
     layoutFields: layout.length,
     attachmentBuckets: qualifiedAttachmentBuckets.length,
     conditionalRules: conditionalRules.length,
+    screenCommands: screenCommands.length,
     professionista: count("professionista"),
     automatico: count("automatico"),
     "riservato-ufficio": count("riservato-ufficio"),
@@ -497,21 +602,28 @@ export async function buildOfficialApplicationEvidence(
     throw new Error(`Conteggi produttori inattesi: ${JSON.stringify(counts)}`);
 
   return {
-    schemaVersion: 4,
-    application: {
-      name: "SuccessioniOnLine",
-      model: "SUC13",
-      jnlpUrl: "https://jws.agenziaentrate.it/jws/registro/2013/SUC13/SUC13.jnlp",
-      sources: sourceEntries.map(({ file, sha256: sourceSha256 }) => ({
-        file: basename(file),
-        sha256: sourceSha256,
-      })),
+    evidence: {
+      schemaVersion: 5,
+      application: {
+        name: "SuccessioniOnLine",
+        model: "SUC13",
+        jnlpUrl: "https://jws.agenziaentrate.it/jws/registro/2013/SUC13/SUC13.jnlp",
+        sources: sourceEntries.map(({ file, sha256: sourceSha256 }) => ({
+          file: basename(file),
+          sha256: sourceSha256,
+        })),
+      },
+      counts,
+      fields,
+      layout,
+      attachmentBuckets: qualifiedAttachmentBuckets,
+      conditionalRules,
+      screenModel: {
+        schemaVersion: 1,
+        file: "successionionline-screen-commands.json",
+      },
     },
-    counts,
-    fields,
-    layout,
-    attachmentBuckets: qualifiedAttachmentBuckets,
-    conditionalRules,
+    screenCommands,
   };
 }
 
@@ -523,15 +635,28 @@ async function main(): Promise<void> {
     throw new Error(
       "Indicare la cartella dei JAR ufficiali con --source-dir=... o SUC13_OFFICIAL_APP_DIR.",
     );
-  const outputPath = resolve(
+  const evidencePath = resolve(
     process.cwd(),
     "src/domain/official-catalog/successionionline-field-evidence.json",
   );
-  const evidence = await buildOfficialApplicationEvidence(sourceDirectory);
-  const formatted = await format(outputPath, `${JSON.stringify(evidence, null, 2)}\n`);
-  if (formatted.errors.length > 0)
-    throw new Error(`Impossibile formattare l’evidenza: ${formatted.errors[0]?.message}`);
-  await writeFile(outputPath, formatted.code, "utf8");
+  const screenModelPath = resolve(
+    process.cwd(),
+    "src/domain/official-catalog/successionionline-screen-commands.json",
+  );
+  const { evidence, screenCommands } = await buildOfficialApplicationEvidence(sourceDirectory);
+  const formattedEvidence = await format(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
+  if (formattedEvidence.errors.length > 0)
+    throw new Error(`Impossibile formattare l’evidenza: ${formattedEvidence.errors[0]?.message}`);
+  const formattedScreenModel = await format(
+    screenModelPath,
+    `${JSON.stringify({ schemaVersion: 1, commands: screenCommands }, null, 2)}\n`,
+  );
+  if (formattedScreenModel.errors.length > 0)
+    throw new Error(
+      `Impossibile formattare il modello schermate: ${formattedScreenModel.errors[0]?.message}`,
+    );
+  await writeFile(evidencePath, formattedEvidence.code, "utf8");
+  await writeFile(screenModelPath, formattedScreenModel.code, "utf8");
   console.log(
     `Evidenza SuccessioniOnLine aggiornata: ${evidence.counts.reviewedFields} campi (${evidence.counts.professionista} professionali, ${evidence.counts.automatico} automatici, ${evidence.counts["riservato-ufficio"]} riservati all’ufficio).`,
   );

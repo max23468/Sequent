@@ -85,7 +85,11 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
 }) => {
   test.setTimeout(180_000);
   const pageErrors: string[] = [];
+  const consoleErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
   const practiceTitle = unique("Pratica soggetti e beni");
   const beneficiaryName = unique("Beneficiario sintetico");
   const canonicalBeneficiaryName = "ROSSI MARIO";
@@ -166,6 +170,19 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await submitOnlinePracticeForm(subjectForm.getByRole("button", { name: "Aggiungi" }));
   await expect(page.getByText(decedentName, { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("alert").filter({ hasText: "Defunto da aggiungere" })).toHaveCount(0);
+  const operationalDecedentGroup = page
+    .locator("details.operational-fields-group")
+    .filter({ hasText: decedentName });
+  await openDetails(operationalDecedentGroup);
+  await expect(
+    operationalDecedentGroup.getByRole("textbox", { name: /Codice fiscale del defunto/ }),
+  ).toBeVisible();
+  await expect(
+    operationalDecedentGroup.getByRole("radio", { name: "Maschile", exact: true }),
+  ).toBeVisible();
+  await expect(
+    operationalDecedentGroup.getByRole("radio", { name: "Femminile", exact: true }),
+  ).toBeVisible();
 
   await subjectForm.getByLabel("Ruolo").selectOption("beneficiary");
   await subjectForm.getByLabel("Nome o denominazione").fill(beneficiaryName);
@@ -177,6 +194,15 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     .locator("details.operational-fields-group")
     .filter({ hasText: beneficiaryName });
   await openDetails(operationalSubjectGroup);
+  const operationalSubjectMale = operationalSubjectGroup.getByRole("radio", {
+    name: "Maschile",
+    exact: true,
+  });
+  await expect(operationalSubjectMale).toBeVisible();
+  await operationalSubjectMale.check();
+  await expect(
+    operationalSubjectGroup.getByRole("combobox", { name: /Codice dello Stato estero/ }),
+  ).toBeVisible();
   await operationalSubjectGroup.getByRole("textbox", { name: /^\d+ Cognome$/ }).fill("ROSSI");
   const saveOperationalSubject = operationalSubjectGroup.getByRole("button", {
     name: "Salva questa scheda",
@@ -200,6 +226,20 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     taxCode,
   );
   await expect(page.getByRole("textbox", { name: /Cognome/, exact: false })).toHaveValue("ROSSI");
+  await expect(page.getByRole("radio", { name: "Maschile", exact: true })).toBeChecked();
+  const quadriForeignState = page
+    .locator(".official-field")
+    .filter({ hasText: "Codice dello Stato estero" });
+  await expect(quadriForeignState.locator("output")).toBeVisible();
+  await expect(
+    quadriForeignState.locator("input:not([type=hidden]), select, textarea"),
+  ).toHaveCount(0);
+  await expect(
+    quadriForeignState.getByText(
+      "Valore acquisito nella Vista operativa e mostrato qui in sola lettura, come in SuccessioniOnLine.",
+      { exact: true },
+    ),
+  ).toBeVisible();
   await page.getByRole("textbox", { name: /^\d+ Nome$/ }).fill("MARIO");
   await page.getByRole("combobox", { name: "2 Tipo soggetto", exact: true }).selectOption("1");
   await page
@@ -216,6 +256,14 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await openDetails(foreignResidentGroup);
   await expect(page.getByRole("textbox", { name: /Località di residenza estera$/ })).toBeVisible();
   await expect(page.getByText(decedentName, { exact: true })).toBeVisible();
+  const quadriDecedentTaxCode = page
+    .locator(".official-field")
+    .filter({ hasText: "Codice fiscale del defunto" });
+  await expect(quadriDecedentTaxCode.locator("output")).toBeVisible();
+  await expect(
+    quadriDecedentTaxCode.locator("input:not([type=hidden]), select, textarea"),
+  ).toHaveCount(0);
+  await expect(page.getByRole("radio", { name: "Maschile", exact: true })).toBeVisible();
   await expect(page.locator('output[id="field-frontespizio.beneficiari.numero-eredi"]')).toHaveText(
     "1",
   );
@@ -234,9 +282,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await confirmOfficialInstructions(saveGeneralData);
   await submitOnlinePracticeForm(saveGeneralData);
   await expect(legalDevolution).toBeChecked();
-  await expect(page.getByRole("textbox", { name: "Codice fiscale del defunto" })).toHaveValue(
-    decedentTaxCode,
-  );
+  await expect(quadriDecedentTaxCode.locator("output")).toHaveText(decedentTaxCode);
   const civilStatus = page.getByRole("combobox", { name: "Stato civile" });
   const deathDate = page.getByRole("textbox", {
     name: "Data del decesso, assenza o morte presunta",
@@ -534,4 +580,5 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     .allTextContents();
   expect(new Set(checklistRows).size).toBe(checklistRows.length);
   expect(pageErrors).toEqual([]);
+  expect(consoleErrors).toEqual([]);
 });

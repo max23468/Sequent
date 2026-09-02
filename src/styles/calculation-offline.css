@@ -159,6 +159,12 @@
   color: var(--text);
   font-size: 0.86rem;
 }
+.official-radio-panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
 .official-fields label.official-checkbox-control,
 .official-fields label.official-radio-control {
   min-height: 44px;

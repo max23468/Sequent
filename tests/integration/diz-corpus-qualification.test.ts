@@ -88,8 +88,10 @@ describe("qualificazione privata del corpus DIZ", () => {
       passed: true,
       samples: expect.arrayContaining([
         expect.objectContaining({
-          mappedFields: 1,
+          mappedFields: 2,
           materializedAttachments: 1,
+          qualifiedEgAttachmentLinks: 1,
+          egCountsMatch: true,
           archiveArtifacts: 2,
           readbackVerified: true,
         }),

@@ -41,3 +41,9 @@ export function successioniOnLineLayout(fieldId: string): {
       }
     : null;
 }
+
+export function isSuccessioniOnLineQuadroReadOnlyControl(uiControls: readonly string[]): boolean {
+  return uiControls.some((control) =>
+    ["CampiStampa", "CampoOutput", "CheckPannelloOutput"].includes(control),
+  );
+}

@@ -4,6 +4,21 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 1.2.0
+
+### Added
+
+- modello statico riproducibile delle 17 schermate di SuccessioniOnLine, con 2.571 comandi e specifiche per controllo, cardinalità, obbligatorietà, fonte delle scelte e dipendenze;
+- qualificazione fail-closed degli 11 contenitori documentali EG contro i collegamenti ufficiali e contro un corpus DIZ privato, senza includere dati reali nel repository.
+
+### Changed
+
+- Frontespizio ed EA allineati tra Vista operativa e Vista Quadri per pannelli radio e campi ufficialmente di sola lettura, mantenendo modificabili nella vista operativa i valori acquisiti dal flusso di lavoro.
+
+### Fixed
+
+- riconoscimento dei codici record DIZ con lettera incorporata, incluso `EA003A05`, e blocco dell’esportazione quando conteggi, collegamenti o hash degli allegati EG non coincidono.
+
 ## 1.1.0
 
 ### Added

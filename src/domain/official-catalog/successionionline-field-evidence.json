@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "application": {
     "name": "SuccessioniOnLine",
     "model": "SUC13",
@@ -24,6 +24,7 @@
     "layoutFields": 580,
     "attachmentBuckets": 11,
     "conditionalRules": 5,
+    "screenCommands": 2571,
     "professionista": 230,
     "automatico": 19,
     "riservato-ufficio": 8
@@ -8217,77 +8218,99 @@
       "label": "Dichiarazione sostitutiva del certificato di morte, dello stato di famiglia del defunto, eredi, chiamati e legatari",
       "recordCode": "EG001001",
       "order": 0,
-      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/DichSost/DichSostNum"
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/DichSost/DichSostNum",
+      "converterPath": "DichSost/DichSostNum",
+      "sourcePointer": "XMLConverter_PropertiesREG2013.jar#SUC/conf/quadroEG.properties:DichSost/DichSostNum"
     },
     {
       "id": "EG2",
       "label": "Testamento",
       "recordCode": "EG002001",
       "order": 1,
-      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoNum"
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/Testamento/TestamentoNum",
+      "converterPath": "Testamento/TestamentoNum",
+      "sourcePointer": "XMLConverter_PropertiesREG2013.jar#SUC/conf/quadroEG.properties:Testamento/TestamentoNum"
     },
     {
       "id": "EG3",
       "label": "Inventario",
       "recordCode": "EG003001",
       "order": 2,
-      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/Inventario/InventarioNum"
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/Inventario/InventarioNum",
+      "converterPath": "Inventario/InventarioNum",
+      "sourcePointer": "XMLConverter_PropertiesREG2013.jar#SUC/conf/quadroEG.properties:Inventario/InventarioNum"
     },
     {
       "id": "EG4",
       "label": "Certificazione imposta versata all’estero",
       "recordCode": "EG004001",
       "order": 3,
-      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/CertificazioneImpostaVersataEstero/CertificazioneImpostaVersataEsteroNum"
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/CertificazioneImpostaVersataEstero/CertificazioneImpostaVersataEsteroNum",
+      "converterPath": "CertificazioneImpostaVersataEstero/CertificazioneImpostaVersataEsteroNum",
+      "sourcePointer": "XMLConverter_PropertiesREG2013.jar#SUC/conf/quadroEG.properties:CertificazioneImpostaVersataEstero/CertificazioneImpostaVersataEsteroNum"
     },
     {
       "id": "EG5",
       "label": "Documenti comprovanti passività",
       "recordCode": "EG005001",
       "order": 4,
-      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/DocumentiPassivita/DocumentiPassivitaNum"
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/DocumentiPassivita/DocumentiPassivitaNum",
+      "converterPath": "DocumentiPassivita/DocumentiPassivitaNum",
+      "sourcePointer": "XMLConverter_PropertiesREG2013.jar#SUC/conf/quadroEG.properties:DocumentiPassivita/DocumentiPassivitaNum"
     },
     {
       "id": "EG6",
       "label": "Albero genealogico",
       "recordCode": "EG006001",
       "order": 5,
-      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/AlberoGenealogico/AlberoGenealogicoNum"
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/AlberoGenealogico/AlberoGenealogicoNum",
+      "converterPath": "AlberoGenealogico/AlberoGenealogicoNum",
+      "sourcePointer": "XMLConverter_PropertiesREG2013.jar#SUC/conf/quadroEG.properties:AlberoGenealogico/AlberoGenealogicoNum"
     },
     {
       "id": "EG7",
       "label": "Documento d’identità",
       "recordCode": "EG007001",
       "order": 6,
-      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/DocumentiIdentita/DocumentiIdentitaNum"
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/DocumentiIdentita/DocumentiIdentitaNum",
+      "converterPath": "DocumentiIdentita/DocumentiIdentitaNum",
+      "sourcePointer": "XMLConverter_PropertiesREG2013.jar#SUC/conf/quadroEG.properties:DocumentiIdentita/DocumentiIdentitaNum"
     },
     {
       "id": "EG8",
       "label": "Altro",
       "recordCode": "EG008001",
       "order": 7,
-      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/Altro/AltroNum"
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/Altro/AltroNum",
+      "converterPath": "Altro/AltroNum",
+      "sourcePointer": "XMLConverter_PropertiesREG2013.jar#SUC/conf/quadroEG.properties:Altro/AltroNum"
     },
     {
       "id": "EG9",
       "label": "Prima casa [P,X,Y,Z]",
       "recordCode": "EG009001",
       "order": 8,
-      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/PrimaCasa/PrimaCasaNum"
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/PrimaCasa/PrimaCasaNum",
+      "converterPath": "PrimaCasa/PrimaCasaNum",
+      "sourcePointer": "XMLConverter_PropertiesREG2013.jar#SUC/conf/quadroEG.properties:PrimaCasa/PrimaCasaNum"
     },
     {
       "id": "EG10",
       "label": "Terreni agricoli in comunità montane [C], Aziende [D], Terreni agricoli \"compendio unico\" [E]",
       "recordCode": "EG010001",
       "order": 9,
-      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/AgevolazioniImposteIpocatastali/AgevolazioniImposteIpocatastaliNum"
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/AgevolazioniImposteIpocatastali/AgevolazioniImposteIpocatastaliNum",
+      "converterPath": "AgevolazioniImposteIpocatastali/AgevolazioniImposteIpocatastaliNum",
+      "sourcePointer": "XMLConverter_PropertiesREG2013.jar#SUC/conf/quadroEG.properties:AgevolazioniImposteIpocatastali/AgevolazioniImposteIpocatastaliNum"
     },
     {
       "id": "EG11",
       "label": "Beni culturali [A]/[L], Aziende, quote società di persone, ecc. [Q], Beni precedenti in successione entro cinque anni [1-2-3-4-5]",
       "recordCode": "EG011001",
       "order": 10,
-      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/RiduzioniImposteSuccessione/RiduzioniImposteSuccessioneNum"
+      "fieldId": "xsd:/Fornitura/Dichiarazione/QuadroEG/RiduzioniImposteSuccessione/RiduzioniImposteSuccessioneNum",
+      "converterPath": "RiduzioniImposteSuccessione/RiduzioniImposteSuccessioneNum",
+      "sourcePointer": "XMLConverter_PropertiesREG2013.jar#SUC/conf/quadroEG.properties:RiduzioniImposteSuccessione/RiduzioniImposteSuccessioneNum"
     }
   ],
   "conditionalRules": [
@@ -8345,5 +8368,9 @@
       ],
       "sourcePointer": "SUC13.jar#it.finanze.entrate.sco.quadri.EventiQuadroEH.eventiCampi/eventiTestamento"
     }
-  ]
+  ],
+  "screenModel": {
+    "schemaVersion": 1,
+    "file": "successionionline-screen-commands.json"
+  }
 }

@@ -22,6 +22,10 @@ import {
   rewriteDizFields,
 } from "../../src/domain/diz/index.ts";
 import { syntheticDizFromFields } from "../fixtures/synthetic-diz.ts";
+import {
+  assertOfficialEgDizAlignment,
+  type OfficialEgAttachmentState,
+} from "../../src/lib/server/successionionline-eg-attachments.ts";
 
 type SyntheticEntry = {
   name: string;
@@ -48,7 +52,7 @@ function syntheticXml(): Buffer {
       `</hashtable></subElements></it.finanze.entrate.sco.generale2013.DicModulo>` +
       `</entry></subElements></it.finanze.entrate.sco.generale2013.DicQuadro></entry>` +
       `</hashtable>` +
-      `<hashtable><entry><string>00000001</string><hashtable><entry><string>0001</string>` +
+      `<hashtable><entry><string>EG008001</string><hashtable><entry><string>0001</string>` +
       `<finanze.IDAC.struct.AllegatiBean><path>allegato</path></finanze.IDAC.struct.AllegatiBean>` +
       `</entry></hashtable></entry></hashtable>` +
       `</finanze.IDAC.struct.SavedData>` +
@@ -150,8 +154,62 @@ test("legge il contenitore XStream e collega gli allegati", () => {
     ],
   );
   assert.deepEqual(
-    parsed.attachments.map(({ name, kind, referenced }) => ({ name, kind, referenced })),
-    [{ name: "allegato", kind: "pdf", referenced: true }],
+    parsed.attachments.map(({ name, recordCode, kind, referenced }) => ({
+      name,
+      recordCode,
+      kind,
+      referenced,
+    })),
+    [{ name: "allegato", recordCode: "EG008001", kind: "pdf", referenced: true }],
+  );
+});
+
+test("qualifica contenitore, contatore e hash EG come un unico vincolo", () => {
+  const attachment = { name: "allegato.pdf", content: Buffer.from("%PDF-1.7\n%%EOF") };
+  const parsed = parseDiz(
+    syntheticDizFromFields(
+      [{ quadro: "EG", module: "00000001", field: "008001", value: "1" }],
+      attachment,
+    ),
+  );
+  const state: OfficialEgAttachmentState = {
+    buckets: [
+      {
+        id: "EG8",
+        fieldId: "EG008001",
+        label: "Altro",
+        recordCode: "EG008001",
+        checklistItemIds: [],
+        documentIds: [],
+        preparedFileNames: [attachment.name],
+        preparedSha256: [parsed.attachments[0]!.sha256],
+        count: 1,
+      },
+    ],
+    ambiguousDocumentIds: [],
+    unmappedChecklistItemIds: [],
+    unassignedPreparedDocumentIds: [],
+    ready: true,
+  };
+  assert.doesNotThrow(() => assertOfficialEgDizAlignment(parsed, state));
+
+  const wrongCount = parseDiz(
+    syntheticDizFromFields(
+      [{ quadro: "EG", module: "00000001", field: "008001", value: "0" }],
+      attachment,
+    ),
+  );
+  assert.throws(
+    () => assertOfficialEgDizAlignment(wrongCount, state),
+    /DIZ_EG_ATTACHMENTS_NOT_QUALIFIED/,
+  );
+  assert.throws(
+    () =>
+      assertOfficialEgDizAlignment(parsed, {
+        ...state,
+        buckets: [{ ...state.buckets[0]!, preparedSha256: ["0".repeat(64)] }],
+      }),
+    /DIZ_EG_ATTACHMENTS_NOT_QUALIFIED/,
   );
 });
 
