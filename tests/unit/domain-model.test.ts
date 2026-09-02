@@ -27,7 +27,6 @@ import {
   QUADRI,
   getCatalogStatus,
   listOfficialChoiceOptions,
-  listOfficialInstructions,
   listQuadroFields,
   listQuadroSummaries,
   listTechnicalEnumerationValues,
@@ -101,10 +100,9 @@ describe("modello canonico della dichiarazione", () => {
     ).toBe(true);
   });
 
-  it("lega la conferma professionale al valore e alle indicazioni ministeriali correnti", () => {
+  it("non richiede una conferma generica per i campi compilati manualmente", () => {
     const fieldId = "quadro-ea.soggetto.codice-fiscale";
     const entityId = "soggetto-sintetico";
-    const fieldKey = canonicalFieldKey(fieldId, entityId);
     const declaration = setCanonicalField(
       createEmptyDeclaration(),
       fieldId,
@@ -113,31 +111,7 @@ describe("modello canonico della dichiarazione", () => {
       [],
       entityId,
     );
-    expect(
-      validateDeclaration(declaration).some((issue) =>
-        issue.id.startsWith("OFFICIAL_INSTRUCTION_CONFIRMATION_REQUIRED:"),
-      ),
-    ).toBe(true);
-    const instructions = listOfficialInstructions(fieldId);
-    expect(instructions.length).toBeGreaterThan(0);
-    expect(instructions.every((instruction) => instruction.effectiveFrom === "2025-07-15")).toBe(
-      true,
-    );
-    const confirmed = {
-      ...declaration,
-      officialRuleConfirmations: {
-        [fieldKey]: {
-          ruleIds: instructions.map((instruction) => instruction.id).sort(),
-          valueJson: JSON.stringify("RSSMRA80A01H501U"),
-          confirmedAt: "2026-08-28T00:00:00.000Z",
-        },
-      },
-    };
-    expect(
-      validateDeclaration(confirmed).some((issue) =>
-        issue.id.startsWith("OFFICIAL_INSTRUCTION_CONFIRMATION_REQUIRED:"),
-      ),
-    ).toBe(false);
+    expect(validateDeclaration(declaration)).toEqual([]);
   });
 
   it("interpreta i pattern ministeriali con il trattino protetto", () => {

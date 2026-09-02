@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
   authenticate,
-  confirmOfficialInstructions,
   createPracticeFromDashboard,
   expectOfficialCheckboxesAligned,
   expectOfficialFieldHeadingsSeparated,
@@ -63,7 +62,6 @@ test("mantiene mutuamente esclusive le scelte radio qualificate da SuccessioniOn
   await expect(firstHome).not.toBeChecked();
 
   const save = section.getByRole("button", { name: "Salva il quadro" });
-  await confirmOfficialInstructions(save);
   await submitOnlinePracticeForm(save);
   const reloadedSection = page.locator("details.official-fields-group").filter({
     has: page.getByRole("heading", { name: "Scelta esclusiva · Opzioni" }),
@@ -208,7 +206,6 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   const saveOperationalSubject = operationalSubjectGroup.getByRole("button", {
     name: "Salva questa scheda",
   });
-  await confirmOfficialInstructions(saveOperationalSubject);
   await submitOnlinePracticeForm(saveOperationalSubject);
 
   await openPracticeSection(page, "Patrimonio");
@@ -247,7 +244,6 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     .getByRole("combobox", { name: "4 Grado di parentela", exact: true })
     .selectOption("10");
   const saveOfficialSubject = page.getByRole("button", { name: "Salva questa posizione" });
-  await confirmOfficialInstructions(saveOfficialSubject);
   await submitOnlinePracticeForm(saveOfficialSubject);
   await openPracticeQuadro(page, "Frontespizio");
   await expect(page.getByRole("heading", { name: "Frontespizio", level: 2 })).toBeVisible();
@@ -282,7 +278,6 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   const saveGeneralData = legalDevolution
     .locator("xpath=ancestor::form")
     .getByRole("button", { name: "Salva il quadro" });
-  await confirmOfficialInstructions(saveGeneralData);
   await submitOnlinePracticeForm(saveGeneralData);
   await expect(legalDevolution).toBeChecked();
   await expect(quadriDecedentTaxCode.locator("output")).toHaveText(decedentTaxCode);
@@ -296,7 +291,6 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await civilStatus.selectOption("3");
   await deathDate.fill("01012025");
   const saveDecedent = page.getByRole("button", { name: "Salva dati del defunto" });
-  await confirmOfficialInstructions(saveDecedent);
   await submitOnlinePracticeForm(saveDecedent);
   await expect(civilStatus).toHaveValue("3");
   await expect(deathDate).toHaveValue("01012025");
@@ -367,7 +361,6 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   const saveOfficialAsset = officialAssetValue
     .locator("xpath=ancestor::form")
     .getByRole("button", { name: "Salva questo bene" });
-  await confirmOfficialInstructions(saveOfficialAsset);
   await submitOnlinePracticeForm(saveOfficialAsset);
   await openDetails(buildingsGroup);
   await expect(officialAssetValue).toHaveValue("200000");

@@ -592,7 +592,6 @@ describe("persistenza del procedimento", () => {
         { fieldId: "quadro-ea.soggetto.tipo", value: "1" },
         { fieldId: "quadro-ea.soggetto.grado-parentela", value: "10" },
       ],
-      confirmOfficialRules: true,
     }).revision;
     revision = saveCanonicalField(database, {
       practiceId: practice.id,
@@ -613,7 +612,6 @@ describe("persistenza del procedimento", () => {
         { fieldId: BUILDING_MUNICIPALITY_FIELD_ID, value: "H501" },
         { fieldId: BUILDING_ADMINISTRATIVE_MUNICIPALITY_FIELD_ID, value: "H501" },
       ],
-      confirmOfficialRules: true,
     }).revision;
     revision = saveCanonicalFields(database, {
       practiceId: practice.id,
@@ -626,7 +624,6 @@ describe("persistenza del procedimento", () => {
         { fieldId: BUILDING_MUNICIPALITY_FIELD_ID, value: "H501" },
         { fieldId: BUILDING_ADMINISTRATIVE_MUNICIPALITY_FIELD_ID, value: "F205" },
       ],
-      confirmOfficialRules: true,
     }).revision;
     const scenario = saveDevolutionScenario(database, {
       practiceId: practice.id,
@@ -716,7 +713,6 @@ describe("persistenza del procedimento", () => {
           value: "2",
         },
       ],
-      confirmOfficialRules: true,
     }).revision;
     const updatedSuccessiveScenario = saveDevolutionScenario(database, {
       practiceId: practice.id,

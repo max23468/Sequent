@@ -1,7 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   authenticate,
-  confirmOfficialInstructions,
   createPracticeFromDashboard,
   openPracticeQuadro,
   openPracticeSection,
@@ -28,7 +27,6 @@ async function saveFieldGroup(field: Locator): Promise<void> {
   const button = field
     .locator("xpath=ancestor::form")
     .getByRole("button", { name: "Salva questo bene" });
-  await confirmOfficialInstructions(button);
   await submitOnlinePracticeForm(button);
 }
 

@@ -1,14 +1,10 @@
 import type Database from "better-sqlite3";
 import {
-  canonicalFieldKey,
   getCanonicalField,
   setCanonicalField,
   type DeclarationSnapshot,
 } from "../../domain/declaration.ts";
-import {
-  getCatalogField,
-  listOfficialInstructions,
-} from "../../domain/official-catalog/catalog.ts";
+import { getCatalogField } from "../../domain/official-catalog/catalog.ts";
 import { validateFieldValue, type ValidationIssue } from "../../domain/validation.ts";
 import { getDeclaration, saveDeclaration } from "./practices.ts";
 import { listSharedAssets } from "./domain-assets.ts";
@@ -45,7 +41,6 @@ export function saveCanonicalField(
     entityId: input.entityId,
     occurrenceId: input.occurrenceId,
     fields: [{ fieldId: input.fieldId, value: input.value }],
-    confirmOfficialRules: true,
   });
 }
 
@@ -58,7 +53,6 @@ export function saveCanonicalFields(
     fields: Array<{ fieldId: string; value: string }>;
     entityId?: string | null;
     occurrenceId?: string | null;
-    confirmOfficialRules?: boolean;
   },
 ): { revision: number; issues: ValidationIssue[] } {
   const record = getDeclaration(database, input.declarationId, input.practiceId);
@@ -241,23 +235,6 @@ export function saveCanonicalFields(
   const issues = fields.flatMap((field) =>
     field.value === "" ? [] : validateFieldValue(field.fieldId, field.value),
   );
-  const fieldsWithInstructions = fields
-    .map((field) => ({ ...field, instructions: listOfficialInstructions(field.fieldId) }))
-    .filter((field) => field.instructions.length > 0);
-  const officialRulesConfirmed = input.confirmOfficialRules !== false;
-  if (fieldsWithInstructions.length > 0 && !officialRulesConfirmed)
-    issues.push({
-      id: "OFFICIAL_INSTRUCTIONS_NOT_CONFIRMED",
-      level: "blocking",
-      fieldId: fieldsWithInstructions[0]?.fieldId ?? null,
-      entityId,
-      occurrenceId,
-      message:
-        "Conferma di aver verificato le indicazioni ministeriali mostrate per questo blocco.",
-      sourceId: fieldsWithInstructions[0]?.instructions[0]?.sourceIds[0] ?? "SRC-07",
-      sourcePointer:
-        fieldsWithInstructions[0]?.instructions[0]?.sourcePointer ?? "Controlli ministeriali",
-    });
   const valueField = asset ? officialAssetValueField(asset) : null;
   const officialValue = valueField
     ? fields.find((field) => field.fieldId === valueField.canonicalId)
@@ -285,33 +262,7 @@ export function saveCanonicalFields(
         )?.value ?? "",
       ) !== field.value,
   );
-  const confirmations = { ...record.declaration.officialRuleConfirmations };
-  const now = new Date().toISOString();
-  let confirmationsChanged = false;
-  if (officialRulesConfirmed) {
-    for (const field of fieldsWithInstructions) {
-      const key = canonicalFieldKey(
-        field.fieldId,
-        requiresOccurrence ? null : entityId,
-        requiresOccurrence ? occurrenceId : null,
-      );
-      const nextConfirmation = {
-        ruleIds: field.instructions.map((instruction) => instruction.id).sort(),
-        valueJson: JSON.stringify(field.value),
-        confirmedAt: now,
-      };
-      const previous = confirmations[key];
-      if (
-        previous?.valueJson !== nextConfirmation.valueJson ||
-        JSON.stringify([...previous.ruleIds].sort()) !== JSON.stringify(nextConfirmation.ruleIds)
-      ) {
-        confirmations[key] = nextConfirmation;
-        confirmationsChanged = true;
-      }
-    }
-  }
-  if (changedFields.length === 0 && !confirmationsChanged)
-    return { revision: record.revision, issues: [] };
+  if (changedFields.length === 0) return { revision: record.revision, issues: [] };
   let declaration = record.declaration;
   for (const field of changedFields) {
     declaration = setCanonicalField(
@@ -349,7 +300,6 @@ export function saveCanonicalFields(
   }
   declaration = {
     ...declaration,
-    officialRuleConfirmations: confirmations,
     confirmedDevolutionScenarioId: null,
     latestCalculationRunId: null,
   };

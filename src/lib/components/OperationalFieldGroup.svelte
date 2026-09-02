@@ -124,7 +124,6 @@
           <summary>Indicazioni dell’Agenzia da verificare ({groupInstructions().length})</summary>
           <ul>{#each groupInstructions() as instruction (instruction.id)}<li>{instruction.instruction}</li>{/each}</ul>
         </details>
-        <label class="official-confirmation"><input type="checkbox" name="confirmOfficialRules" value="yes" required /><span>Ho letto e verificato le regole ministeriali mostrate sopra per i campi che sto salvando.</span></label>
       {/if}
       <div class="official-fields-actions">
         <button class="button primary" type="submit" disabled={group.entityMissing}>{saveLabel()}</button>

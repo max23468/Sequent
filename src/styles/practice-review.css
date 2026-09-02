@@ -726,32 +726,6 @@ details[open] > summary .field-group-chevron {
   font-size: 0.8rem;
   line-height: 1.5;
 }
-.official-fields label.official-confirmation {
-  align-items: flex-start;
-  min-height: 44px;
-  margin: 14px 2px 0;
-  color: var(--text);
-  cursor: pointer;
-  line-height: 1.45;
-}
-.official-confirmation input {
-  width: 18px;
-  height: 18px;
-  min-height: 18px;
-  margin-top: 1px;
-  padding: 0;
-  flex: 0 0 auto;
-  accent-color: var(--teal);
-}
-.official-fields .official-confirmation span {
-  display: inline;
-  min-width: 0;
-  height: auto;
-  border: 0;
-  border-radius: 0;
-  color: inherit;
-  font-size: inherit;
-}
 .official-derived-value {
   display: flex;
   align-items: center;
