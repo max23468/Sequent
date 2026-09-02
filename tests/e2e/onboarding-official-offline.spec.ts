@@ -168,9 +168,6 @@ test("rende una pratica selezionata disponibile offline e sincronizza un allegat
   }
   await expect(field).toBeVisible();
   await field.check();
-  await fieldForm
-    .getByRole("checkbox", { name: "Confermo di aver verificato queste indicazioni" })
-    .check();
   await fieldForm.getByRole("button", { name: "Salva questi dati" }).click();
   await expect(
     page.getByText("Modifica conservata sul dispositivo e in attesa di sincronizzazione."),
@@ -218,9 +215,6 @@ test("protegge spazio locale, restore del server, recovery export e rimozione de
   });
   const seedForm = seedField.locator("xpath=ancestor::form");
   await seedField.check();
-  await seedForm
-    .getByRole("checkbox", { name: "Confermo di aver verificato queste indicazioni" })
-    .check();
   await seedForm.getByRole("button", { name: "Salva questi dati" }).click();
   await expect(seedField).toBeChecked();
   await page.getByRole("button", { name: "Scarica offline" }).click();
@@ -236,9 +230,6 @@ test("protegge spazio locale, restore del server, recovery export e rimozione de
   const fieldForm = field.locator("xpath=ancestor::form");
   await context.setOffline(true);
   await field.uncheck();
-  await fieldForm
-    .getByRole("checkbox", { name: "Confermo di aver verificato queste indicazioni" })
-    .check();
   await fieldForm.getByRole("button", { name: "Salva questi dati" }).click();
   await expect(page.getByText(/1 modifica in coda/)).toBeVisible();
 
