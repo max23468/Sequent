@@ -315,7 +315,6 @@ function savePreparedCases(
         value: values[input.valueIndex],
       })),
       ...group.identity,
-      confirmOfficialRules: true,
     });
     expect(
       result.issues,
@@ -713,7 +712,6 @@ describe("round-trip parametrico dei campi coperti", () => {
             view: quadriView(testCase.row),
             fields: [{ fieldId: testCase.row.fieldId, value: values[0] }],
             ...identity,
-            confirmOfficialRules: true,
           });
           expect(result.issues, testCase.row.fieldId).toEqual([]);
           revision = result.revision;
@@ -748,7 +746,6 @@ describe("round-trip parametrico dei campi coperti", () => {
             view: operationalView(testCase.row),
             fields: [{ fieldId: testCase.row.fieldId, value: values[1] }],
             ...identity,
-            confirmOfficialRules: true,
           });
           expect(result.issues, testCase.row.fieldId).toEqual([]);
           revision = result.revision;
@@ -1454,7 +1451,6 @@ describe("round-trip parametrico dei campi coperti", () => {
         { fieldId: "quadro-ea.soggetto.tipo", value: "1" },
         { fieldId: "quadro-ea.soggetto.grado-parentela", value: "10" },
       ],
-      confirmOfficialRules: true,
     }).revision;
     revision = saveCanonicalFieldsFromView(database, {
       practiceId: practice.id,
@@ -1463,7 +1459,6 @@ describe("round-trip parametrico dei campi coperti", () => {
       view: { kind: "quadri", quadro: "Frontespizio" },
       entityId: decedent.id,
       fields: [{ fieldId: "frontespizio.defunto.data-decesso", value: "01012025" }],
-      confirmOfficialRules: true,
     }).revision;
     revision = saveCanonicalFieldsFromView(database, {
       practiceId: practice.id,
@@ -1477,7 +1472,6 @@ describe("round-trip parametrico dei campi coperti", () => {
           value: "200000",
         },
       ],
-      confirmOfficialRules: true,
     }).revision;
     revision = saveCanonicalFieldsFromView(database, {
       practiceId: practice.id,
@@ -1491,7 +1485,6 @@ describe("round-trip parametrico dei campi coperti", () => {
           value: "1",
         },
       ],
-      confirmOfficialRules: true,
     }).revision;
     const scenario = saveDevolutionScenario(database, {
       practiceId: practice.id,
@@ -1563,7 +1556,6 @@ describe("round-trip parametrico dei campi coperti", () => {
           expectedRevision: revision,
           view,
           fields: [{ fieldId: row.fieldId, value: "999" }],
-          confirmOfficialRules: true,
         });
         expect(rejected.revision, row.fieldId).toBe(revision);
         expect(rejected.issues[0]?.id, row.fieldId).toBe("FIELD_NOT_EDITABLE_FROM_VIEW");
@@ -1928,7 +1920,6 @@ describe("round-trip parametrico dei campi coperti", () => {
           expectedRevision: declaration.revision,
           view,
           fields: [{ fieldId: row.fieldId, value: attemptedValue }],
-          confirmOfficialRules: true,
         });
         expect(result.revision, `${view.kind}:${row.fieldId}`).toBe(declaration.revision);
         expect(result.issues, `${view.kind}:${row.fieldId}`).toEqual([
@@ -1970,7 +1961,6 @@ describe("round-trip parametrico dei campi coperti", () => {
       expectedRevision: 1,
       view: quadriView(row),
       fields: [{ fieldId: row.fieldId, value: values[0] }],
-      confirmOfficialRules: true,
     });
     expect(first.issues).toEqual([]);
     expect(() =>
@@ -1980,7 +1970,6 @@ describe("round-trip parametrico dei campi coperti", () => {
         expectedRevision: 1,
         view: operationalView(row),
         fields: [{ fieldId: row.fieldId, value: values[1] }],
-        confirmOfficialRules: true,
       }),
     ).toThrow("REVISION_CONFLICT");
 
@@ -1993,7 +1982,6 @@ describe("round-trip parametrico dei campi coperti", () => {
       expectedRevision: first.revision,
       view: quadriView(substituteOnly),
       fields: [{ fieldId: substituteOnly.fieldId, value: "2020" }],
-      confirmOfficialRules: true,
     });
     expect(notApplicable.issues[0]?.id).toBe("FIELD_NOT_EDITABLE_FROM_VIEW");
     const wrongOperationalArea = saveCanonicalFieldsFromView(database, {
@@ -2002,7 +1990,6 @@ describe("round-trip parametrico dei campi coperti", () => {
       expectedRevision: first.revision,
       view: { kind: "operational", section: "documents" },
       fields: [{ fieldId: row.fieldId, value: values[1] }],
-      confirmOfficialRules: true,
     });
     expect(wrongOperationalArea.issues[0]?.id).toBe("FIELD_NOT_EDITABLE_FROM_VIEW");
   });

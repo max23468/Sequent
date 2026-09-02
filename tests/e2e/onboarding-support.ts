@@ -135,13 +135,6 @@ export async function uploadFromWorkspace(
   await expect(page.getByRole("heading", { name: documentName })).toBeVisible();
 }
 
-export async function confirmOfficialInstructions(button: import("@playwright/test").Locator) {
-  const confirmation = button
-    .locator("xpath=ancestor::form")
-    .getByRole("checkbox", { name: "Confermo di aver verificato queste indicazioni" });
-  if ((await confirmation.count()) > 0) await confirmation.check();
-}
-
 export function prepareConfirmedAutomaticFields(practiceId: string) {
   const dataDirectory = process.env.SEQUENT_E2E_DATA_DIR ?? ".test-data/e2e";
   const database = openDatabase(dataDirectory);
@@ -173,7 +166,6 @@ export function prepareConfirmedAutomaticFields(practiceId: string) {
       { fieldId: "quadro-ea.soggetto.tipo", value: "1" },
       { fieldId: "quadro-ea.soggetto.grado-parentela", value: "10" },
     ],
-    confirmOfficialRules: true,
   }).revision;
   revision = saveCanonicalFieldsFromView(database, {
     practiceId,
@@ -182,7 +174,6 @@ export function prepareConfirmedAutomaticFields(practiceId: string) {
     view: { kind: "quadri", quadro: "Frontespizio" },
     entityId: decedent.id,
     fields: [{ fieldId: "frontespizio.defunto.data-decesso", value: "01012025" }],
-    confirmOfficialRules: true,
   }).revision;
   revision = saveCanonicalFieldsFromView(database, {
     practiceId,
@@ -196,7 +187,6 @@ export function prepareConfirmedAutomaticFields(practiceId: string) {
         value: "200000",
       },
     ],
-    confirmOfficialRules: true,
   }).revision;
   revision = saveCanonicalFieldsFromView(database, {
     practiceId,
@@ -210,7 +200,6 @@ export function prepareConfirmedAutomaticFields(practiceId: string) {
         value: "1",
       },
     ],
-    confirmOfficialRules: true,
   }).revision;
   const scenario = saveDevolutionScenario(database, {
     practiceId,
@@ -262,9 +251,7 @@ export function createSubstituteOneForE2e(practiceId: string): string {
 
 export async function expectOfficialCheckboxesAligned(page: import("@playwright/test").Page) {
   const fieldCheckboxes = page.locator(".official-checkbox-control input[type=checkbox]");
-  const confirmations = page.locator(".official-confirmation");
   expect(await fieldCheckboxes.count()).toBeGreaterThan(0);
-  expect(await confirmations.count()).toBeGreaterThan(0);
   expect(
     await fieldCheckboxes.evaluateAll((checkboxes) =>
       checkboxes.every((checkbox) => {
@@ -278,15 +265,20 @@ export async function expectOfficialCheckboxesAligned(page: import("@playwright/
       }),
     ),
   ).toBe(true);
+}
+
+export async function expectOfficialFieldHeadingsSeparated(page: import("@playwright/test").Page) {
+  const fields = page.locator(".official-field:visible");
+  expect(await fields.count()).toBeGreaterThan(0);
   expect(
-    await confirmations.evaluateAll((labels) =>
-      labels.every((label) => {
-        const checkbox = label.querySelector<HTMLInputElement>('input[type="checkbox"]');
-        const text = label.querySelector("span");
-        if (!checkbox || !text) return false;
-        const box = checkbox.getBoundingClientRect();
-        const copy = text.getBoundingClientRect();
-        return box.height <= 19 && Math.abs(box.top - copy.top) <= 2;
+    await fields.evaluateAll((visibleFields) =>
+      visibleFields.every((field) => {
+        const heading = field.querySelector<HTMLElement>(":scope > .official-field-heading");
+        const control = field.querySelector<HTMLElement>(
+          ":scope > div:not(.official-field-heading)",
+        );
+        if (!heading || !control) return false;
+        return control.getBoundingClientRect().top - heading.getBoundingClientRect().bottom >= 7;
       }),
     ),
   ).toBe(true);

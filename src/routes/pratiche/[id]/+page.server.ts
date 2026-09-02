@@ -591,7 +591,6 @@ export const actions = {
         view,
         entityId,
         occurrenceId,
-        confirmOfficialRules: formData.get("confirmOfficialRules") === "yes",
         fields: activeFields,
       });
       if (result.issues.length > 0)

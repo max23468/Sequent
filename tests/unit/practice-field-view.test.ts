@@ -142,6 +142,36 @@ describe("DTO dei campi della pratica", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("porta nel controllo il significato ufficiale dei codici numerici", () => {
+    const fields = listQuadroFields("Frontespizio");
+    const presenterRole = fields.find(({ visibleNumber }) => visibleNumber === "43");
+    const presenterSex = fields.find(({ visibleNumber }) => visibleNumber === "47");
+    const presenterBirthProvince = fields.find(({ visibleNumber }) => visibleNumber === "49");
+    const transmissionCommitment = fields.find(({ visibleNumber }) => visibleNumber === "81");
+    const printLanguage = fields.find(({ visibleNumber }) => visibleNumber === "106");
+
+    expect(presenterRole?.options).toContainEqual({
+      value: "7",
+      label: "Esecutore testamentario",
+    });
+    expect(transmissionCommitment?.options).toContainEqual({
+      value: "2",
+      label: "Dichiarazione predisposta da chi effettua l’invio",
+    });
+    expect(presenterSex?.options).toEqual([
+      { value: "M", label: "Maschile" },
+      { value: "F", label: "Femminile" },
+    ]);
+    expect(presenterBirthProvince?.options).toContainEqual({
+      value: "EE",
+      label: "EE — Paese estero",
+    });
+    expect(printLanguage?.options).toEqual([
+      { value: "1", label: "Tedesco" },
+      { value: "2", label: "Sloveno" },
+    ]);
+  });
+
   it("mantiene i predicate client separati dal catalogo ministeriale", () => {
     for (const component of [
       "src/lib/components/OfficialFieldControl.svelte",

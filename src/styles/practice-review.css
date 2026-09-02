@@ -467,6 +467,11 @@
   background: color-mix(in srgb, #6c63a8 7%, var(--surface));
   color: color-mix(in srgb, #6c63a8 78%, var(--text));
 }
+.field-necessity-badge.contextual {
+  border-color: color-mix(in srgb, #6c63a8 38%, var(--line));
+  background: color-mix(in srgb, #6c63a8 5%, var(--surface));
+  color: color-mix(in srgb, #6c63a8 72%, var(--text));
+}
 .field-necessity-badge.conditional,
 .field-necessity-badge.read-only {
   background: var(--surface-soft);
@@ -612,14 +617,37 @@ details[open] > summary .field-group-chevron {
   border-left: 3px solid #b7791f;
   background: color-mix(in srgb, #b7791f 6%, transparent);
 }
+.official-field.field-automatic,
+.official-field.field-read-only,
+.official-field.field-empty {
+  margin-inline: -10px;
+  padding-inline: 10px;
+  border-radius: 6px;
+}
+.official-field.field-automatic {
+  background: color-mix(in srgb, var(--success) 5%, transparent);
+}
+.official-field.field-read-only {
+  background: color-mix(in srgb, var(--teal) 4%, var(--surface-soft));
+}
+.official-field.field-empty:not(.field-required-missing) {
+  background: color-mix(in srgb, var(--muted) 4%, transparent);
+}
+.official-field.field-automatic .official-derived-value,
+.official-field.field-read-only .official-derived-value {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
+}
 .official-field > .official-field-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 7px;
 }
 .official-field-heading > label {
   min-width: 0;
+  margin-bottom: 0;
 }
 .official-field-heading > .field-necessity-badge {
   flex: 0 0 auto;
@@ -697,32 +725,6 @@ details[open] > summary .field-group-chevron {
   color: var(--muted);
   font-size: 0.8rem;
   line-height: 1.5;
-}
-.official-fields label.official-confirmation {
-  align-items: flex-start;
-  min-height: 44px;
-  margin: 14px 2px 0;
-  color: var(--text);
-  cursor: pointer;
-  line-height: 1.45;
-}
-.official-confirmation input {
-  width: 18px;
-  height: 18px;
-  min-height: 18px;
-  margin-top: 1px;
-  padding: 0;
-  flex: 0 0 auto;
-  accent-color: var(--teal);
-}
-.official-fields .official-confirmation span {
-  display: inline;
-  min-width: 0;
-  height: auto;
-  border: 0;
-  border-radius: 0;
-  color: inherit;
-  font-size: inherit;
 }
 .official-derived-value {
   display: flex;

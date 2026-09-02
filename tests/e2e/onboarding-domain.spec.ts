@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 import {
   authenticate,
-  confirmOfficialInstructions,
   createPracticeFromDashboard,
   expectOfficialCheckboxesAligned,
+  expectOfficialFieldHeadingsSeparated,
   openDetails,
   openPracticeQuadro,
   openPracticeSection,
@@ -62,7 +62,6 @@ test("mantiene mutuamente esclusive le scelte radio qualificate da SuccessioniOn
   await expect(firstHome).not.toBeChecked();
 
   const save = section.getByRole("button", { name: "Salva il quadro" });
-  await confirmOfficialInstructions(save);
   await submitOnlinePracticeForm(save);
   const reloadedSection = page.locator("details.official-fields-group").filter({
     has: page.getByRole("heading", { name: "Scelta esclusiva · Opzioni" }),
@@ -178,10 +177,10 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     operationalDecedentGroup.getByRole("textbox", { name: /Codice fiscale del defunto/ }),
   ).toBeVisible();
   await expect(
-    operationalDecedentGroup.getByRole("radio", { name: "Maschile", exact: true }),
+    operationalDecedentGroup.getByRole("radio", { name: "M — Maschile", exact: true }),
   ).toBeVisible();
   await expect(
-    operationalDecedentGroup.getByRole("radio", { name: "Femminile", exact: true }),
+    operationalDecedentGroup.getByRole("radio", { name: "F — Femminile", exact: true }),
   ).toBeVisible();
 
   await subjectForm.getByLabel("Ruolo").selectOption("beneficiary");
@@ -195,7 +194,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     .filter({ hasText: beneficiaryName });
   await openDetails(operationalSubjectGroup);
   const operationalSubjectMale = operationalSubjectGroup.getByRole("radio", {
-    name: "Maschile",
+    name: "M — Maschile",
     exact: true,
   });
   await expect(operationalSubjectMale).toBeVisible();
@@ -207,7 +206,6 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   const saveOperationalSubject = operationalSubjectGroup.getByRole("button", {
     name: "Salva questa scheda",
   });
-  await confirmOfficialInstructions(saveOperationalSubject);
   await submitOnlinePracticeForm(saveOperationalSubject);
 
   await openPracticeSection(page, "Patrimonio");
@@ -226,7 +224,7 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     taxCode,
   );
   await expect(page.getByRole("textbox", { name: /Cognome/, exact: false })).toHaveValue("ROSSI");
-  await expect(page.getByRole("radio", { name: "Maschile", exact: true })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "M — Maschile", exact: true })).toBeChecked();
   const quadriForeignState = page
     .locator(".official-field")
     .filter({ hasText: "Codice dello Stato estero" });
@@ -246,7 +244,6 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
     .getByRole("combobox", { name: "4 Grado di parentela", exact: true })
     .selectOption("10");
   const saveOfficialSubject = page.getByRole("button", { name: "Salva questa posizione" });
-  await confirmOfficialInstructions(saveOfficialSubject);
   await submitOnlinePracticeForm(saveOfficialSubject);
   await openPracticeQuadro(page, "Frontespizio");
   await expect(page.getByRole("heading", { name: "Frontespizio", level: 2 })).toBeVisible();
@@ -263,7 +260,11 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await expect(
     quadriDecedentTaxCode.locator("input:not([type=hidden]), select, textarea"),
   ).toHaveCount(0);
-  await expect(page.getByRole("radio", { name: "Maschile", exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole("radiogroup", { name: "Sesso", exact: true })
+      .getByRole("radio", { name: "M — Maschile", exact: true }),
+  ).toBeVisible();
   await expect(page.locator('output[id="field-frontespizio.beneficiari.numero-eredi"]')).toHaveText(
     "1",
   );
@@ -273,13 +274,14 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   const legalDevolution = page.getByRole("checkbox", { name: "Devoluzione per legge" });
   await page.setViewportSize({ width: 390, height: 844 });
   await expectOfficialCheckboxesAligned(page);
+  await expectOfficialFieldHeadingsSeparated(page);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await expectOfficialCheckboxesAligned(page);
+  await expectOfficialFieldHeadingsSeparated(page);
   await legalDevolution.check();
   const saveGeneralData = legalDevolution
     .locator("xpath=ancestor::form")
     .getByRole("button", { name: "Salva il quadro" });
-  await confirmOfficialInstructions(saveGeneralData);
   await submitOnlinePracticeForm(saveGeneralData);
   await expect(legalDevolution).toBeChecked();
   await expect(quadriDecedentTaxCode.locator("output")).toHaveText(decedentTaxCode);
@@ -293,10 +295,9 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   await civilStatus.selectOption("3");
   await deathDate.fill("01012025");
   const saveDecedent = page.getByRole("button", { name: "Salva dati del defunto" });
-  await confirmOfficialInstructions(saveDecedent);
   await submitOnlinePracticeForm(saveDecedent);
   await expect(civilStatus).toHaveValue("3");
-  await expect(deathDate).toHaveValue("01012025");
+  await expect(deathDate).toHaveValue("01/01/2025");
   // Il salvataggio SvelteKit invalida i dati della pagina in background: attendiamo
   // il completamento prima di iniziare una navigazione esplicita verso la Dashboard.
   await page.waitForLoadState("networkidle");
@@ -364,7 +365,6 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   const saveOfficialAsset = officialAssetValue
     .locator("xpath=ancestor::form")
     .getByRole("button", { name: "Salva questo bene" });
-  await confirmOfficialInstructions(saveOfficialAsset);
   await submitOnlinePracticeForm(saveOfficialAsset);
   await openDetails(buildingsGroup);
   await expect(officialAssetValue).toHaveValue("200000");

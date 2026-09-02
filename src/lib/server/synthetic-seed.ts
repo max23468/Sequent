@@ -64,7 +64,6 @@ export function ensureSyntheticPractice(database: Database.Database): SyntheticS
         declarationId: practice.declarationId,
         expectedRevision: 1,
         entityId: beneficiary.id,
-        confirmOfficialRules: true,
         fields: [
           { fieldId: "quadro-ea.soggetto.tipo", value: "1" },
           { fieldId: "quadro-ea.soggetto.grado-parentela", value: "10" },
@@ -74,7 +73,6 @@ export function ensureSyntheticPractice(database: Database.Database): SyntheticS
         practiceId: practice.id,
         declarationId: practice.declarationId,
         expectedRevision: revision,
-        confirmOfficialRules: true,
         fields: [{ fieldId: "frontespizio.devoluzione.per-legge", value: "1" }],
       });
       revision = saveFields(database, {
@@ -82,7 +80,6 @@ export function ensureSyntheticPractice(database: Database.Database): SyntheticS
         declarationId: practice.declarationId,
         expectedRevision: revision,
         entityId: decedent.id,
-        confirmOfficialRules: true,
         fields: [
           { fieldId: "frontespizio.defunto.stato-civile", value: "3" },
           { fieldId: "frontespizio.defunto.data-decesso", value: "01012025" },
@@ -93,7 +90,6 @@ export function ensureSyntheticPractice(database: Database.Database): SyntheticS
         declarationId: practice.declarationId,
         expectedRevision: revision,
         entityId: asset.id,
-        confirmOfficialRules: true,
         fields: [{ fieldId: BUILDING_VALUE_FIELD, value: "200000" }],
       });
       const scenario = saveDevolutionScenario(database, {

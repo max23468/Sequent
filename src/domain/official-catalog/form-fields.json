@@ -549,6 +549,20 @@
       "technicalPath": "/Fornitura/Dichiarazione/Frontespizio/Presentatore/CodiceCarica",
       "technicalType": "{urn:www.agenziaentrate.gov.it:specificheTecniche:sco:reg:v2}CodiciCarica_Type",
       "officialControlCode": "B43",
+      "options": [
+        { "value": "1", "label": "Erede o chiamato all’eredità" },
+        { "value": "2", "label": "Legatario" },
+        { "value": "3", "label": "Rappresentante legale o tutore di legatario" },
+        { "value": "4", "label": "Rappresentante legale, tutore o erede dell’erede" },
+        { "value": "5", "label": "Curatore dell’eredità giacente" },
+        { "value": "6", "label": "Amministratore dell’eredità" },
+        { "value": "7", "label": "Esecutore testamentario" },
+        {
+          "value": "8",
+          "label": "Persona immessa nel possesso temporaneo dei beni dell’assente"
+        },
+        { "value": "9", "label": "Trustee o suo rappresentante" }
+      ],
       "presentation": "visible",
       "sourceIds": ["SRC-03", "SRC-07", "SRC-08", "SRC-39"],
       "status": "qualified-from-official-control-description"
@@ -597,6 +611,10 @@
       "technicalPath": "/Fornitura/Dichiarazione/Frontespizio/Presentatore/DatiAnagrafici/Sesso",
       "technicalType": "{urn:www.agenziaentrate.gov.it:specificheTecniche:sco:common:v3}Sesso_Type",
       "officialControlCode": "B47",
+      "options": [
+        { "value": "M", "label": "Maschile" },
+        { "value": "F", "label": "Femminile" }
+      ],
       "presentation": "visible",
       "sourceIds": ["SRC-03", "SRC-07", "SRC-08", "SRC-39"],
       "status": "qualified-from-official-control-description"
@@ -993,6 +1011,10 @@
       "technicalPath": "/Fornitura/Dichiarazione/Frontespizio/ImpegnoATrasmettere/ImpegnoATrasmettere",
       "technicalType": "{urn:www.agenziaentrate.gov.it:specificheTecniche:sco:reg:v2}ImpegnoPresentazione_Type",
       "officialControlCode": "B81",
+      "options": [
+        { "value": "1", "label": "Dichiarazione predisposta dal contribuente" },
+        { "value": "2", "label": "Dichiarazione predisposta da chi effettua l’invio" }
+      ],
       "presentation": "visible",
       "sourceIds": ["SRC-03", "SRC-07", "SRC-08", "SRC-39"],
       "status": "qualified-from-official-control-description"
@@ -1173,6 +1195,10 @@
       "technicalPath": "/Fornitura/Dichiarazione/Frontespizio/Lingua",
       "technicalType": "{urn:www.agenziaentrate.gov.it:specificheTecniche:common:v2}DatoN1_Type",
       "officialControlCode": "B106",
+      "options": [
+        { "value": "1", "label": "Tedesco" },
+        { "value": "2", "label": "Sloveno" }
+      ],
       "presentation": "visible",
       "sourceIds": ["SRC-03", "SRC-07", "SRC-08", "SRC-39"],
       "status": "qualified-from-official-control-description"

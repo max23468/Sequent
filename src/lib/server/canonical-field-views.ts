@@ -44,7 +44,6 @@ interface SaveCanonicalFieldsFromViewInput {
   fields: Array<{ fieldId: string; value: string }>;
   entityId?: string | null;
   occurrenceId?: string | null;
-  confirmOfficialRules?: boolean;
 }
 
 function appliesToDeclaration(
