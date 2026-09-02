@@ -4,6 +4,18 @@ Tutte le modifiche rilevanti di Sequent sono documentate in questo file.
 
 ## Unreleased
 
+## 1.2.1
+
+### Changed
+
+- campi automatici, in sola lettura e non compilati distinti visivamente, date mostrate con separatori e codici ufficiali accompagnati dal relativo significato;
+- indicazioni ministeriali mantenute consultabili senza richiedere una conferma generica prima di ogni salvataggio, sia nella Vista Quadri sia nella Vista operativa.
+
+### Fixed
+
+- badge, intestazioni e controlli dei blocchi ufficiali separati correttamente nelle geometrie desktop e mobile;
+- valori zero usati come riempitivi tecnici nei DIZ opzionali non più presentati come date o contenuti effettivi.
+
 ## 1.2.0
 
 ### Added
