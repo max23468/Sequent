@@ -33,6 +33,15 @@ describe("priorità dei campi della pratica", () => {
     ).toBe("Obbligatorio");
     expect(
       fieldNecessityLabel(
+        fieldNecessityKind(field("obbligatorio-nel-contesto", 0), {
+          readOnly: false,
+          automatic: false,
+          missing: false,
+        }),
+      ),
+    ).toBe("Obbligatorio se applicabile");
+    expect(
+      fieldNecessityLabel(
         fieldNecessityKind(field("obbligatorio-nel-contesto", 0, "choice-1"), {
           readOnly: false,
           automatic: false,

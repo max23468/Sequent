@@ -8,6 +8,12 @@
   } from "../field-necessity";
   import type { PageData } from "../../routes/pratiche/[id]/$types";
   import OfficialSearchSelect from "./OfficialSearchSelect.svelte";
+  import {
+    formatOfficialChoiceLabel,
+    formatOfficialDateValue,
+    isOfficialDateType,
+    normalizeOfficialDateValue,
+  } from "../official-field-presentation";
   import { getContext } from "svelte";
   import {
     SUCCESSIONIONLINE_FIELD_STATE,
@@ -130,10 +136,31 @@
     if (control.checked) liveFieldState.update(field.canonicalId, control.value);
   }
 
+  let dateHiddenControl = $state<HTMLInputElement>();
+
+  function updateDateValue(event: Event): void {
+    const control = event.currentTarget as HTMLInputElement;
+    const canonicalValue = normalizeOfficialDateValue(control.value);
+    control.value = formatOfficialDateValue(canonicalValue);
+    if (dateHiddenControl) dateHiddenControl.value = canonicalValue;
+    liveFieldState.update(field.canonicalId, canonicalValue);
+  }
+
   function displayedFieldValue(): string {
     const value = fieldValue();
+    if (isOfficialDateType(field.type)) {
+      const formatted = formatOfficialDateValue(value);
+      return formatted || "Non indicato";
+    }
     if (value === "") return "Non applicabile";
-    return field.options.find((option: { value: string }) => option.value === value)?.label ?? value;
+    const option = field.options.find((candidate: { value: string }) => candidate.value === value);
+    return option ? formatOfficialChoiceLabel(option) : value;
+  }
+
+  function isVisuallyEmpty(): boolean {
+    return isOfficialDateType(field.type)
+      ? normalizeOfficialDateValue(fieldValue()) === ""
+      : fieldValue() === "";
   }
 
   function uncheckedValue(): string {
@@ -181,7 +208,13 @@
   }
 </script>
 
-<div class="official-field" class:field-required-missing={isMissingRequired()}>
+<div
+  class="official-field"
+  class:field-required-missing={isMissingRequired()}
+  class:field-automatic={necessityKind() === "automatic"}
+  class:field-read-only={necessityKind() === "read-only"}
+  class:field-empty={isVisuallyEmpty() && necessityKind() !== "automatic" && necessityKind() !== "read-only"}
+>
   {#if field.entryMode !== "derived" && !readOnly && !field.successioniOnLineAttachmentBucket}<input type="hidden" name="fieldId" value={field.canonicalId} />{/if}
   <div class="official-field-heading">
     <label id={`${controlId}-label`} for={field.successioniOnLineRadioPanel ? undefined : controlId}>{#if field.visibleNumber}<span>{field.visibleNumber}</span>{/if}{field.label}</label>
@@ -204,7 +237,7 @@
     {:else if field.successioniOnLineRadioPanel}
       <div class="official-radio-panel" role="radiogroup" aria-labelledby={`${controlId}-label`} aria-describedby={isMissingRequired() ? `${necessityId()} ${missingId()}` : necessityId()}>
         {#each field.options as option (option.value)}
-          <label class="official-radio-control" for={`${controlId}-${option.value}`}><input id={`${controlId}-${option.value}`} type="radio" name={`value:${field.canonicalId}`} value={option.value} checked={fieldValue() === option.value} disabled={controlDisabled()} onchange={updateRadioPanelValue} /><span>{option.label}</span></label>
+          <label class="official-radio-control" for={`${controlId}-${option.value}`}><input id={`${controlId}-${option.value}`} type="radio" name={`value:${field.canonicalId}`} value={option.value} checked={fieldValue() === option.value} disabled={controlDisabled()} onchange={updateRadioPanelValue} /><span>{formatOfficialChoiceLabel(option)}</span></label>
         {/each}
       </div>
     {:else if field.control === "checkbox"}
@@ -224,10 +257,13 @@
     {:else if field.control === "select" || field.options.length > 0}
       <select id={controlId} name={`value:${field.canonicalId}`} disabled={controlDisabled()} onchange={updateLiveValue} aria-describedby={isMissingRequired() ? `${necessityId()} ${missingId()}` : necessityId()}>
         <option value="" selected={fieldValue() === ""}>Non indicato</option>
-        {#each field.options as option (option.value)}<option value={option.value} selected={fieldValue() === option.value}>{option.label}</option>{/each}
+        {#each field.options as option (option.value)}<option value={option.value} selected={fieldValue() === option.value}>{formatOfficialChoiceLabel(option)}</option>{/each}
       </select>
+    {:else if isOfficialDateType(field.type)}
+      <input bind:this={dateHiddenControl} type="hidden" name={`value:${field.canonicalId}`} value={normalizeOfficialDateValue(fieldValue())} disabled={controlDisabled()} />
+      <input id={controlId} value={formatOfficialDateValue(fieldValue())} placeholder="GG/MM/AAAA" inputmode="numeric" maxlength="10" autocomplete="off" disabled={controlDisabled()} oninput={updateDateValue} aria-describedby={isMissingRequired() ? `${necessityId()} ${missingId()}` : necessityId()} />
     {:else}
-      <input id={controlId} name={`value:${field.canonicalId}`} value={fieldValue()} placeholder={field.type.endsWith("DatoDT_Type") ? "GGMMAAAA" : ""} disabled={controlDisabled()} onchange={updateLiveValue} aria-describedby={isMissingRequired() ? `${necessityId()} ${missingId()}` : necessityId()} />
+      <input id={controlId} name={`value:${field.canonicalId}`} value={fieldValue()} disabled={controlDisabled()} onchange={updateLiveValue} aria-describedby={isMissingRequired() ? `${necessityId()} ${missingId()}` : necessityId()} />
     {/if}
   </div>
 </div>

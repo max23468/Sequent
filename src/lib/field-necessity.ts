@@ -1,5 +1,6 @@
 export type FieldNecessityKind =
   | "required"
+  | "contextual"
   | "alternative"
   | "conditional"
   | "automatic"
@@ -43,6 +44,11 @@ export function fieldNecessityKind(
   if (options.readOnly || field.entryMode === "derived")
     return options.automatic || field.entryMode === "derived" ? "automatic" : "read-only";
   if (field.operationalParity.applicability.choiceGroup !== null) return "alternative";
+  if (
+    field.operationalParity.applicability.xsdPresence === "obbligatorio-nel-contesto" &&
+    field.operationalParity.cardinality.effectiveMin === 0
+  )
+    return "contextual";
   return field.operationalParity.applicability.xsdPresence === "obbligatorio-nel-contesto"
     ? "required"
     : "conditional";
@@ -51,6 +57,7 @@ export function fieldNecessityKind(
 export function fieldNecessityLabel(kind: FieldNecessityKind): string {
   return {
     required: "Obbligatorio",
+    contextual: "Obbligatorio se applicabile",
     alternative: "Alternativa",
     conditional: "Solo se pertinente",
     automatic: "Automatico",

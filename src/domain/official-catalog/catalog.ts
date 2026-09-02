@@ -114,9 +114,13 @@ const visibleFieldOrder = new Map(
   ((formFields.fields ?? []) as CatalogField[]).map((field, index) => [field.id, index]),
 );
 
-const provinceLabels = new Map(
-  officialReferences.provinces.map((option) => [option.value, option.label]),
-);
+const provinceLabels = new Map([
+  ...officialReferences.provinces.map((option) => [option.value, option.label]),
+  ["FU", "Fiume"],
+  ["PL", "Pola"],
+  ["ZA", "Zara"],
+  ["EE", "Paese estero"],
+] as Array<[string, string]>);
 const foreignStateLabels = new Map(
   officialReferences.foreignStates.map((option) => [option.value, option.label]),
 );

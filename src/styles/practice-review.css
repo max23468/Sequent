@@ -467,6 +467,11 @@
   background: color-mix(in srgb, #6c63a8 7%, var(--surface));
   color: color-mix(in srgb, #6c63a8 78%, var(--text));
 }
+.field-necessity-badge.contextual {
+  border-color: color-mix(in srgb, #6c63a8 38%, var(--line));
+  background: color-mix(in srgb, #6c63a8 5%, var(--surface));
+  color: color-mix(in srgb, #6c63a8 72%, var(--text));
+}
 .field-necessity-badge.conditional,
 .field-necessity-badge.read-only {
   background: var(--surface-soft);
@@ -611,6 +616,27 @@ details[open] > summary .field-group-chevron {
   padding-inline: 10px;
   border-left: 3px solid #b7791f;
   background: color-mix(in srgb, #b7791f 6%, transparent);
+}
+.official-field.field-automatic,
+.official-field.field-read-only,
+.official-field.field-empty {
+  margin-inline: -10px;
+  padding-inline: 10px;
+  border-radius: 6px;
+}
+.official-field.field-automatic {
+  background: color-mix(in srgb, var(--success) 5%, transparent);
+}
+.official-field.field-read-only {
+  background: color-mix(in srgb, var(--teal) 4%, var(--surface-soft));
+}
+.official-field.field-empty:not(.field-required-missing) {
+  background: color-mix(in srgb, var(--muted) 4%, transparent);
+}
+.official-field.field-automatic .official-derived-value,
+.official-field.field-read-only .official-derived-value {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
 }
 .official-field > .official-field-heading {
   display: flex;

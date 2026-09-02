@@ -9,6 +9,7 @@ import {
 } from "../../domain/diz/index.ts";
 import type { DizField } from "../../domain/diz/xstream.ts";
 import { getCanonicalField, setCanonicalField } from "../../domain/declaration.ts";
+import { getCatalogField, getTechnicalField } from "../../domain/official-catalog/catalog.ts";
 import { createSharedAsset, listSharedAssets } from "./domain-assets.ts";
 import { SUCCESSION_OPENING_DATE_FIELD_ID, type AssetKind } from "./domain-model.ts";
 import {
@@ -46,6 +47,18 @@ interface MappedSourceField {
   mapping: DizImportMapping;
   identity: string;
   occurrenceId: string | null;
+}
+
+export function normalizeImportedDizValue(fieldId: string, value: string): string {
+  const field = getCatalogField(fieldId);
+  const technical = getTechnicalField(fieldId);
+  if (
+    field?.technicalType.endsWith("DatoDT_Type") &&
+    technical?.effectiveMinOccurs === 0 &&
+    /^0+$/u.test(value.trim())
+  )
+    return "";
+  return value;
 }
 
 const ASSET_KIND_BY_QUADRO: Partial<Record<string, AssetKind>> = {
@@ -250,7 +263,7 @@ export function acquireDizFields(
     const mapping = importMappingFor(field);
     if (mapping) {
       mapped.push({
-        field,
+        field: { ...field, value: normalizeImportedDizValue(mapping.catalogFieldId, field.value) },
         mapping,
         identity: dizMappingIdentity(field, mapping),
         occurrenceId: dizMappingOccurrenceId(field, mapping),
@@ -280,6 +293,28 @@ export function acquireDizFields(
       entityId,
       row.occurrenceId,
     );
+    if (row.field.value === "") {
+      if (
+        current &&
+        /^0+$/u.test(String(current.value ?? "")) &&
+        current.sourceRefs.some((source) => source.startsWith("DIZ acquisito · SHA-256 "))
+      ) {
+        declaration = setCanonicalField(
+          declaration,
+          row.mapping.catalogFieldId,
+          "",
+          "missing",
+          [
+            ...current.sourceRefs,
+            "Segnaposto di assenza di SuccessioniOnLine normalizzato senza modificare il DIZ originale",
+          ],
+          entityId,
+          row.occurrenceId,
+        );
+        importedFields += 1;
+      } else unchangedFields += 1;
+      continue;
+    }
     if (current) {
       if (String(current.value ?? "") === row.field.value) unchangedFields += 1;
       else conflictingFields += 1;
