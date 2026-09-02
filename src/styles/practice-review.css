@@ -617,9 +617,11 @@ details[open] > summary .field-group-chevron {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 7px;
 }
 .official-field-heading > label {
   min-width: 0;
+  margin-bottom: 0;
 }
 .official-field-heading > .field-necessity-badge {
   flex: 0 0 auto;

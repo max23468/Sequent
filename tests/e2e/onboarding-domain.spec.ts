@@ -4,6 +4,7 @@ import {
   confirmOfficialInstructions,
   createPracticeFromDashboard,
   expectOfficialCheckboxesAligned,
+  expectOfficialFieldHeadingsSeparated,
   openDetails,
   openPracticeQuadro,
   openPracticeSection,
@@ -273,8 +274,10 @@ test("completa il percorso di dominio tra soggetti, beni, Quadri, devoluzione, c
   const legalDevolution = page.getByRole("checkbox", { name: "Devoluzione per legge" });
   await page.setViewportSize({ width: 390, height: 844 });
   await expectOfficialCheckboxesAligned(page);
+  await expectOfficialFieldHeadingsSeparated(page);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await expectOfficialCheckboxesAligned(page);
+  await expectOfficialFieldHeadingsSeparated(page);
   await legalDevolution.check();
   const saveGeneralData = legalDevolution
     .locator("xpath=ancestor::form")

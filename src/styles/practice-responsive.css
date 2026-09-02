@@ -195,6 +195,11 @@
   .calculation-summary-grid {
     grid-template-columns: 1fr;
   }
+  .official-fields-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
 }
 
 @keyframes mobile-sections-enter {
@@ -290,7 +295,8 @@
   .official-field > .official-field-heading {
     align-items: flex-start;
     flex-direction: column;
-    gap: 3px;
+    gap: 6px;
+    margin-bottom: 9px;
   }
   .operational-canonical-heading,
   .operational-fields-summary {

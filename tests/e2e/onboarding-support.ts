@@ -291,3 +291,20 @@ export async function expectOfficialCheckboxesAligned(page: import("@playwright/
     ),
   ).toBe(true);
 }
+
+export async function expectOfficialFieldHeadingsSeparated(page: import("@playwright/test").Page) {
+  const fields = page.locator(".official-field:visible");
+  expect(await fields.count()).toBeGreaterThan(0);
+  expect(
+    await fields.evaluateAll((visibleFields) =>
+      visibleFields.every((field) => {
+        const heading = field.querySelector<HTMLElement>(":scope > .official-field-heading");
+        const control = field.querySelector<HTMLElement>(
+          ":scope > div:not(.official-field-heading)",
+        );
+        if (!heading || !control) return false;
+        return control.getBoundingClientRect().top - heading.getBoundingClientRect().bottom >= 7;
+      }),
+    ),
+  ).toBe(true);
+}
