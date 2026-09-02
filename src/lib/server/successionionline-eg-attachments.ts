@@ -1,5 +1,9 @@
 import type Database from "better-sqlite3";
-import { SUCCESSIONIONLINE_EG_BUCKETS } from "../../domain/successionionline-eg.ts";
+import type { ParsedDiz } from "../../domain/diz/index.ts";
+import {
+  qualifiedOfficialEgDizEvidence,
+  SUCCESSIONIONLINE_EG_BUCKETS,
+} from "../../domain/successionionline-eg.ts";
 import type { ChecklistItem } from "./domain-model.ts";
 import { listOfficialAttachments } from "./official-attachments.ts";
 
@@ -11,6 +15,7 @@ interface OfficialEgAttachmentBucket {
   checklistItemIds: string[];
   documentIds: string[];
   preparedFileNames: string[];
+  preparedSha256: string[];
   count: number;
 }
 
@@ -68,6 +73,7 @@ export function buildOfficialEgAttachmentState(
       checklistItemIds: items.map((item) => item.id),
       documentIds,
       preparedFileNames: files.map((attachment) => attachment.preparedName),
+      preparedSha256: files.map((attachment) => attachment.sha256),
       count: files.length,
     };
   });
@@ -81,4 +87,32 @@ export function buildOfficialEgAttachmentState(
       unmappedChecklistItemIds.length === 0 &&
       unassignedPreparedDocumentIds.length === 0,
   };
+}
+
+export function assertOfficialEgDizAlignment(
+  parsed: ParsedDiz,
+  state: OfficialEgAttachmentState,
+): void {
+  if (!state.ready) throw new Error("DIZ_EG_ATTACHMENTS_NOT_QUALIFIED");
+  qualifiedOfficialEgDizEvidence(parsed);
+  const sourceHashesByRecordCode = new Map<string, string[]>();
+  for (const attachment of parsed.attachments) {
+    if (!attachment.recordCode) throw new Error("DIZ_EG_ATTACHMENTS_NOT_QUALIFIED");
+    const bucket = state.buckets.find(
+      (candidate) => candidate.recordCode === attachment.recordCode,
+    );
+    if (!bucket) throw new Error("DIZ_EG_ATTACHMENTS_NOT_QUALIFIED");
+    const hashes = sourceHashesByRecordCode.get(attachment.recordCode) ?? [];
+    hashes.push(attachment.sha256);
+    sourceHashesByRecordCode.set(attachment.recordCode, hashes);
+  }
+  for (const bucket of state.buckets) {
+    const sourceHashes = (sourceHashesByRecordCode.get(bucket.recordCode) ?? []).sort();
+    const preparedHashes = [...bucket.preparedSha256].sort();
+    if (
+      sourceHashes.length !== preparedHashes.length ||
+      sourceHashes.some((hash, index) => hash !== preparedHashes[index])
+    )
+      throw new Error("DIZ_EG_ATTACHMENTS_NOT_QUALIFIED");
+  }
 }

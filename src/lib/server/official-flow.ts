@@ -18,6 +18,10 @@ import { ingestPersistedUploadInTransaction } from "./document-ingestion.ts";
 import { acquireDizFields, type DizAcquisitionSummary } from "./diz-acquisition.ts";
 import { buildComplianceReport } from "./domain-compliance.ts";
 import { listOfficialAttachments } from "./official-attachments.ts";
+import {
+  assertOfficialEgDizAlignment,
+  buildOfficialEgAttachmentState,
+} from "./successionionline-eg-attachments.ts";
 import { getDeclaration, saveDeclaration } from "./practices.ts";
 
 export const OFFICIAL_ARTIFACT_KINDS = [
@@ -738,6 +742,10 @@ export async function exportDiz(
   if (!source) throw new Error("DIZ_SOURCE_REQUIRED");
   const sourceBytes = await readArtifactBytes(source, input.dataDirectory);
   const parsed = parseDiz(sourceBytes);
+  assertOfficialEgDizAlignment(
+    parsed,
+    buildOfficialEgAttachmentState(database, input.practiceId, compliance.checklist),
+  );
   const currentFields = currentDizFields(
     database,
     input.practiceId,

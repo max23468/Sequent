@@ -57,6 +57,7 @@ export type ParsedDiz = {
   readonly fields: readonly DizField[];
   readonly attachments: readonly {
     name: string;
+    recordCode: string | null;
     bytes: number;
     kind: "pdf" | "tiff" | "jpeg" | "png" | "unknown";
     sha256: string;
@@ -99,16 +100,22 @@ export function parseDiz(input: Uint8Array): ParsedDiz {
     archive.entries.filter((entry) => entry !== xmlEntry).map((entry) => entry.name),
   );
   for (const reference of xstream.attachmentReferences) {
-    assertSafeArchivePath(reference);
-    if (!attachmentNames.has(reference)) {
+    assertSafeArchivePath(reference.path);
+    if (!attachmentNames.has(reference.path)) {
       throw new Error("DIZ non valido: riferimento a un allegato assente");
     }
   }
-  const references = new Set(xstream.attachmentReferences);
+  const references = new Map<string, string | null>();
+  for (const reference of xstream.attachmentReferences) {
+    if (references.has(reference.path))
+      throw new Error("DIZ non valido: riferimento allegato duplicato");
+    references.set(reference.path, reference.recordCode);
+  }
   const attachments = archive.entries
     .filter((entry) => entry !== xmlEntry)
     .map((entry) => ({
       name: entry.name,
+      recordCode: references.get(entry.name) ?? null,
       bytes: entry.content.length,
       kind: attachmentKind(entry.content),
       sha256: sha256(entry.content),

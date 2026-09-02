@@ -33,7 +33,10 @@ export type DizField = DizFieldLocator & {
 export type ParsedXstreamDiz = {
   readonly fields: readonly DizField[];
   readonly rootName: typeof DIZ_ROOT;
-  readonly attachmentReferences: readonly string[];
+  readonly attachmentReferences: readonly {
+    readonly path: string;
+    readonly recordCode: string | null;
+  }[];
   readonly source: string;
   readonly root: XmlElement;
   readonly fieldKeyElements: ReadonlyMap<string, XmlElement>;
@@ -318,8 +321,29 @@ function extractFields(
   return { fields, fieldKeyElements, fieldElements };
 }
 
-function descendants(element: XmlElement): XmlElement[] {
-  return [element, ...element.children.flatMap(descendants)];
+function attachmentReferences(
+  source: string,
+  root: XmlElement,
+): ParsedXstreamDiz["attachmentReferences"] {
+  const result: Array<{ path: string; recordCode: string | null }> = [];
+  const visit = (element: XmlElement, ancestors: readonly XmlElement[]): void => {
+    if (element.name.endsWith(".AllegatiBean")) {
+      const paths = element.children.filter((child) => child.name === "path");
+      if (paths.length !== 1)
+        throw new Error("DIZ XML non supportato: riferimento allegato inatteso");
+      const recordCodes = ancestors
+        .filter((ancestor) => ancestor.name === "entry")
+        .flatMap((entry) => entry.children.filter((child) => child.name === "string"))
+        .map((child) => scalar(source, child))
+        .filter((value) => /^EG\d{6}$/u.test(value));
+      if (new Set(recordCodes).size > 1)
+        throw new Error("DIZ XML non supportato: allegato associato a più campi EG");
+      result.push({ path: scalar(source, paths[0]!), recordCode: recordCodes[0] ?? null });
+    }
+    for (const child of element.children) visit(child, [...ancestors, element]);
+  };
+  visit(root, []);
+  return result;
 }
 
 export function parseXstreamDiz(input: Uint8Array): ParsedXstreamDiz {
@@ -334,14 +358,11 @@ export function parseXstreamDiz(input: Uint8Array): ParsedXstreamDiz {
     throw new Error(`DIZ XML non supportato: radice ${root.name}`);
   }
   const { fields, fieldKeyElements, fieldElements } = extractFields(source, root);
-  const attachmentReferences = descendants(root)
-    .filter((element) => element.name.endsWith(".AllegatiBean"))
-    .flatMap((element) => element.children.filter((child) => child.name === "path"))
-    .map((element) => scalar(source, element));
+  const parsedAttachmentReferences = attachmentReferences(source, root);
   return {
     fields,
     rootName: DIZ_ROOT,
-    attachmentReferences,
+    attachmentReferences: parsedAttachmentReferences,
     source,
     root,
     fieldKeyElements,

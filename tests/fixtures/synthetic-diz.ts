@@ -51,7 +51,10 @@ export function syntheticDiz(
   attachment?: { name: string; content: Buffer },
 ): Buffer {
   return syntheticDizFromFields(
-    [{ quadro: "EA", module: "00000001", field: "001005", value: cognome }],
+    [
+      { quadro: "EA", module: "00000001", field: "001005", value: cognome },
+      ...(attachment ? [{ quadro: "EG", module: "00000001", field: "008001", value: "1" }] : []),
+    ],
     attachment,
   );
 }
@@ -62,7 +65,7 @@ export function syntheticDizFromFields(
   frontespizio?: Readonly<Record<number, string>>,
 ): Buffer {
   const attachments = attachment
-    ? `<hashtable><entry><string>00000001</string><hashtable><entry><string>0001</string>` +
+    ? `<hashtable><entry><string>EG008001</string><hashtable><entry><string>0001</string>` +
       `<finanze.IDAC.struct.AllegatiBean><path>${attachment.name}</path></finanze.IDAC.struct.AllegatiBean>` +
       `</entry></hashtable></entry></hashtable>`
     : `<hashtable></hashtable>`;

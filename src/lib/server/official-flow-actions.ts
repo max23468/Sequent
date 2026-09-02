@@ -89,6 +89,8 @@ const exportDizAction: PracticeAction = async ({ locals, params, request }) => {
       DIZ_SOURCE_REQUIRED: "Acquisisci prima un DIZ qualificato da usare come base trasparente.",
       DIZ_ATTACHMENTS_NOT_QUALIFIED:
         "Gli allegati incorporati nel DIZ non coincidono con quelli preparati e controllati in Sequent.",
+      DIZ_EG_ATTACHMENTS_NOT_QUALIFIED:
+        "I contenitori e i contatori del Quadro EG nel DIZ non coincidono con gli allegati preparati in Sequent.",
       DIZ_ROUND_TRIP_PENDING: "Completa il ciclo DIZ già aperto prima di generarne uno nuovo.",
       DIZ_MAPPING_CONTEXT_UNSUPPORTED:
         "Il DIZ contiene una posizione mappata che non può essere associata in modo univoco alla dichiarazione.",

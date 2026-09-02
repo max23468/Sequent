@@ -1,6 +1,9 @@
 import { listQuadroFields } from "../../domain/official-catalog/catalog.ts";
 import type { OperationalParityRow } from "../../domain/operational-parity.ts";
-import { successioniOnLineLayout } from "../../domain/successionionline-layout.ts";
+import {
+  isSuccessioniOnLineQuadroReadOnlyControl,
+  successioniOnLineLayout,
+} from "../../domain/successionionline-layout.ts";
 import { successioniOnLineDisabledWhen } from "../../domain/successionionline-behavior.ts";
 import { successioniOnLineEgBucketForField } from "../../domain/successionionline-eg.ts";
 
@@ -11,9 +14,7 @@ export function createPracticeFieldView(
   parity: OperationalParityRow,
   includeSuccessioniOnLineLayout = false,
 ) {
-  const applicationLayout = includeSuccessioniOnLineLayout
-    ? successioniOnLineLayout(field.canonicalId)
-    : null;
+  const applicationLayout = successioniOnLineLayout(field.canonicalId);
   return {
     canonicalId: field.canonicalId,
     label: field.label,
@@ -35,11 +36,15 @@ export function createPracticeFieldView(
           successioniOnLineSection: applicationLayout?.section ?? null,
           successioniOnLinePage: applicationLayout?.page ?? null,
           successioniOnLineControlTypes: applicationLayout?.uiControls ?? [],
+          successioniOnLineQuadroReadOnly: isSuccessioniOnLineQuadroReadOnlyControl(
+            applicationLayout?.uiControls ?? [],
+          ),
           successioniOnLineRadioGroup: applicationLayout?.radioGroup ?? null,
           successioniOnLineDisabledWhen: successioniOnLineDisabledWhen(field.canonicalId),
           successioniOnLineAttachmentBucket: successioniOnLineEgBucketForField(field.canonicalId),
         }
       : {}),
+    successioniOnLineRadioPanel: applicationLayout?.uiControls.includes("RadioPannello") ?? false,
     type: field.type,
     instructions: field.instructions.map(({ id, instruction }) => ({ id, instruction })),
     operationalParity: {

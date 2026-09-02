@@ -20,6 +20,7 @@ interface ApplicationEvidence {
     layoutFields: number;
     attachmentBuckets: number;
     conditionalRules: number;
+    screenCommands: number;
     professionista: number;
     automatico: number;
     "riservato-ufficio": number;
@@ -46,6 +47,8 @@ interface ApplicationEvidence {
     id: string;
     recordCode: string;
     fieldId: string;
+    converterPath: string;
+    sourcePointer: string;
     label: string;
     order: number;
   }>;
@@ -56,6 +59,25 @@ interface ApplicationEvidence {
     targetRecordCodes: string[];
     sourcePointer: string;
   }>;
+  screenModel: {
+    schemaVersion: number;
+    file: string;
+  };
+}
+
+interface ScreenEvidence {
+  schemaVersion: number;
+  commands: Array<{
+    quadro: string;
+    script: string;
+    page: number;
+    section: string;
+    order: number;
+    command: string;
+    recordCodes: string[];
+    arguments: string[];
+    sourcePointer: string;
+  }>;
 }
 
 async function readEvidence(): Promise<ApplicationEvidence> {
@@ -64,9 +86,15 @@ async function readEvidence(): Promise<ApplicationEvidence> {
   ) as ApplicationEvidence;
 }
 
+async function readScreenEvidence(): Promise<ScreenEvidence> {
+  return JSON.parse(
+    await readFile("src/domain/official-catalog/successionionline-screen-commands.json", "utf8"),
+  ) as ScreenEvidence;
+}
+
 test("l’evidenza SuccessioniOnLine registra 257 campi e copre tutti i residui correnti", async () => {
   const evidence = await readEvidence();
-  assert.equal(evidence.schemaVersion, 4);
+  assert.equal(evidence.schemaVersion, 5);
   assert.equal(evidence.application.name, "SuccessioniOnLine");
   assert.equal(evidence.application.model, "SUC13");
   assert.deepEqual(evidence.counts, {
@@ -74,6 +102,7 @@ test("l’evidenza SuccessioniOnLine registra 257 campi e copre tutti i residui 
     layoutFields: 580,
     attachmentBuckets: 11,
     conditionalRules: 5,
+    screenCommands: 2571,
     professionista: 230,
     automatico: 19,
     "riservato-ufficio": 8,
@@ -105,6 +134,71 @@ test("l’evidenza SuccessioniOnLine registra 257 campi e copre tutti i residui 
   );
 });
 
+test("estrae un modello di schermata riproducibile per ogni quadro ufficiale", async () => {
+  const evidence = await readEvidence();
+  const screenEvidence = await readScreenEvidence();
+  assert.deepEqual(evidence.screenModel, {
+    schemaVersion: 1,
+    file: "successionionline-screen-commands.json",
+  });
+  assert.equal(screenEvidence.schemaVersion, evidence.screenModel.schemaVersion);
+  assert.equal(screenEvidence.commands.length, evidence.counts.screenCommands);
+  assert.deepEqual(
+    [...new Set(screenEvidence.commands.map(({ quadro }) => quadro))],
+    [
+      "Frontespizio",
+      "EA",
+      "EB",
+      "EC",
+      "ED",
+      "EE",
+      "EF",
+      "EG",
+      "EH",
+      "EI",
+      "EL",
+      "EM",
+      "EN",
+      "EO",
+      "EP",
+      "EQ",
+      "ER",
+    ],
+  );
+  assert.ok(
+    screenEvidence.commands.every(
+      ({ page, order, command, sourcePointer }) =>
+        page >= 1 && order >= 0 && command.length > 0 && sourcePointer.includes(".txt:"),
+    ),
+  );
+  assert.deepEqual(
+    screenEvidence.commands
+      .filter(({ arguments: commandArguments }) => commandArguments[0] === "EA003A05")
+      .map(({ command, recordCodes, sourcePointer }) => ({ command, recordCodes, sourcePointer })),
+    [
+      {
+        command: "CampoInput",
+        recordCodes: ["EA003A05"],
+        sourcePointer:
+          "SUC13_ResSUC13.jar#finanze/IDAC/resources/SUC13/localAppRoot/script/EA.txt:366",
+      },
+    ],
+  );
+  const egCommands = screenEvidence.commands.filter(({ quadro }) => quadro === "EG");
+  assert.equal(egCommands.filter(({ command }) => command === "ListaFileSemaforo").length, 11);
+  assert.equal(egCommands.filter(({ command }) => command === "CampoInput").length, 11);
+  assert.deepEqual(
+    [
+      ...new Set(
+        egCommands
+          .filter(({ command }) => command === "ListaFileSemaforo")
+          .flatMap(({ recordCodes }) => recordCodes),
+      ),
+    ],
+    Array.from({ length: 11 }, (_, index) => `EG${String(index + 1).padStart(3, "0")}001`),
+  );
+});
+
 test("registra gli 11 contenitori EG e le condizioni eseguite da SuccessioniOnLine", async () => {
   const evidence = await readEvidence();
   assert.deepEqual(
@@ -116,6 +210,19 @@ test("registra gli 11 contenitori EG e le condizioni eseguite da SuccessioniOnLi
   );
   assert.ok(evidence.attachmentBuckets.every(({ label }) => label.length > 3));
   assert.equal(new Set(evidence.attachmentBuckets.map(({ fieldId }) => fieldId)).size, 11);
+  const egFieldsById = new Map(
+    listQuadroFields("EG").map((field) => [field.canonicalId, field.path]),
+  );
+  assert.ok(
+    evidence.attachmentBuckets.every(({ fieldId, converterPath, sourcePointer }) => {
+      const technicalPath = egFieldsById.get(fieldId);
+      return (
+        technicalPath?.endsWith(`/${converterPath}`) &&
+        sourcePointer ===
+          `XMLConverter_PropertiesREG2013.jar#SUC/conf/quadroEG.properties:${converterPath}`
+      );
+    }),
+  );
   assert.deepEqual(
     evidence.conditionalRules.map(({ triggerRecordCode }) => triggerRecordCode),
     ["EH000014", "EH000018", "EH000021", "EH000023", "EH000025"],
