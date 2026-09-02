@@ -622,7 +622,7 @@ export function getTechnicalField(fieldId: string): TechnicalElement | null {
   );
 }
 
-export function listOfficialInstructions(fieldId: string): OfficialInstruction[] {
+function listOfficialInstructions(fieldId: string): OfficialInstruction[] {
   const technical = getTechnicalField(fieldId);
   if (!technical) return [];
   return (semanticRules.rules as OfficialInstruction[])
