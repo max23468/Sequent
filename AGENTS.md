@@ -35,37 +35,71 @@ La pulizia finale rimuove soltanto branch e worktree temporanei creati nel ciclo
 
 - Non eseguire il merge finché tutti i required checks non sono verdi e tutte le conversazioni non sono risolte. Dopo il merge rileggi `main`, elimina il branch temporaneo e verifica che checkout e VPS canonica siano puliti, quando la VPS rientra nello scope.
 
-Decidi autonomamente naming, formattazione e default tecnici reversibili. Fermati soltanto per azioni distruttive, prima attivazione, deploy o release non già autorizzati da `Pubblica`, o letture materialmente diverse della richiesta.
+Sospendi il passaggio interessato per azioni distruttive, prima attivazione, deploy o release non già autorizzati da `Pubblica`, o letture materialmente diverse della richiesta.
 
-## Prompting e conduzione del lavoro con Astra
+## Autonomia
 
-- Interpreta le richieste operative come incarichi da completare, usando intento
-  e contesto della sessione. Risolvi i dettagli ordinari con assunzioni ragionevoli;
-  chiedi solo quando la risposta cambia materialmente il risultato.
-- Prima di una conferma necessaria, completa il lavoro indipendente già autorizzato
-  e prepara un risultato concreto da valutare. Non richiedere consensi già concessi;
-  conserva i confini di pubblicazione, dati e operazioni esterne definiti qui.
-  Un ordine esplicito di attesa o arresto interrompe il lavoro interessato.
-- Le istruzioni esplicite dell'utente prevalgono sulle linee guida delle skill,
-  nel rispetto delle istruzioni di sistema e sviluppatore. Verifica pertinenza,
-  gerarchia e conflitti di AGENTS, override e skill prima di dedurne un blocco;
-  non trasformare raccomandazioni generiche in nuovi gate.
-- Se una skill causa una pausa, una richiesta di permesso o lavoro incompleto,
-  cita e collega il preciso `SKILL.md`, riporta l'istruzione rilevante e distingui
-  il requisito esplicito dalla tua interpretazione.
-- Integra correzioni e nuovi vincoli durante il lavoro; rispondi alle domande
-  laterali senza perdere l'obiettivo, salvo annullamento o cambio di scope esplicito.
-- Scrivi in italiano semplice, con esito per primo e paragrafi brevi. Usa elenchi
-  solo quando aiutano; evita formule ricorrenti, gergo superfluo e aggiornamenti
-  che ripetono lo stesso stato. Riporta prove, limiti e prossima azione reale.
-- Calibra la verifica sul rischio del diff e completa i gate applicabili. Riusa
-  test esistenti; aggiungine solo per un comportamento o rischio concreto, non
-  per replicare modifiche banali. Dopo un esito verde ripeti o amplia i controlli
-  solo per nuove modifiche, errori o dubbi irrisolti. Verifica il diff effettivo,
-  senza trattare il messaggio di successo di uno strumento come prova sufficiente.
-- Quando la sessione e le regole del progetto consentono subagent, delega solo
-  filoni consistenti e indipendenti, con ownership disgiunta, risultato atteso e
-  verifiche espliciti. Il coordinatore integra; niente delega per microtask o
-  semplice ricontrollo. Scrivi messaggi leggibili anche tra agenti.
+Interpreta le richieste operative come incarichi da completare, usando intento
+e contesto della sessione. Risolvi autonomamente naming, formattazione, default
+e dettagli ordinari con assunzioni ragionevoli. Prima di chiedere un chiarimento,
+verifica le fonti disponibili; chiedi solo se resta una decisione che cambia
+materialmente il risultato.
 
-Esempio e fonti: [prompting con Astra](CONTRIBUTING.md#prompting-con-gpt-6-astra).
+Prima di una conferma necessaria, completa il lavoro indipendente già autorizzato
+e prepara un risultato concreto da valutare. Sospendi soltanto il passaggio che
+dipende dalla decisione mancante. Non richiedere consensi già concessi per la
+stessa azione e lo stesso perimetro, salvo un checkpoint esplicito del progetto.
+Conserva i confini di pubblicazione, dati e operazioni esterne definiti qui;
+un ordine esplicito di attesa o arresto interrompe il lavoro interessato.
+Il tempo trascorso non costituisce una risposta o un'autorizzazione.
+
+Integra correzioni e nuovi vincoli durante il lavoro; rispondi alle domande
+laterali senza perdere l'obiettivo, salvo annullamento o cambio di scope esplicito.
+
+## Qualità del lavoro
+
+Evita di creare un numero eccessivo di file di test. Crea un nuovo file di test
+solo se richiesto dalle convenzioni della repository o se nessun file esistente
+è una collocazione adatta. Evita pulizie non pertinenti e complessità non
+necessaria. Riusa le utility esistenti adatte allo scopo. Leggi le istruzioni
+pertinenti della repository ed esamina codice, test, documentazione e CI vicini
+all'area interessata. Segui le convenzioni consolidate. L'obiettivo è ottenere
+codice pulito e pronto per essere integrato.
+
+## Verifiche
+
+Calibra la verifica sul rischio del diff e completa i gate applicabili. Riusa
+i test esistenti; aggiungine solo per un comportamento o rischio concreto, non
+per replicare modifiche banali. Dopo un esito verde ripeti o amplia i controlli
+solo per nuove modifiche, errori o dubbi irrisolti. Verifica il diff effettivo,
+senza trattare il messaggio di successo di uno strumento come prova sufficiente.
+
+## Comunicazione e completamento
+
+Scrivi in italiano semplice, con esito per primo e paragrafi brevi. Usa elenchi
+solo quando aiutano; evita formule ricorrenti, gergo superfluo e aggiornamenti
+che ripetono lo stesso stato. Riporta prove, limiti e prossima azione reale.
+
+Completa l'esito richiesto: analisi, modifica locale o pubblicazione. Distingui
+passaggi completati, non richiesti, non applicabili e bloccati; non dichiarare
+completo ciò che resta bloccato o non verificato. Applica i requisiti di commit
+previsti per l'implementazione e pulisci soltanto risorse proprie e assorbite,
+preservando modifiche e worktree altrui.
+
+## Skill e delega
+
+Le istruzioni esplicite dell'utente prevalgono sulle linee guida delle Skill,
+nel rispetto delle istruzioni di sistema e sviluppatore. Verifica pertinenza,
+gerarchia e conflitti di AGENTS, override e Skill prima di dedurne un blocco;
+non trasformare raccomandazioni generiche in nuovi gate.
+
+Se una Skill causa una pausa, una richiesta di permesso o lavoro incompleto,
+cita e collega il preciso `SKILL.md`, riporta l'istruzione rilevante e distingui
+il requisito esplicito dalla tua interpretazione.
+
+Quando la sessione e le regole del progetto consentono subagent, delega solo
+filoni consistenti e indipendenti, con ownership disgiunta, risultato atteso e
+verifiche espliciti. Il coordinatore integra; niente delega per microtask o
+semplice ricontrollo. Scrivi messaggi leggibili anche tra agenti.
+
+Esempio e fonti: [preparare un incarico](CONTRIBUTING.md#preparare-un-incarico).
