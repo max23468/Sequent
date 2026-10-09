@@ -7,16 +7,16 @@ const read = (path: string) => readFileSync(path, "utf8");
 test("l'immagine applicativa usa una sola base Debian 13 Slim fissata per digest", () => {
   const dockerfile = read("Dockerfile");
   const directBases = dockerfile.match(
-    /^FROM node:26\.7\.0-trixie-slim@sha256:[0-9a-f]{64} AS node-base$/gm,
+    /^FROM node:26\.10\.0-trixie-slim@sha256:[0-9a-f]{64} AS node-base$/gm,
   );
 
   assert.equal(directBases?.length, 1);
-  assert.equal(dockerfile.match(/node:26\.7\.0-trixie-slim@sha256:/g)?.length, 1);
+  assert.equal(dockerfile.match(/node:26\.10\.0-trixie-slim@sha256:/g)?.length, 1);
   assert.match(dockerfile, /^FROM node-base AS dependencies$/m);
   assert.match(dockerfile, /^FROM node-base AS ocr$/m);
   assert.match(dockerfile, /^FROM node-base AS runtime$/m);
   assert.doesNotMatch(dockerfile, /\b(?:alpine|apk|musl|gcompat)\b/i);
-  assert.match(dockerfile, /DEBIAN_SNAPSHOT=\d{8}T\d{6}Z/);
+  assert.match(dockerfile, /DEBIAN_SNAPSHOT=20261009T000000Z/);
   assert.match(dockerfile, /snapshot\.debian\.org\/archive\/debian/);
   assert.match(dockerfile, /--no-install-recommends/);
   assert.match(dockerfile, /rm -rf \/var\/lib\/apt\/lists\/\*/);
