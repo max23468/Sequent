@@ -151,7 +151,7 @@ test("il runtime dietro Caddy dichiara origine HTTPS e singolo proxy fidato", ()
   assert.match(codexService, /\/opt\/sequent\/tmp\/codex-runtime:\/run\/sequent-codex/);
   assert.doesNotMatch(compose, /\/var\/run\/sequent-codex/);
   assert.match(dockerfile, /ca-certificates/);
-  assert.match(dockerfile, /^FROM node:26\.7\.0-trixie-slim@sha256:[0-9a-f]{64} AS node-base$/m);
+  assert.match(dockerfile, /^FROM node:26\.10\.0-trixie-slim@sha256:[0-9a-f]{64} AS node-base$/m);
   assert.match(dockerfile, /COPY requirements-ocr\.txt/);
   assert.match(dockerfile, /COPY --from=ocr --chown=root:root \/opt\/ocr \/opt\/ocr/);
   assert.match(dockerfile, /python3 -m venv \/opt\/ocr/);
