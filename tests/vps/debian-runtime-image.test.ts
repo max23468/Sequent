@@ -7,11 +7,11 @@ const read = (path: string) => readFileSync(path, "utf8");
 test("l'immagine applicativa usa una sola base Debian 13 Slim fissata per digest", () => {
   const dockerfile = read("Dockerfile");
   const directBases = dockerfile.match(
-    /^FROM node:26\.10\.0-trixie-slim@sha256:[0-9a-f]{64} AS node-base$/gm,
+    /^FROM node:26\.11\.1-trixie-slim@sha256:[0-9a-f]{64} AS node-base$/gm,
   );
 
   assert.equal(directBases?.length, 1);
-  assert.equal(dockerfile.match(/node:26\.10\.0-trixie-slim@sha256:/g)?.length, 1);
+  assert.equal(dockerfile.match(/node:26\.11\.1-trixie-slim@sha256:/g)?.length, 1);
   assert.match(dockerfile, /^FROM node-base AS dependencies$/m);
   assert.match(dockerfile, /^FROM node-base AS ocr$/m);
   assert.match(dockerfile, /^FROM node-base AS runtime$/m);
