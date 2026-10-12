@@ -16,7 +16,7 @@ test("Production distribuisce soltanto una candidata ARM64 exact-run", () => {
   assert.match(workflow, /test .*\.head_sha.*CANDIDATE_COMMIT/);
   assert.match(workflow, /test .*\.conclusion.*success/);
   assert.match(workflow, /\.github\/workflows\/release-candidate\.yml/);
-  assert.match(workflow, /actions\/download-artifact@[0-9a-f]{40} # v8\.0\.1/);
+  assert.match(workflow, /actions\/download-artifact@[0-9a-f]{40} # v8\.0\.2/);
   assert.match(workflow, /run-id: \$\{\{ inputs\.release_run \}\}/);
   assert.match(workflow, /release-artifact\.mjs verify/);
   assert.match(workflow, /candidate_tree=.*git rev-parse.*CANDIDATE_COMMIT.*\^\{tree\}/);
