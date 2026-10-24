@@ -67,7 +67,7 @@
     "read-excel-file": "9.3.10",
     "svelte": "5.56.10",
     "unzipper-esm": "0.13.3",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
